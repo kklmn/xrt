@@ -723,18 +723,10 @@ class XrtQookBase(qt.QMainWindow):
         for argName, argValue in oeProps.items():
             if hasattr(oeObj, f'_{argName}Init'):
                 oeInitProps[argName] = getattr(oeObj, f'_{argName}Init')
-            if any(argName.lower().startswith(v) for v in
-                    ['mater', 'tlay', 'blay', 'coat', 'substrate']) and\
-                    raycing.is_valid_uuid(argValue):
-                argMat = self.beamLine.materialsDict.get(argValue)
-                if hasattr(argMat, 'name'):
-                    oeProps[argName] = argMat.name
-            if any(argName.lower().startswith(v) for v in
-                    ['figureerror']) and\
-                    raycing.is_valid_uuid(argValue):
-                argFE = self.beamLine.fesDict.get(argValue)
-                if hasattr(argFE, 'name'):
-                    oeProps[argName] = argFE.name
+            refKind = raycing.ref_kind_for_arg(argName)
+            if refKind is not None:
+                oeProps[argName] = raycing.normalize_ref(
+                    argValue, self.beamLine, refKind, target='display')
 
         catDict = {'Position': raycing.orientationArgSet}
         if oeType == 0:  # source
@@ -789,12 +781,10 @@ class XrtQookBase(qt.QMainWindow):
                                            blname=blName)
         matProps.update({'uuid': matuuid})
         for argName, argValue in matProps.items():
-            if any(argName.lower().startswith(v) for v in
-                    ['mater', 'tlay', 'blay', 'coat', 'substrate']) and\
-                   raycing.is_valid_uuid(str(argValue)):
-                argMat = self.beamLine.materialsDict.get(argValue)
-                if hasattr(argMat, 'name'):
-                    matProps[argName] = argMat.name
+            refKind = raycing.ref_kind_for_arg(argName)
+            if refKind is not None:
+                matProps[argName] = raycing.normalize_ref(
+                    argValue, self.beamLine, refKind, target='display')
         glowObj = getattr(self, 'blViewer', None)
         glWidget = getattr(glowObj, 'customGlWidget', None)
         matViewer = InstanceInspector(self, matProps, beamLine=self.beamLine,
@@ -838,12 +828,10 @@ class XrtQookBase(qt.QMainWindow):
         surfProps.update({'uuid': surfuuid})
 
         for argName, argValue in surfProps.items():
-            if any(argName.lower().startswith(v) for v in
-                    ['basefe']) and\
-                   raycing.is_valid_uuid(str(argValue)):
-                argFE = self.beamLine.fesDict.get(argValue)
-                if hasattr(argFE, 'name'):
-                    surfProps[argName] = argFE.name
+            refKind = raycing.ref_kind_for_arg(argName)
+            if refKind is not None:
+                surfProps[argName] = raycing.normalize_ref(
+                    argValue, self.beamLine, refKind, target='display')
         glowObj = getattr(self, 'blViewer', None)
         glWidget = getattr(glowObj, 'customGlWidget', None)
         surfViewer = InstanceInspector(self, surfProps, beamLine=self.beamLine,
@@ -1591,12 +1579,16 @@ class XrtQookBase(qt.QMainWindow):
         view.setRowHidden(child0.index().row(), parent.index(), True)
         return child0, child1
 
-    def addParam(self, parent, paramName, value, source=None, unit=None):
+    def addParam(self, parent, paramName, value, source=None, unit=None,
+                 editorHint=None):
         """Add a pair of Parameter-Value Items"""
         toolTip = None
         child0 = qt.QStandardItem(str(paramName))
         child0.setFlags(self.paramFlag)
         child1 = qt.QStandardItem()
+        if editorHint is not None:
+            child0.setData(editorHint, qt.EDITOR_HINT_ROLE)
+            child1.setData(editorHint, qt.EDITOR_HINT_ROLE)
         self.setParamItemValue(child1, paramName, value)
         if str(paramName) == 'name':
             ch1flag = self.paramFlag
@@ -1650,16 +1642,22 @@ class XrtQookBase(qt.QMainWindow):
         return str(value)
 
     def setParamItemValue(self, item, paramName, value):
-        rawValue = str(value)
-        item.setData(rawValue, qt.Qt.UserRole + 1)
-        item.setText(self.formatParamDisplay(paramName, value))
+        editorHint = item.data(qt.EDITOR_HINT_ROLE)
+        rawValue = raycing.serialize_editor_value(
+            value, editorHint, getattr(self, 'beamLine', None))
+        item.setData(rawValue, qt.RAW_VALUE_ROLE)
+        if isinstance(editorHint, dict) and editorHint.get('editor') == 'dict':
+            displayValue = rawValue
+        else:
+            displayValue = self.formatParamDisplay(paramName, value)
+        item.setText(displayValue)
         if item.text() != rawValue:
             item.setToolTip(rawValue)
         else:
             item.setToolTip('')
 
     def getParamItemValue(self, item):
-        rawValue = item.data(qt.Qt.UserRole + 1)
+        rawValue = item.data(qt.RAW_VALUE_ROLE)
         return str(rawValue) if rawValue is not None else str(item.text())
 
     def addProp(self, parent, propName):
@@ -1738,6 +1736,12 @@ class XrtQookBase(qt.QMainWindow):
                                                    argSpec[3]):
                                 if arg == 'bl':
                                     argVal = self.rootBLItem.text()
+                                editorHint = raycing.get_argument_editor_hint(
+                                    objRef, arg)
+                                if argVal is None and isinstance(
+                                        editorHint, dict) and\
+                                        'default' in editorHint:
+                                    argVal = editorHint['default']
                                 if arg not in uArgs and arg not in hpList:
                                     uArgs[arg] = argVal
 #                                    args.append(arg)
@@ -1907,7 +1911,8 @@ class XrtQookBase(qt.QMainWindow):
 #                        print(pyname, oldname)
                         self.iterateRename(
                                 self.rootMatItem, oldname, pyname,
-                                ['tlay', 'blay', 'coat', 'substrate'])
+                                ['tlay', 'blay', 'coat', 'substrate',
+                                 'materialsIndex'])
                         self.iterateRename(self.rootBLItem, oldname, pyname,
                                            ['material'])
                     elif item.model() is self.fesModel:
@@ -1956,13 +1961,51 @@ class XrtQookBase(qt.QMainWindow):
         signalsBlocked = model.signalsBlocked()
         model.blockSignals(True)
 
+        def replace_value(value):
+            if isinstance(value, dict):
+                newDict = OrderedDict()
+                changed = False
+                for key, itemValue in value.items():
+                    newValue, itemChanged = replace_value(itemValue)
+                    newDict[key] = newValue
+                    changed = changed or itemChanged
+                return dict(newDict), changed
+            if isinstance(value, list):
+                newList = []
+                changed = False
+                for itemValue in value:
+                    newValue, itemChanged = replace_value(itemValue)
+                    newList.append(newValue)
+                    changed = changed or itemChanged
+                return newList, changed
+            if isinstance(value, tuple):
+                newList, changed = replace_value(list(value))
+                return tuple(newList), changed
+            if str(value) == old_name:
+                return new_name, True
+            return value, False
+
         def recurse(item):
             for row in range(item.rowCount()):
                 argName = item.child(row, 0)
                 argValue = item.child(row, 1)
-                if argValue is not None and argValue.text() == old_name and\
-                        any([m in argName.text() for m in mask]):
-                    argValue.setText(new_name)
+                argNameText = str(argName.text())
+                if argValue is not None and\
+                        any([str(m).lower() in argNameText.lower()
+                             for m in mask]):
+                    rawValue = self.getParamItemValue(argValue)
+                    if rawValue == old_name:
+                        self.setParamItemValue(argValue, argNameText,
+                                               new_name)
+                    else:
+                        try:
+                            parsedValue = raycing.parametrize(rawValue)
+                        except Exception:
+                            parsedValue = rawValue
+                        newValue, changed = replace_value(parsedValue)
+                        if changed:
+                            self.setParamItemValue(argValue, argNameText,
+                                                   newValue)
                 recurse(item.child(row, 0))
         try:
             recurse(rootItem)
@@ -2199,7 +2242,8 @@ class XrtQookBase(qt.QMainWindow):
             pnItem = rootItem.child(pn, 0)
             itemDict = OrderedDict()
             if not pnItem.hasChildren():
-                outDict[str(pnItem.text())] = rootItem.child(pn, 1).text()
+                outDict[str(pnItem.text())] = self.getParamItemValue(
+                    rootItem.child(pn, 1))
                 continue
             for pnp in range(pnItem.rowCount()):
                 pltPropItem = pnItem.child(pnp, 0)
@@ -2207,12 +2251,13 @@ class XrtQookBase(qt.QMainWindow):
                     axDict = OrderedDict()
                     for axn in range(pltPropItem.rowCount()):
                         axPropName = pltPropItem.child(axn, 0).text()
-                        axPropValue = pltPropItem.child(axn, 1).text()
+                        axPropValue = self.getParamItemValue(
+                            pltPropItem.child(axn, 1))
                         axDict[axPropName] = axPropValue
                     itemDict[str(pltPropItem.text())] = axDict
                 else:
                     itemDict[str(pltPropItem.text())] = \
-                        str(pnItem.child(pnp, 1).text())
+                        self.getParamItemValue(pnItem.child(pnp, 1))
             outDict[str(pnItem.text())] = itemDict
         return outDict
 
@@ -2282,13 +2327,14 @@ class XrtQookBase(qt.QMainWindow):
                         else:
                             itemType = "object"
                         if int(child1.isEnabled()) == int(child0.isEnabled()):
-                            if not str(child1.text()).endswith('plot') and not\
-                                    str(child1.text()).startswith('Instance'):
+                            child1Value = self.getParamItemValue(child1)
+                            if not str(child1Value).endswith('plot') and not\
+                                    str(child1Value).startswith('Instance'):
                                 self.confText +=\
                                     '{0}<{1} type=\"{3}\">{2}</{1}>\n'.format(
                                         self.prefixtab,
                                         despace(str(child0.text())),
-                                        child1.text(),
+                                        child1Value,
                                         itemType)
                 elif flatModel:
                     self.confText +=\
