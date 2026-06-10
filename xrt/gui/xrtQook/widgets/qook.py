@@ -392,19 +392,15 @@ class XrtQook(XrtQookElements):
                             pNItem = pItem.child(k, 0)
                             for argName, argValue in kwargs.items():
                                 if str(pNItem.text()) == argName:
-                                    if any(argName.lower().startswith(v) for v in
-                                           ['mater', 'tlay', 'blay', 'coat', 'substrate']) and\
-                                        raycing.is_valid_uuid(argValue):
-                                            matObj = self.beamLine.materialsDict.get(argValue)
-                                            argValue = matObj.name
-                                    elif any(argName.lower().startswith(v) for v in
-                                           ['figureerr', 'basefe']):
-                                        if raycing.is_valid_uuid(argValue):
-                                            feObj = self.beamLine.fesDict.get(argValue)
-                                            argValue = feObj.name
+                                    refKind = raycing.ref_kind_for_arg(argName)
+                                    if refKind is not None:
+                                        argValue = raycing.normalize_ref(
+                                            argValue, self.beamLine, refKind,
+                                            target='display')
 
                                     pVItem = pItem.child(k, 1)
-                                    pVItem.setText(str(argValue))
+                                    self.setParamItemValue(
+                                        pVItem, argName, argValue)
                         break
                 break
         model.blockSignals(False)
@@ -426,17 +422,38 @@ class XrtQook(XrtQookElements):
         paintItem = self.rootMatItem.child(matItem.row(), 1)
         # renaming existing
         if item.column() == 1 and item.text() == matItem.text():
-            self.beamLine.materialsDict[matId].name = item.text()
+            matObj = self.beamLine.materialsDict[matId]
+            oldName = matObj.name
+            matObj.name = item.text()
+            self.beamLine.matnamesToUUIDs.pop(oldName, None)
+            self.beamLine.matnamesToUUIDs[str(item.text())] = matId
             return
 
         parent = item.parent()
 
         if item.column() == 1:  # Existing Element
-            argValue_str = item.text()
+            argValue_str = self.getParamItemValue(item)
             argName = parent.child(item.row(), 0).text()
             argValue = raycing.parametrize(argValue_str)
+            matObj = self.beamLine.materialsDict.get(matId)
+            if matObj is not None:
+                setattr(matObj, argName, argValue)
 
             kwargs[argName] = argValue
+            if argName == 'fileName' and hasattr(matObj, 'materialsIndex'):
+                kwargs['materialsIndex'] = matObj.materialsIndex
+                for i in range(parent.rowCount()):
+                    keyItem = parent.child(i, 0)
+                    if str(keyItem.text()) == 'materialsIndex':
+                        signalsBlocked = item.model().signalsBlocked()
+                        item.model().blockSignals(True)
+                        try:
+                            self.setParamItemValue(
+                                parent.child(i, 1), 'materialsIndex',
+                                matObj.materialsIndex)
+                        finally:
+                            item.model().blockSignals(signalsBlocked)
+                        break
             outDict = kwargs
 
         elif item.column() == 0:  # New Element
@@ -446,7 +463,8 @@ class XrtQook(XrtQookElements):
                     for iprop in range(chitem.rowCount()):
                         argName = chitem.child(iprop, 0).text()
                         argValue = raycing.parametrize(
-                                chitem.child(iprop, 1).text())
+                                self.getParamItemValue(
+                                    chitem.child(iprop, 1)))
                         kwargs[str(argName)] = argValue
                 elif chitem.text() == '_object':
                     objStr = str(matItem.child(itop, 1).text())
@@ -489,7 +507,7 @@ class XrtQook(XrtQookElements):
         parent = item.parent()
 
         if item.column() == 1:  # Existing Element
-            argValue_str = item.text()
+            argValue_str = self.getParamItemValue(item)
             argName = parent.child(item.row(), 0).text()
             argValue = raycing.parametrize(argValue_str)
 
@@ -503,7 +521,8 @@ class XrtQook(XrtQookElements):
                     for iprop in range(chitem.rowCount()):
                         argName = chitem.child(iprop, 0).text()
                         argValue = raycing.parametrize(
-                                chitem.child(iprop, 1).text())
+                                self.getParamItemValue(
+                                    chitem.child(iprop, 1)))
                         kwargs[str(argName)] = argValue
                 elif chitem.text() == '_object':
                     objStr = str(feItem.child(itop, 1).text())
@@ -539,7 +558,8 @@ class XrtQook(XrtQookElements):
                 if str(mchi.text()) == 'parameters':
                     for mchpi in range(mchi.rowCount()):
                         argName = str(mchi.child(mchpi, 0).text())
-                        argValue = str(mchi.child(mchpi, 1).text())
+                        argValue = self.getParamItemValue(
+                            mchi.child(mchpi, 1))
                         if argName == 'beam':
                             argValue = beamToUuid(argValue)
                         else:
@@ -549,7 +569,8 @@ class XrtQook(XrtQookElements):
                 elif str(mchi.text()) == 'output':
                     for mchpi in range(mchi.rowCount()):
                         argName = str(mchi.child(mchpi, 0).text())
-                        argValue = str(mchi.child(mchpi, 1).text())
+                        argValue = self.getParamItemValue(
+                            mchi.child(mchpi, 1))
                         if argName == 'beam':
                             argValue = beamToUuid(argValue)
                         else:
@@ -596,8 +617,7 @@ class XrtQook(XrtQookElements):
                 oeid = str(item.data(qt.Qt.UserRole))
 
             if column == 1:  # Existing Element
-                item.setData(str(item.text()), qt.Qt.UserRole + 1)
-                argValue_str = item.text()
+                argValue_str = self.getParamItemValue(item)
                 argName = parent.child(row, 0).text()
 
                 if argName == 'beam':
@@ -640,7 +660,8 @@ class XrtQook(XrtQookElements):
                             for iprop in range(chitem.rowCount()):
                                 argName = chitem.child(iprop, 0).text()
                                 argValue = raycing.parametrize(
-                                        chitem.child(iprop, 1).text())
+                                        self.getParamItemValue(
+                                            chitem.child(iprop, 1)))
                                 kwargs[str(argName)] = argValue
                         elif chitem.text() == '_object':
                             continue
@@ -694,7 +715,8 @@ import numpy as np\nimport sys\nsys.path.append(r\"{1}\")\n""".format(
                         blPropItem.rowCount()),
                         list(zip(*self.getParams(blstr)))[1]):
                     paraname = str(blPropItem.child(iep, 0).text())
-                    paravalue = str(blPropItem.child(iep, 1).text())
+                    paravalue = self.getParamItemValue(
+                        blPropItem.child(iep, 1))
                     if paravalue != str(arg_def):
                         paravalue = self.quotize(paravalue)
                         codeBuildBeamline += '\n{2}{0}={1},'.format(
@@ -741,12 +763,14 @@ if __name__ == '__main__':
                                         pItem.rowCount()),
                                         list(zip(*self.getParams(elstr)))[1]):
                                     paraname = str(pItem.child(iep, 0).text())
-                                    paravalue = str(pItem.child(iep, 1).text())
+                                    paravalue = self.getParamItemValue(
+                                        pItem.child(iep, 1))
                                     if paravalue != str(arg_def) or\
                                             paravalue == 'bl':
                                         if paraname.lower() not in\
                                                 ['tlayer', 'blayer',
-                                                 'coating', 'substrate']:
+                                                 'coating', 'substrate',
+                                                 'materialsindex']:
                                             paravalue = self.quotize(paravalue)
                                         ieinit += '\n{2}{0}={1},'.format(
                                             paraname, paravalue, myTab)
@@ -776,7 +800,8 @@ if __name__ == '__main__':
                                         pItem.rowCount()),
                                         list(zip(*self.getParams(elstr)))[1]):
                                     paraname = str(pItem.child(iep, 0).text())
-                                    paravalue = str(pItem.child(iep, 1).text())
+                                    paravalue = self.getParamItemValue(
+                                        pItem.child(iep, 1))
                                     if paravalue != str(arg_def) or\
                                             paravalue == 'bl':
                                         if paraname.lower() not in\
@@ -818,7 +843,8 @@ if __name__ == '__main__':
                             pItem.rowCount()),
                             list(zip(*self.getParams(elstr)))[1]):
                         paraname = str(pItem.child(iep, 0).text())
-                        paravalue = str(pItem.child(iep, 1).text())
+                        paravalue = self.getParamItemValue(
+                            pItem.child(iep, 1))
                         if paraname == 'center':
                             if paravalue.startswith('['):
                                 paravalue = re.findall(r'\[(.*)\]',
@@ -860,8 +886,8 @@ if __name__ == '__main__':
                                     getargspec(methodObj)[3]):
                                 paraname = str(
                                     mItem.child(iep, 0).text())
-                                paravalue = str(
-                                    mItem.child(iep, 1).text())
+                                paravalue = self.getParamItemValue(
+                                    mItem.child(iep, 1))
                                 if paravalue != str(arg_def):
                                     ierun += '\n{2}{0}={1},'.format(
                                         paraname, paravalue, myTab*2)
@@ -870,7 +896,8 @@ if __name__ == '__main__':
                             paraOutput = ""
                             paraOutBeams = []
                             for iep in range(mItem.rowCount()):
-                                paravalue = mItem.child(iep, 1).text()
+                                paravalue = self.getParamItemValue(
+                                    mItem.child(iep, 1))
                                 paraOutBeams.append(str(paravalue))
                                 outBeams.append(str(paravalue))
                                 paraOutput += str(paravalue)+", "

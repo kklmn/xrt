@@ -421,6 +421,9 @@ class FigureErrorImported(FigureErrorBase):
         self.nx, self.ny = len(self.x1d), len(self.y1d)
         self.x2d, self.y2d = np.meshgrid(self.x1d, self.y1d)
         self.z2d = np.zeros((self.ny, self.nx))
+        self.local_z_spline = interpolate.RectBivariateSpline(
+            self.y1d, self.x1d, self.z2d,
+            kx=self.splineOrder, ky=self.splineOrder)
         self.get_angles()
 
     def get_grids(self):

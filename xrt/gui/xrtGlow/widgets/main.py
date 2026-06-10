@@ -408,20 +408,11 @@ class xrtGlow(qt.QWidget):
             for argName, argValue in oeProps.items():
                 if hasattr(oeObj, f'_{argName}Init'):
                     oeInitProps[argName] = getattr(oeObj, f'_{argName}Init')
-                if any(argName.lower().startswith(v) for v in
-                        ['mater', 'tlay', 'blay', 'coat', 'substrate']) and\
-                        raycing.is_valid_uuid(argValue):
-                    argMat = self.customGlWidget.beamline.materialsDict.get(
-                            argValue)
-                    if argMat is not None:
-                        oeProps[argName] = argMat.name
-                if any(argName.lower().startswith(v) for v in
-                        ['figureer', 'basefe']) and\
-                        raycing.is_valid_uuid(argValue):
-                    argFE = self.customGlWidget.beamline.fesDict.get(
-                            argValue)
-                    if argFE is not None:
-                        oeProps[argName] = argFE.name
+                refKind = raycing.ref_kind_for_arg(argName)
+                if refKind is not None:
+                    oeProps[argName] = raycing.normalize_ref(
+                        argValue, self.customGlWidget.beamline, refKind,
+                        target='display')
 
             catDict = {'Position': raycing.orientationArgSet}
             if oeType == 0:  # source

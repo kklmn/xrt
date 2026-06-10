@@ -51,7 +51,23 @@ class TXMMaterial(Material):
         'kind', 'elements', 'quantities', 'rho', 't', 'table', 'efficiency',
         'efficiencyFile', 'refractiveIndex')
 
-    def __init__(self, fileName='', materialsIndex=None, name='', **kwargs):
+    @staticmethod
+    def get_argument_editor_hint(argName):
+        if str(argName).lower() == 'materialsindex':
+            return {
+                'editor': 'dict',
+                'keyType': 'int',
+                'keyHeader': 'Index',
+                'valueHeader': 'Material',
+                'valueHint': {
+                    'editor': 'reference',
+                    'refKind': 'material',
+                    },
+                'default': {},
+                }
+        return None
+
+    def __init__(self, fileName=None, materialsIndex=None, name='', **kwargs):
         r"""
         *fileName*: str
             Path to the indexed-volume HDF5 file.
@@ -79,14 +95,14 @@ class TXMMaterial(Material):
         Material.__init__(
             self, elements=(), quantities=(), kind='plate', rho=0, t=None,
             name=name, refractiveIndex=1., **kwargs)
-        self._fileName = ''
+        self._fileName = None
         self._materialsIndex = {}
         self._materialsIndexError = None
         self._activeMaterialsIndex = {}
         self.isLoaded = False
         self.loadError = None
-        self.fileName = fileName
         self.materialsIndex = materialsIndex
+        self.fileName = fileName
 
     @property
     def kind(self):
@@ -104,7 +120,7 @@ class TXMMaterial(Material):
 
     @fileName.setter
     def fileName(self, fileName):
-        self._fileName = fileName or ''
+        self._fileName = fileName or None
         if hasattr(self, '_materialsIndex'):
             self.reload()
 
@@ -142,6 +158,13 @@ class TXMMaterial(Material):
         return raycing.normalize_ref(
             material, self.bl, 'material', target='object')
 
+    def _update_materials_index_keys(self, volume):
+        required = set(np.unique(volume['indexGrid']))
+        required.add(volume['backgroundIndex'])
+        self._materialsIndex = {
+            int(index): self._materialsIndex.get(int(index))
+            for index in sorted(required)}
+
     def reload(self, strict=False):
         """
         Reload and validate the configured indexed volume.
@@ -153,12 +176,12 @@ class TXMMaterial(Material):
         *strict*: bool
             If True, raise an exception for missing or invalid configuration.
         """
-        if not self.fileName or not self.materialsIndex:
+        if not self.fileName:
             self.isLoaded = False
             self.loadError = None
             if strict:
                 raise ValueError(
-                    'TXMMaterial requires fileName and materialsIndex')
+                    'TXMMaterial requires fileName')
             return False
         if self._materialsIndexError is not None:
             self.loadError = self._materialsIndexError
@@ -168,6 +191,15 @@ class TXMMaterial(Material):
 
         try:
             volume = self._read_volume_file(self.fileName)
+            self._update_materials_index_keys(volume)
+            if any(material is None
+                   for material in self.materialsIndex.values()):
+                self.isLoaded = False
+                self.loadError = None
+                if strict:
+                    raise ValueError(
+                        'TXMMaterial requires all materialsIndex entries')
+                return False
             self._validate_materials_index(
                 volume['indexGrid'], volume['backgroundIndex'],
                 self.materialsIndex)

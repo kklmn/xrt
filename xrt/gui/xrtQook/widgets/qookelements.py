@@ -151,20 +151,12 @@ class XrtQookElements(XrtQookBase):
             if arg == 'uuid':
                 elementItem.setData(argVal, qt.Qt.UserRole)
                 continue
-            if arg in ['material', 'material2', 'tlayer', 'blayer', 'coating',
-                       'substrate']:
-                for iMat in range(self.rootMatItem.rowCount()):
-                    matItem = self.rootMatItem.child(iMat, 0)
-                    if str(matItem.data(qt.Qt.UserRole)) == str(argVal):
-                        argVal = str(matItem.text())
-                        break
-            elif arg in ['figureError', 'baseFE']:
-                for iFe in range(self.rootFEItem.rowCount()):
-                    feItem = self.rootFEItem.child(iFe, 0)
-                    if str(feItem.data(qt.Qt.UserRole)) == str(argVal):
-                        argVal = str(feItem.text())
-                        break
-            self.addParam(elprops, arg, argVal)
+            refKind = raycing.ref_kind_for_arg(arg)
+            if refKind is not None:
+                argVal = raycing.normalize_ref(
+                    argVal, self.beamLine, refKind, target='display')
+            editorHint = raycing.get_argument_editor_hint(obj, arg)
+            self.addParam(elprops, arg, argVal, editorHint=editorHint)
 
         if not isRoot:
             self.showDoc(elementItem.index())
@@ -235,7 +227,8 @@ class XrtQookElements(XrtQookBase):
         else:
             self.iterateRename(
                     self.rootMatItem, oldname, "None",
-                    ['tlay', 'blay', 'coat', 'substrate'])
+                    ['tlay', 'blay', 'coat', 'substrate',
+                     'materialsIndex'])
             self.iterateRename(self.rootBLItem, oldname, "None",
                                ['material'])
             item.model().invisibleRootItem().removeRow(item.index().row())

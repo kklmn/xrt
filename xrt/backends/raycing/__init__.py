@@ -226,6 +226,8 @@ from ._flow_utils import (
     append_to_flow_decorator, set_name, vec_to_quat, multiply_quats,
     quat_vec_rotate, get_init_val, get_params, parametrize,
     normalize_ref, ref_kind_for_arg,
+    get_argument_editor_hint, parse_editor_mapping, format_editor_scalar,
+    serialize_editor_value,
     create_paramdict_oe, create_paramdict_mat, get_obj_str, get_init_kwargs,
     is_valid_uuid, run_process_from_file, build_hist, parse_energy_string,
     is_auto_align_value, get_auto_align_energy, format_energy_input,
