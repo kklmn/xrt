@@ -32,6 +32,8 @@ PYVERSION = int(sys.version[0])
 
 __fdir__ = os.path.dirname(__file__)
 _DEBUG = 20
+_ZMQ_CONNECT_TIMEOUT_MS = 5000
+_ZMQ_PING_KERNEL = '__xrt_ping__'
 
 
 def list_all_devices():
@@ -88,6 +90,7 @@ class XRT_CL(object):
         self.cl_filename = filename
         self.lastTargetOpenCL = None
         self.lastPrecisionOpenCL = None
+        self.lastOpenCLError = None
         self.autoTune = True  # TODO: to be set in set_cl
         self.targetTimePerRun = 1.
         self.set_cl(targetOpenCL, precisionOpenCL)
@@ -109,30 +112,95 @@ class XRT_CL(object):
 #        p = zlib.decompress(z)
         return pickle.loads(z, **kw)
 
+    def _disable_cl(self, reason, strict=False,
+                    errorClass=EnvironmentError):
+        zmqSocket = getattr(self, 'ZMQsocket', None)
+        if zmqSocket is not None:
+            try:
+                zmqSocket.close(0)
+            except Exception:
+                pass
+        zmqContext = getattr(self, 'ZMQcontext', None)
+        if zmqContext is not None:
+            try:
+                zmqContext.term()
+            except Exception:
+                pass
+        self.useZMQ = False
+        self.lastTargetOpenCL = None
+        self.lastPrecisionOpenCL = None
+        self.lastOpenCLError = reason
+        self.cl_queue = []
+        self.cl_ctx = []
+        self.cl_program = []
+        self.cl_mf = None
+        self.cl_precisionF = None
+        self.cl_precisionC = None
+        self.ZMQcontext = None
+        self.ZMQsocket = None
+        print(reason)
+        if strict:
+            raise errorClass(reason)
+
+    def _run_zmq_ping(self):
+        if hasattr(zmq, 'RCVTIMEO'):
+            self.ZMQsocket.setsockopt(
+                zmq.RCVTIMEO, _ZMQ_CONNECT_TIMEOUT_MS)
+        self.send_zipped_pickle(
+            self.ZMQsocket, {'kernelName': _ZMQ_PING_KERNEL,
+                             'scalarArgs': []})
+        self.recv_zipped_pickle(self.ZMQsocket)
+        if hasattr(zmq, 'RCVTIMEO'):
+            self.ZMQsocket.setsockopt(zmq.RCVTIMEO, -1)
+
     def set_cl(self, targetOpenCL=raycing.targetOpenCL,
-               precisionOpenCL=raycing.precisionOpenCL):
+               precisionOpenCL=raycing.precisionOpenCL, strict=False):
         if (targetOpenCL == self.lastTargetOpenCL) and\
                 (precisionOpenCL == self.lastPrecisionOpenCL):
             return
         self.lastTargetOpenCL = targetOpenCL
         self.lastPrecisionOpenCL = precisionOpenCL
+        self.lastOpenCLError = None
         try:
-            if ':' in targetOpenCL and isZMQ:
-                self.address, self.port = targetOpenCL.split(':')
+            if isinstance(targetOpenCL, str) and ':' in targetOpenCL:
+                if not isZMQ:
+                    self._disable_cl(
+                        "ZMQ is not available. Remote OpenCL disabled",
+                        strict)
+                    return
+                self.address, self.port = targetOpenCL.rsplit(':', 1)
                 if not self.address.startswith('tcp://'):
                     self.address = 'tcp://' + self.address
-                print(self.address, self.port)
+                self.ZMQendpoint = "{0}:{1}".format(self.address, self.port)
                 self.ZMQcontext = zmq.Context()
                 self.ZMQsocket = self.ZMQcontext.socket(zmq.REQ)
-                self.ZMQsocket.connect("{0}:{1}".format(self.address,
-                                                        self.port))
+                self.ZMQsocket.setsockopt(zmq.LINGER, 0)
+                if hasattr(zmq, 'IMMEDIATE'):
+                    self.ZMQsocket.setsockopt(zmq.IMMEDIATE, 1)
+                if hasattr(zmq, 'SNDTIMEO'):
+                    self.ZMQsocket.setsockopt(
+                        zmq.SNDTIMEO, _ZMQ_CONNECT_TIMEOUT_MS)
+                self.ZMQsocket.connect(self.ZMQendpoint)
+                self._run_zmq_ping()
                 self.useZMQ = True
-                print("connected")
+                print("Remote OpenCL endpoint is available: {0}".format(
+                    self.ZMQendpoint))
                 self.lastTargetOpenCL = targetOpenCL
             else:
                 self.useZMQ = False
-        except:
-            self.useZMQ = False
+        except zmq.error.Again:
+            self._disable_cl(
+                "Remote OpenCL endpoint {0} did not respond within {1} ms. "
+                "OpenCL disabled".format(
+                    getattr(self, 'ZMQendpoint', targetOpenCL),
+                    _ZMQ_CONNECT_TIMEOUT_MS), strict)
+            return
+        except Exception as e:
+            self._disable_cl(
+                "Remote OpenCL endpoint {0} is not usable: {1}. "
+                "OpenCL disabled".format(
+                    getattr(self, 'ZMQendpoint', targetOpenCL), e), strict)
+            return
 #        print("useZMQ:", self.useZMQ)
 
         if isOpenCL and not self.useZMQ:
@@ -140,7 +208,8 @@ class XRT_CL(object):
                 cl_platforms = cl.get_platforms()
             except:
                 targetOpenCL = None
-                raise EnvironmentError("Unknown error. OpenCL disabled")
+                self._disable_cl("Unknown error. OpenCL disabled", strict)
+                return
             if isinstance(targetOpenCL, (tuple, list)):
                 iDevice = []
                 targetOpenCL = list(targetOpenCL)
@@ -274,12 +343,16 @@ class XRT_CL(object):
                         iDevice = iDeviceCPU
                 if len(iDevice) == 0:
                     targetOpenCL = None
-                    self.lastTargetOpenCL = targetOpenCL
+                    self._disable_cl(
+                        "No suitable OpenCL devices found!", strict)
+                    return
             else:  # None
                 targetOpenCL = None
                 self.lastTargetOpenCL = targetOpenCL
         elif not self.useZMQ:
-            raise EnvironmentError("Neither pyopencl nor ZMQ are available!")
+            self._disable_cl(
+                "Neither pyopencl nor ZMQ are available!", strict)
+            return
 
         if targetOpenCL is not None:
             if _DEBUG > 10 and not self.useZMQ:
@@ -317,7 +390,8 @@ class XRT_CL(object):
                 self.cl_precisionF = np.float32
                 self.cl_precisionC = np.complex64
             else:
-                raise ValueError("Unknown precision")
+                self._disable_cl("Unknown precision", strict, ValueError)
+                return
             self.cl_queue = []
             self.cl_ctx = []
             self.cl_program = []

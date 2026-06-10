@@ -142,6 +142,11 @@ def main():
     while True:
         # message = socket.recv_pyobj()  # Python 3 only
         message = recv_zipped_pickle(socket)
+        if isinstance(message, dict) and\
+                message.get('kernelName') == mcl._ZMQ_PING_KERNEL:
+            send_zipped_pickle(socket, ("PONG",), protocol=2)
+            continue
+
         precision = 64
         reply = None
         dtstr = datetime.now().strftime("%Y-%m-%d, %H:%M:%S")
