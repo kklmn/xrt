@@ -66,6 +66,8 @@ class InstanceInspector(qt.QDialog):
         elementId = dataDict.get('uuid')
         self.elementId = elementId
         self.elementName = dataDict.get('name', elementId)
+        self.beamLine = beamLine
+        self.editorObject = self.editor_object(elementId)
         epicsTree = None
         if epicsDict:
             epicsTree = epicsDict.pv_map.get(elementId)
@@ -196,7 +198,6 @@ class InstanceInspector(qt.QDialog):
         layoutL = qt.QVBoxLayout(widgetL)
         layoutL.addWidget(self.table)
         layoutL.addWidget(self.button_box)
-        self.beamLine = beamLine
 
         if self.beamLine is None:
             layout.addWidget(widgetL)
@@ -290,6 +291,20 @@ class InstanceInspector(qt.QDialog):
         self.edited_data = {}
         self.scanItems = []
 
+    def editor_object(self, elementId):
+        if self.beamLine is None:
+            return None
+        if elementId in self.beamLine.oesDict:
+            return self.beamLine.oesDict[elementId][0]
+        if elementId in self.beamLine.materialsDict:
+            return self.beamLine.materialsDict[elementId]
+        if elementId in self.beamLine.fesDict:
+            return self.beamLine.fesDict[elementId]
+        return None
+
+    def getArgumentEditorHint(self, argName, index=None):
+        return raycing.get_argument_editor_hint(self.editorObject, argName)
+
     def add_blades_params(self, parentItem, value, epicsTree):
         blades = value if isinstance(value, dict) else\
             raycing.parametrize(value)
@@ -341,7 +356,18 @@ class InstanceInspector(qt.QDialog):
         toolTip = None
         child0 = qt.QStandardItem(str(paramName))
         child0.setFlags(self.paramFlag)
-        child1 = qt.QStandardItem(str(value))
+        editorHint = self.getArgumentEditorHint(paramName)
+        rawValue = raycing.serialize_editor_value(
+            value, editorHint, getattr(self, 'beamLine', None))
+        if isinstance(editorHint, dict) and editorHint.get('editor') == 'dict':
+            displayValue = rawValue
+        else:
+            displayValue = str(value)
+        child1 = qt.QStandardItem(displayValue)
+        child1.setData(rawValue, qt.RAW_VALUE_ROLE)
+        if editorHint is not None:
+            child0.setData(editorHint, qt.EDITOR_HINT_ROLE)
+            child1.setData(editorHint, qt.EDITOR_HINT_ROLE)
 
         if str(paramName) == 'name' or paramName.endswith('rbk') or\
                 parent is self.itemGroups.get('Diagnostic'):

@@ -39,6 +39,27 @@ safe_globals = {
 }
 
 
+def _class_from_string(objStr):
+    moduleName, className = str(objStr).rsplit('.', 1)
+    module = importlib.import_module(moduleName)
+    return getattr(module, className)
+
+
+def get_argument_editor_hint(objRef, argName):
+    if objRef is None:
+        return None
+    try:
+        if isinstance(objRef, str):
+            objRef = _class_from_string(objRef)
+        hintFunc = getattr(objRef, 'get_argument_editor_hint', None)
+        if hintFunc is None:
+            return None
+        hint = hintFunc(argName)
+    except Exception:
+        return None
+    return hint if isinstance(hint, dict) else None
+
+
 class NameAsString(ast.NodeTransformer):
     """Replace unknown names with string literals."""
     def __init__(self, allowed_names):
@@ -339,6 +360,12 @@ def get_params(objStr):  # Returns a collection of default parameters
                         for arg, argVal in zip(argnames, argdefaults):
                             if arg == 'bl':
                                 argVal = None
+                            editorHint = get_argument_editor_hint(
+                                objRef, arg)
+                            if argVal is None and isinstance(
+                                    editorHint, dict) and\
+                                    'default' in editorHint:
+                                argVal = editorHint['default']
                             if arg not in args and arg not in hpList:
                                 uArgs[arg] = argVal
                     if namef == "__init__" or namef.endswith("pop_kwargs"):
@@ -538,6 +565,57 @@ def normalize_ref(value, bl=None, refKind='material', target='uuid'):
             return obj if obj is not None else (
                 None if bl is not None else value)
         return value
+
+
+def parse_editor_mapping(value):
+    if value is None or (isinstance(value, basestring) and
+                         value in ['', 'None']):
+        return {}
+    if isinstance(value, dict):
+        return dict(value)
+    if isinstance(value, (list, tuple)):
+        return {i: item for i, item in enumerate(value)}
+    try:
+        parsed = parametrize(value)
+    except Exception:
+        parsed = value
+    if parsed is None or (isinstance(parsed, basestring) and
+                          parsed in ['', 'None']):
+        return {}
+    if isinstance(parsed, dict):
+        return dict(parsed)
+    if isinstance(parsed, (list, tuple)):
+        return {i: item for i, item in enumerate(parsed)}
+    return {}
+
+
+def format_editor_scalar(value, valueHint=None, bl=None,
+                         quote_strings=True):
+    valueHint = {} if valueHint is None else dict(valueHint)
+    if value is None:
+        return 'None'
+    if valueHint.get('editor') == 'reference':
+        refKind = valueHint.get('refKind', 'material')
+        value = normalize_ref(value, bl, refKind, target='display')
+        if value is None:
+            return 'None'
+        text = str(value)
+        if not quote_strings:
+            return text
+        return text if text.isidentifier() else repr(text)
+    return repr(value) if quote_strings else str(value)
+
+
+def serialize_editor_value(value, hint=None, bl=None):
+    if not isinstance(hint, dict) or hint.get('editor') != 'dict':
+        return str(value)
+    valueHint = dict(hint.get('valueHint') or {})
+    mapping = parse_editor_mapping(value)
+    items = []
+    for key, itemValue in mapping.items():
+        items.append('{0}: {1}'.format(
+            repr(key), format_editor_scalar(itemValue, valueHint, bl)))
+    return '{' + ', '.join(items) + '}'
 
 
 def _parametrize_reference(value, bl=None, refKind='material'):

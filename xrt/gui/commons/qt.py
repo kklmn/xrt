@@ -30,6 +30,10 @@ from qtpy.QtSql import (QSqlDatabase, QSqlQuery, QSqlTableModel,
                         QSqlQueryModel)
 
 
+RAW_VALUE_ROLE = Qt.UserRole + 1
+EDITOR_HINT_ROLE = Qt.UserRole + 2
+
+
 def _qt_attr(name, *modules):
     for module in modules:
         if hasattr(module, name):
@@ -89,6 +93,155 @@ glowSlider = mySlider
 glowTopScale = QSlider.TicksAbove
 
 
+class DictEditorDialog(QDialog):
+    def __init__(self, value=None, hint=None, bl=None, excludeRefs=None,
+                 parent=None):
+        super().__init__(parent)
+        self.hint = {} if hint is None else dict(hint)
+        self.valueHint = dict(self.hint.get('valueHint') or {})
+        self.bl = bl
+        self.excludeRefs = set(
+            str(ref) for ref in (excludeRefs or []) if ref is not None)
+        self.resultValue = None
+
+        self.setWindowTitle(self.hint.get('title', 'Edit values'))
+        self.resize(520, 360)
+
+        layout = QVBoxLayout(self)
+        self.table = QTableWidget(0, 2, self)
+        self.table.setHorizontalHeaderLabels([
+            self.hint.get('keyHeader', 'Key'),
+            self.hint.get('valueHeader', 'Value')])
+        self.table.horizontalHeader().setStretchLastSection(True)
+        self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.table.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.table.customContextMenuRequested.connect(self.show_context_menu)
+        layout.addWidget(self.table)
+
+        buttonsLayout = QHBoxLayout()
+        addButton = QPushButton('Add row', self)
+        addButton.clicked.connect(self.add_empty_row)
+        buttonsLayout.addWidget(addButton)
+        buttonsLayout.addStretch()
+        layout.addLayout(buttonsLayout)
+
+        self.buttonBox = QDialogButtonBox(
+            QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self)
+        self.buttonBox.accepted.connect(self.accept)
+        self.buttonBox.rejected.connect(self.reject)
+        layout.addWidget(self.buttonBox)
+
+        for key, itemValue in self._parse_value(value).items():
+            self.add_row(key, itemValue)
+        if self.table.rowCount() == 0:
+            self.add_empty_row()
+
+    def _parse_value(self, value):
+        from ...backends import raycing
+        return raycing.parse_editor_mapping(value)
+
+    def add_empty_row(self):
+        row = self.table.rowCount()
+        self.add_row(row, None)
+
+    def add_row(self, key, value):
+        row = self.table.rowCount()
+        self.table.insertRow(row)
+        self.table.setItem(row, 0, QTableWidgetItem(str(key)))
+        self._set_value_cell(row, value)
+
+    def _set_value_cell(self, row, value):
+        if self.valueHint.get('editor') == 'reference':
+            combo = QComboBox(self.table)
+            combo.setEditable(False)
+            combo.addItems(self._reference_items())
+            text = self._display_value(value)
+            idx = combo.findText(text)
+            if idx >= 0:
+                combo.setCurrentIndex(idx)
+            else:
+                combo.setEditText(text)
+            self.table.setCellWidget(row, 1, combo)
+        else:
+            self.table.setItem(row, 1, QTableWidgetItem(str(value)))
+
+    def _reference_items(self):
+        refKind = self.valueHint.get('refKind')
+        if refKind != 'material' or self.bl is None:
+            return ['None']
+        names = []
+        for name, uuid in sorted(getattr(
+                self.bl, 'matnamesToUUIDs', {}).items()):
+            if str(name) in self.excludeRefs or str(uuid) in self.excludeRefs:
+                continue
+            names.append(name)
+        return ['None'] + names
+
+    def _display_value(self, value):
+        from ...backends import raycing
+        return raycing.format_editor_scalar(
+            value, self.valueHint, self.bl, quote_strings=False)
+
+    def _parse_key(self, text):
+        keyType = str(self.hint.get('keyType', 'str')).lower()
+        if keyType == 'int':
+            return int(str(text).strip())
+        if keyType == 'float':
+            return float(str(text).strip())
+        return str(text)
+
+    def _cell_value(self, row):
+        widget = self.table.cellWidget(row, 1)
+        if isinstance(widget, QComboBox):
+            text = str(widget.currentText()).strip()
+        else:
+            item = self.table.item(row, 1)
+            text = '' if item is None else str(item.text()).strip()
+        if text in ['', 'None']:
+            return None
+        return text
+
+    def value(self):
+        out = {}
+        seen = set()
+        for row in range(self.table.rowCount()):
+            keyItem = self.table.item(row, 0)
+            if keyItem is None or not str(keyItem.text()).strip():
+                continue
+            key = self._parse_key(keyItem.text())
+            if key in seen:
+                raise ValueError('Duplicate key {0!r}'.format(key))
+            seen.add(key)
+            out[key] = self._cell_value(row)
+        return out
+
+    def serialized_value(self):
+        if self.resultValue is None:
+            self.resultValue = self.value()
+        from ...backends import raycing
+        return raycing.serialize_editor_value(
+            self.resultValue, self.hint, self.bl)
+
+    def show_context_menu(self, position):
+        index = self.table.indexAt(position)
+        if not index.isValid():
+            return
+        menu = QMenu(self.table)
+        removeAction = QAction('Remove row', self)
+        menu.addAction(removeAction)
+        removeAction.triggered.connect(
+            lambda: self.table.removeRow(index.row()))
+        menu.exec_(self.table.viewport().mapToGlobal(position))
+
+    def accept(self):
+        try:
+            self.resultValue = self.value()
+        except Exception as error:
+            QMessageBox.warning(self, 'Invalid values', str(error))
+            return
+        super().accept()
+
+
 class DynamicArgumentDelegate(QStyledItemDelegate):
     def __init__(self, nameToModel=None, parent=None, mainWidget=None,
                  bl=None):
@@ -96,6 +249,75 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
         self.nameToModel = nameToModel
         self.mainWidget = mainWidget
         self.bl = bl
+
+    def argumentEditorHint(self, index, argName):
+        model = index.model()
+        if hasattr(model, 'itemFromIndex'):
+            valueItem = model.itemFromIndex(index)
+            if valueItem is not None:
+                hint = valueItem.data(EDITOR_HINT_ROLE)
+                if isinstance(hint, dict):
+                    return hint
+            keyItem = model.itemFromIndex(model.index(
+                index.row(), 0, index.parent()))
+            if keyItem is not None:
+                hint = keyItem.data(EDITOR_HINT_ROLE)
+                if isinstance(hint, dict):
+                    return hint
+        if self.mainWidget is not None and\
+                hasattr(self.mainWidget, 'getArgumentEditorHint'):
+            hint = self.mainWidget.getArgumentEditorHint(argName, index)
+            if isinstance(hint, dict):
+                return hint
+        return None
+
+    def _indexRawValue(self, index):
+        model = index.model()
+        if hasattr(model, 'itemFromIndex'):
+            item = model.itemFromIndex(index)
+            if item is not None:
+                rawValue = item.data(RAW_VALUE_ROLE)
+                if rawValue is not None:
+                    return rawValue
+        return index.data()
+
+    def _beamLine(self):
+        if self.bl is not None:
+            return self.bl
+        if self.mainWidget is not None:
+            bl = getattr(self.mainWidget, 'beamLine', None)
+            if bl is not None:
+                return bl
+            customGlWidget = getattr(self.mainWidget, 'customGlWidget', None)
+            bl = getattr(customGlWidget, 'beamline', None)
+            if bl is not None:
+                return bl
+        return None
+
+    def _excludedReferenceValues(self, index, hint):
+        valueHint = (hint or {}).get('valueHint') or {}
+        if valueHint.get('refKind') != 'material':
+            return set()
+
+        editorObject = getattr(self.mainWidget, 'editorObject', None)
+        uuid = getattr(editorObject, 'uuid', None)
+        if uuid is not None:
+            return {uuid}
+
+        bl = self._beamLine()
+        if bl is None or not hasattr(index.model(), 'itemFromIndex'):
+            return set()
+
+        item = index.model().itemFromIndex(index)
+        while item is not None and item.parent() is not None:
+            item = item.parent()
+        if item is None:
+            return set()
+
+        uuid = item.data(Qt.UserRole)
+        if str(uuid) in getattr(bl, 'materialsDict', {}):
+            return {uuid}
+        return set()
 
     def createEditor(self, parent, option, index):
         # TODO: split into oe/mat/plot
@@ -117,6 +339,13 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
         # beamModel - only in propagation and plots
         # fluxLabels - only in plots
         # units - only in plots
+
+        editorHint = self.argumentEditorHint(index, argName)
+        if editorHint is not None and editorHint.get('editor') == 'dict':
+            btn = QPushButton('Edit...', parent)
+            btn.clicked.connect(partial(self.openDictDialog, index,
+                                        editorHint))
+            return btn
 
         combo = QComboBox(parent)
         combo.activated.connect(lambda: self.commitData.emit(combo))
@@ -172,8 +401,6 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
 #            combo.setEditable(True)
 #            combo.setInsertPolicy(QComboBox.InsertAtCurrent)
 #            return combo
-        elif argNameL == 'materialsindex':
-            return QLineEdit(parent)
         elif any(argNameL.startswith(v) for v in
                  ['mater', 'tlay', 'blay', 'coat', 'substrate']):  # mat and bl
             currentElement = None
@@ -421,6 +648,8 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
                 editor.setEditText(value)
         elif isinstance(editor, QLineEdit):
             editor.setText(value)
+        elif isinstance(editor, QPushButton):
+            editor.setText('Edit...')
 #        elif isinstance(editor, QWidget):  # TODO: need better condition
         elif editor.property('fieldName') == 'kind':
             for cb in editor.cb:
@@ -434,6 +663,8 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
             model.setData(index, editor.currentText())
         elif isinstance(editor, QLineEdit):
             model.setData(index, editor.text())
+        elif isinstance(editor, QPushButton):
+            pass
         elif editor.property('fieldName') == 'kind':
             text = "["
             for cb in editor.cb:
@@ -473,6 +704,19 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
             openFileName = openDialog.selectedFiles()[0]
             if openFileName:
                 index.model().setData(index, openFileName)
+
+    def openDictDialog(self, index, hint):
+        dialog = DictEditorDialog(
+            self._indexRawValue(index), hint, bl=self._beamLine(),
+            excludeRefs=self._excludedReferenceValues(index, hint),
+            parent=self.parent())
+        if dialog.exec_():
+            valueText = dialog.serialized_value()
+            if hasattr(index.model(), 'itemFromIndex'):
+                item = index.model().itemFromIndex(index)
+                if item is not None:
+                    item.setData(valueText, RAW_VALUE_ROLE)
+            index.model().setData(index, valueText)
 
 
 class MultiColumnFilterProxy(QSortFilterProxyModel):
