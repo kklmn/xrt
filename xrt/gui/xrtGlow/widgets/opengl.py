@@ -1281,6 +1281,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
     def update_beam_footprint(self, beam=None, beamTag=None):
         if beam is None:
             beam = self.beamline.beamsDictU[beamTag[0]][beamTag[1]]
+            if beam is None:
+                return
 
         if self.beamBufferDict.get(beamTag) is None:
             self.init_beam_footprint(beam, beamTag)

@@ -1314,10 +1314,13 @@ class BeamLine(object):
 
         if elid in self.flowU:
             del self.flowU[elid]
-            for eluuid, props in list(self.flowU.items()):
-                for methName, methArgs in list(props.items()):
-                    if methArgs.get('beam') == elid:
-                        methArgs['beam'] = None
+
+        for eluuid, props in list(self.flowU.items()):
+            for methName, methArgs in list(props.items()):
+                if (methArgs.get('beam') == elid or
+                        methArgs.get('accuBeam') == elid):
+                    del self.flowU[eluuid]
+                    break
 
         if elid in self.beamsDictU:
             del self.beamsDictU[elid]

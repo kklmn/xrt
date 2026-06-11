@@ -208,11 +208,21 @@ class XrtQookElements(XrtQookBase):
         oldname = str(item.text())
 
         if item.parent() is not None:
-            item.parent().removeRow(item.index().row())
             beams = self.beamModel.findItems(objuuid, column=2)
             bRows = []
+            bNames = []
             for bItem in beams:
-                bRows.append(bItem.row())
+                row = bItem.row()
+                bRows.append(row)
+                bNameItem = self.beamModel.item(row, 0)
+                if bNameItem is not None:
+                    bNames.append(str(bNameItem.text()))
+
+            item.parent().removeRow(item.index().row())
+
+            for bName in bNames:
+                self.iterateRename(self.rootBLItem, bName, "None", ['beam'])
+                self.iterateRename(self.rootPlotItem, bName, "None", ['beam'])
 
             for row in sorted(bRows, reverse=True):
                 self.beamModel.removeRow(row)
