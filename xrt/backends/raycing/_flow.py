@@ -383,11 +383,15 @@ class MessageHandler:
 
     def handle_auto_update(self, message):
         # print("Starting processing loop.")
-        kwargs = message.get('kwargs')
-        if kwargs is not None:
-            auto_update = kwargs.get('value')
+        kwargs = message.get('kwargs') or {}
+        auto_update = kwargs.get('value')
+        clear_beams = kwargs.get('clear_beams')
 
         if bool(auto_update):
+            if clear_beams and self.bl is not None:
+                for beamDict in self.bl.beamsDictU.values():
+                    for beamKey in beamDict:
+                        beamDict[beamKey] = None
             self.needUpdate = True
             self.startEl = None
 

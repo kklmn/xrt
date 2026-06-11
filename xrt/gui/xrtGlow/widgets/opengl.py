@@ -6,6 +6,7 @@ Created on Tue Jan 27 13:21:08 2026
 
 import os
 import copy
+import queue
 import numpy as np
 from functools import partial
 from multiprocessing import Process, Queue
@@ -464,13 +465,18 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         "object_type": "beamline"
                         })
 
-    def set_auto_update(self, value):
+    def set_auto_update(self, value, clear_beams=False):
         self.autoUpdate = bool(value)
+        if clear_beams and self.autoUpdate:
+            self.clear_beams()
         if hasattr(self, 'input_queue'):
+            kwargs = {"value": int(self.autoUpdate)}
+            if clear_beams and self.autoUpdate:
+                kwargs["clear_beams"] = 1
             self.input_queue.put({
                         "command": "auto_update",
                         "object_type": "beamline",
-                        "kwargs": {"value": int(self.autoUpdate)}
+                        "kwargs": kwargs
                         })
 
     def update_epics_record(self, oeid, kwargs):
@@ -1242,6 +1248,22 @@ class xrtGlWidget(qt.QOpenGLWidget):
             if beamTag[0] == oeid:
                 self.delete_beam_footprint(beamTag)
                 del self.beamBufferDict[beamTag]
+
+    def clear_beams(self):
+        progress_queue = getattr(self, 'output_queue', None)
+        if progress_queue is not None:
+            while True:
+                try:
+                    progress_queue.get_nowait()
+                except (queue.Empty, EOFError, OSError):
+                    break
+        self.needBeamUpdate.clear()
+        for beamTag in list(self.beamBufferDict):
+            self.delete_beam_footprint(beamTag)
+            del self.beamBufferDict[beamTag]
+        for beamDict in self.beamline.beamsDictU.values():
+            for beamKey in beamDict:
+                beamDict[beamKey] = None
 
 #        mesh = self.meshDict.get(oeid)
 #        if mesh is not None:

@@ -2985,11 +2985,17 @@ class XrtQookBase(qt.QMainWindow):
         self.isGlowAutoUpdate = status
         self.blRunGlow()
         if self.blViewer is not None:
-            if hasattr(self.blViewer.customGlWidget, 'input_queue'):
-                self.blViewer.customGlWidget.input_queue.put({
+            glWidget = self.blViewer.customGlWidget
+            if hasattr(glWidget, 'set_auto_update'):
+                glWidget.set_auto_update(status, clear_beams=bool(status))
+            elif hasattr(glWidget, 'input_queue'):
+                kwargs = {"value": int(status)}
+                if status:
+                    kwargs["clear_beams"] = 1
+                glWidget.input_queue.put({
                             "command": "auto_update",
                             "object_type": "beamline",
-                            "kwargs": {"value": int(status)}
+                            "kwargs": kwargs
                             })
 
     def blRunGlow(self, kwargs={}):
