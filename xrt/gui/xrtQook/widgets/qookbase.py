@@ -1310,7 +1310,14 @@ class XrtQookBase(qt.QMainWindow):
     def showObjHelp(self, obj):
         self.curObj = obj
         argSpecStr = '('
-        for arg, argVal in self.getParams(obj):
+        try:
+            objParams = list(self.getParams(obj))
+        except (OSError, IOError, TypeError, UnicodeError) as e:
+            if _DEBUG_:
+                print("Cannot inspect parameters for {0}: {1}".format(
+                    obj, e))
+            objParams = []
+        for arg, argVal in objParams:
             showVal = self.quotize(argVal)
             try:
                 showVal = showVal.strip('r') if showVal.startswith('r"') else\
@@ -1338,7 +1345,13 @@ class XrtQookBase(qt.QMainWindow):
 
         argDocStr = u'{0}\n\n'.format(inspect.cleandoc(headerDoc)) if\
             objP.__doc__ is not None else "\n\n"
-        dNames, dVals = self.getArgDescr(obj)
+        try:
+            dNames, dVals = self.getArgDescr(obj)
+        except (OSError, IOError, TypeError, UnicodeError) as e:
+            if _DEBUG_:
+                print("Cannot inspect documentation for {0}: {1}".format(
+                    obj, e))
+            dNames, dVals = [], []
         if len(dNames) > 0:
             argDocStr += u'.. raw:: html\n\n   <div class="title"> '\
                 u'<h3> Properties: </h3> </div>\n'
@@ -1750,9 +1763,17 @@ class XrtQookBase(qt.QMainWindow):
 #                                    args.append(arg)
 #                                    argVals.append(argVal)
                         if namef == "__init__" or namef.endswith("pop_kwargs"):
+                            try:
+                                objSource = inspect.getsource(objf)
+                            except (OSError, IOError, TypeError,
+                                    UnicodeError) as e:
+                                if _DEBUG_:
+                                    print(
+                                        "Cannot read source for {0}: {1}".
+                                        format(objf, e))
+                                objSource = ''
                             kwa = re.findall(r"(?<=kwargs\.pop).*?\)",
-                                             inspect.getsource(objf),
-                                             re.S)
+                                             objSource, re.S)
                             if len(kwa) > 0:
                                 kwa = [re.split(
                                     ",", kwline.strip("\n ()"),
