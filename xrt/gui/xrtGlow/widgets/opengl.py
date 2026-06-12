@@ -1428,6 +1428,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         shader.setUniformValue(
                 "colorSelMinMax", qt.QVector2D(selColorMin, selColorMax))
         shader.setUniformValue("useColorSelection", useColorSelection)
+        shader.setUniformValue("cutoffI", float(self.cutoffI))
         shader.setUniformValue("gridMask", qt.QVector4D(1, 1, 1, 1))
         shader.setUniformValue("gridProjection", qt.QVector4D(0, 0, 0, 0))
 

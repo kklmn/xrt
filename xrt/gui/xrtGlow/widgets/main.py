@@ -3546,7 +3546,6 @@ class xrtGlow(qt.QWidget):
             value = float(re.sub(',', '.', str(editor.text())))
             extents = list(self.paletteWidget.span.extents)
             self.customGlWidget.cutoffI = np.float32(value)
-            self.customGlWidget.updateCutOffI(np.float32(value))
             newExtents = (extents[0], extents[1],
                           self.customGlWidget.cutoffI, extents[3])
             self.paletteWidget.span.extents = newExtents

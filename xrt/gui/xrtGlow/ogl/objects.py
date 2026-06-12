@@ -48,6 +48,7 @@ class Beam3D():
 
     uniform float opacity;
     uniform float iMax;
+    uniform float cutoffI;
     uniform vec2 colorMinMax;
     uniform vec2 colorSelMinMax;
     uniform int useColorSelection;
@@ -65,6 +66,7 @@ class Beam3D():
     out float vs_out_selected;
 
     float hue;
+    float normalized_intensity;
     float intensity_v;
     vec4 hrgb;
 
@@ -77,13 +79,17 @@ class Beam3D():
                          gridProjection);
 
      hue = (colorAxis - colorMinMax.x) / (colorMinMax.y - colorMinMax.x);
-     intensity_v = opacity*intensity/iMax;
+     normalized_intensity = iMax > 0.0 ? intensity/iMax : 0.0;
+     intensity_v = opacity*normalized_intensity;
      hrgb = vec4(texture(hsvTexture, hue*0.85).rgb, intensity_v);
 
      vs_out_color = hrgb;
      vs_out_selected = 1.0;
      if (useColorSelection != 0 &&
          (colorAxis < colorSelMinMax.x || colorAxis > colorSelMinMax.y)) {
+         vs_out_selected = 0.0;
+     }
+     if (normalized_intensity <= cutoffI) {
          vs_out_selected = 0.0;
      }
 
@@ -219,6 +225,7 @@ class Beam3D():
 
     uniform float opacity;
     uniform float iMax;
+    uniform float cutoffI;
     uniform int isLost;
     uniform vec2 colorMinMax;
     uniform vec2 colorSelMinMax;
@@ -236,6 +243,7 @@ class Beam3D():
 
     float hue;
     vec4 hrgb;
+    float normalized_intensity;
     float intensity_v;
 
     void main()
@@ -246,13 +254,17 @@ class Beam3D():
      gl_PointSize = pointSize;
 
      hue = (colorAxis - colorMinMax.x) / (colorMinMax.y - colorMinMax.x);
-     intensity_v = opacity*intensity/iMax;
+     normalized_intensity = iMax > 0.0 ? intensity/iMax : 0.0;
+     intensity_v = opacity*normalized_intensity;
      hrgb = vec4(texture(hsvTexture, hue*0.85).rgb, intensity_v);
 
      vs_out_color = hrgb;
      vs_out_selected = 1.0;
      if (useColorSelection != 0 &&
          (colorAxis < colorSelMinMax.x || colorAxis > colorSelMinMax.y)) {
+         vs_out_selected = 0.0;
+     }
+     if (normalized_intensity <= cutoffI) {
          vs_out_selected = 0.0;
      }
 
