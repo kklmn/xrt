@@ -1235,14 +1235,17 @@ class Curve1dWidget(qt.QWidget):
         if self.beamLine is not None and self.elementId is not None:
             mat = self.beamLine.materialsDict.get(self.elementId)
             matName = mat.name if mat is not None else ''
+            matKind = mat.kind if mat is not None else None
+            if matKind == 'auto':
+                matKind = 'mirror'
             plot_name = f"{matName}"
             # if hasattr(mat, 'efficiency') and mat.efficiency is not None:
             #     plot_name = f"{matName} efficiency"
-            if mat.kind in ('plate', 'lens'):
+            if matKind in ('plate', 'lens'):
                 plot_name = f"{matName} abs coeff"
                 self.axes.set_ylabel('Absorption coefficient (cm⁻¹)')
                 self.kindParams = 'plate'
-            elif mat.kind in ('mirror', 'multilayer'):
+            elif matKind in ('mirror', 'multilayer'):
                 if hasattr(mat, 'geom'):
                     if mat.geom.endswith('transmitted'):
                         plot_name = f"{matName} transmittivity"
@@ -1250,7 +1253,7 @@ class Curve1dWidget(qt.QWidget):
                         plot_name = f"{matName} reflectivity"
                 self.axes.set_ylabel(plot_name)
                 self.kindParams = 'mirror'
-            elif 'crystal' in mat.kind:
+            elif matKind is not None and 'crystal' in matKind:
                 if hasattr(mat, 'geom'):
                     if hasattr(mat, 'geom') and mat.geom.endswith('mitted'):
                         plot_name = f"{matName} transmittivity"
@@ -1591,6 +1594,7 @@ class Curve1dWidget(qt.QWidget):
         if self.kindParams in ('mirror', 'crystal'):
             theta0 = self.get_theta0(plot_item)
         mat = self.beamLine.materialsDict.get(self.elementId)
+        originalMatKind = getattr(mat, 'kind', None)
         try:
             if isinstance(mat, rmats.Crystal):
                 geometry = getattr(mat, 'geom', None)
@@ -1617,6 +1621,9 @@ class Curve1dWidget(qt.QWidget):
             print(e)
             ampS = np.zeros_like(xenergy)
             ampP = ampS
+        finally:
+            if originalMatKind == 'auto' and mat is not None:
+                mat.kind = originalMatKind
         self.on_calculation_result((xenergy, ampS, ampP, 0))
 
     def on_calculation_result(self, res_tuple):
