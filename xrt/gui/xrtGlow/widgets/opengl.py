@@ -320,6 +320,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.makeCurrent()
         if self.epicsPrefix is not None and self.renderingMode == 'dynamic':
             try:
+                os.environ["EPICS_CAS_INTF_ADDR_LIST"] = "127.0.0.1"
+                os.environ["EPICS_CAS_BEACON_ADDR_LIST"] = "127.0.0.1"
+                os.environ["EPICS_CAS_AUTO_BEACON_ADDR_LIST"] = "NO"
                 os.environ["EPICS_CA_ADDR_LIST"] = "127.0.0.1"
                 os.environ["EPICS_CA_AUTO_ADDR_LIST"] = "NO"
                 self.epicsInterface = EpicsDevice(
