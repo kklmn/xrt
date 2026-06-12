@@ -46,6 +46,8 @@ class InstanceInspector(qt.QDialog):
             self.windowTitleStr += ' - Static Mode - View Only'
         self.setWindowTitle(self.windowTitleStr)
 
+        self.setWindowFlags(qt.Qt.WindowType.Window)
+
         self.model = qt.QStandardItemModel()
         self.modelRoot = self.model.invisibleRootItem()
         self.original_data = raycing.OrderedDict()
