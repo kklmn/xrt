@@ -2566,22 +2566,82 @@ class xrtGlow(qt.QWidget):
         self.customGlWidget.labelCoordPrec = prec
         self.customGlWidget.glDraw()
 
-    def updateColorAxis(self, icSel):
-        if icSel == 0:
-            txt = re.sub(',', '.', str(self.colorControls[1].text()))
-            if txt == "{0:.3f}".format(self.customGlWidget.colorMin):
-                return
-            newColorMin = float(txt)
-            self.customGlWidget.colorMin = newColorMin
-            self.colorControls[2].validator().setBottom(newColorMin)
+    def _syncColorLimitControls(self):
+        colorMin = self.customGlWidget.colorMin
+        colorMax = self.customGlWidget.colorMax
+        if colorMin >= colorMax:
+            return
+
+        selColorMin = self.customGlWidget.selColorMin
+        selColorMax = self.customGlWidget.selColorMax
+        try:
+            finiteSelection = all(np.isfinite([selColorMin, selColorMax]))
+        except TypeError:
+            finiteSelection = False
+        if not finiteSelection:
+            selColorMin, selColorMax = colorMin, colorMax
         else:
-            txt = re.sub(',', '.', str(self.colorControls[2].text()))
-            if txt == "{0:.3f}".format(self.customGlWidget.colorMax):
-                return
-            newColorMax = float(txt)
-            self.customGlWidget.colorMax = newColorMax
-            self.colorControls[1].validator().setTop(newColorMax)
-        self.changeColorAxis(None, newLimits=True)
+            selColorMin = np.clip(selColorMin, colorMin, colorMax)
+            selColorMax = np.clip(selColorMax, colorMin, colorMax)
+            if selColorMin > selColorMax:
+                selColorMin, selColorMax = colorMin, colorMax
+        self.customGlWidget.selColorMin = selColorMin
+        self.customGlWidget.selColorMax = selColorMax
+
+        self.im.set_extent((colorMin, colorMax, 0, 1))
+        self.colorControls[1].setText('{0:.6g}'.format(colorMin))
+        self.colorControls[2].setText('{0:.6g}'.format(colorMax))
+        self.colorControls[3].setText('{0:.6g}'.format(selColorMin))
+        self.colorControls[4].setText('{0:.6g}'.format(selColorMax))
+        self.colorControls[1].validator().setRange(-1.0e20, colorMax, 5)
+        self.colorControls[2].validator().setRange(colorMin, 1.0e20, 5)
+        self.colorControls[3].validator().setRange(
+            colorMin, selColorMax, 5)
+        self.colorControls[4].validator().setRange(
+            selColorMin, colorMax, 5)
+
+        slider = self.colorControls[5]
+        center = 0.5 * (selColorMin + selColorMax)
+        halfWidth = 0.5 * (selColorMax - selColorMin)
+        newMin = colorMin + halfWidth
+        newMax = colorMax - halfWidth
+        if newMin >= newMax:
+            newMin, newMax = colorMin, colorMax
+        newRange = (newMax - newMin) * 0.01
+        slider.setRange(newMin, newMax, newRange)
+        slider.setValue(center)
+        try:
+            self.paletteWidget.span.extents = (
+                selColorMin, selColorMax, 0, 1)
+        except Exception:
+            pass
+        self.paletteWidget.span.active_handle = None
+        self.mplFig.canvas.draw()
+
+    def updateColorAxis(self, icSel):
+        print(self.colorControls[1].text(), self.colorControls[2].text())
+        try:
+            newColorMin = float(re.sub(',', '.', str(
+                self.colorControls[1].text())))
+            newColorMax = float(re.sub(',', '.', str(
+                self.colorControls[2].text())))
+        except ValueError:
+            self._syncColorLimitControls()
+            return
+        if newColorMin >= newColorMax or not all(
+                np.isfinite([newColorMin, newColorMax])):
+            self._syncColorLimitControls()
+            return
+        if newColorMin == self.customGlWidget.colorMin and\
+                newColorMax == self.customGlWidget.colorMax:
+            return
+        self.customGlWidget.colorMin = newColorMin
+        self.customGlWidget.colorMax = newColorMax
+        print(self.customGlWidget.colorMin, self.customGlWidget.colorMax)
+        self.customGlWidget.newColorAxis = False
+        self._syncColorLimitControls()
+        if self.customGlWidget.globalColors:
+            self.customGlWidget.glDraw()
 
     def changeColorAxis(self, selAxis, newLimits=False):
         if selAxis is None:
@@ -2610,6 +2670,10 @@ class xrtGlow(qt.QWidget):
             '{0:.3f}'.format(self.customGlWidget.colorMin))
         self.colorControls[2].setText(
             '{0:.3f}'.format(self.customGlWidget.colorMax))
+        self.colorControls[1].validator().setRange(
+            -1.0e20, self.customGlWidget.colorMax, 5)
+        self.colorControls[2].validator().setRange(
+            self.customGlWidget.colorMin, 1.0e20, 5)
         self.colorControls[3].setText(
             '{0:.3f}'.format(self.customGlWidget.colorMin))
         self.colorControls[4].setText(
