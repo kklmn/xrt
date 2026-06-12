@@ -49,6 +49,8 @@ class Beam3D():
     uniform float opacity;
     uniform float iMax;
     uniform vec2 colorMinMax;
+    uniform vec2 colorSelMinMax;
+    uniform int useColorSelection;
 
     uniform mat4 mPV;
     uniform mat4 modelStart;
@@ -60,6 +62,7 @@ class Beam3D():
     out vec4 vs_out_start;
     out vec4 vs_out_end;
     out vec4 vs_out_color;
+    out float vs_out_selected;
 
     float hue;
     float intensity_v;
@@ -78,6 +81,11 @@ class Beam3D():
      hrgb = vec4(texture(hsvTexture, hue*0.85).rgb, intensity_v);
 
      vs_out_color = hrgb;
+     vs_out_selected = 1.0;
+     if (useColorSelection != 0 &&
+         (colorAxis < colorSelMinMax.x || colorAxis > colorSelMinMax.y)) {
+         vs_out_selected = 0.0;
+     }
 
     }
     '''
@@ -91,12 +99,17 @@ class Beam3D():
     in vec4 vs_out_start[];
     in vec4 vs_out_end[];
     in vec4 vs_out_color[];
+    in float vs_out_selected[];
 
     uniform float pointSize;
 
     out vec4 gs_out_color;
 
     void main() {
+
+        if (vs_out_selected[0] < 0.5) {
+            return;
+        }
 
         gl_Position = vs_out_start[0];
         gl_PointSize = pointSize;
@@ -208,6 +221,8 @@ class Beam3D():
     uniform float iMax;
     uniform int isLost;
     uniform vec2 colorMinMax;
+    uniform vec2 colorSelMinMax;
+    uniform int useColorSelection;
 
     uniform mat4 mPV;
     uniform mat4 modelStart;
@@ -217,6 +232,7 @@ class Beam3D():
     uniform vec4 gridProjection;
 
     out vec4 vs_out_color;
+    out float vs_out_selected;
 
     float hue;
     vec4 hrgb;
@@ -234,6 +250,11 @@ class Beam3D():
      hrgb = vec4(texture(hsvTexture, hue*0.85).rgb, intensity_v);
 
      vs_out_color = hrgb;
+     vs_out_selected = 1.0;
+     if (useColorSelection != 0 &&
+         (colorAxis < colorSelMinMax.x || colorAxis > colorSelMinMax.y)) {
+         vs_out_selected = 0.0;
+     }
 
     }
     '''
@@ -242,11 +263,16 @@ class Beam3D():
     #version 410 core
 
     in vec4 vs_out_color;
+    in float vs_out_selected;
 
     out vec4 fragColor;
 
     void main()
     {
+
+      if (vs_out_selected < 0.5) {
+        discard;
+      }
 
       fragColor = vs_out_color;
 

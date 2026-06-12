@@ -1402,14 +1402,32 @@ class xrtGlWidget(qt.QOpenGLWidget):
         shader.setUniformValue("mPV", mPV)
 
         if self.globalColors:
+            colorMin, colorMax = self.colorMin, self.colorMax
             shader.setUniformValue(
-                        "colorMinMax", qt.QVector2D(self.colorMin,
-                                                    self.colorMax))
+                        "colorMinMax", qt.QVector2D(colorMin, colorMax))
         else:
+            colorMin = beamBuffers.get('colorMin', 0)
+            colorMax = beamBuffers.get('colorMax', 0)
             shader.setUniformValue(
                         "colorMinMax",
-                        qt.QVector2D(beamBuffers.get('colorMin', 0),
-                                     beamBuffers.get('colorMax', 0)))
+                        qt.QVector2D(colorMin, colorMax))
+        selColorMin = getattr(self, 'selColorMin', colorMin)
+        selColorMax = getattr(self, 'selColorMax', colorMax)
+        try:
+            finiteSelection = all(np.isfinite([selColorMin, selColorMax]))
+        except TypeError:
+            finiteSelection = False
+        if finiteSelection:
+            if selColorMin > selColorMax:
+                selColorMin, selColorMax = selColorMax, selColorMin
+            useColorSelection = int(
+                selColorMin > colorMin or selColorMax < colorMax)
+        else:
+            selColorMin, selColorMax = colorMin, colorMax
+            useColorSelection = 0
+        shader.setUniformValue(
+                "colorSelMinMax", qt.QVector2D(selColorMin, selColorMax))
+        shader.setUniformValue("useColorSelection", useColorSelection)
         shader.setUniformValue("gridMask", qt.QVector4D(1, 1, 1, 1))
         shader.setUniformValue("gridProjection", qt.QVector4D(0, 0, 0, 0))
 
