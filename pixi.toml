@@ -26,8 +26,8 @@ siphash24 = "*"
 freetype-py = "*"
 
 [pypi-dependencies]
-# xrt = { path = ".", editable = true }
-xrt = { git = "https://github.com/kklmn/xrt.git", branch = "master" }
+# xrt = { path = ".", editable = true, extras = ["all"] }
+xrt = { git = "https://github.com/kklmn/xrt.git", branch = "master", extras = ["all"] }
 
 [feature.pyqt5.dependencies]
 pyqt = "*"

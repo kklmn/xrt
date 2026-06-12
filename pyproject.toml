@@ -55,6 +55,7 @@ pyqt5 = [
 
 epics = [
     "softioc",
+    "pyepics",
     "phoebusgen"
 ]
 
@@ -64,6 +65,7 @@ all = [
     "qtpy",
     "qtpynodeeditor",
     "softioc",
+    "pyepics",
     "phoebusgen"
 ]
 
