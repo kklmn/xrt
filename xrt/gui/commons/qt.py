@@ -24,7 +24,9 @@ from qtpy.QtOpenGL import *
 #    QShortcut, QSplitter, QStackedWidget, QStyle, QStyledItemDelegate, QTabBar,
 #    QTabWidget, QTextEdit, QToolBar, QToolButton, QToolTip, QTreeView,
 #    QVBoxLayout, QWidget)
+from ctypes import c_int, sizeof
 from functools import partial
+from math import isfinite
 
 from qtpy.QtSql import (QSqlDatabase, QSqlQuery, QSqlTableModel,
                         QSqlQueryModel)
@@ -72,21 +74,43 @@ PYQT_VERSION_STR = qtpy.QT_VERSION
 
 
 class mySlider(QSlider):
+    _INT_BITS = sizeof(c_int) * 8
+    _INT_MAX = (1 << (_INT_BITS - 1)) - 1
+    _INT_MIN = -(1 << (_INT_BITS - 1))
+
     def __init__(self, parent, scaleDirection, scalePosition):
         super(mySlider, self).__init__(scaleDirection)
         self.setTickPosition(scalePosition)
         self.scale = 1.
 
     def setRange(self, start, end, step):
-        if abs(step) < 1e-10:
+        try:
+            start = float(start)
+            end = float(end)
+            step = float(step)
+        except (TypeError, ValueError):
             return
+        if not all(isfinite(v) for v in (start, end, step)) or step == 0:
+            return
+        maxAbs = max(abs(start), abs(end))
+        if maxAbs > 0:
+            stepSign = -1. if step < 0 else 1.
+            step = stepSign * max(abs(step), maxAbs/self._INT_MAX)
         self.scale = 1. / step
         # QSlider.setRange(self, int(start/step), int(end/step))
         super(mySlider, self).setRange(int(start/step), int(end/step))
 
     def setValue(self, value):
         # QSlider.setValue(self, int(value*self.scale))
-        super(mySlider, self).setValue(int(value*self.scale))
+        try:
+            value = float(value)
+        except (TypeError, ValueError):
+            return
+        if not isfinite(value):
+            return
+        value = int(value*self.scale)
+        value = max(self._INT_MIN, min(self._INT_MAX, value))
+        super(mySlider, self).setValue(value)
 
 
 glowSlider = mySlider
