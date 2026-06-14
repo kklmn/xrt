@@ -383,6 +383,9 @@ class OE(OEMainMethods):
             else:
                 self._RsVal = np.inf
 
+        if hasattr(self, '_reset_material'):
+            self._reset_material()
+
     @property
     def roll(self):
         return self._roll
@@ -1152,7 +1155,7 @@ class OE(OEMainMethods):
                         self.lostNum
         elif isinstance(self.shape, list):
             footprint = mpl.path.Path(self.shape)
-            locState[:] = footprint.contains_points(np.array(zip(x, y)))
+            locState[:] = footprint.contains_points(np.column_stack((x, y)))
             locState[(locState == 0) & (y < surfPhysY[0])] = self.lostNum
             locState[locState == 0] = 3
         else:

@@ -122,7 +122,7 @@ class BentLaueCylinder(OE):
             self.cosalpha = np.cos(self.alpha)
             self.sinalpha = np.sin(self.alpha)
             self.tanalpha = self.sinalpha / self.cosalpha
-            self._reset_material()
+        self._reset_material()
 
     def _reset_material(self):
         if not all([hasattr(self, v) for v in
@@ -341,7 +341,7 @@ class BentLaue2D(OE):
             self.cosalpha = np.cos(self.alpha)
             self.sinalpha = np.sin(self.alpha)
             self.tanalpha = self.sinalpha / self.cosalpha
-            self._reset_material()
+        self._reset_material()
 
     def _reset_material(self):
         if not all([hasattr(self, v) for v in
