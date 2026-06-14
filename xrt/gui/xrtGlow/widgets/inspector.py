@@ -62,6 +62,7 @@ class InstanceInspector(qt.QDialog):
         self.checkFlag = qt.Qt.ItemFlags(
             qt.Qt.ItemIsEnabled | qt.Qt.ItemIsUserCheckable |
             qt.Qt.ItemIsSelectable)
+        self.dynamicPlotWidget = None
 
         elementId = dataDict.get('uuid')
         self.elementId = elementId
@@ -678,7 +679,11 @@ class InstanceInspector(qt.QDialog):
 #                        child1.setText(str(pTuple[2]))
 
     def update_beam(self, beamTag):
-        self.dynamicPlotWidget.update_beam(beamTag)
+        if not self.liveUpdateEnabled:
+            return
+        updateBeam = getattr(self.dynamicPlotWidget, 'update_beam', None)
+        if updateBeam is not None:
+            updateBeam(beamTag)
 
 
 class ConfigurablePlotWidget(qt.QWidget):
