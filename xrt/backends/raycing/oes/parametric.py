@@ -956,6 +956,7 @@ class HyperboloidCapillaryMirror(SurfaceOfRevolution):
                               raycing.maxHalfSizeOfOE]
         else:
             self._limPhysY = limPhysY
+        self.get_surface_limits()
         self.reset_curvature()
 
     def reset_curvature(self):

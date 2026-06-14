@@ -91,6 +91,7 @@ class DCM(OE):
 #                    print(self._braggVal)
         else:
             self._braggVal = raycing.auto_units_angle(bragg)
+            self._bragg = None
 
         if hasattr(self, '_fixedOffset'):
             self.get_orientation()
@@ -162,6 +163,7 @@ class DCM(OE):
                                               raycing.maxHalfSizeOfOE])
         else:
             self._limPhysX2 = raycing.Limits(limPhysX2)
+        self.get_surface_limits()
 
     @property
     def limPhysY2(self):
@@ -174,6 +176,7 @@ class DCM(OE):
                                               raycing.maxHalfSizeOfOE])
         else:
             self._limPhysY2 = raycing.Limits(limPhysY2)
+        self.get_surface_limits()
 
     @property
     def fixedOffset(self):
@@ -202,15 +205,18 @@ class DCM(OE):
         self.surfPhysY2 = self.limPhysY2
         if self.limPhysY2 is not None:
             if raycing.is_sequence(self.limPhysY2[0]):
-                self.surfPhysY = (self.limPhysY2[0][cs], self.limPhysY2[1][cs])
+                self.surfPhysY2 = (self.limPhysY2[0][cs],
+                                   self.limPhysY2[1][cs])
         self.surfOptX2 = self.limOptX2
         if self.limOptX2 is not None:
             if raycing.is_sequence(self.limOptX2[0]):
-                self.surfOptX = (self.limOptX2[0][cs], self.limOptX2[1][cs])
+                self.surfOptX2 = (self.limOptX2[0][cs],
+                                  self.limOptX2[1][cs])
         self.surfOptY2 = self.limOptY2
         if self.limOptY2 is not None:
             if raycing.is_sequence(self.limOptY2[0]):
-                self.surfOptY = (self.limOptY2[0][cs], self.limOptY2[1][cs])
+                self.surfOptY2 = (self.limOptY2[0][cs],
+                                  self.limOptY2[1][cs])
 
     def local_z1(self, x, y):
         """Determines the normal vector of OE at (x, y) position."""
