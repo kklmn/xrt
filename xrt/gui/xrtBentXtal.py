@@ -83,17 +83,20 @@ try:
 except (ImportError, OSError):  # OSError is here for rtfd.io
     isOpenCL = False
 
-HKLRE = r'\((\d{1,2})[,\s]*(\d{1,2})[,\s]*(\d{1,2})\)|(\d{1,2})[,\s]*(\d{1,2})[,\s]*(\d{1,2})'
 
-
-def parse_hkl(hklstr):
-    matches = re.findall(HKLRE, hklstr)
-    hklval = []
-    for match in matches:
-        for group in match:
-            if group != '':
-                hklval.append(int(group))
-    return hklval
+def parse_hkl(s):
+    """
+    Separator allows: commas, spaces, commas with spaces, no separator.
+    Any of hkl can have a sign.
+    """
+    nums = re.findall(r'[+-]?\d', s)
+    if len(nums) != 3:
+        return []
+    return tuple(map(int, nums))
+# print(parse_hkl("220"))        # (2, 2, 0)
+# print(parse_hkl("2 2 0"))      # (2, 2, 0)
+# print(parse_hkl("2,2,0"))      # (2, 2, 0)
+# print(parse_hkl("(-2-20)"))    # (-2, -2, 0)
 
 
 def run_calculation(params, progress_queue):

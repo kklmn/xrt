@@ -137,6 +137,8 @@ class Crystal(Material):
         """
         super().__init__(elements, quantities, rho=rho, table=table, name=name,
                          **kwargs)
+        if len(hkl) == 0:
+            hkl = [1, 1, 1]
         self.hkl = hkl
         self.d = d
         self.V = V

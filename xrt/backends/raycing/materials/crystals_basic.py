@@ -50,11 +50,13 @@ class CrystalDiamond(CrystalFcc):
         a = None
         if 'a' in kwargs:
             a = kwargs.pop('a')
+            hkl = []
             if 'hkl' in kwargs:
                 hkl = kwargs['hkl']
             elif len(args) > 0:
                 hkl = args[0]
-            else:
+
+            if len(hkl) == 0:
                 hkl = [1, 1, 1]
                 kwargs['hkl'] = hkl
             sqrthkl2 = (sum(i**2 for i in hkl))**0.5
