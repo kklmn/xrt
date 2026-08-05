@@ -44,21 +44,22 @@ from __future__ import unicode_literals
 __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "27 Jun 2022"
 
-import os
-import copy
-import pickle
-import numpy as np
-import scipy as sp
+import os  # analysis:ignore
+import copy  # analysis:ignore
+import pickle  # analysis:ignore
+import numpy as np  # analysis:ignore
+import scipy as sp  # analysis:ignore
 # from scipy.interpolate import UnivariateSpline
-from scipy.interpolate import make_interp_spline, PPoly
+from scipy.interpolate import make_interp_spline, PPoly  # analysis:ignore
 
-import matplotlib as mpl
-from matplotlib.ticker import MaxNLocator
-from . import runner
+import matplotlib as mpl  # analysis:ignore
+from matplotlib.ticker import MaxNLocator  # analysis:ignore
+from . import runner  # analysis:ignore
 # from runner import runCardVals, runCardProcs
-from .backends import raycing
+from .backends import raycing  # analysis:ignore
 
-_RAYCING_BEAM_FIELDS = {field.lower(): field for field in raycing.allBeamFields}
+_RAYCING_BEAM_FIELDS = {field.lower(): field
+                        for field in raycing.allBeamFields}
 
 
 def _label_tokens(label):
@@ -74,7 +75,7 @@ except ImportError:
     qt = None
     hasQt = False
 
-from matplotlib.figure import Figure
+from matplotlib.figure import Figure  # analysis:ignore
 
 try:  # for Python 3 compatibility:
     unicode = unicode
@@ -97,7 +98,7 @@ mpl.rcParams['axes.linewidth'] = 0.75
 # mpl.rcParams['backend'] = 'Agg'
 # mpl.rcParams['xtick.major.pad'] = '5'
 # mpl.rcParams['ytick.major.pad'] = '5'
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt  # analysis:ignore
 
 epsHist = 1e-100  # prevents problem with normalization of histograms
 # [Sizes and positions of plots]
@@ -1639,7 +1640,8 @@ class XYCPlot(object):
             wantDiscrete = (xx[0] > xxMaxHalf) or (xx[-1] > xxMaxHalf)
             if not wantDiscrete:
                 try:
-                    # spl = UnivariateSpline(axis.binCenters, xx-xxMaxHalf, s=0)
+                    # spl = UnivariateSpline(
+                    #        axis.binCenters, xx-xxMaxHalf, s=0)
                     # roots = spl.roots()
                     spl = make_interp_spline(axis.binCenters, xx-xxMaxHalf)
                     roots = PPoly.from_spline(spl, False).roots()

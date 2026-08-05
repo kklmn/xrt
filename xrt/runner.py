@@ -4,21 +4,35 @@ Module :mod:`runner` defines the entry point of xrt - :func:`run_ray_tracing`,
 containers for job properties and functions for running the processes or
 threads and accumulating the resulting histograms.
 """
+
 __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "26 Mar 2016"
 
-import os
-import sys
-import time
-import inspect
-import pickle
-import re
-import numpy as np
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-import multiprocessing
-import errno
-import threading
+import os  # analysis:ignore
+import sys  # analysis:ignore
+import time  # analysis:ignore
+import inspect  # analysis:ignore
+import pickle  # analysis:ignore
+import re  # analysis:ignore
+import numpy as np  # analysis:ignore
+import matplotlib as mpl  # analysis:ignore
+
+try:
+    from matplotlib.backends import BackendFilter, backend_registry
+    _NON_INTERACTIVE_BACKENDS = tuple(
+        name.lower()
+        for name in backend_registry.list_builtin(
+                BackendFilter.NON_INTERACTIVE))
+except (ImportError, AttributeError):
+    _NON_INTERACTIVE_BACKENDS = tuple(
+        name.lower()
+        for name in mpl.rcsetup.non_interactive_bk
+    )
+
+import matplotlib.pyplot as plt  # analysis:ignore
+import multiprocessing  # analysis:ignore
+import errno  # analysis:ignore
+import threading  # analysis:ignore
 if sys.version_info < (3, 1):
     import Queue
 else:
@@ -26,8 +40,8 @@ else:
     Queue = queue
 import uuid  #  is needed on some platforms with pyopencl  # analysis:ignore
 
-from . import multipro
-from .backends import raycing
+from . import multipro  # analysis:ignore
+from .backends import raycing  # analysis:ignore
 
 # _DEBUG = True
 __fdir__ = os.path.abspath(os.path.dirname(__file__))
@@ -201,8 +215,7 @@ def start_jobs():
 
     runCardVals.iteration = np.int64(0)
     noTimer = len(_plots) == 0 or\
-        (plt.get_backend().lower() in (x.lower() for x in
-                                       mpl.rcsetup.non_interactive_bk))
+        (plt.get_backend().lower() in _NON_INTERACTIVE_BACKENDS)
     if noTimer:
         print("The job is running... ")
         while True:
@@ -378,8 +391,7 @@ def on_finish():
     """Executed on exit from the ray-tracing iteration loop."""
     if len(_plots) > 0:
         plot = _plots[0]
-        if plt.get_backend().lower() not in (
-                x.lower() for x in mpl.rcsetup.non_interactive_bk):
+        if plt.get_backend().lower() not in _NON_INTERACTIVE_BACKENDS:
             plot.timer.stop()
             plot.timer.remove_callback(plot.timer_callback)
         plot.areProcessAlreadyRunning = False
