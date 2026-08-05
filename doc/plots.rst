@@ -46,8 +46,9 @@ image<logo>` (see also ``logo_xrt.py`` script in the examples)::
 Saving the histogram arrays
 ---------------------------
 
-The histograms can be saved to and later restored from a :ref:`persistent file
-<persistentName>`. Doing so is always recommended as this can save you time
+The histograms and some scalar properties can be saved to and later restored
+from a :ref:`persistent file <persistentName>`.
+Doing so is always recommended as this can save you time
 afterwards if you decide to change a label or a font size or to make the graphs 
 negative: you can do this without re-doing ray tracing. Remember, however, that 
 a new run of the same script will initialize the histograms not from zero but 
@@ -55,3 +56,6 @@ from the last saved state. You will notice this by the displayed number of rays.
 If you want to initialize from zero, just delete the persistent file. Note that 
 you can run :func:`~xrt.runner.run_ray_tracing` with *repeats=0* in order to
 re-display the saved plots without starting ray tracing.
+
+.. autoclass:: xrt.plotter.SaveResults
+
