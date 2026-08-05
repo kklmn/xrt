@@ -866,7 +866,10 @@ class XYCPlot(object):
                 make sure that this option is switched off or the pickle files
                 do not exist! Otherwise you do resume, not really start anew.
 
-            if *persistentName* ends with '.mat', a Matlab file is generated.
+            If *persistentName* ends with '.mat', a Matlab file is generated.
+            Otherwise the file contains a ``SaveResults`` object. See
+            :class:`~xrt.plotter.SaveResults` for the saved field names and
+            examples of reading the persistent file.
 
         *oe*: instance of an optical element or None
             If supplied, the rectangular or circular areas of the optical
@@ -2250,6 +2253,125 @@ class SaveResults(object):
     """
     Container for the accumulated arrays (histograms) and values (like flux)
     for subsequent pickling/unpickling or for global flux normalization.
+
+    ``SaveResults`` is the object written to a pickle file when
+    ``XYCPlot.persistentName`` points to a non-Matlab file. When
+    ``persistentName`` ends with ``.mat``, xrt writes variables with the same
+    names as this object's fields.
+
+    The field names are historical. The prefix ``e`` means the plot color axis,
+    i.e. ``plot.caxis``. It is often energy, but it can be another quantity
+    selected by the user.
+
+    Main saved arrays:
+
+    ``xtotal1D``, ``ytotal1D``, ``etotal1D`` : ndarray
+        Copies of ``plot.xaxis.total1D``, ``plot.yaxis.total1D`` and
+        ``plot.caxis.total1D``. These are the accumulated 1D histograms for the
+        x, y and color axes. The color-axis histogram is still saved as
+        ``etotal1D`` even when the color axis is not energy.
+
+    ``xtotal1D_RGB``, ``ytotal1D_RGB``, ``etotal1D_RGB`` : ndarray
+        RGB-weighted companions of the 1D histograms, used for the colored 1D
+        histogram bars.
+
+    ``total2D`` : ndarray
+        Main accumulated 2D histogram. Its shape is
+        ``(yaxis.bins, xaxis.bins)``: the first array index is y and the second
+        one is x.
+
+    ``total2D_RGB`` : ndarray
+        RGB-weighted companion of ``total2D`` with shape
+        ``(yaxis.bins, xaxis.bins, 3)``.
+
+    ``xbinEdges``, ``ybinEdges``, ``ebinEdges`` : ndarray
+        Histogram bin edges for x, y and the color axis.
+
+    ``xlimits``, ``ylimits``, ``elimits`` : sequence of float
+        Axis limits used for histogramming.
+
+    Derived values:
+
+    ``cx``, ``cy``, ``cE`` : float
+        Centers of the x, y and color-axis 1D histograms, calculated as the
+        midpoint of the FWHM interval. ``cE`` exists only when the color-axis
+        histogram is displayed (``plot.ePos != 0``).
+
+    ``dx``, ``dy``, ``dE`` : float
+        FWHM widths of the x, y and color-axis 1D histograms. ``dE`` exists
+        only when the color-axis histogram is displayed (``plot.ePos != 0``).
+
+    ``nRaysAll`` : int
+        Total number of rays sampled for this plot.
+
+    ``intensity`` : float
+        Accumulated histogram weight. Its meaning depends on ``fluxKind`` and
+        backend.
+
+    ``fluxKind`` : str
+        The histogram weighting mode used when the result was accumulated.
+
+    Backend-specific values:
+
+    ``nRaysNeeded`` : int
+        Shadow-only ray counter.
+
+    ``nRaysAlive`` ... ``nRaysDead`` : int
+        Raycing-only counters for alive, good, out, over and dead ray states.
+
+    ``nRaysAccepted`` ... ``flux`` : number
+        Raycing-only source sampling and flux counters. They are present only
+        for beams that provide the corresponding source bookkeeping.
+
+    ``power`` : float
+        Raycing-only total or absorbed power estimate.
+
+    Not all plot attributes are saved here. A persistent result is not a full
+    ``XYCPlot``. It does not contain plot constructor arguments, axis labels,
+    axis units, axis factors, figure objects, or custom user data. It also does
+    not save ``plot.total4D`` or ``plot.field3D``; export these explicitly from
+    an ``afterScript`` if you need them.
+
+    Example: plot the saved 2D intensity histogram with matplotlib::
+
+        import pickle
+        import matplotlib.pyplot as plt
+
+        with open('plot.pickle', 'rb') as f:
+            saved = pickle.load(f)
+
+        extent = [
+            saved.xbinEdges[0], saved.xbinEdges[-1],
+            saved.ybinEdges[0], saved.ybinEdges[-1]]
+
+        fig, ax = plt.subplots()
+        image = ax.imshow(
+            saved.total2D, extent=extent, origin='lower', aspect='auto')
+        fig.colorbar(image, ax=ax, label='intensity')
+        ax.set_xlabel('x')
+        ax.set_ylabel('y')
+        plt.show()
+
+    Example: plot the saved RGB-weighted histogram::
+
+        import pickle
+        import matplotlib.pyplot as plt
+
+        with open('plot.pickle', 'rb') as f:
+            saved = pickle.load(f)
+
+        extent = [
+            saved.xbinEdges[0], saved.xbinEdges[-1],
+            saved.ybinEdges[0], saved.ybinEdges[-1]]
+
+        rgb = saved.total2D_RGB.copy()
+        if rgb.max() > 0:
+            rgb /= rgb.max()
+
+        plt.imshow(rgb, extent=extent, origin='lower', aspect='auto')
+        plt.xlabel('x')
+        plt.ylabel('y')
+        plt.show()
     """
 
     def __init__(self, plot):
