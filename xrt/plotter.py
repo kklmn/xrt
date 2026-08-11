@@ -647,7 +647,9 @@ class XYCPlot(object):
     Container for the accumulated histograms. Besides giving the beam
     images, this class provides with useful fields like *dx*, *dy*, *dE*
     (FWHM), *cx*, *cy*, *cE* (centers) and *intensity* which can be used in
-    scripts for producing scan-like results."""
+    scripts for producing scan-like results.
+
+    """
 
     def __init__(
         self, beam=None, rayFlag=(1,), xaxis=None, yaxis=None, caxis=None,
@@ -816,6 +818,9 @@ class XYCPlot(object):
             - If without these endings, the field aplitudes are simply summed
               in the 2D histogram.
 
+            See :ref:`absolute-flux-and-power` for how ray weights are
+            normalized to absolute flux and power.
+
         *fluxUnit*: 'auto' or None
             If a synchrotron source is used and *fluxUnit* is 'auto', the
             flux will be displayed as 'ph/s' or 'W' (if *fluxKind* == 'power').
@@ -864,13 +869,13 @@ class XYCPlot(object):
 
             .. warning::
                 Be careful when you use it: if you intend to start from zeros,
-                make sure that this option is switched off or the pickle files
-                do not exist! Otherwise you do resume, not really start anew.
+                make sure that this option is switched off or the persistent
+                files do not exist! Otherwise you do resume, not really start
+                anew.
 
-            If *persistentName* ends with '.mat', a Matlab file is generated.
-            Otherwise the file contains a ``SaveResults`` object. See
-            :class:`~xrt.plotter.SaveResults` for the saved field names and
-            examples of reading the persistent file.
+            Persistent results can be stored as pickle files or Matlab
+            ``.mat`` files. In either format, the stored values are defined by
+            :class:`~xrt.plotter.SaveResults`.
 
         *oe*: instance of an optical element or None
             If supplied, the rectangular or circular areas of the optical
@@ -2256,76 +2261,76 @@ class SaveResults(object):
     Container for the accumulated arrays (histograms) and values (like flux)
     for subsequent pickling/unpickling or for global flux normalization.
 
-    ``SaveResults`` is the object written to a pickle file when
-    ``XYCPlot.persistentName`` points to a non-Matlab file. When
-    ``persistentName`` ends with ``.mat``, xrt writes variables with the same
-    names as this object's fields.
-
     The field names are historical. The prefix ``e`` means the plot color axis,
     i.e. ``plot.caxis``. It is often energy, but it can be another quantity
     selected by the user.
 
     Main saved arrays:
 
-    ``xtotal1D``, ``ytotal1D``, ``etotal1D`` : ndarray
+    *xtotal1D*, *ytotal1D*, *etotal1D* : ndarray
         Copies of ``plot.xaxis.total1D``, ``plot.yaxis.total1D`` and
         ``plot.caxis.total1D``. These are the accumulated 1D histograms for the
         x, y and color axes. The color-axis histogram is still saved as
-        ``etotal1D`` even when the color axis is not energy.
+        *etotal1D* even when the color axis is not energy.
 
-    ``xtotal1D_RGB``, ``ytotal1D_RGB``, ``etotal1D_RGB`` : ndarray
+    *xtotal1D_RGB*, *ytotal1D_RGB*, *etotal1D_RGB* : ndarray
         RGB-weighted companions of the 1D histograms, used for the colored 1D
         histogram bars.
 
-    ``total2D`` : ndarray
+    *total2D* : ndarray
         Main accumulated 2D histogram. Its shape is
-        ``(yaxis.bins, xaxis.bins)``: the first array index is y and the second
+        *(yaxis.bins, xaxis.bins)*: the first array index is y and the second
         one is x.
 
-    ``total2D_RGB`` : ndarray
-        RGB-weighted companion of ``total2D`` with shape
-        ``(yaxis.bins, xaxis.bins, 3)``.
+    *total2D_RGB* : ndarray
+        RGB-weighted companion of *total2D* with shape
+        *(yaxis.bins, xaxis.bins, 3)*.
 
-    ``xbinEdges``, ``ybinEdges``, ``ebinEdges`` : ndarray
+    *xbinEdges*, *ybinEdges*, *ebinEdges* : ndarray
         Histogram bin edges for x, y and the color axis.
 
-    ``xlimits``, ``ylimits``, ``elimits`` : sequence of float
+    *xlimits*, *ylimits*, *elimits* : sequence of float
         Axis limits used for histogramming.
 
     Derived values:
 
-    ``cx``, ``cy``, ``cE`` : float
+    *cx*, *cy*, *cE* : float
         Centers of the x, y and color-axis 1D histograms, calculated as the
-        midpoint of the FWHM interval. ``cE`` exists only when the color-axis
+        midpoint of the FWHM interval. *cE* exists only when the color-axis
         histogram is displayed (``plot.ePos != 0``).
 
-    ``dx``, ``dy``, ``dE`` : float
-        FWHM widths of the x, y and color-axis 1D histograms. ``dE`` exists
+    *dx*, *dy*, *dE* : float
+        FWHM widths of the x, y and color-axis 1D histograms. *dE* exists
         only when the color-axis histogram is displayed (``plot.ePos != 0``).
 
-    ``nRaysAll`` : int
+    *nRaysAll* : int
         Total number of rays sampled for this plot.
 
-    ``intensity`` : float
-        Accumulated histogram weight. Its meaning depends on ``fluxKind`` and
+    *intensity* : float
+        Accumulated histogram weight. Its meaning depends on *fluxKind* and
         backend.
 
-    ``fluxKind`` : str
+    *fluxKind* : str
         The histogram weighting mode used when the result was accumulated.
 
-    Backend-specific values:
-
-    ``nRaysNeeded`` : int
+    *nRaysNeeded* : int
         Shadow-only ray counter.
 
-    ``nRaysAlive`` ... ``nRaysDead`` : int
+    *nRaysAlive*, *nRaysGood*, *nRaysOut*, *nRaysOver*, *nRaysDead* : int
         Raycing-only counters for alive, good, out, over and dead ray states.
 
-    ``nRaysAccepted`` ... ``flux`` : number
-        Raycing-only source sampling and flux counters. They are present only
-        for beams that provide the corresponding source bookkeeping.
+    *nRaysSeeded*, *nRaysSeededI* : number
+        Raycing-only source-sampling normalization values.
+        *nRaysSeeded* is the number of trial samples. *nRaysSeededI* is the
+        mode-dependent source normalization total used for absolute flux and
+        power. See :ref:`absolute-flux-and-power` for the two sampling modes
+        and the flux and power calculations.
 
-    ``power`` : float
+    *flux* : float
+        Raycing-only absolute flux estimate in ph/s, present only together
+        with the synchrotron source normalization values.
+
+    *power* : float
         Raycing-only total or absorbed power estimate.
 
     Not all plot attributes are saved here. A persistent result is not a full

@@ -1,6 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 __author__ = "Konstantin Klementiev", "Roman Chernikov"
 __date__ = "12 Aug 2021"
+
 import sys
 import numpy as np
 from scipy import special
@@ -258,7 +259,6 @@ class BendingMagnet(SourceBase):
 #                else:
 #                    kwArgsIn['accuBeam'] = accuBeam.parentId
 
-
         if self.uniformRayDensity:  # Force withAmplitudes=True
             withAmplitudes = True
 
@@ -471,6 +471,7 @@ class BendingMagnet(SourceBase):
             bo.acceptedE = bo.E.sum() * self.fluxConst * SIE0
             bo.seeded = seeded
             bo.seededI = seededI
+
         if length > self.nrays and not self.filamentBeam:
             bo.filter_by_index(slice(0, np.int64(self.nrays)))
         if self.filamentBeam:
@@ -506,7 +507,8 @@ class Wiggler(BendingMagnet):
     is not required and is not implemented.
     """
 
-    hiddenParams = getattr(BendingMagnet, 'hiddenParams', set()) | {'B0', 'rho'}
+    hiddenParams = getattr(BendingMagnet,
+                           'hiddenParams', set()) | {'B0', 'rho'}
 
     def __init__(self, *args, **kwargs):
         u"""Parameters are the same as in BendingMagnet except *B0* and *rho*
@@ -725,23 +727,29 @@ class SourceFromField(IntegratedSource):
 
         dataShape = self.customFieldData.shape
         if dataShape[1] == 2:
-#            By = UnivariateSpline(dataz, self.customFieldData[:, 1], s=1e-6)(z)
             By = interp1d(dataz, self.customFieldData[:, 1], **self.spl_kw)(z)
+#            By = UnivariateSpline(dataz, self.customFieldData[:, 1],
+#                                  s=1e-6)(z)
             Bx = np.zeros_like(By)
             Bz = np.zeros_like(By)
         elif dataShape[1] == 3:
-#            Bx = UnivariateSpline(dataz, self.customFieldData[:, 1], s=1e-6)(z)
-#            By = UnivariateSpline(dataz, self.customFieldData[:, 2], s=1e-6)(z)
             Bx = interp1d(dataz, self.customFieldData[:, 1], **self.spl_kw)(z)
             By = interp1d(dataz, self.customFieldData[:, 2], **self.spl_kw)(z)
+#            Bx = UnivariateSpline(dataz, self.customFieldData[:, 1],
+#                                  s=1e-6)(z)
+#            By = UnivariateSpline(dataz, self.customFieldData[:, 2],
+#                                  s=1e-6)(z)
             Bz = np.zeros_like(By)
         elif dataShape[1] == 4:
-#            Bx = UnivariateSpline(dataz, self.customFieldData[:, 1], s=1e-6)(z)
-#            By = UnivariateSpline(dataz, self.customFieldData[:, 2], s=1e-6)(z)
-#            Bz = UnivariateSpline(dataz, self.customFieldData[:, 3], s=1e-6)(z)
             Bx = interp1d(dataz, self.customFieldData[:, 1], **self.spl_kw)(z)
             By = interp1d(dataz, self.customFieldData[:, 2], **self.spl_kw)(z)
             Bz = interp1d(dataz, self.customFieldData[:, 3], **self.spl_kw)(z)
+#            Bx = UnivariateSpline(dataz, self.customFieldData[:, 1],
+#                                  s=1e-6)(z)
+#            By = UnivariateSpline(dataz, self.customFieldData[:, 2],
+#                                  s=1e-6)(z)
+#            Bz = UnivariateSpline(dataz, self.customFieldData[:, 3],
+#                                  s=1e-6)(z)
         else:
             print("Unknown file structure.")
             raise

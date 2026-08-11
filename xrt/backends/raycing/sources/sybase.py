@@ -112,6 +112,9 @@ class SourceBase:
             and with constant amplitudes. Required as True for wave propagation
             calculations. False is usual for ray-tracing.
 
+            See :ref:`absolute-flux-and-power` for how the two sampling modes
+            are normalized to absolute flux and power.
+
         *filamentBeam*: bool
             If True the source generates coherent monochromatic wavefronts.
             Required as True for the wave propagation calculations in partially
@@ -1755,6 +1758,7 @@ class IntegratedSource(SourceBase):
             bo.acceptedE = bo.E.sum() * self.fluxConst * SIE0
             bo.seeded = seeded
             bo.seededI = seededI
+
             if raycing._VERBOSITY_ > 0:
                 sys.stdout.flush()
 

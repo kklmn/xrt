@@ -421,7 +421,9 @@ def get_output(plot, beamsReturnedBy_run_process):
 
         if plot.fluxKind.startswith('power'):
             intensity = ((beam.Jss + beam.Jpp) *
-                         beam.E * beam.accepted / beam.seeded * SIE0)
+                         beam.E * beam.seededI / beam.seeded * SIE0)
+#            intensity = ((beam.Jss + beam.Jpp) *
+#                         beam.E * beam.accepted / beam.seeded * SIE0)
         elif plot.fluxKind.startswith('s'):
             intensity = beam.Jss
         elif plot.fluxKind.startswith('p'):

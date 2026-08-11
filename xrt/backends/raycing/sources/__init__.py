@@ -25,9 +25,7 @@ intensity maximum for each field sample, and the sample is accepted if the
 acceptance variable is below the sample intensity, otherwise it is rejected.
 The sampling continues until the requested number of samples is reached. The
 resulted space density of the samples (rays) is proportional to the field
-intensity. Simultaneously, this sampling provides total flux as the Monte Carlo
-integration of intensity, i.e. as the product of the acceptance ratio times
-the 3D sample volume times the intensity maximum.
+intensity.
 
 2. Uniform Monte Carlo sampling, or *wave* generation. This mode is necessary
 for wave propagation when it starts right from the source. The 3D calculation
@@ -40,8 +38,7 @@ however, for single electron (or *macro electrons*) field propagation (enabled
 by the source option *filamentBeam=True*), when all wave samples are attributed
 to the same electron with a single displacement within emittance distribution
 and a single shift of gamma (relative electron energy) within energy spread
-distribution. The flux is a sum of all intensities times the 3D sample volume
-over the number of samples.
+distribution.
 
 3. Grid sampling. This is frequently a quick method for studying synchrotron
 sources in reciprocal space and energy that must be used with care as it is
@@ -83,6 +80,44 @@ electron beam size is totally ignored.
 
 See the example :ref:`Undulator radiation through rectangular aperture
 <through-aperture>`, where several calculation methods are compared.
+
+.. _absolute-flux-and-power:
+
+Absolute flux and power
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Geometric sources do not provide an absolute physical source
+normalization; their plot values are relative intensities or weighted
+ray counts.
+
+For synchrotron sources, both Monte Carlo strategies use::
+
+    sourceNormalization = seededI / seeded
+
+With rejection sampling, ``seededI / seeded`` is the sampled phase-space
+volume multiplied by the mean calculated intensity of the trial samples.
+Accepted rays have unit initial total intensity, and their density is
+proportional to the source intensity.
+
+With uniform ray density, ``seededI / seeded`` is the sampled phase-space
+volume. All trial samples are accepted, and the calculated source
+intensity is carried by their ray weights.
+
+Let *rayIntensity* be the per-ray intensity after beamline propagation.
+For the rays selected by a plot, absolute flux and power are::
+
+    flux = (mean(rayIntensity) *
+            sourceNormalization)
+
+    power = (mean(rayIntensity * photonEnergy) *
+             sourceNormalization * joulesPerElectronvolt)
+
+Here, *photonEnergy* is in eV. Flux is reported in ph/s and power in W.
+
+Grid sampling does not use these beam counters. Its absolute flux and
+power are obtained by directly integrating the intensity map, or the
+intensity map multiplied by photon energy, over the grid.
+
 
 Geometric sources
 ^^^^^^^^^^^^^^^^^
