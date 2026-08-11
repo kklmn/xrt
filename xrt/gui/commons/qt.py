@@ -504,7 +504,14 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
                             '+45', '-45', 'left', 'right', 'None'])
             return combo
         elif 'diste' in argNameL:  # source only
-            combo.addItems(['eV', 'BW'])
+            geomSrcItems = ['normal', 'flat', 'lines', 'None']
+            if argValue in geomSrcItems:
+                combo.addItems(geomSrcItems)
+            else:
+                combo.addItems(['eV', 'BW'])
+            return combo
+        elif argNameL.startswith('dist'):
+            combo.addItems(['normal', 'flat', 'annulus', 'None'])
             return combo
         elif argNameL == 'shape':  # bl only
             combo.addItems(['rect', 'round'])

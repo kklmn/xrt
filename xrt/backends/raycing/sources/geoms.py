@@ -20,17 +20,43 @@ def make_energy(
     energies. If *distE* is 'lines', *energyWeights* can define the relative
     weights of the lines.
     """
+
     locnrays = 1 if filamentBeam else int(nrays)
+    eArr = np.atleast_1d(energies)
     if distE == 'normal':
         try:
-            E = np.random.normal(energies[0], energies[1], locnrays)
-        except ValueError:
+            eMean = eArr[0]
+            eSigma = eArr[1] if len(eArr) == 2 else 0
+            E = np.random.normal(
+                    eMean,
+                    0 if abs(eSigma) > 0.1*abs(eMean) else abs(eSigma),
+                    locnrays)
+        except Exception:  # temporary broad interception
             E = np.zeros(locnrays)
     elif distE == 'flat':
-        E = np.random.uniform(energies[0], energies[1], locnrays)
+        try:
+            eMin = eArr[0]
+            eMax = eArr[1] or eArr[0] if len(eArr) == 2 else eArr[0]
+            E = np.random.uniform(eMin, eMax, locnrays)
+        except Exception:  # temporary broad interception
+            E = np.zeros(locnrays)
     elif distE == 'lines':
+        try:
+            if energyWeights is not None:
+                eWeights = np.atleast_1d(energyWeights)
+            else:
+                eWeights = None
+
+            if 0 in eArr:
+                eArr = eArr[eArr > 0]
 #        E = np.array(energies)[np.random.randint(len(energies), size=locnrays)]
-        E = np.random.choice(energies, size=locnrays, p=energyWeights)
+            if energyWeights is not None and\
+                    len(eArr) == len(eWeights):
+                E = np.random.choice(eArr, size=locnrays, p=eWeights)
+            else:
+                E = np.random.choice(eArr, size=locnrays)
+        except Exception:  # temporary broad interception
+            E = np.zeros(locnrays)
     return E
 
 
@@ -197,6 +223,12 @@ class GeometricSource(object):
             (minE, maxE) for *distE* = 'flat', a sequence of E values for
             *distE* = 'lines'
 
+            .. note::
+                Erroneous input (size/type mismatch) will default to
+                monochromatic distribution.
+                If *sigmaE* exceeds 10% of *centerE*, *sigmaE* is taken as zero
+                to avoid sampling negative energies.
+
         *energyWeights*: 1-D array-like
             Can be used together with *distE* = 'lines' to specify the weight
             of each line. Must be of the shape of *energies*.
@@ -221,6 +253,9 @@ class GeometricSource(object):
             distributions the density is already uniform. If you set it True,
             the size parameter (*dx* or *dz*) must be given as
             (sigma, cut_limit).
+
+            See :ref:`absolute-flux-and-power` for how ray density and ray
+            weights affect plot intensity and normalization.
 
         *pitch*, *roll*, *yaw*: float
             rotation angles around x, y and z axes. Useful for canted sources.
@@ -252,9 +287,9 @@ class GeometricSource(object):
         self.distz = distz
         self.dz = dz
         self.distxprime = distxprime
-        self.dxprime = raycing.auto_units_angle(dxprime)
+        self._dxprime = raycing.auto_units_angle(dxprime)
         self.distzprime = distzprime
-        self.dzprime = raycing.auto_units_angle(dzprime)
+        self._dzprime = raycing.auto_units_angle(dzprime)
         self.distE = distE
         self.energies = energies
         self.energyWeights = energyWeights
@@ -267,24 +302,51 @@ class GeometricSource(object):
         self.polarization = polarization
         self.filamentBeam = filamentBeam
         self.uniformRayDensity = uniformRayDensity
-        self.pitch = raycing.auto_units_angle(pitch)
-        self.roll = raycing.auto_units_angle(roll)
-        self.yaw = raycing.auto_units_angle(yaw)
+        self._pitch = raycing.auto_units_angle(pitch)
+        self._roll = raycing.auto_units_angle(roll)
+        self._yaw = raycing.auto_units_angle(yaw)
 
     center = raycing.center_property()
 
     @property
-    def energies(self):
-        return self._energies
+    def dxprime(self):
+        return self._dxprime
 
-    @energies.setter
-    def energies(self, energies):
-        if self.distE == 'lines':
-            if isinstance(energies, (int, float)):
-                energies = [energies]
-            self._energies = np.array(energies)
-        else:
-            self._energies = energies
+    @dxprime.setter
+    def dxprime(self, dxprime):
+        self._dxprime = raycing.auto_units_angle(dxprime)
+
+    @property
+    def dzprime(self):
+        return self._dzprime
+
+    @dzprime.setter
+    def dzprime(self, dzprime):
+        self._dzprime = raycing.auto_units_angle(dzprime)
+
+    @property
+    def pitch(self):
+        return self._pitch
+
+    @pitch.setter
+    def pitch(self, pitch):
+        self._pitch = raycing.auto_units_angle(pitch)
+
+    @property
+    def roll(self):
+        return self._roll
+
+    @roll.setter
+    def roll(self, roll):
+        self._roll = raycing.auto_units_angle(roll)
+
+    @property
+    def yaw(self):
+        return self._yaw
+
+    @yaw.setter
+    def yaw(self, yaw):
+        self._yaw = raycing.auto_units_angle(yaw)
 
     def _apply_distribution(self, axis, distaxis, daxis, bo=None):
         if distaxis == 'normal':
@@ -346,13 +408,15 @@ class GeometricSource(object):
             try:
                 self.bl._alignE = float(self.bl.alignE)
             except ValueError:
-                if self.distE in ['lines', 'normal']:
-                    self.bl._alignE = self.energies[0]
+                alignE = np.atleast_1d(self.energies)
+                if len(alignE) == 0:
+                    self.bl._alignE = defaultEnergy
                 elif self.distE in ['flat']:
-                    self.bl._alignE = 0.5 * (self.energies[0] +
-                                             self.energies[-1])
+                    eMax = alignE[1] or alignE[0] if len(alignE) == 2 else\
+                        alignE[0]
+                    self.bl._alignE = 0.5 * (alignE[0] + eMax)
                 else:
-                    self.bl._alignE = self.energies
+                    self.bl._alignE = alignE[0]
 
 #            if accuBeam is None:
 #                kwArgsIn['accuBeam'] = accuBeam
@@ -470,6 +534,12 @@ class GaussianBeam(object):
             (minE, maxE) for *distE* = 'flat', a sequence of E values for
             *distE* = 'lines'
 
+            .. note::
+                Erroneous input (size/type mismatch) will default to
+                monochromatic distribution.
+                If *sigmaE* exceeds 10% of *centerE*, *sigmaE* is taken as zero
+                to avoid sampling negative energies.
+
         *energyWeights*: 1-D array-like
             Can be used together with *distE* = 'lines' to specify the weight
             of each line. Must be of the shape of *energies*.
@@ -503,14 +573,11 @@ class GaussianBeam(object):
 
         self.center = center
         self.w0 = w0
-        if raycing.is_sequence(self.w0):
-            if len(self.w0) != 2:
-                raise ValueError('wrong length of w0')
+#        if raycing.is_sequence(self.w0):
+#            if len(self.w0) != 2:
+#                raise ValueError('wrong length of w0')
         self.distE = distE
-        if self.distE == 'lines':
-            self.energies = np.array(energies)
-        else:
-            self.energies = energies
+        self.energies = energies
         self.energyWeights = energyWeights
 
         if bl is not None:
@@ -526,6 +593,43 @@ class GaussianBeam(object):
         self.yaw = raycing.auto_units_angle(yaw)
 
     center = raycing.center_property()
+
+    @property
+    def w0(self):
+        return self._w0
+
+    @w0.setter
+    def w0(self, w0):
+        if raycing.is_sequence(w0) and len(w0) != 2:
+            print("Wrong length of w0: expected a scalar or a 2-sequence")
+            if not hasattr(self, '_w0'):
+                self._w0 = 0.1
+            return
+        self._w0 = w0
+
+    @property
+    def pitch(self):
+        return self._pitch
+
+    @pitch.setter
+    def pitch(self, pitch):
+        self._pitch = raycing.auto_units_angle(pitch)
+
+    @property
+    def roll(self):
+        return self._roll
+
+    @roll.setter
+    def roll(self, roll):
+        self._roll = raycing.auto_units_angle(roll)
+
+    @property
+    def yaw(self):
+        return self._yaw
+
+    @yaw.setter
+    def yaw(self, yaw):
+        self._yaw = raycing.auto_units_angle(yaw)
 
     def rayleigh_range(self, E, w0=None):
         if w0 is None:
@@ -557,13 +661,15 @@ class GaussianBeam(object):
             try:
                 self.bl._alignE = float(self.bl.alignE)
             except ValueError:
-                if self.distE in ['lines', 'normal']:
-                    self.bl._alignE = self.energies[0]
+                alignE = np.atleast_1d(self.energies)
+                if len(alignE) == 0:
+                    self.bl._alignE = defaultEnergy
                 elif self.distE in ['flat']:
-                    self.bl._alignE = 0.5 * (self.energies[0] +
-                                             self.energies[-1])
+                    eMax = alignE[1] or alignE[0] if len(alignE) == 2 else\
+                        alignE[0]
+                    self.bl._alignE = 0.5 * (alignE[0] + eMax)
                 else:
-                    self.bl._alignE = self.energies
+                    self.bl._alignE = alignE[0]
 
         try:
             mcRays = len(wave.rDiffr)
@@ -738,6 +844,12 @@ class MeshSource(object):
             (minE, maxE) for *distE* = 'flat', a sequence of E values for
             *distE* = 'lines'
 
+            .. note::
+                Erroneous input (size/type mismatch) will default to
+                monochromatic distribution.
+                If *sigmaE* exceeds 10% of *centerE*, *sigmaE* is taken as zero
+                to avoid sampling negative energies.
+
         *energyWeights*: 1-D array-like
             Can be used together with *distE* = 'lines' to specify the weight
             of each line. Must be of the shape of *energies*.
@@ -781,12 +893,9 @@ class MeshSource(object):
         self.maxzprime = raycing.auto_units_angle(maxzprime)
         self.nx = nx
         self.nz = nz
-        self.nrays = self.nx * self.nz + int(withCentralRay)
+#        self.nrays = self.nx * self.nz + int(self.withCentralRay)
         self.distE = distE
-        if self.distE == 'lines':
-            self.energies = np.array(energies)
-        else:
-            self.energies = energies
+        self.energies = energies
         self.energyWeights = energyWeights
 
         if bl is not None:
@@ -797,6 +906,70 @@ class MeshSource(object):
         self.polarization = polarization
 
     center = raycing.center_property()
+
+    def _set_nrays(self):
+        if all([hasattr(self, val) for val in
+                ['_nx', '_nz', '_withCentralRay']]):
+            self.nrays = self.nx * self.nz + int(self.withCentralRay)
+
+    @property
+    def nx(self):
+        return self._nx
+
+    @nx.setter
+    def nx(self, nx):
+        self._nx = nx
+        self._set_nrays()
+
+    @property
+    def nz(self):
+        return self._nz
+
+    @nz.setter
+    def nz(self, nz):
+        self._nz = nz
+        self._set_nrays()
+
+    @property
+    def withCentralRay(self):
+        return self._withCentralRay
+
+    @withCentralRay.setter
+    def withCentralRay(self, withCentralRay):
+        self._withCentralRay = withCentralRay
+        self._set_nrays()
+
+    @property
+    def minxprime(self):
+        return self._minxprime
+
+    @minxprime.setter
+    def minxprime(self, minxprime):
+        self._minxprime = raycing.auto_units_angle(minxprime)
+
+    @property
+    def maxxprime(self):
+        return self._maxxprime
+
+    @maxxprime.setter
+    def maxxprime(self, maxxprime):
+        self._maxxprime = raycing.auto_units_angle(maxxprime)
+
+    @property
+    def minzprime(self):
+        return self._minzprime
+
+    @minzprime.setter
+    def minzprime(self, minzprime):
+        self._minzprime = raycing.auto_units_angle(minzprime)
+
+    @property
+    def maxzprime(self):
+        return self._maxzprime
+
+    @maxzprime.setter
+    def maxzprime(self, maxzprime):
+        self._maxzprime = raycing.auto_units_angle(maxzprime)
 
     @raycing.append_to_flow_decorator
     def shine(self, toGlobal=True):
@@ -811,13 +984,15 @@ class MeshSource(object):
             try:
                 self.bl._alignE = float(self.bl.alignE)
             except ValueError:
-                if self.distE in ['lines', 'normal']:
-                    self.bl._alignE = self.energies[0]
+                alignE = np.atleast_1d(self.energies)
+                if len(alignE) == 0:
+                    self.bl._alignE = defaultEnergy
                 elif self.distE in ['flat']:
-                    self.bl._alignE = 0.5 * (self.energies[0] +
-                                             self.energies[-1])
+                    eMax = alignE[1] or alignE[0] if len(alignE) == 2 else\
+                        alignE[0]
+                    self.bl._alignE = 0.5 * (alignE[0] + eMax)
                 else:
-                    self.bl._alignE = self.energies
+                    self.bl._alignE = alignE[0]
 
         self.dxprime = (self.maxxprime-self.minxprime) / (self.nx-1)
         self.dzprime = (self.maxzprime-self.minzprime) / (self.nz-1)
@@ -892,10 +1067,12 @@ class CollimatedMeshSource(object):
     """
 
     def __init__(
-        self, bl=None, name='', center=(0, 0, 0), dx=1., dz=1., nx=11, nz=11,
-        distE='lines', energies=(defaultEnergy,), energyWeights=None,
-        polarization='horizontal', withCentralRay=True,
-        autoAppendToBL=False, **kwargs):
+            self, bl=None, name='', center=(0, 0, 0),
+            dx=1., dz=1., nx=11, nz=11,
+            distE='lines', energies=(defaultEnergy,), energyWeights=None,
+            polarization='horizontal', withCentralRay=True,
+            autoAppendToBL=False, **kwargs):
+
         self.bl = bl
         if autoAppendToBL:
             if bl is not None:
@@ -918,12 +1095,9 @@ class CollimatedMeshSource(object):
         self.dz = dz
         self.nx = nx
         self.nz = nz
-        self.nrays = self.nx * self.nz + int(withCentralRay)
+#        self.nrays = self.nx * self.nz + int(withCentralRay)
         self.distE = distE
-        if self.distE == 'lines':
-            self.energies = np.array(energies)
-        else:
-            self.energies = energies
+        self.energies = energies
         self.energyWeights = energyWeights
 
         if bl is not None:
@@ -934,6 +1108,38 @@ class CollimatedMeshSource(object):
         self.polarization = polarization
 
     center = raycing.center_property()
+
+    def _set_nrays(self):
+        if all([hasattr(self, val) for val in
+                ['_nx', '_nz', '_withCentralRay']]):
+            self.nrays = self.nx * self.nz + int(self.withCentralRay)
+
+    @property
+    def nx(self):
+        return self._nx
+
+    @nx.setter
+    def nx(self, nx):
+        self._nx = nx
+        self._set_nrays()
+
+    @property
+    def nz(self):
+        return self._nz
+
+    @nz.setter
+    def nz(self, nz):
+        self._nz = nz
+        self._set_nrays()
+
+    @property
+    def withCentralRay(self):
+        return self._withCentralRay
+
+    @withCentralRay.setter
+    def withCentralRay(self, withCentralRay):
+        self._withCentralRay = withCentralRay
+        self._set_nrays()
 
     @raycing.append_to_flow_decorator
     def shine(self, toGlobal=True):
@@ -948,13 +1154,15 @@ class CollimatedMeshSource(object):
             try:
                 self.bl._alignE = float(self.bl.alignE)
             except ValueError:
-                if self.distE in ['lines', 'normal']:
-                    self.bl._alignE = self.energies[0]
+                alignE = np.atleast_1d(self.energies)
+                if len(alignE) == 0:
+                    self.bl._alignE = defaultEnergy
                 elif self.distE in ['flat']:
-                    self.bl._alignE = 0.5 * (self.energies[0] +
-                                             self.energies[-1])
+                    eMax = alignE[1] or alignE[0] if len(alignE) == 2 else\
+                        alignE[0]
+                    self.bl._alignE = 0.5 * (alignE[0] + eMax)
                 else:
-                    self.bl._alignE = self.energies
+                    self.bl._alignE = alignE[0]
 
         bo = Beam(self.nrays)  # beam-out
         bo.state[:] = 1
@@ -989,7 +1197,7 @@ class BeamFromFile():
     """
 
     def __init__(self, bl=None, name='', center=(0, 0, 0),
-                 nrays=raycing.nrays, fileName=None, **kwargs):
+                 fileName=None, **kwargs):
         super().__init__()
         self.bl = bl
         if bl is not None:
@@ -1008,10 +1216,16 @@ class BeamFromFile():
                 bl.oenamesToUUIDs[self.name] = self.uuid
 
         self.center = center
-        self.nrays = np.int64(nrays)
         self.fileName = fileName
 
     center = raycing.center_property()
+
+    @property
+    def nrays(self):
+        if hasattr(self, 'fbeam'):
+            if hasattr(self.fbeam, 'x'):
+                return np.int64(np.asarray(getattr(self.fbeam, 'x')).size)
+        return np.int64(0)
 
     @property
     def fileName(self):
@@ -1025,7 +1239,6 @@ class BeamFromFile():
         else:
             print("No filename provided, using an empty beam")
             self.fbeam = Beam()
-
 
     @raycing.append_to_flow_decorator
     def shine(self):
