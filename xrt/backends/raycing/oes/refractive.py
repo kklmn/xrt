@@ -146,6 +146,8 @@ class Plate(DCM):
 
         if hasattr(self, '_nCRLlist') and self._nCRLlist is not None:
             self.nCRL = self._nCRLlist
+        if hasattr(self, '_focuslist') and self._focuslist is not None:
+            self.focus = self._focuslist
 
     @property
     def wedgeAngle(self):
@@ -294,9 +296,11 @@ class ParaboloidFlatLens(Plate):
 
     def __init__(self, *args, **kwargs):
         r"""
-        *focus*: float
-            The focal distance of the of paraboloid in mm. The paraboloid is
-            then defined by the equation:
+        *focus*: float or 2-tuple (*focalDistance*, *E*)
+            The focal distance of the of paraboloid in mm. It can also be
+            calculated automatically for *focalDistance* at energy *E*. In this
+            case, *nCRL* must be an integer. The paraboloid is then defined by
+            the equation:
 
             .. math::
                 z = (x^2 + y^2) / (4 * \mathit{focus})
@@ -315,7 +319,7 @@ class ParaboloidFlatLens(Plate):
             plate of the thickness *zmax* + *t* with a paraboloid hole at the
             origin.
 
-        *nCRL*: int or tuple (*focalDistance*, *E*)
+        *nCRL*: int or 2-tuple (*focalDistance*, *E*)
             If used as CRL (a stack of several lenslets), the number of the
             lenslets nCRL is either given by the user directly or calculated
             for *focalDistance* at energy *E* and then rounded. The lenses are
@@ -338,10 +342,11 @@ class ParaboloidFlatLens(Plate):
         if isinstance(nCRL, (int, float)):
             self._nCRL = max(int(round(nCRL)), 1)
             self._nCRLlist = None
+            if hasattr(self, '_focuslist') and self._focuslist is not None:
+                self.focus = self._focuslist
         elif isinstance(nCRL, (list, tuple)):
             self._nCRL = max(int(round(self.get_nCRL(*nCRL))), 1)
             self._nCRLlist = copy.copy(nCRL)
-#            print('nCRL={0}'.format(nCRL))
         else:
             self._nCRL = 1
 #            raise ValueError("wrong nCRL value!")
@@ -352,15 +357,34 @@ class ParaboloidFlatLens(Plate):
 
     @focus.setter
     def focus(self, focus):
-        self._focus = focus
-        if hasattr(self, '_nCRLlist'):
-            if self._nCRLlist is not None:
+        if isinstance(focus, (int, float)):
+            self._focus = focus
+            self._focuslist = None
+            if hasattr(self, '_nCRLlist') and self._nCRLlist is not None:
                 self.nCRL = self._nCRLlist
+        elif isinstance(focus, (list, tuple)):
+            self._focus = self.get_focus(*focus)
+            self._focuslist = copy.copy(focus)
+        else:
+            self._focus = 1.
 
     def __pop_kwargs(self, **kwargs):
-        self.focus = kwargs.pop('focus', 1.)
+        focus = kwargs.pop('focus', 1.)
+        nCRL = kwargs.pop('nCRL', 1)
+        if isinstance(focus, (list, tuple)):
+            if isinstance(nCRL, (list, tuple)):
+                print("'focus' and 'nCRL' cannot be both automatic")
+                nCRL = 1
+            self.nCRL = nCRL  # int, float
+            self.focus = focus
+        elif isinstance(nCRL, (list, tuple)):
+            self.focus = focus  # int, float
+            self.nCRL = nCRL
+        else:
+            self.nCRL = nCRL  # int, float
+            self.focus = focus  # int, float
+
         self.zmax = kwargs.pop('zmax', None)
-        self.nCRL = kwargs.pop('nCRL', 1)
         kwargs['pitch'] = kwargs.get('pitch', np.pi/2)
         return kwargs
 
@@ -404,15 +428,30 @@ class ParaboloidFlatLens(Plate):
         return self.local_n1(x, y)
 
     def get_nCRL(self, f, E):
-        nCRL, nFactor = 1, 1.
-        if all([hasattr(self, val) for val in ['focus', 'material']]):
-            if self.focus is not None and self.material is not None:
-                if isinstance(self, (DoubleParaboloidLens,
-                                     DoubleParabolicCylinderLens)):
-                    nFactor *= 0.5
-                nCRL = 2 * self.focus / float(f) /\
-                    (1. - self.material.get_refractive_index(E).real) * nFactor
+        nCRL = 1
+        if all([hasattr(self, val) for val in ['focus', 'material']]) and \
+                (self.focus is not None) and (self.material is not None):
+            if isinstance(self, (DoubleParaboloidLens,
+                                 DoubleParabolicCylinderLens)):
+                nFactor = 0.5
+            else:
+                nFactor = 1.
+            df = 1. - self.material.get_refractive_index(E).real
+            nCRL = self.focus / (f*df) * (2*nFactor)
         return nCRL
+
+    def get_focus(self, f, E):
+        focus = 1.
+        if all([hasattr(self, val) for val in ['nCRL', 'material']]) and \
+                (self.nCRL is not None) and (self.material is not None):
+            if isinstance(self, (DoubleParaboloidLens,
+                                 DoubleParabolicCylinderLens)):
+                nFactor = 0.5
+            else:
+                nFactor = 1.
+            df = 1. - self.material.get_refractive_index(E).real
+            focus = (f*df) * self.nCRL / (2*nFactor)
+        return focus
 
     @raycing.append_to_flow_decorator
     def multiple_refract(self, beam=None, needLocal=True,
