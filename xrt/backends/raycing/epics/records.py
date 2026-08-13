@@ -10,7 +10,8 @@ import numpy as np
 
 from .device import to_valid_var_name
 from .._named_arrays import Center, Limits
-from .._sets_units import orientationArgSet, shapeArgSet
+from .._sets_units import (
+    derivedArgSet, diagnosticArgs, orientationArgSet, shapeArgSet)
 from ..physconsts import CH
 
 
@@ -83,6 +84,24 @@ def element_records(oe_obj: Any,
         pvs.append(PvSpec(mapped, label, property_path, kind, access,
                           initial_value, group, metadata or {}))
 
+    def add_readback(default_record: str, label: str, property_path: str,
+                     initial_value: Any = None,
+                     group: str = "Properties") -> None:
+        default_rbv = f"{default_record}_RBV"
+        if epics_map:
+            if default_rbv in epics_map:
+                mapped = _map_record(default_rbv, epics_map)
+            elif default_record in epics_map:
+                mapped = f"{_map_record(default_record, epics_map)}_RBV"
+            else:
+                return
+        else:
+            mapped = default_rbv
+        pvs.append(PvSpec(
+            mapped, f"{label} RBV", property_path, "number", "ro",
+            _numeric_initial(initial_value), group,
+            {"readback_for": _map_record(default_record, epics_map)}))
+
     _add_energy_record(oe_obj, oename, add)
     _add_image_records(oe_obj, oename, add)
 
@@ -102,32 +121,54 @@ def element_records(oe_obj: Any,
             center_obj = getattr(oe_obj, arg_name)
             if isinstance(center_obj, (list, tuple)) and len(center_obj) == 3:
                 center_obj = Center(center_obj)
-            for field_name in ["x", "y", "z"]:
-                value = getattr(center_obj, field_name, None)
-                add(f"{oename}:{arg_name}:{field_name}",
-                    f"{_label(arg_name)} {field_name}",
-                    f"{arg_name}.{field_name}", "number", "rw", value,
-                    _group(arg_name))
+            for index, field_name in enumerate(["x", "y", "z"]):
+                value = _field_value(center_obj, index, field_name)
+                record = f"{oename}:{arg_name}:{field_name}"
+                label = f"{_label(arg_name)} {field_name}"
+                add(record, label, f"{arg_name}.{field_name}", "number",
+                    "rw", value, _group(arg_name))
+                add_readback(record, label, f"{arg_name}.{field_name}",
+                             value, _group(arg_name))
         elif arg_name in ["limPhysX", "limPhysY", "limPhysX2", "limPhysY2"]:
             lim_obj = getattr(oe_obj, arg_name)
             if isinstance(lim_obj, Limits):
                 for index, field_name in enumerate(["lmin", "lmax"]):
-                    add(f"{oename}:{arg_name}:{field_name}",
-                        f"{_label(arg_name)} {field_name}",
-                        f"{arg_name}.{field_name}", "number", "rw",
-                        lim_obj[index], _group(arg_name))
+                    record = f"{oename}:{arg_name}:{field_name}"
+                    label = f"{_label(arg_name)} {field_name}"
+                    add(record, label, f"{arg_name}.{field_name}", "number",
+                        "rw", lim_obj[index], _group(arg_name))
         elif arg_name == "blades":
             blades_obj = getattr(oe_obj, "blades")
             if isinstance(blades_obj, dict):
                 for field_name, value in blades_obj.items():
-                    add(f"{oename}:blades:{field_name}",
-                        f"Blade {field_name}", f"blades.{field_name}",
-                        "number", "rw", value, _group(arg_name))
+                    record = f"{oename}:blades:{field_name}"
+                    label = f"Blade {field_name}"
+                    add(record, label, f"blades.{field_name}", "number",
+                        "rw", value, _group(arg_name))
+                    add_readback(record, label, f"blades.{field_name}",
+                                 value, _group(arg_name))
         else:
             initial_value = getattr(oe_obj, arg_name)
             if isinstance(initial_value, (int, float, np.number)):
-                add(f"{oename}:{arg_name}", _label(arg_name), arg_name,
-                    "number", "rw", initial_value, _group(arg_name))
+                record = f"{oename}:{arg_name}"
+                add(record, _label(arg_name), arg_name, "number", "rw",
+                    initial_value, _group(arg_name))
+
+    for arg_name in derivedArgSet:
+        if arg_name == "center" or not hasattr(oe_obj, arg_name):
+            continue
+        record = f"{oename}:{arg_name}"
+        if any(pv.record == f"{record}_RBV" for pv in pvs):
+            continue
+        add_readback(record, _label(arg_name), arg_name,
+                     getattr(oe_obj, arg_name), _group(arg_name))
+
+    for arg_name in diagnosticArgs:
+        if not hasattr(oe_obj, arg_name):
+            continue
+        record = f"{oename}:{arg_name}"
+        add_readback(record, _label(arg_name), arg_name,
+                     getattr(oe_obj, arg_name), "Diagnostic")
 
     return pvs
 
@@ -374,3 +415,23 @@ def _label(arg_name: str) -> str:
         "parabolaAxis": "Parabola axis",
     }
     return special.get(arg_name, arg_name[:1].upper() + arg_name[1:])
+
+
+def _field_value(value: Any, index: int, field_name: str) -> Any:
+    if isinstance(value, dict):
+        return value.get(field_name)
+    if hasattr(value, field_name):
+        return getattr(value, field_name)
+    if hasattr(value, "tolist"):
+        value = value.tolist()
+    if isinstance(value, (list, tuple)) and len(value) > index:
+        return value[index]
+    return None
+
+
+def _numeric_initial(value: Any, default: float = 0.) -> float:
+    try:
+        value = np.asarray(value, dtype=float)
+        return float(value.flat[0] if value.shape else value)
+    except (TypeError, ValueError):
+        return default

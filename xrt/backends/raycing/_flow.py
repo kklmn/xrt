@@ -10,8 +10,20 @@ from ._flow_utils import parametrize, format_energy_input
 from .beamline import BeamLine
 
 
-def propagationProcess(q_in, q_out, with_epics_histograms=False):
-    handler = MessageHandler(with_epics_histograms=with_epics_histograms)
+DEFAULT_OUTPUT_POLICY = {
+    'beams': True,
+    'histograms': True,
+    'auto_properties': True,
+    'footprints': True,
+    'diagnostics': True,
+    'progress': True,
+}
+
+
+def propagationProcess(q_in, q_out, with_epics_histograms=False,
+                       output_policy=None):
+    handler = MessageHandler(with_epics_histograms=with_epics_histograms,
+                             output_policy=output_policy)
     repeats = 0
     while True:
         try:
@@ -55,7 +67,12 @@ def propagationProcess(q_in, q_out, with_epics_histograms=False):
                         print("Error in PropagationProcess\n", e)
                         continue
                     flowCounter += 1
-                    for autoAttr in derivedArgSet:
+                    if handler.output_policy.get('auto_properties'):
+                        autoAttrs = derivedArgSet
+                    else:
+                        autoAttrs = ()
+
+                    for autoAttr in autoAttrs:
                         # 'center', 'pitch', 'bragg', 'R', 'r', 'Rm', 'Rs'
                         if (hasattr(oe, f'_{autoAttr}') and hasattr(
                                 oe, f'_{autoAttr}Val')):
@@ -70,28 +87,32 @@ def propagationProcess(q_in, q_out, with_epics_histograms=False):
                                         'status': 0}
                                 q_out.put(msg_autopos_update)
 
-                    for autoAttr in ['footprint']:
-                        if (hasattr(oe, autoAttr) and len(
-                                getattr(oe, autoAttr)) > 0):
-                            msg_autopos_update = {
-                                    'pos_attr': autoAttr,
-                                    'pos_value': getattr(oe, autoAttr, None),
-                                    'sender_name': oe.name,
-                                    'sender_id': oe.uuid,
-                                    'status': 0}
-                            q_out.put(msg_autopos_update)
-
-                    for diagAttrName in diagnosticArgs:
-                        if hasattr(oe, diagAttrName):
-                            diagAttrValue = getattr(oe, diagAttrName, None)
-                            if diagAttrValue is not None:
-                                msg_diagparam_update = {
-                                        'diag_attr': diagAttrName,
-                                        'diag_value': diagAttrValue,
+                    if handler.output_policy.get('footprints'):
+                        for autoAttr in ['footprint']:
+                            if (hasattr(oe, autoAttr) and len(
+                                    getattr(oe, autoAttr)) > 0):
+                                msg_autopos_update = {
+                                        'pos_attr': autoAttr,
+                                        'pos_value': getattr(
+                                                oe, autoAttr, None),
                                         'sender_name': oe.name,
                                         'sender_id': oe.uuid,
                                         'status': 0}
-                                q_out.put(msg_diagparam_update)
+                                q_out.put(msg_autopos_update)
+
+                    if handler.output_policy.get('diagnostics'):
+                        for diagAttrName in diagnosticArgs:
+                            if hasattr(oe, diagAttrName):
+                                diagAttrValue = getattr(
+                                    oe, diagAttrName, None)
+                                if diagAttrValue is not None:
+                                    msg_diagparam_update = {
+                                            'diag_attr': diagAttrName,
+                                            'diag_value': diagAttrValue,
+                                            'sender_name': oe.name,
+                                            'sender_id': oe.uuid,
+                                            'status': 0}
+                                    q_out.put(msg_diagparam_update)
 
 #                    for dependAttrName in dependentArgs:
 #                        if hasattr(oe, dependAttrName):
@@ -105,19 +126,23 @@ def propagationProcess(q_in, q_out, with_epics_histograms=False):
 #                                        'status': 0}
 #                                q_out.put(msg_dependparam_update)
 
-                    msg_beam = {'beam': handler.bl.beamsDictU[oe.uuid],
-                                'sender_name': oe.name,
-                                'sender_id': oe.uuid,
-                                'status': 0}
-                    q_out.put(msg_beam)
+                    if handler.output_policy.get('beams'):
+                        msg_beam = {'beam': handler.bl.beamsDictU[oe.uuid],
+                                    'sender_name': oe.name,
+                                    'sender_id': oe.uuid,
+                                    'status': 0}
+                        q_out.put(msg_beam)
                     # TODO: histDict
-                    if hasattr(oe, 'expose') and hasattr(oe, 'image'):
+                    if handler.output_policy.get('histograms') and\
+                            hasattr(oe, 'expose') and hasattr(oe, 'image'):
                         msg_hist = {'histogram': oe.image,
                                     'sender_name': oe.name,
                                     'sender_id': oeid,
                                     'status': 0}
                         q_out.put(msg_hist)
-                    q_out.put({"status": 0, "progress": flowCounter/flowLen})
+                    if handler.output_policy.get('progress'):
+                        q_out.put({"status": 0,
+                                   "progress": flowCounter/flowLen})
             handler.bl.forceAlign = False
             q_out.put({"status": 0, "repeat": repeats})
             handler.needUpdate = False
@@ -131,7 +156,8 @@ def propagationProcess(q_in, q_out, with_epics_histograms=False):
 
 
 class MessageHandler:
-    def __init__(self, bl=None, with_epics_histograms=False):
+    def __init__(self, bl=None, with_epics_histograms=False,
+                 output_policy=None):
         self.bl = bl
         self.stop = True
         self.needUpdate = False
@@ -139,6 +165,9 @@ class MessageHandler:
         self.startEl = None
         self.exit = False
         self.with_epics_histograms = with_epics_histograms
+        self.output_policy = DEFAULT_OUTPUT_POLICY.copy()
+        if output_policy is not None:
+            self.output_policy.update(output_policy)
 
     def prepare_method_kwargs(self, kwargs):
         if not self.with_epics_histograms or 'withHistogram' not in kwargs:
@@ -368,7 +397,8 @@ class MessageHandler:
     def handle_start(self, message):
         print("Starting processing loop.")
         self.stop = False
-        self.needUpdate = True
+        if message.get('run', True):
+            self.needUpdate = True
 
     def handle_exit(self, message):
         print("Exiting.")

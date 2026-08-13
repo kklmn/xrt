@@ -10,7 +10,7 @@ import json
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 from xml.dom import minidom
 
 try:
@@ -72,11 +72,11 @@ class BobWriter:
         widgets = []
         widgets.append(widget.Label("title", title, 16, 12, 720, 28))
         y = 52
-        for group, group_pvs in _group_pvs(pvs):
+        for group, group_rows in _group_pv_rows(pvs):
             widgets.append(widget.Label(f"{group} group", group, 16, y,
                                         720, 20))
             y += 26
-            for pv in group_pvs:
+            for pv, readback in group_rows:
                 if pv.kind == "image":
                     image = widget.Image(pv.label, prefixed_pv_name(pv.record),
                                          180, y, 320, 240)
@@ -100,6 +100,7 @@ class BobWriter:
                 widgets.append(widget.Label(f"{pv.label} label", pv.label,
                                             32, y, 132, 24))
                 pv_name = prefixed_pv_name(pv.record)
+                control = None
                 if pv.kind == "bool_command":
                     control = widget.BooleanButton(pv.label, pv_name, 180, y,
                                                    130, 26)
@@ -115,14 +116,16 @@ class BobWriter:
                 elif pv.kind == "bool_status":
                     control = widget.LED(pv.label, pv_name, 180, y, 28, 24)
                 elif pv.access == "ro":
-                    control = widget.TextUpdate(pv.label, pv_name, 180, y,
-                                                210, 24)
+                    pass
                 else:
                     control = widget.TextEntry(pv.label, pv_name, 180, y,
                                                210, 24)
-                widgets.append(control)
-                widgets.append(widget.TextUpdate(f"{pv.label} pv", pv_name,
-                                                 420, y, 300, 24))
+                if control is not None:
+                    widgets.append(control)
+                readback_name = prefixed_pv_name(
+                    (readback or pv).record)
+                widgets.append(widget.TextUpdate(
+                    f"{pv.label} readback", readback_name, 420, y, 300, 24))
                 y += 30
 
         display.add_widget(widgets)
@@ -143,11 +146,11 @@ class BobWriter:
         _widget(root, "label", "title", 16, 12, 720, 28,
                 {"text": title})
         y = 52
-        for group, group_pvs in _group_pvs(pvs):
+        for group, group_rows in _group_pv_rows(pvs):
             _widget(root, "label", f"{group} group", 16, y, 720, 20,
                     {"text": group, "font": ("Liberation Sans", 14, "BOLD")})
             y += 26
-            for pv in group_pvs:
+            for pv, readback in group_rows:
                 if pv.kind == "image":
                     pv_name = prefixed_pv_name(pv.record)
                     _widget(root, "label", f"{pv.label} label", 32, y, 132,
@@ -188,15 +191,14 @@ class BobWriter:
                         "pv_name": pv_name,
                     })
                 elif pv.access == "ro":
-                    _widget(root, "textupdate", pv.label, 180, y, 210, 24, {
-                        "pv_name": pv_name,
-                    })
+                    pass
                 else:
                     _widget(root, "textentry", pv.label, 180, y, 210, 24, {
                         "pv_name": pv_name,
                     })
-                _widget(root, "textupdate", f"{pv.label} pv", 420, y,
-                        300, 24, {"pv_name": pv_name})
+                readback_name = prefixed_pv_name((readback or pv).record)
+                _widget(root, "textupdate", f"{pv.label} readback", 420, y,
+                        300, 24, {"pv_name": readback_name})
                 y += 30
 
         file_name.write_text(_pretty_xml(root), encoding="utf-8")
@@ -353,8 +355,40 @@ def _group_pvs(pvs: List[PvSpec]):
             yield group, group_pvs
 
 
+def _group_pv_rows(pvs: List[PvSpec]):
+    for group, group_pvs in _group_pvs(pvs):
+        rows = _pair_readbacks(group_pvs)
+        if rows:
+            yield group, rows
+
+
+def _pair_readbacks(pvs: List[PvSpec]) -> List[Tuple[PvSpec, Optional[PvSpec]]]:
+    readbacks = {}
+    for pv in pvs:
+        readback_for = pv.metadata.get("readback_for")
+        if readback_for and readback_for not in readbacks:
+            readbacks[readback_for] = pv
+
+    paired = set()
+    rows = []
+    for pv in pvs:
+        if pv.metadata.get("readback_for"):
+            continue
+        readback = readbacks.get(pv.record)
+        if readback is not None:
+            paired.add(readback.record)
+        rows.append((pv, readback))
+
+    for pv in pvs:
+        if pv.metadata.get("readback_for") and pv.record not in paired:
+            rows.append((pv, None))
+    return rows
+
+
 def _layout_height(pvs: List[PvSpec]):
-    row_count = len([pv for pv in pvs if pv.kind != "image"])
+    row_count = sum(
+        len([row for row in rows if row[0].kind != "image"])
+        for _, rows in _group_pv_rows(pvs))
     group_count = len({pv.group for pv in pvs})
     image_count = len([pv for pv in pvs if pv.kind == "image"])
     return 52 + group_count * 26 + row_count * 30, image_count * 252

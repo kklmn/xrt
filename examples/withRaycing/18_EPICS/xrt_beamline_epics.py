@@ -20,11 +20,14 @@ import xrt.backends.raycing as raycing
 import xrt.plotter as xrtplot
 import xrt.runner as xrtrun
 from functools import partial
-from softioc import softioc, builder
+from softioc import softioc, builder, asyncio_dispatcher
 import copy
 import numbers
 import time
 
+os.environ["EPICS_CAS_INTF_ADDR_LIST"] = "127.0.0.1"
+os.environ["EPICS_CAS_BEACON_ADDR_LIST"] = "127.0.0.1"
+os.environ["EPICS_CAS_AUTO_BEACON_ADDR_LIST"] = "NO"
 os.environ["EPICS_CA_ADDR_LIST"] = "127.0.0.1"
 os.environ["EPICS_CA_AUTO_ADDR_LIST"] = "NO"
 
@@ -188,7 +191,7 @@ for oeid, oeline in bl.oesDict.items():
     if isinstance(oeObj, rscreens.Screen):
         histShape = oeObj.histShape
         if histShape is not None:
-            length = np.prod(histShape)
+            length = int(np.prod(histShape))
         pv_records[f'{oeObj.name}:Array'] = builder.WaveformIn(
             f'{oeObj.name}:Array', length=length)  # TODO: check API for 
         pv_records[f'{oeObj.name}:Status'] = builder.mbbIn(
@@ -201,7 +204,8 @@ for oeid, oeline in bl.oesDict.items():
 
 
 builder.LoadDatabase()
-softioc.iocInit()
+dispatcher = asyncio_dispatcher.AsyncioDispatcher()
+softioc.iocInit(dispatcher)
 
 # Start processes required to be run after iocInit
 #def update():

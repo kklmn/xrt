@@ -217,7 +217,7 @@ from ._sets_units import (
     allUnitsEnergyStr, allUnitsEmittance, allUnitsEmittanceStr,
     allUnitsCurrent, allUnitsCurrentStr, lengthUnitParams, auto_unit)
 
-from .epics import to_valid_var_name, EpicsDevice
+from .epics import to_valid_var_name, EpicsDevice, DynamicBeamline
 
 from ._named_arrays import NamedArrayFactory, Center, Limits, Opening, Image2D
 
