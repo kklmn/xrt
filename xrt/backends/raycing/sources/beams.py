@@ -102,7 +102,7 @@ class Beam(object):
                    'phi', 'r', 'theta', 'order', 'accepted',
                    'acceptedE', 'seeded', 'seededI', 'Es', 'Ep',
                    # 'area',
-                   'nRefl']
+                   'nRefl', 'sourceWeight']
 
     def __init__(self, nrays=raycing.nrays, copyFrom=None, forceState=False,
                  withNumberOfReflections=False, withAmplitudes=False,
@@ -230,6 +230,8 @@ class Beam(object):
     def concatenate(self, beam):
         """Adds *beam* to *self*. Useful when more than one source is
         presented."""
+        nself = len(self.x)
+
         self.state = np.concatenate((self.state, beam.state))
         self.x = np.concatenate((self.x, beam.x))
         self.y = np.concatenate((self.y, beam.y))
@@ -242,6 +244,7 @@ class Beam(object):
         self.Jss = np.concatenate((self.Jss, beam.Jss))
         self.Jpp = np.concatenate((self.Jpp, beam.Jpp))
         self.Jsp = np.concatenate((self.Jsp, beam.Jsp))
+
         if hasattr(self, 'nRefl') and hasattr(beam, 'nRefl'):
             self.nRefl = np.concatenate((self.nRefl, beam.nRefl))
         if hasattr(self, 'elevationD') and hasattr(beam, 'elevationD'):
@@ -263,14 +266,29 @@ class Beam(object):
             self.theta = np.concatenate((self.theta, beam.theta))
         if hasattr(self, 'order') and hasattr(beam, 'order'):
             self.order = np.concatenate((self.order, beam.order))
-        if hasattr(self, 'accepted') and hasattr(beam, 'accepted'):
-            seeded = self.seeded + beam.seeded
-            self.accepted = (self.accepted / self.seeded +
-                             beam.accepted / beam.seeded) * seeded
-            self.acceptedE = (self.acceptedE / self.seeded +
-                              beam.acceptedE / beam.seeded) * seeded
-            self.seeded = seeded
-            self.seededI = self.seededI + beam.seededI
+        if hasattr(self, 'sourceWeight') and hasattr(beam, 'sourceWeight'):
+            nbeam = len(beam.x)
+            if np.ndim(self.sourceWeight) == 0 and\
+                    np.ndim(beam.sourceWeight) == 0:
+                if self.sourceWeight == beam.sourceWeight:
+                    pass
+                else:
+                    self.sourceWeight = np.concatenate((
+                        np.full(nself, self.sourceWeight),
+                        np.full(nbeam, beam.sourceWeight),
+                    ))
+            else:
+                self.sourceWeight = np.concatenate((
+                    np.broadcast_to(self.sourceWeight, nself),
+                    np.broadcast_to(beam.sourceWeight, nbeam),
+                ))
+#            seeded = self.seeded + beam.seeded
+#            self.accepted = (self.accepted / self.seeded +
+#                             beam.accepted / beam.seeded) * seeded
+#            self.acceptedE = (self.acceptedE / self.seeded +
+#                              beam.acceptedE / beam.seeded) * seeded
+#            self.seeded = seeded
+#            self.seededI = self.seededI + beam.seededI
         if hasattr(self, 'Es') and hasattr(beam, 'Es'):
             self.Es = np.concatenate((self.Es, beam.Es))
             self.Ep = np.concatenate((self.Ep, beam.Ep))
@@ -308,6 +326,8 @@ class Beam(object):
         if hasattr(self, 'Es'):
             self.Es = self.Es[indarr]
             self.Ep = self.Ep[indarr]
+        if hasattr(self, 'sourceWeight') and np.ndim(self.sourceWeight) > 0:
+            self.sourceWeight = self.sourceWeight[indarr]
         return self
 
     def replace_by_index(self, indarr, beam):

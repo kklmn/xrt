@@ -1905,11 +1905,10 @@ class XYCPlot(object):
 #        return r"{0}$\cdot$10$^{{{1}}}$".format(f_SF, power)
 
     def _get_flux(self):
-        self.flux = float(self.intensity) / self.nRaysAll *\
-            self.nRaysSeededI / self.nRaysSeeded
+        self.flux = float(self.intensity) / self.nRaysAll
 
     def _get_power(self):
-        self.power = self.intensity / self.nRaysAll
+        self.power = float(self.intensity) / self.nRaysAll
 
     def plot_plots(self):
         """

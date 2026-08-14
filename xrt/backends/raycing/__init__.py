@@ -438,31 +438,36 @@ def get_output(plot, beamsReturnedBy_run_process):
         else:
             raise ValueError('cannot find data for cData!')
 
+        srcWt = nrays * beam.sourceWeight if hasattr(beam, 'sourceWeight')\
+            else 1.
+
         if plot.fluxKind.startswith('power'):
-            intensity = ((beam.Jss + beam.Jpp) *
-                         beam.E * beam.seededI / beam.seeded * SIE0)
+            intensity = (beam.Jss + beam.Jpp) * beam.E * SIE0 * srcWt
+#            intensity = ((beam.Jss + beam.Jpp) *
+#                         beam.E * beam.seededI / beam.seeded * SIE0)
 #            intensity = ((beam.Jss + beam.Jpp) *
 #                         beam.E * beam.accepted / beam.seeded * SIE0)
         elif plot.fluxKind.startswith('s'):
-            intensity = beam.Jss
+            intensity = beam.Jss * srcWt
         elif plot.fluxKind.startswith('p'):
-            intensity = beam.Jpp
+            intensity = beam.Jpp * srcWt
         elif plot.fluxKind.startswith('+/-45'):
-            intensity = 2*beam.Jsp.real
+            intensity = 2*beam.Jsp.real * srcWt
         elif plot.fluxKind.startswith('left-right'):
-            intensity = 2*beam.Jsp.imag
+            intensity = 2*beam.Jsp.imag * srcWt
         elif plot.fluxKind.startswith('E'):
+            sqrtWt = np.sqrt(srcWt)
             if plot.fluxKind.startswith('Es'):
-                intensity = beam.Es
-                flux = beam.Jss
+                intensity = beam.Es * sqrtWt
+                flux = beam.Jss * srcWt
             elif plot.fluxKind.startswith('Ep'):
-                intensity = beam.Ep
-                flux = beam.Jpp
+                intensity = beam.Ep* sqrtWt
+                flux = beam.Jpp * srcWt
             else:
-                intensity = beam.Es + beam.Ep
-                flux = beam.Jss + beam.Jpp
+                intensity = (beam.Es + beam.Ep) * sqrtWt
+                flux = (beam.Jss + beam.Jpp) * srcWt
         else:
-            intensity = beam.Jss + beam.Jpp
+            intensity = (beam.Jss + beam.Jpp) * srcWt
 
         if not plot.fluxKind.startswith('E'):
             flux = intensity
