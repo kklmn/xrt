@@ -683,9 +683,10 @@ class XYCPlot(object):
 
         *rayFlag*: int or tuple of ints
             shadow: 0=lost rays, 1=good rays, 2=all rays.
-            raycing: a tuple of integer ray states: 1=good, 2=out, 3=over,
-            4=alive (good + out), -NN = dead at oe number NN (numbering starts
-            with 1).
+
+            raycing: a tuple of integer ray states. See
+            :ref:`raycing-beam-categories`. The special value of 4 (not a
+            state) selects all alive rays (``state > 0``).
 
         *xaxis*, *yaxis*, *caxis*: instance of :class:`XYCAxis` or None.
             If None, a default axis is created. If caxis='category' and the

@@ -80,16 +80,32 @@ is not used. Angles are unitless (radians). Energy is in eV.
 For plotting, the user may select units and conversion factors. The latter are
 usually automatically deduced from the units.
 
+.. _raycing-beam-categories:
+
 Beam categories
 ---------------
 
-xrt discriminates rays by several categories:
+Each ray in the beam carries an integer ``state`` defined by its propagation
+status:
 
-a) ``good``: reflected within the working optical surface;
-b) ``out``: reflected outside of the working optical surface, i.e. outside of
-   a metal stripe on a mirror;
-c) ``over``: propagated over the surface without intersection;
-d) ``dead``: arrived below the optical surface and thus absorbed by the OE.
+**0**: ``undefined``
+    No valid propagation state is assigned. This is used for newly created
+    beams.
+
+**1**: ``good``
+    Intersected the element within its working optical area.
+
+**2**: ``out``
+    Intersected the physical surface outside the working optical area,
+    i.e. outside of a metal stripe on a mirror.
+
+**3**: ``over``
+    Propagated past the element without intersection.
+
+**-NN**: ``dead``
+    Lost (absorbed) at the beamline element with ``lostNum=-NN``. Dead rays
+    remain in the beam arrays but are excluded from further
+    propagation.
 
 This distinction simplifies the adjustment of entrance and exit slits. The
 user supplies `physical` and `optical` limits, where the latter is used to
@@ -361,7 +377,10 @@ def get_output(plot, beamsReturnedBy_run_process):
     locOver = 0
     locDead = 0
     for rayFlag in plot.rayFlag:
-        locPart = beamState == rayFlag
+        if rayFlag == 4:
+            locPart = beamState > 0
+        else:
+            locPart = beamState == rayFlag
         if rayFlag == 1:
             locGood = locPart.sum()
         if rayFlag == 2:

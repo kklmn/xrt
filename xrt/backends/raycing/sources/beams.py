@@ -44,20 +44,54 @@ class BeamProxy(object):
 
 
 class Beam(object):
-    """Container for the beam arrays. *x, y, z* give the starting points.
-    *a, b, c* give normalized vectors of ray directions (the source must take
-    care about the normalization). *E* is energy. *Jss*, *Jpp* and *Jsp* are
-    the components  of the coherency matrix. The latter one is complex. *Es*
-    and *Ep* are *s* and *p* field amplitudes (not always used). *path* is the
-    total path length from the source to the last impact point. *theta* is the
-    incidence angle. *order* is the order of grating diffraction. If multiple
-    reflections are considered: *nRefl* is the number of reflections,
-    *elevationD* is the maximum elevation distance between the rays and the
-    surface as the ray travels from one impact point to the next one,
-    *elevationX*, *elevationY*, *elevationZ* are the coordinates of the
-    highest elevation points. If an OE uses a parametric representation,
-    *s*, *phi*, *r* arrays store the impact points in the parametric
-    coordinates.
+    """Container for the beam arrays.
+
+    *x*, *y*, *z*: float
+        Starting points of the rays.
+
+    *a*, *b*, *c*: float
+        Normalized vectors of ray directions (the source is responsible for
+        the normalization).
+
+    *E*: float
+        Energy.
+
+    *state*: int
+        Per-ray propagation state. See :ref:`raycing-beam-categories`.
+
+    *Jss*, *Jpp*, *Jsp*: float, float, complex
+        Components of the coherency matrix.
+
+    *Es*, *Ep*: complex
+        S- and p-polarized field amplitudes (not always used).
+
+    *path*: float
+        Total path length from the source to the last impact point.
+
+    *theta*: float
+        Incidence angle.
+
+    *order*: int
+        Order of grating diffraction.
+
+    If multiple reflections are considered:
+
+    *nRefl*: int
+        Number of reflections,
+
+    *elevationD*: float
+        Maximum elevation distance between the rays and the
+        surface as the ray travels from one impact point to the next one,
+
+    *elevationX*, *elevationY*, *elevationZ*: float
+        Coordinates of the highest elevation points.
+
+    If an OE uses a parametric representation:
+
+    *s*, *phi*, *r*: float
+        Arrays storing the impact points in the parametric coordinates.
+
+
     """
     listOfAttrs = ['x', 'y', 'z', 'sourceSIGMAx', 'sourceSIGMAz',
                    'filamentDX', 'filamentDZ', 'filamentDtheta',
