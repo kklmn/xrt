@@ -8,7 +8,8 @@ from typing import Any, Dict, Iterable, List, Optional
 
 import numpy as np
 
-from .device import to_valid_var_name
+from .device import (
+    resolve_epics_readback, resolve_epics_record, to_valid_var_name)
 from .._named_arrays import Center, Limits
 from .._sets_units import (
     derivedArgSet, diagnosticArgs, orientationArgSet, shapeArgSet)
@@ -78,29 +79,25 @@ def element_records(oe_obj: Any,
             access: str = "rw", initial_value: Any = None,
             group: str = "Properties",
             metadata: Optional[Dict[str, Any]] = None) -> None:
-        if not _include_record(default_record, epics_map):
+        mapped = resolve_epics_record(default_record, epics_map)
+        if mapped is None:
             return
-        mapped = _map_record(default_record, epics_map)
         pvs.append(PvSpec(mapped, label, property_path, kind, access,
                           initial_value, group, metadata or {}))
 
     def add_readback(default_record: str, label: str, property_path: str,
                      initial_value: Any = None,
                      group: str = "Properties") -> None:
-        default_rbv = f"{default_record}_RBV"
-        if epics_map:
-            if default_rbv in epics_map:
-                mapped = _map_record(default_rbv, epics_map)
-            elif default_record in epics_map:
-                mapped = f"{_map_record(default_record, epics_map)}_RBV"
-            else:
-                return
-        else:
-            mapped = default_rbv
+        mapped, readback_for = resolve_epics_readback(
+            default_record, epics_map)
+        if mapped is None:
+            return
+        metadata = {}
+        if readback_for is not None:
+            metadata["readback_for"] = readback_for
         pvs.append(PvSpec(
             mapped, f"{label} RBV", property_path, "number", "ro",
-            _numeric_initial(initial_value), group,
-            {"readback_for": _map_record(default_record, epics_map)}))
+            _numeric_initial(initial_value), group, metadata))
 
     _add_energy_record(oe_obj, oename, add)
     _add_image_records(oe_obj, oename, add)
@@ -310,19 +307,6 @@ def template_records(category: str) -> List[PvSpec]:
         PvSpec("$(E):period", "Period", "period", "number", "rw",
                0, "Shape"),
     ]
-
-
-def _include_record(record: str,
-                    epics_map: Optional[Dict[str, Optional[str]]]) -> bool:
-    return not epics_map or record in epics_map
-
-
-def _map_record(record: str,
-                epics_map: Optional[Dict[str, Optional[str]]]) -> str:
-    if not epics_map:
-        return record
-    mapped = epics_map.get(record)
-    return record if mapped is None else mapped
 
 
 def _add_energy_record(oe_obj: Any, oename: str, add) -> None:

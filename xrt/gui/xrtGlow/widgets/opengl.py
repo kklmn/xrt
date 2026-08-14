@@ -25,7 +25,7 @@ from ...commons import gl
 from ....backends import raycing
 from ....backends.raycing import (propagationProcess, renderOnlyArgSet,
                                   orientationArgSet, shapeArgSet)
-from ....backends.raycing.epics import EpicsDevice
+from ....backends.raycing.epics import EpicsDevice, update_epics_readback
 from ....backends.raycing import apertures as rapts
 from ....backends.raycing import sources as rsources
 from ....backends.raycing import screens as rscreens
@@ -986,7 +986,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 if self.QookSignal is not None:
                     self.QookSignal.emit((1., "Propagation complete"))
                 self.propagationComplete.emit(msg)
-            elif 'pos_attr' in msg:  # TODO: Update epics rbv
+            elif 'pos_attr' in msg:
                 oeLine = self.beamline.oesDict.get(msg['sender_id'])
                 if oeLine is not None:
                     setattr(oeLine[0],
@@ -999,10 +999,18 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     if self.autoSizeOe:
                         self.needMeshUpdate.append(msg['sender_id'])
                 else:
+                    if self.epicsPrefix is not None:
+                        update_epics_readback(
+                            self.epicsInterface, msg['sender_id'],
+                            msg['pos_attr'], msg['pos_value'])
                     self.oePropsUpdated.emit((msg['sender_id'],
                                               msg['pos_attr'],
                                               msg['pos_value']))
             elif 'diag_attr' in msg:
+                if self.epicsPrefix is not None:
+                    update_epics_readback(
+                        self.epicsInterface, msg['sender_id'],
+                        msg['diag_attr'], msg['diag_value'])
                 self.oePropsUpdated.emit((msg['sender_id'],
                                           msg['diag_attr'],
                                           msg['diag_value']))

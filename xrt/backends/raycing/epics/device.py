@@ -74,6 +74,85 @@ def _initial_numeric_value(value, default=0.):
         return default
 
 
+def _compound_field_value(value, index, field):
+    if isinstance(value, dict):
+        return value.get(field)
+    if hasattr(value, field):
+        return getattr(value, field)
+    if hasattr(value, 'tolist'):
+        value = value.tolist()
+    if isinstance(value, (list, tuple)) and len(value) > index:
+        return value[index]
+    return None
+
+
+def _record_value(value):
+    if isinstance(value, np.generic):
+        return value.item()
+    if isinstance(value, np.ndarray) and value.shape == ():
+        return value.item()
+    return value
+
+
+def update_epics_readback(epics, oeid, key, value):
+    if epics is None or oeid is None or key is None:
+        return False
+
+    rbv_map = getattr(epics, 'rbv_map', {})
+    elementReadbacks = rbv_map.get(oeid, {})
+    updated = False
+
+    if key in COMPOUND_RECORD_FIELDS:
+        for index, field in enumerate(COMPOUND_RECORD_FIELDS[key]):
+            record = elementReadbacks.get(f'{key}.{field}')
+            if record is None:
+                continue
+            fieldValue = _compound_field_value(value, index, field)
+            if fieldValue is None:
+                continue
+            record.set(_record_value(fieldValue))
+            updated = True
+        return updated
+
+    if key == 'blades' and isinstance(value, dict):
+        for field, fieldValue in value.items():
+            record = elementReadbacks.get(f'blades.{field}')
+            if record is None:
+                continue
+            record.set(_record_value(fieldValue))
+            updated = True
+        return updated
+
+    record = elementReadbacks.get(key)
+    if record is not None:
+        record.set(_record_value(value))
+        updated = True
+    return updated
+
+
+def resolve_epics_record(default_record, epics_map):
+    if not epics_map:
+        return default_record
+    if default_record not in epics_map:
+        return None
+    mapped = epics_map.get(default_record)
+    return default_record if mapped is None else mapped
+
+
+def resolve_epics_readback(default_record, epics_map):
+    base_record = resolve_epics_record(default_record, epics_map)
+    default_rbv = f'{default_record}_RBV'
+
+    if epics_map and default_rbv in epics_map:
+        mapped_rbv = resolve_epics_record(default_rbv, epics_map)
+        return mapped_rbv, base_record
+
+    if base_record is None:
+        return None, None
+
+    return f'{base_record}_RBV', base_record
+
+
 def to_valid_var_name(name, default='unnamed'):
     # Replace invalid characters with underscores
     var_name = re.sub(r'\W|^(?=\d)', '_', name.strip())
@@ -262,6 +341,11 @@ class EpicsDevice:
             If ``epicsMap`` is empty or ``None``, all supported records are
             created with their default names.
 
+            Readback records follow the same map automatically. If a writable
+            record is included, its readback is created as
+            ``"<mapped_record>_RBV"``. An explicit ``"<default_record>_RBV"``
+            key in ``epicsMap`` overrides that generated readback name.
+
             The mapping changes only the exposed EPICS record names. Internal
             xrt property paths used by callbacks and ``pv_map`` remain
             unchanged, for example ``"pitch"``, ``"center.x"``,
@@ -312,21 +396,13 @@ class EpicsDevice:
         pv_records = {}
         pvFields = {'name'} | orientationArgSet | shapeArgSet
 
-        def add_numeric_rbv(oeid, key, default_pvname, pvname=None,
-                            initial_value=0.):
+        def add_numeric_rbv(oeid, key, default_pvname, initial_value=0.):
             if key in self.rbv_map[oeid]:
                 return
-            rbv_default = f'{default_pvname}_RBV'
-            if self.epicsMap:
-                if rbv_default in self.epicsMap:
-                    newname = self.epicsMap.get(rbv_default)
-                    rbvname = rbv_default if newname is None else newname
-                elif default_pvname in self.epicsMap:
-                    rbvname = f'{pvname or default_pvname}_RBV'
-                else:
-                    return
-            else:
-                rbvname = f'{pvname or default_pvname}_RBV'
+            rbvname, _ = resolve_epics_readback(
+                default_pvname, self.epicsMap)
+            if rbvname is None:
+                return
             pv_records[rbvname] = builder.aIn(
                 rbvname,
                 initial_value=_initial_numeric_value(initial_value))
@@ -369,11 +445,10 @@ class EpicsDevice:
                         angle = oeObj.pitch
                     initial_e = _initial_energy_from_angle(
                         oeObj.material, angle)
-                    pvname = f'{oename}:ENERGY'
-                    if not self.epicsMap or pvname in self.epicsMap:
-                        newname = self.epicsMap.get(pvname)
-                        if newname is not None:
-                            pvname = newname
+                    default_pvname = f'{oename}:ENERGY'
+                    pvname = resolve_epics_record(
+                        default_pvname, self.epicsMap)
+                    if pvname is not None:
                         pv_records[pvname] = builder.aOut(
                                 pvname,
                                 initial_value=initial_e,
@@ -382,7 +457,7 @@ class EpicsDevice:
                         self.pv_map[oeid]['bragg'] = pv_records[pvname]
 
             if hasattr(oeObj, 'expose') and oeObj.limPhysX is not None:
-                pvname = f'{oename}:image'
+                default_pvname = f'{oename}:image'
                 histShape = getattr(oeObj, 'histShape')
                 imageLength = int(histShape[0]*histShape[1])
                 if self.imageMaxLength is not None:
@@ -390,10 +465,8 @@ class EpicsDevice:
                 else:
                     imageLength = max(imageLength,
                                       DEFAULT_IMAGE_WAVEFORM_LENGTH)
-                if not self.epicsMap or pvname in self.epicsMap:
-                    newname = self.epicsMap.get(pvname)
-                    if newname is not None:
-                        pvname = newname
+                pvname = resolve_epics_record(default_pvname, self.epicsMap)
+                if pvname is not None:
                     pv_records[pvname] = builder.WaveformIn(
                         pvname,
                         length=imageLength
@@ -402,11 +475,10 @@ class EpicsDevice:
                     self.image_lengths[oeid] = imageLength
 
                 for fIndex, field in enumerate(['width', 'height']):
-                    pvname = f'{oename}:histShape:{field}'
-                    if not self.epicsMap or pvname in self.epicsMap:
-                        newname = self.epicsMap.get(pvname)
-                        if newname is not None:
-                            pvname = newname
+                    default_pvname = f'{oename}:histShape:{field}'
+                    pvname = resolve_epics_record(
+                        default_pvname, self.epicsMap)
+                    if pvname is not None:
                         dimObj = getattr(oeObj, 'histShape')
                         if dimObj is not None:
                             pv_records[pvname] = builder.aOut(
@@ -423,11 +495,10 @@ class EpicsDevice:
                     continue
                 if hasattr(oeObj, argName):
                     if argName in ['name', 'rotationSequence']:
-                        pvname = f'{oename}:{argName}'
-                        if not self.epicsMap or pvname in self.epicsMap:
-                            newname = self.epicsMap.get(pvname)
-                            if newname is not None:
-                                pvname = newname
+                        default_pvname = f'{oename}:{argName}'
+                        pvname = resolve_epics_record(
+                            default_pvname, self.epicsMap)
+                        if pvname is not None:
                             pv_records[pvname] = builder.stringOut(
                                 pvname,
                                 initial_value=str(getattr(oeObj, argName)),
@@ -438,12 +509,9 @@ class EpicsDevice:
                         cntrObj = getattr(oeObj, argName)
                         for fIndex, field in enumerate(['x', 'y', 'z']):
                             default_pvname = f'{oename}:{argName}:{field}'
-                            if not self.epicsMap or\
-                                    default_pvname in self.epicsMap:
-                                newname = self.epicsMap.get(default_pvname)
-                                pvname = default_pvname
-                                if newname is not None:
-                                    pvname = newname
+                            pvname = resolve_epics_record(
+                                default_pvname, self.epicsMap)
+                            if pvname is not None:
                                 pv_records[pvname] = builder.aOut(
                                     pvname,
                                     initial_value=_initial_numeric_field(
@@ -455,19 +523,15 @@ class EpicsDevice:
                                     pv_records[pvname]
                                 add_numeric_rbv(
                                     oeid, f'{argName}.{field}',
-                                    default_pvname, pvname,
-                                    _initial_numeric_field(
+                                    default_pvname, _initial_numeric_field(
                                         cntrObj, fIndex, field))
                     elif argName in ['limPhysX', 'limPhysY', 'limPhysX2',
                                      'limPhysY2']:  # TODO: startswith?
                         for fIndex, field in enumerate(['lmin', 'lmax']):
                             default_pvname = f'{oename}:{argName}:{field}'
-                            if not self.epicsMap or\
-                                    default_pvname in self.epicsMap:
-                                newname = self.epicsMap.get(default_pvname)
-                                pvname = default_pvname
-                                if newname is not None:
-                                    pvname = newname
+                            pvname = resolve_epics_record(
+                                default_pvname, self.epicsMap)
+                            if pvname is not None:
                                 limObj = getattr(oeObj, argName)
                                 if isinstance(limObj, Limits):
                                     pv_records[pvname] = builder.aOut(
@@ -484,12 +548,9 @@ class EpicsDevice:
                         if isinstance(bladesObj, dict):
                             for field, value in bladesObj.items():
                                 default_pvname = f'{oename}:blades:{field}'
-                                if not self.epicsMap or\
-                                        default_pvname in self.epicsMap:
-                                    newname = self.epicsMap.get(default_pvname)
-                                    pvname = default_pvname
-                                    if newname is not None:
-                                        pvname = newname
+                                pvname = resolve_epics_record(
+                                    default_pvname, self.epicsMap)
+                                if pvname is not None:
                                     pv_records[pvname] = builder.aOut(
                                         pvname,
                                         initial_value=value,
@@ -501,14 +562,12 @@ class EpicsDevice:
                                         pv_records[pvname]
                                     add_numeric_rbv(
                                         oeid, f'blades.{field}',
-                                        default_pvname, pvname, value)
+                                        default_pvname, value)
                     else:
                         default_pvname = f'{oename}:{argName}'
-                        if not self.epicsMap or default_pvname in self.epicsMap:
-                            newname = self.epicsMap.get(default_pvname)
-                            pvname = default_pvname
-                            if newname is not None:
-                                pvname = newname
+                        pvname = resolve_epics_record(
+                            default_pvname, self.epicsMap)
+                        if pvname is not None:
                             initial_value = getattr(oeObj, argName)
                             if isinstance(initial_value, (int, float,
                                                          np.number)):  # TODO: process sequence args
@@ -765,12 +824,6 @@ class DynamicBeamline:
             return None
         return getattr(epics, 'pv_map', {}).get(oeid, {}).get(key)
 
-    def _readback_record_for(self, oeid, key):
-        epics = self.epicsInterface
-        if epics is None:
-            return None
-        return getattr(epics, 'rbv_map', {}).get(oeid, {}).get(key)
-
     def set_acquire_status(self, value):
         epics = self.epicsInterface
         if epics is None:
@@ -807,49 +860,7 @@ class DynamicBeamline:
         record.set(flatHist)
 
     def update_epics_record(self, oeid, key, value):
-        if oeid is None or key is None:
-            return
-
-        if key in COMPOUND_RECORD_FIELDS:
-            for index, field in enumerate(COMPOUND_RECORD_FIELDS[key]):
-                record = self._readback_record_for(oeid, f'{key}.{field}')
-                if record is not None:
-                    fieldValue = self._compound_field_value(
-                        value, index, field)
-                    if fieldValue is not None:
-                        record.set(self._record_value(fieldValue))
-            return
-
-        if key == 'blades' and isinstance(value, dict):
-            for field, fieldValue in value.items():
-                record = self._readback_record_for(oeid, f'blades.{field}')
-                if record is not None:
-                    record.set(self._record_value(fieldValue))
-            return
-
-        record = self._readback_record_for(oeid, key)
-        if record is not None:
-            record.set(self._record_value(value))
-
-    @staticmethod
-    def _compound_field_value(value, index, field):
-        if isinstance(value, dict):
-            return value.get(field)
-        if hasattr(value, field):
-            return getattr(value, field)
-        if hasattr(value, 'tolist'):
-            value = value.tolist()
-        if isinstance(value, (list, tuple)) and len(value) > index:
-            return value[index]
-        return None
-
-    @staticmethod
-    def _record_value(value):
-        if isinstance(value, np.generic):
-            return value.item()
-        if isinstance(value, np.ndarray) and value.shape == ():
-            return value.item()
-        return value
+        update_epics_readback(self.epicsInterface, oeid, key, value)
 
     @staticmethod
     def _bool_value(value):
