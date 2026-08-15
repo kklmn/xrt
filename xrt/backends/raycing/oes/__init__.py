@@ -52,8 +52,11 @@ elements with various geometries.
 .. .. autoclass:: EllipticalMirror(OE)
 .. .. autoclass:: ParabolicMirror(OE)
 .. autoclass:: EllipticalMirrorParam(OE)
+   :members: __init__
 .. autoclass:: ParabolicalMirrorParam(EllipticalMirrorParam)
+   :members: __init__
 .. autoclass:: HyperbolicMirrorParam(OE)
+   :members: __init__
 .. autoclass:: ConicalMirror(OE)
    :members: __init__
 .. autoclass:: DCM(OE)
