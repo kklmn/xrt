@@ -33,25 +33,53 @@ def build_beamline():
     bl = raycing.BeamLine(
         name=r"BeamLine")
 
-    bl.wiggler01 = rsources.Wiggler(
-        bl=bl,
-        name=r"wiggler01",
-        nrays=8e4,
-        n=10,
-#        uniformRayDensity=True,
-        xPrimeMax=1.5e-2,
-        zPrimeMax=2.5e-2,
-        center=[0.0, -3000.0, 0.0])
+#    bl.wiggler01 = rsources.Wiggler(
+#        bl=bl,
+#        name=r"wiggler01",
+#        nrays=8e4,
+#        n=10,
+##        uniformRayDensity=True,
+#        xPrimeMax=1.5e-2,
+#        zPrimeMax=2.5e-2,
+#        center=[0.0, -3000.0, 0.0])
+#
+#    bl.wiggler02 = rsources.Wiggler(
+#        bl=bl,
+#        name=r"wiggler02",
+#        nrays=5e4,
+#        n=20,
+#        xPrimeMax=1.5e-2,
+#        zPrimeMax=2.5e-2,
+##        uniformRayDensity=True,
+#        center=[0.0, 3000.0, 0.0])
 
-    bl.wiggler02 = rsources.Wiggler(
-        bl=bl,
-        name=r"wiggler02",
-        nrays=5e4,
-        n=20,
-        xPrimeMax=1.5e-2,
-        zPrimeMax=2.5e-2,
-#        uniformRayDensity=True,
-        center=[0.0, 3000.0, 0.0])
+    bl.wiggler01 = rsources.GeometricSource(
+            bl=bl,
+            nrays=8e4,
+            totalFlux=3e7,
+            disty='normal',
+            dy=0.1,
+            dx=0.1,
+            dz=0.1,
+            dxprime=0.001,
+            dzprime=0.001,
+            uniformRayDensity=True,
+            center=[0.0, -3000.0, 0.0]
+            )
+
+    bl.wiggler02 = rsources.GeometricSource(
+            bl=bl,
+            nrays=1e4,
+            totalFlux=5e6,
+            disty='normal',
+            dy=0.1,
+            uniformRayDensity=True,
+            dx=0.1,
+            dz=0.1,
+            dxprime=0.001,
+            dzprime=0.001,
+            center=[0.0, 3000.0, 0.0]
+            )
 
     bl.screen01 = rscreens.Screen(
         bl=bl,

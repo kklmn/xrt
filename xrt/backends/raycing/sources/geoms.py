@@ -251,8 +251,9 @@ class GeometricSource(object):
             calculations. False is usual for ray-tracing. This parameter
             only affects normal distributions, as for flat and annulus
             distributions the density is already uniform. If you set it True,
-            the size parameter (*dx* or *dz*) must be given as
-            (sigma, cut_limit).
+            the size parameter (*dx* or *dz*) will use a +/-5 sigma sampling
+            interval. Use (sigma, cut_limit) sequence to set this half-width
+            explicitly.
 
             See :ref:`absolute-flux-and-power` for how ray density and ray
             weights affect plot intensity and normalization.
@@ -305,6 +306,7 @@ class GeometricSource(object):
         self._pitch = raycing.auto_units_angle(pitch)
         self._roll = raycing.auto_units_angle(roll)
         self._yaw = raycing.auto_units_angle(yaw)
+        self.totalFlux = kwargs.get('totalFlux')
 
     center = raycing.center_property()
 
@@ -351,11 +353,19 @@ class GeometricSource(object):
     def _apply_distribution(self, axis, distaxis, daxis, bo=None):
         if distaxis == 'normal':
             if self.uniformRayDensity:
-                if not isinstance(daxis, (list, tuple)):
-                    raise ValueError("Wrong distribution size!")
-                axis[:] = np.random.uniform(-daxis[1], daxis[1], self.nrays)
-                amp = np.exp(-axis**2 / daxis[0]**2 / 2) /\
-                    PI2**0.5 / daxis[0] * 2 * daxis[1]
+                daxisArr = np.atleast_1d(daxis)
+                if len(daxisArr) < 2:
+                    sigma = daxisArr[0]
+                    cutLim = 5 * abs(sigma)
+                else:
+                    sigma = daxisArr[0]
+                    cutLim = daxisArr[-1]
+                axis[:] = np.random.uniform(-cutLim, cutLim, self.nrays)
+#                if not isinstance(daxis, (list, tuple)):
+#                    raise ValueError("Wrong distribution size!")
+#                axis[:] = np.random.uniform(-daxis[-1], daxis[-1], self.nrays)
+                amp = np.exp(-axis**2 / sigma**2 / 2) /\
+                    PI2**0.5 / sigma * 2 * cutLim
                 bo.Jss *= amp
                 bo.Jpp *= amp
                 bo.Jsp *= amp
@@ -435,7 +445,7 @@ class GeometricSource(object):
 
         make_polarization(self.polarization, bo, self.nrays)
 # in local coordinate system:
-        self._apply_distribution(bo.y, self.disty, self.dy)
+        self._apply_distribution(bo.y, self.disty, self.dy, bo)
 
         isAnnulus = False
         if (self.distx == 'annulus') or (self.distz == 'annulus'):
@@ -468,8 +478,24 @@ class GeometricSource(object):
         if isAnnulus:
             self._set_annulus(bo.a, bo.c, rMin, rMax, phiMin, phiMax)
         else:
-            self._apply_distribution(bo.a, self.distxprime, self.dxprime)
-            self._apply_distribution(bo.c, self.distzprime, self.dzprime)
+            self._apply_distribution(bo.a, self.distxprime, self.dxprime, bo)
+            self._apply_distribution(bo.c, self.distzprime, self.dzprime, bo)
+
+        if np.isscalar(self.totalFlux) and self.totalFlux > 0:
+            if self.uniformRayDensity:
+                bo.sourceWeight = self.totalFlux / self.nrays
+                bo.seeded = self.nrays
+                bo.seededI = 1.
+                bo.accepted = 1.
+                bo.acceptedE = 1.
+            else:
+                intensitySum = (bo.Jss + bo.Jpp).sum()
+                if intensitySum > 0:
+                    bo.sourceWeight = self.totalFlux / intensitySum
+                    bo.seeded = self.nrays
+                    bo.seededI = 1.
+                    bo.accepted = 1.
+                    bo.acceptedE = 1.
 
 # normalize (a,b,c):
         ac = bo.a**2 + bo.c**2
