@@ -179,6 +179,17 @@ def make_polarization(polarization, bo, nrays=raycing.nrays):
         _fill_linear(angle)
 
 
+def make_flux_normalization(tFlux, beam):
+    if np.isscalar(tFlux) and tFlux > 0:
+        intensitySum = (beam.Jss + beam.Jpp).sum()
+        if intensitySum > 0:
+            beam.sourceWeight = tFlux / intensitySum
+            beam.seeded = len(beam.E)
+            beam.seededI = 1.
+            beam.accepted = 1.
+            beam.acceptedE = 1.
+
+
 class GeometricSource(object):
     """Implements a geometric source - a source with the ray origin,
     divergence and energy sampled with the given distribution laws."""
@@ -481,21 +492,7 @@ class GeometricSource(object):
             self._apply_distribution(bo.a, self.distxprime, self.dxprime, bo)
             self._apply_distribution(bo.c, self.distzprime, self.dzprime, bo)
 
-        if np.isscalar(self.totalFlux) and self.totalFlux > 0:
-            if self.uniformRayDensity:
-                bo.sourceWeight = self.totalFlux / self.nrays
-                bo.seeded = self.nrays
-                bo.seededI = 1.
-                bo.accepted = 1.
-                bo.acceptedE = 1.
-            else:
-                intensitySum = (bo.Jss + bo.Jpp).sum()
-                if intensitySum > 0:
-                    bo.sourceWeight = self.totalFlux / intensitySum
-                    bo.seeded = self.nrays
-                    bo.seededI = 1.
-                    bo.accepted = 1.
-                    bo.acceptedE = 1.
+        make_flux_normalization(self.totalFlux, bo)
 
 # normalize (a,b,c):
         ac = bo.a**2 + bo.c**2
@@ -617,6 +614,7 @@ class GaussianBeam(object):
         self.pitch = raycing.auto_units_angle(pitch)
         self.roll = raycing.auto_units_angle(roll)
         self.yaw = raycing.auto_units_angle(yaw)
+        self.totalFlux = kwargs.get('totalFlux')
 
     center = raycing.center_property()
 
@@ -770,6 +768,8 @@ class GaussianBeam(object):
         wave.Jss *= amp2
         wave.Jpp *= amp2
         wave.Jsp *= amp2
+
+        make_flux_normalization(self.totalFlux, wave)
 
         wave.a[:] = wave.xDiffr
         wave.c[:] = wave.zDiffr
@@ -930,6 +930,7 @@ class MeshSource(object):
                 bl.oenamesToUUIDs[self.name] = self.uuid
 
         self.polarization = polarization
+        self.totalFlux = kwargs.get('totalFlux')
 
     center = raycing.center_property()
 
@@ -1029,6 +1030,7 @@ class MeshSource(object):
             np.linspace(self.minxprime, self.maxxprime, self.nx),
             np.linspace(self.minzprime, self.maxzprime, self.nz))
         zz = np.flipud(zz)
+
         bo.a[int(self.withCentralRay):] = xx.flatten()
         bo.c[int(self.withCentralRay):] = zz.flatten()
 # normalize (a,b,c):
@@ -1040,6 +1042,7 @@ class MeshSource(object):
             bo.E[:] = make_energy(self.distE, self.energies, self.nrays,
                                   energyWeights=self.energyWeights)
         make_polarization(self.polarization, bo, self.nrays)
+        make_flux_normalization(self.totalFlux, bo)
         if toGlobal:  # in global coordinate system:
             raycing.virgin_local_to_global(self.bl, bo, self.center)
         raycing.append_to_flow(self.shine, [bo],
@@ -1132,6 +1135,7 @@ class CollimatedMeshSource(object):
                 bl.oenamesToUUIDs[self.name] = self.uuid
 
         self.polarization = polarization
+        self.totalFlux = kwargs.get('totalFlux')
 
     center = raycing.center_property()
 
@@ -1203,6 +1207,7 @@ class CollimatedMeshSource(object):
             bo.E[:] = make_energy(self.distE, self.energies, self.nrays,
                                   energyWeights=self.energyWeights)
         make_polarization(self.polarization, bo, self.nrays)
+        make_flux_normalization(self.totalFlux, bo)
         if toGlobal:  # in global coordinate system:
             raycing.virgin_local_to_global(self.bl, bo, self.center)
         raycing.append_to_flow(self.shine, [bo],
