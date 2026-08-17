@@ -1589,11 +1589,12 @@ class OEMesh3D():
         # Side Surface, do not plot for 2ndXtal of Plate
         if not ((isPlate and is2ndXtal) or isScreen or isClosedSurface):
             if oeShape == 'round':  # Side surface
-                allSurfaces = np.vstack((allSurfaces, tB))
-                allNormals = np.vstack((allNormals, normsB))
-                allIndices = np.hstack((allIndices,
-                                        triLR.simplices.flatten() +
-                                        indArrOffset))
+                if useLR:
+                    allSurfaces = np.vstack((allSurfaces, tB))
+                    allNormals = np.vstack((allNormals, normsB))
+                    allIndices = np.hstack((allIndices,
+                                            triLR.simplices.flatten() +
+                                            indArrOffset))
             else:
                 if useLR:
                     allSurfaces = np.vstack((allSurfaces, tL, tR))
