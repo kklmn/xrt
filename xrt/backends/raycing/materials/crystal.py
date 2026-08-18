@@ -781,6 +781,13 @@ class Crystal(Material):
             NRAYS = len(beamInDotNormal)
             E *= np.ones_like(beamInDotNormal)
 
+        if ucl is None:
+            print("OpenCL target device not set in parent OE. "
+                  "Calculating reflectivity as plane crystal.")
+            return self.get_amplitude(
+                E, beamInDotNormal, beamOutDotNormal,
+                beamInDotHNormal, xd, yd)
+
         tmaxCL = np.ones(NRAYS, dtype=ucl.cl_precisionF)*np.pi
         tminCL = -tmaxCL
         if hasattr(self, 'get_d') and xd is not None and yd is not None:
@@ -886,11 +893,6 @@ class Crystal(Material):
             'get_amplitudes_pytte', scalarArgs, slicedROArgs,
             None, slicedRWArgs, None, dimension=bLength, complexity=startSteps,
             signal=signal)
-
-#        from matplotlib import pyplot as plt
-#        plt.figure("npoints")
-#        plt.plot(dtheta[nzrays], npoints)
-#        plt.savefig("npoints.png")
 
         if True:  # background.startswith('zero'):
             curveS = np.zeros(NRAYS, dtype=np.complex128)
