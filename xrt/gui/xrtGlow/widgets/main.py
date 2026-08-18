@@ -88,11 +88,30 @@ class _ToolbarPopupPanel(qt.QFrame):
         layout = qt.QVBoxLayout(self)
         layout.setContentsMargins(10, 8, 10, 10)
         layout.addWidget(self.titleLabel)
+        self.drag_position = None
         layout.addWidget(self.stack)
 
     def hideEvent(self, event):
         super().hideEvent(event)
         self.popupHidden.emit()
+
+    def mousePressEvent(self, event: qt.QMouseEvent):
+        headerHeight = self.titleLabel.height() + self.layout().spacing()*1.5
+        pos = event.position()
+        if event.button() == qt.Qt.LeftButton and \
+                (0 < pos.x() < self.width()) and (0 < pos.y() < headerHeight):
+            self.drag_position = event.globalPosition().toPoint() - \
+                self.frameGeometry().topLeft()
+            event.accept()
+        else:
+            self.drag_position = None
+            super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event: qt.QMouseEvent):
+        if event.buttons() == qt.Qt.LeftButton and self.drag_position:
+            # Move the widget to follow the cursor smoothly
+            self.move(event.globalPosition().toPoint() - self.drag_position)
+            event.accept()
 
 
 class xrtGlow(qt.QWidget):
@@ -1971,19 +1990,19 @@ class xrtGlow(qt.QWidget):
         self.renderingPanel.setLayout(renderingLayout)
 
     def initControlPanels(self):
-        self.controlPanels = OrderedDict([
-            ("Selection", self.navigationPanel),
-            ("Transformations", self.transformationPanel),
-            ("Colors", self.colorOpacityPanel),
-            ("Grid/Projections", self.projectionPanel),
-            ("Scene", self.scenePanel),
-            ("Rendering", self.renderingPanel),
-            ("Scans", self.scanPanel),
-        ])
+        self.controlPanels = {
+            "Selection": (self.navigationPanel, "p_selection128.png"),
+            "Transformations": (self.transformationPanel, "p_transform128.png"),
+            "Colors": (self.colorOpacityPanel, "p_colors128.png"),
+            "Grid/Projections": (self.projectionPanel, "p_grid128.png"),
+            "Scene": (self.scenePanel, "p_scene128.png"),
+            "Rendering": (self.renderingPanel, "p_mesh128.png"),
+            "Scans": (self.scanPanel, "p_scan128.png"),
+        }
 
     def makeControlsTabsWidget(self):
         tabs = qt.QTabWidget()
-        for panelName, panelWidget in self.controlPanels.items():
+        for panelName, (panelWidget, _) in self.controlPanels.items():
             tabs.addTab(panelWidget, panelName)
         self.sideTabs = tabs
         return tabs
@@ -1995,18 +2014,8 @@ class xrtGlow(qt.QWidget):
         iconsDir = os.path.join(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
             '_icons')
-        panelIcons = {
-            "Selection": "p_selection128.png",
-            "Transformations": "p_transform128.png",
-            "Colors": "p_colors128.png",
-            "Grid/Projections": "p_grid128.png",
-            "Scene": "p_scene128.png",
-            "Rendering": "p_mesh128.png",
-            "Scans": "p_scan128.png",
-        }
-
         for panel in self.controlPanels.values():
-            self.controlPopup.stack.addWidget(panel)
+            self.controlPopup.stack.addWidget(panel[0])
 
         toolbar = qt.QToolBar("Controls", self)
         toolbar.setMovable(False)
@@ -2024,9 +2033,8 @@ class xrtGlow(qt.QWidget):
             else qt.Qt.AlignHCenter)
         toolbar.addWidget(titleLabel)
 
-        for panelName in self.controlPanels.keys():
+        for panelName, (panelWidget, iconName) in self.controlPanels.items():
             button = qt.QToolButton(self)
-            iconName = panelIcons.get(panelName)
             iconPath = os.path.join(iconsDir, iconName) if iconName else None
             if iconPath and os.path.exists(iconPath):
                 button.setIcon(qt.QIcon(iconPath))
@@ -2144,7 +2152,7 @@ class xrtGlow(qt.QWidget):
                 otherButton.blockSignals(False)
 
         self.controlPopup.titleLabel.setText(panelName)
-        panelWidget = self.controlPanels[panelName]
+        panelWidget = self.controlPanels[panelName][0]
         self.controlPopup.stack.setCurrentWidget(panelWidget)
         self.controlPopup.adjustSize()
 
