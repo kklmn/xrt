@@ -61,6 +61,8 @@ SCAN_ANGLE_PROPERTIES = {
     'cryst1roll', 'cryst2roll', 'cryst2pitch', 'alpha', 'theta',
     'wedgeAngle',
 }
+HORIZONTAL_HEADERS = ['Rays', 'Footprint', 'Surface', 'Label']
+
 SCAN_LIMIT_PROPERTIES = ('limPhysX', 'limPhysY', 'limPhysX2', 'limPhysY2')
 SCAN_AXIS_PROPERTIES = ('x', 'z')
 
@@ -150,9 +152,7 @@ class xrtGlow(qt.QWidget):
                          'signal': progressSignal}
 
         if arrayOfRays is not None:
-            glwInitKwargs.update(
-                    {'arrayOfRays': arrayOfRays,
-                     })
+            glwInitKwargs.update({'arrayOfRays': arrayOfRays})
         elif layout is not None:
             glwInitKwargs.update({'beamLayout': layout})
 
@@ -442,8 +442,8 @@ class xrtGlow(qt.QWidget):
                         })
 
                 catDict.update({
-                        'Distributions': rsources.distributionsArgSet,
-                        'Source Limits': rsources.sourceLimitsArgSet})
+                    'Distributions': rsources.distributionsArgSet,
+                    'Source Limits': rsources.sourceLimitsArgSet})
             else:
                 catDict.update({'Shape': raycing.shapeArgSet})
 
@@ -458,20 +458,19 @@ class xrtGlow(qt.QWidget):
             viewOnly = self.customGlWidget.renderingMode == 'static'
 
             elViewer = InstanceInspector(
-                    self, oeProps,
-                    initDict=oeInitProps,
-                    epicsDict=getattr(self.customGlWidget,
-                                      'epicsInterface', None),
-                    viewOnly=viewOnly,
-                    beamLine=self.customGlWidget.beamline,
-                    categoriesDict=catDict)
+                self, oeProps,
+                initDict=oeInitProps,
+                epicsDict=getattr(self.customGlWidget, 'epicsInterface', None),
+                viewOnly=viewOnly,
+                beamLine=self.customGlWidget.beamline,
+                categoriesDict=catDict)
 
             self.customGlWidget.beamUpdated.connect(elViewer.update_beam)
             self.customGlWidget.oePropsUpdated.connect(elViewer.update_param)
             # TODO: update tree
             elViewer.propertiesChanged.connect(
-                    partial(self.customGlWidget.update_beamline, oeuuid,
-                            sender='OEE'))
+                partial(self.customGlWidget.update_beamline, oeuuid,
+                        sender='OEE'))
             elViewer.scanCreated.connect(self.addScanItem)
             if (elViewer.show()):
                 pass
@@ -1416,25 +1415,6 @@ class xrtGlow(qt.QWidget):
 
     def makeNavigationPanel(self):
         self.navigationLayout = qt.QVBoxLayout()
-#        centerCBLabel = qt.QLabel('Center view at:')
-#        self.centerCB = qt.QComboBox()
-#        self.centerCB.setMaxVisibleItems(48)
-#        self.centerCB.setSizeAdjustPolicy(qt.QComboBox.AdjustToContents)
-#        self.centerProxyModel = qt.ComboBoxFilterProxyModel(self.centerCB)
-#        self.centerProxyModel.setSourceModel(self.segmentsModel)
-#        self.centerCB.setModel(self.centerProxyModel)
-#        self.centerCB.setModelColumn(0)
-#        self.centerCB.currentIndexChanged['int'].connect(
-#                lambda elementid: self.centerEl(
-#                        self.centerCB.itemData(elementid,
-#                                               role=qt.Qt.UserRole)))
-#        self.centerCB.setCurrentIndex(0)
-
-        layout = qt.QHBoxLayout()
-#        layout.addWidget(centerCBLabel)
-#        layout.addWidget(self.centerCB)
-        layout.addStretch()
-        self.navigationLayout.addLayout(layout)
         self.oeTree = qt.QTreeView()
         self.oeTree.setModel(self.segmentsModel)
         self.oeTree.setIconSize(qt.QSize(32, 32))
@@ -1521,9 +1501,9 @@ class xrtGlow(qt.QWidget):
             layout.addWidget(axSlider)
             rotationLayout.addLayout(layout)
 
-        for axis, angles in zip(['Side', 'Front', 'Top', 'Isometric'],
-                                [(0., 0.), (89.99, 0.), (0., 89.99),
-                                 (-45., 35.)]):
+        for axis, angles in zip(
+                ['Side', 'Front', 'Top', 'Isometric'],
+                [(0., 0.), (89.99, 0.), (0., 89.99), (-45., 35.)]):
             setView = qt.QPushButton(axis)
             setView.clicked.connect(partial(self.updateRotationFromGL, angles))
             fixedViewsLayout.addWidget(setView)
@@ -1594,17 +1574,19 @@ class xrtGlow(qt.QWidget):
         self.colorPanel.setFlat(False)
         self.colorPanel.setTitle("Color")
         colorLayout = qt.QVBoxLayout()
-        self.mplFig = Figure(dpi=self.logicalDpiX()*0.8)
+        self.mplFig = Figure(figsize=(4, 3), dpi=self.logicalDpiX()*0.75)
         self.mplFig.patch.set_alpha(0.)
-        self.mplFig.subplots_adjust(left=0.15, bottom=0.15, top=0.92)
         self.mplAx = self.mplFig.add_subplot(111)
         self.mplFig.suptitle("")
+        self.mplFig.subplots_adjust(
+            left=0.13, bottom=0.15, top=0.98, right=0.98)
 
         self.drawColorMap('energy')
         self.paletteWidget = qt.FigCanvas(self.mplFig)
-        self.paletteWidget.setSizePolicy(qt.QSizePolicy.Expanding,
-                                         qt.QSizePolicy.MinimumExpanding)
-        self.paletteWidget.setMinimumHeight(260)
+        self.paletteWidget.setMinimumWidth(250)
+        self.paletteWidget.setMinimumHeight(200)
+        self.paletteWidget.setSizePolicy(qt.QSizePolicy.Preferred,
+                                         qt.QSizePolicy.Preferred)
         self.paletteWidget.span = RectangleSelector(
             self.mplAx, self.updateColorSelFromMPL,
             # drawtype='box',
@@ -1743,7 +1725,6 @@ class xrtGlow(qt.QWidget):
         self.colorPanel.setLayout(colorLayout)
 
         self.colorOpacityPanel = qt.QWidget(self)
-        self.colorOpacityPanel.setProperty('popupMinHeight', 620)
         colorOpacityLayout = qt.QVBoxLayout()
         colorOpacityLayout.addWidget(self.colorPanel)
         colorOpacityLayout.addWidget(self.opacityPanel)
@@ -2065,59 +2046,56 @@ class xrtGlow(qt.QWidget):
             button.setChecked(False)
             button.blockSignals(False)
 
-    def _controlPopupSize(self, panelWidget):
-        layout = self.controlPopup.layout()
-        margins = layout.contentsMargins()
-        spacing = layout.spacing()
-        frame = 2 * self.controlPopup.frameWidth()
-        titleHint = self.controlPopup.titleLabel.sizeHint()
-        panelHint = panelWidget.sizeHint()
-        panelMinHint = panelWidget.minimumSizeHint()
-        panelMin = panelWidget.minimumSize()
-
-        panelWidth = max(panelHint.width(), panelMinHint.width(),
-                         panelMin.width(), 280)
-        panelHeight = max(panelHint.height(), panelMinHint.height(),
-                          panelMin.height(), 120)
-        popupMinHeight = panelWidget.property('popupMinHeight')
-        if popupMinHeight is not None:
-            panelHeight = max(panelHeight, int(popupMinHeight))
-        if panelWidget is getattr(self, 'navigationPanel', None):
+    def _controlPopupSize(self, widget):
+        if widget is getattr(self, 'navigationPanel', None):
+            colWidths = []
+            extraWidth = self.oeTree.iconSize().width() + \
+                self.oeTree.indentation() + 40  # scrollbar + checkBox
+            minWidth = self.oeTree.header().minimumSectionSize()
+            for icol, header in enumerate(HORIZONTAL_HEADERS):
+                bbox = self.oeTree.fontMetrics().boundingRect(header)
+                colWidths.append(max(bbox.width()+20, minWidth))
             model = self.oeTree.model()
-            columnCount = model.columnCount() if model is not None else 0
-            treeWidth = sum(self.oeTree.columnWidth(column)
-                            for column in range(columnCount))
             rowCount = 0
+            rowHeights = []
             parents = [qt.QModelIndex()]
             while model is not None and parents:
                 parent = parents.pop()
                 for row in range(model.rowCount(parent)):
                     rowCount += 1
                     index = model.index(row, 0, parent)
+                    ss = model.data(index)
+                    icon = model.data(index, qt.Qt.DecorationRole)
+                    if icon is not None:
+                        rowHeight = self.oeTree.iconSize().height() + 4
+                    else:
+                        rowHeight = self.oeTree.fontMetrics().height() + 4
+                    rowHeights.append(rowHeight)
+                    bbox = self.oeTree.fontMetrics().boundingRect(ss)
+                    colWidths[0] = max(bbox.width()+extraWidth, colWidths[0])
                     if self.oeTree.isExpanded(index):
                         parents.append(index)
-            rowHeight = max(self.oeTree.sizeHintForRow(0),
-                            self.oeTree.iconSize().height() + 8,
-                            self.oeTree.fontMetrics().height() + 8)
-            treeHeight = self.oeTree.header().height() + rowCount * rowHeight
-            panelWidth = max(panelWidth, treeWidth + 48, 420)
-            panelHeight = max(panelHeight, treeHeight + 32)
-
-        width = max(titleHint.width(), panelHint.width(),
-                    panelMinHint.width(), panelMin.width(), panelWidth)
-        height = titleHint.height() + spacing + panelHeight
-
-        width += margins.left() + margins.right() + frame
-        height += margins.top() + margins.bottom() + frame
-
-        viewSize = self.customGlWidget.size()
-        maxWidth = max(420, min(760, int(viewSize.width() * 0.70)))
-        if panelWidget in [getattr(self, 'navigationPanel', None),
-                           getattr(self, 'colorOpacityPanel', None)]:
-            maxHeight = max(320, self.height(), viewSize.height())
+            self.oeTree.setColumnWidth(0, colWidths[0])
+            treeHeight = self.oeTree.header().height() + 4 + sum(rowHeights)
+            treeWidth = sum(colWidths) + 8
+            # self.oeTree.resize(qt.QSize(treeWidth, treeHeight))
+            wMargins = widget.layout().contentsMargins()
+            wWidth = wMargins.left() + treeWidth + wMargins.right()
+            wHeight = wMargins.top() + treeHeight + wMargins.bottom()
         else:
-            maxHeight = max(320, min(760, int(viewSize.height() * 0.85)))
-        return qt.QSize(min(width, maxWidth), min(height, maxHeight))
+            wHint = widget.sizeHint()
+            wWidth = wHint.width()
+            wHeight = wHint.height()
+
+        # widget.resize(qt.QSize(wWidth, wHeight))
+        pLayout = self.controlPopup.layout()
+        pMargins = pLayout.contentsMargins()
+        pSpacing = pLayout.spacing()
+        pFrame = 2 * self.controlPopup.frameWidth()
+        popupWidth = wWidth + pMargins.left() + pMargins.right() + pFrame
+        popupHeight = wHeight + pMargins.top() + pMargins.bottom() + pFrame + \
+            pSpacing + self.controlPopup.fontMetrics().height()  # title
+        return qt.QSize(popupWidth, popupHeight)
 
     def _controlPopupPosition(self, button, popupSize):
         if self.controlTabMode == 'collapsible top':
@@ -2157,7 +2135,8 @@ class xrtGlow(qt.QWidget):
         self.controlPopup.adjustSize()
 
         popupSize = self._controlPopupSize(panelWidget)
-        self.controlPopup.resize(popupSize)
+        if popupSize:
+            self.controlPopup.resize(popupSize)
         popupSize = self.controlPopup.size()
         self.controlPopup.move(self._controlPopupPosition(button, popupSize))
         self.controlPopup.show()
@@ -2244,10 +2223,7 @@ class xrtGlow(qt.QWidget):
 
     def initSegmentsModel(self, isNewModel=True):
         newModel = qt.QStandardItemModel()
-        newModel.setHorizontalHeaderLabels(['Rays',
-                                            'Footprint',
-                                            'Surface',
-                                            'Label'])
+        newModel.setHorizontalHeaderLabels(HORIZONTAL_HEADERS)
         if isNewModel:
             headerRow = []
             for i in range(4):
@@ -2389,7 +2365,7 @@ class xrtGlow(qt.QWidget):
                                 targetName = arrayOfRays[2][targetuuid][0].name
                                 endBeamText = "to {}".format(targetName)
                                 newRow[0].appendRow(self.createRow(
-                                        endBeamText, 3, uuid=targetuuid))
+                                    endBeamText, 3, uuid=targetuuid))
                             except:
                                 continue
                 self.segmentsModelRoot.appendRow(newRow)
@@ -2503,14 +2479,15 @@ class xrtGlow(qt.QWidget):
         xv = xv.flatten()
         yv = yv.flatten()
         self.im = self.mplAx.imshow(hsv_to_rgb(np.vstack((
-            xv, np.ones_like(xv)*colorSaturation, yv)).T).reshape((
-                200, 200, 3)),
+            xv, np.ones_like(xv)*colorSaturation, yv)).T).reshape(
+                (200, 200, 3)),
             aspect='auto', origin='lower',
             extent=(self.customGlWidget.colorMin,
                     self.customGlWidget.colorMax,
                     0, 1))
         self.mplAx.set_xlabel(axis)
         self.mplAx.set_ylabel('Intensity')
+        # self.mplFig.tight_layout()
 
     def updateColorMap(self, histArray):
         if histArray[0] is not None:
@@ -2545,8 +2522,8 @@ class xrtGlow(qt.QWidget):
             xv = xv.flatten()
             yv = yv.flatten()
             self.im.set_data(mpl.colors.hsv_to_rgb(np.vstack((
-                xv, np.ones_like(xv)*colorSaturation, yv)).T).reshape((
-                    200, 200, 3)))
+                xv, np.ones_like(xv)*colorSaturation, yv)).T).reshape(
+                    (200, 200, 3)))
             self.mplAx.set_title("")
             self.mplFig.canvas.draw()
             self.mplFig.canvas.blit()
@@ -2609,10 +2586,8 @@ class xrtGlow(qt.QWidget):
         self.colorControls[4].setText('{0:.6g}'.format(selColorMax))
         self.colorControls[1].validator().setRange(-1.0e20, colorMax, 5)
         self.colorControls[2].validator().setRange(colorMin, 1.0e20, 5)
-        self.colorControls[3].validator().setRange(
-            colorMin, selColorMax, 5)
-        self.colorControls[4].validator().setRange(
-            selColorMin, colorMax, 5)
+        self.colorControls[3].validator().setRange(colorMin, selColorMax, 5)
+        self.colorControls[4].validator().setRange(selColorMin, colorMax, 5)
 
         slider = self.colorControls[5]
         center = 0.5 * (selColorMin + selColorMax)
@@ -2625,8 +2600,7 @@ class xrtGlow(qt.QWidget):
         slider.setRange(newMin, newMax, newRange)
         slider.setValue(center)
         try:
-            self.paletteWidget.span.extents = (
-                selColorMin, selColorMax, 0, 1)
+            self.paletteWidget.span.extents = (selColorMin, selColorMax, 0, 1)
         except Exception:
             pass
         self.paletteWidget.span.active_handle = None
