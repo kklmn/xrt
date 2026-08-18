@@ -296,9 +296,19 @@ class GeneralBraggToroid(JohannToroid):
     planes (*RmBragg* and *RsBragg*)."""
 
     def pop_kwargs(self, **kwargs):
+        """
+        *RmBragg*: float or None
+            Meridional radius of the atomic planes. If None, follows *Rm*.
+
+        *RsBragg*: float or None
+            Sagittal radius of the atomic planes. If None, follows *Rs*.
+
+        """
+        RmBragg = kwargs.pop('RmBragg', None)
+        RsBragg = kwargs.pop('RsBragg', None)
         kw = JohannToroid.pop_kwargs(self, **kwargs)
-        self.RmBragg = kw.pop('RmBragg', self.Rm)  # R Bragg meridional
-        self.RsBragg = kw.pop('RsBragg', self.Rs)  # R Bragg sagittal
+        self.RmBragg = self.Rm if RmBragg is None else RmBragg
+        self.RsBragg = self.Rs if RsBragg is None else RsBragg
         return kw
 
     def local_n(self, x, y):

@@ -1,6 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 import time
 import numpy as np
+import re
 # from scipy.special import jn as besselJn
 from ..physconsts import PI, PI2, CH, CHBAR, R0, SQRT2PI
 from .material import Material
@@ -15,6 +16,17 @@ try:
 except ImportError:
     isPyTTE = False
     # print("pyTTE not found")
+
+
+def parse_hkl(s):
+    """
+    Separator allows: commas, spaces, commas with spaces, no separator.
+    Any of hkl can have a sign.
+    """
+    nums = re.findall(r'[+-]?\d', s)
+    if len(nums) != 3:
+        return []
+    return tuple(map(int, nums))
 
 
 class Crystal(Material):
@@ -169,8 +181,8 @@ class Crystal(Material):
 
     @hkl.setter
     def hkl(self, hkl):
-        self._hkl = hkl
-        self.sqrthkl2 = (sum(i**2 for i in hkl))**0.5
+        self._hkl = parse_hkl(str(hkl))
+        self.sqrthkl2 = (sum(i**2 for i in self._hkl))**0.5
 
         if hasattr(self, 'get_a'):
             d = self.get_a() / self.sqrthkl2

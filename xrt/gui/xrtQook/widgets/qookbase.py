@@ -1312,7 +1312,8 @@ class XrtQookBase(qt.QMainWindow):
         argSpecStr = '('
         try:
             objParams = list(self.getParams(obj))
-        except (OSError, IOError, TypeError, UnicodeError) as e:
+        except (OSError, IOError, TypeError, UnicodeError,
+                AttributeError) as e:
             if _DEBUG_:
                 print("Cannot inspect parameters for {0}: {1}".format(
                     obj, e))
@@ -1736,6 +1737,7 @@ class XrtQookBase(qt.QMainWindow):
         uArgs = OrderedDict()
         args = []
         argVals = []
+
         objRef = eval(str(obj))
         isMethod = False
         if hasattr(objRef, 'hiddenParams'):
