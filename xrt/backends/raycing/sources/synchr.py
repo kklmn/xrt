@@ -1365,7 +1365,7 @@ class Undulator(IntegratedSource):
             Linear variation in undulator gap. None if tapering is not used.
             Pyopencl is recommended for tapering.
 
-        *targetE*: a tuple (Energy, harmonic{, isElliptical})
+        *targetE*: tuple (Energy, harmonic{, isElliptical})
             Can be given for automatic calculation of the deflection parameter.
             If isElliptical is not given, it is assumed as False (as planar).
             *isElliptical* here can also be an angle in radians between the
@@ -1396,45 +1396,28 @@ class Undulator(IntegratedSource):
         self.taper = taper
         self.phaseDeg = phaseDeg
 
-        if targetE is not None:
-            self._targetE = targetE
-            Ky = np.sqrt(targetE[1] * 8 * PI * self.gamma2 /
-                         period / targetE[0] / E2WC - 2)
-            if raycing._VERBOSITY_ > 10:
-                print("K = {0}".format(Ky))
-            if np.isnan(Ky):
-                raise ValueError("Cannot calculate K, try to increase the "
-                                 "undulator harmonic number")
-            if len(targetE) > 2:
-                elliptical = targetE[2]
-                if elliptical:
-                    if isinstance(elliptical, float):
-                        Kx = Ky * np.cos(elliptical)
-                        Ky = Ky * np.sin(elliptical)
-                        if raycing._VERBOSITY_ > 10:
-                            print("Kx = {0}, Ky = {1}".format(Kx, Ky))
-                    else:
-                        Kx = Ky = Ky / 2**0.5
-                        if raycing._VERBOSITY_ > 10:
-                            print("Kx = Ky = {0}".format(Kx))
-
+        self._targetE = None
         self.Kbase = True
 
-        if Kx == 0 and Ky == 0:
-            if abs(K) > 0:
-                self.Kx = 0
-                self.K = K
-            elif B0x == 0 and B0y == 0:
-                self.Kx = 0
-                self.K = 1
-                raise ValueError("Please define either K or B0!")
+        if targetE is not None:
+            self.targetE = targetE
+
+        if self.targetE is None:
+            if Kx == 0 and Ky == 0:
+                if abs(K) > 0:
+                    self.Kx = 0
+                    self.K = K
+                elif B0x == 0 and B0y == 0:
+                    self.Kx = 0
+                    self.K = 1
+                    raise ValueError("Please define either K or B0!")
+                else:
+                    self.Kbase = False
+                    self.B0y = B0y
+                    self.B0x = B0x
             else:
-                self.Kbase = False
-                self.B0y = B0y
-                self.B0x = B0x
-        else:
-            self.Kx = Kx
-            self.Ky = Ky
+                self.Kx = Kx
+                self.Ky = Ky
 
         self.xPrimeMaxAutoReduce = xPrimeMaxAutoReduce
         self.zPrimeMaxAutoReduce = zPrimeMaxAutoReduce
@@ -1506,21 +1489,58 @@ class Undulator(IntegratedSource):
 
     @targetE.setter
     def targetE(self, targetE):
-        self._targetE = targetE
-        Ky = np.sqrt(targetE[1] * 8 * PI * self.gamma2 /
-                     self.L0 / targetE[0] / E2WC - 2)
+        if targetE is None:
+            self._targetE = None
+            self.needReset = True
+            return
+
+        if isinstance(targetE, raycing.basestring) or\
+                not raycing.is_sequence(targetE):
+            print("targetE must be a sequence: "
+                  "(energy, harmonic[, isElliptical])")
+            return
+
+        if len(targetE) not in (2, 3):
+            print("targetE must have 2 or 3 items: "
+                  "(energy, harmonic[, isElliptical])")
+            return
+
+        try:
+            energy = float(targetE[0])
+            harmonic = float(targetE[1])
+        except (TypeError, ValueError):
+            print("targetE energy and harmonic must be numbers")
+            return
+
+        Ky = np.sqrt(harmonic * 8 * PI * self.gamma2 /
+                     self.L0 / energy / E2WC - 2)
         Kx = 0
+
         if np.isnan(Ky):
-            raise ValueError("Cannot calculate K, try to increase the "
-                             "undulator harmonic number")
+            print("Cannot calculate K, try to increase the "
+                  "undulator harmonic number")
+            return
+
         if len(targetE) > 2:
-            isElliptical = targetE[2]
-            if isElliptical:
-                Kx = Ky = Ky / 2**0.5
-                if raycing._VERBOSITY_ > 10:
-                    print("Kx = Ky = {0}".format(Kx))
+            elliptical = targetE[2]
+            if elliptical:
+                if isinstance(elliptical, float):
+                    Kx = Ky * np.cos(elliptical)
+                    Ky = Ky * np.sin(elliptical)
+                    if raycing._VERBOSITY_ > 10:
+                        print("Kx = {0}, Ky = {1}".format(Kx, Ky))
+                else:
+                    Kx = Ky = Ky / 2**0.5
+                    if raycing._VERBOSITY_ > 10:
+                        print("Kx = Ky = {0}".format(Kx))
+
+        self._targetE = targetE
+        self.Kbase = True
         self._Kx = Kx
         self._Ky = Ky
+        self._B0x = K2B * self._Kx / self.L0
+        self._B0y = K2B * self._Ky / self.L0
+
         if raycing._VERBOSITY_ > 10:
             if Kx == 0:
                 print("K = {0}".format(Ky))
