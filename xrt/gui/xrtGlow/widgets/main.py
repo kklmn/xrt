@@ -97,12 +97,24 @@ class _ToolbarPopupPanel(qt.QFrame):
         super().hideEvent(event)
         self.popupHidden.emit()
 
+    @staticmethod
+    def _event_position(event):
+        if hasattr(event, 'position'):
+            return event.position()
+        return event.pos()
+
+    @staticmethod
+    def _event_global_position(event):
+        if hasattr(event, 'globalPosition'):
+            return event.globalPosition().toPoint()
+        return event.globalPos()
+
     def mousePressEvent(self, event: qt.QMouseEvent):
         headerHeight = self.titleLabel.height() + self.layout().spacing()*1.5
-        pos = event.position()
+        pos = self._event_position(event)
         if event.button() == qt.Qt.LeftButton and \
                 (0 < pos.x() < self.width()) and (0 < pos.y() < headerHeight):
-            self.drag_position = event.globalPosition().toPoint() - \
+            self.drag_position = self._event_global_position(event) - \
                 self.frameGeometry().topLeft()
             event.accept()
         else:
@@ -112,7 +124,7 @@ class _ToolbarPopupPanel(qt.QFrame):
     def mouseMoveEvent(self, event: qt.QMouseEvent):
         if event.buttons() == qt.Qt.LeftButton and self.drag_position:
             # Move the widget to follow the cursor smoothly
-            self.move(event.globalPosition().toPoint() - self.drag_position)
+            self.move(self._event_global_position(event) - self.drag_position)
             event.accept()
 
 
