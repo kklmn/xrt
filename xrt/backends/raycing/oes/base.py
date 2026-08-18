@@ -100,7 +100,7 @@ class OE(OEMainMethods):
         limPhysY=[-raycing.maxHalfSizeOfOE, raycing.maxHalfSizeOfOE],
         limOptY=None, isParametric=False, shape='rect',
         gratingDensity=None, order=None, shouldCheckCenter=False,
-            targetOpenCL=None, precisionOpenCL='float64', **kwargs):
+            targetOpenCL=None, precisionOpenCL='float32', **kwargs):
         r"""
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
             Container for beamline elements. Optical elements are added to its
