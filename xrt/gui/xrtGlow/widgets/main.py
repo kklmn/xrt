@@ -100,7 +100,7 @@ class _ToolbarPopupPanel(qt.QFrame):
     @staticmethod
     def _event_position(event):
         if hasattr(event, 'position'):
-            return event.position()
+            return event.position().toPoint()
         return event.pos()
 
     @staticmethod
