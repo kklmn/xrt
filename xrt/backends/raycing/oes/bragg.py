@@ -215,18 +215,24 @@ class JohannToroid(OE):
     def __init__(self, *args, **kwargs):
         """
         *Rm* and *Rs*: float
-            Meridional and sagittal radii.
+            Meridional and sagittal radii. *Rs* is set equal to *Rm* if None.
 
 
         """
         kwargs = self.pop_kwargs(**kwargs)
         OE.__init__(self, *args, **kwargs)
 
+    @property
+    def Rs(self):
+        return self._Rs if self._Rs is not None else self.Rm
+
+    @Rs.setter
+    def Rs(self, Rs):
+        self._Rs = Rs
+
     def pop_kwargs(self, **kwargs):
         self.Rm = kwargs.pop('Rm', 1000.)  # R meridional
         self.Rs = kwargs.pop('Rs', None)  # R sagittal
-        if self.Rs is None:
-            self.Rs = self.Rm
         return kwargs
 
     def local_z(self, x, y):
@@ -295,6 +301,22 @@ class GeneralBraggToroid(JohannToroid):
     meridional and sagittal for the surface (*Rm* and *Rs*) and the atomic
     planes (*RmBragg* and *RsBragg*)."""
 
+    @property
+    def RmBragg(self):
+        return self._RmBragg if self._RmBragg is not None else self.Rm
+
+    @RmBragg.setter
+    def RmBragg(self, RmBragg):
+        self._RmBragg = RmBragg
+
+    @property
+    def RsBragg(self):
+        return self._RsBragg if self._RsBragg is not None else self.Rs
+
+    @RsBragg.setter
+    def RsBragg(self, RsBragg):
+        self._RsBragg = RsBragg
+
     def pop_kwargs(self, **kwargs):
         """
         *RmBragg*: float or None
@@ -307,8 +329,8 @@ class GeneralBraggToroid(JohannToroid):
         RmBragg = kwargs.pop('RmBragg', None)
         RsBragg = kwargs.pop('RsBragg', None)
         kw = JohannToroid.pop_kwargs(self, **kwargs)
-        self.RmBragg = self.Rm if RmBragg is None else RmBragg
-        self.RsBragg = self.Rs if RsBragg is None else RsBragg
+        self.RmBragg = RmBragg
+        self.RsBragg = RsBragg
         return kw
 
     def local_n(self, x, y):
