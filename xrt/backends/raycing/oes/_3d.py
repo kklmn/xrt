@@ -3,7 +3,7 @@
 import numpy as np
 from scipy.interpolate import griddata, RectBivariateSpline
 from collections import defaultdict, deque
-
+from pathlib import Path
 from .base import OE
 
 try:
@@ -100,16 +100,28 @@ class MeshOE(OE):
 
     @fileName.setter
     def fileName(self, fileName):
-        if isSTLsupported:
-            try:
-                self.read_file(fileName)
-                self._fileName = fileName
-                self.fit_surface()
-            except Exception as e:
-                raise e
-                print("STL file import error", e)
-        else:
+        if not fileName:
+            self._fileName = None
+            self.stl_mesh = None
+            return
+
+        if not isSTLsupported:
             print("numpy-stl must be installed to work with STL models")
+            return
+
+        path = Path(fileName)
+        if not path.is_file():
+            print("STL file does not exist:", fileName)
+            return
+
+        try:
+            self.read_file(path)
+            self.fit_surface()
+        except Exception as e:
+            print("STL file import error:", e)
+            return
+
+        self._fileName = fileName
 
     def read_file(self, filename):
         self.stl_mesh = mesh.Mesh.from_file(filename)
