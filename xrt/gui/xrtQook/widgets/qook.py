@@ -332,6 +332,7 @@ class XrtQook(XrtQookElements):
             f'{myTab*2}frame_file_name = "frame{{0:04d}}.jpg".format('
             f'iFrame)',
             f'{myTab*2}for plot in plots:',
+            f'{myTab*3}plot.textPanel.set_text({value_expr})',
             f'{myTab*3}plot.saveName = plot.title + "_" + frame_file_name',
             f'{myTab*2}yield',
             '\n',
@@ -989,11 +990,11 @@ if __name__ == '__main__':
             '{}.run_process = run_process\n\n\n'.format(rrun.__name__)
 
         codeMain += e0str
-        codeMain += '{1}{0}.alignE=E0\n'.format(BLName, myTab)
+        codeMain += '{1}{0}.alignE = E0\n'.format(BLName, myTab)
         if not self.glowOnly:
             codeMain += '{0}{1} = define_plots()\n'.format(
                 myTab, self.rootPlotItem.text())
-        codePlots = '\ndef define_plots():\n{0}{1} = []\n'.format(
+        codePlots = 'def define_plots():\n{0}{1} = []\n'.format(
             myTab, self.rootPlotItem.text())
         self.progressBar.setValue(70)
         self.progressBar.setFormat("Adding plots.")
@@ -1096,6 +1097,12 @@ if __name__ == '__main__':
                                 ieinit += '\n{2}{0}={1},'.format(
                                     paraname, self.quotize(paravalue), myTab*2)
             codePlots += ieinit.rstrip(",") + ")\n"
+            description = self.glowScanDescription()
+            if self._has_glow_scan(description):
+                pnl = "{0}{1}.textPanel = {1}.fig.text(\n" \
+                    "{0}{0}0.88, 0.8, '', transform={1}.fig.transFigure, " \
+                    "size=14, color='r',\n{0}{0}ha='center')\n"
+                codePlots += pnl.format(myTab, tItem.text())
             codePlots += "{0}{2}.append({1})\n".format(
                 myTab, tItem.text(), self.rootPlotItem.text())
         codePlots += "{0}return {1}\n\n".format(
