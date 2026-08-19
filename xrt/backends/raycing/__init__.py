@@ -447,7 +447,7 @@ def get_output(plot, beamsReturnedBy_run_process):
             intensity = beam.Jss
         elif plot.fluxKind.startswith('p'):
             intensity = beam.Jpp
-        elif plot.fluxKind.startswith('+-45'):
+        elif plot.fluxKind.startswith('+/-45'):
             intensity = 2*beam.Jsp.real
         elif plot.fluxKind.startswith('left-right'):
             intensity = 2*beam.Jsp.imag

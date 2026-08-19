@@ -820,7 +820,7 @@ class XYCPlot(object):
         .. _fluxKind:
 
         *fluxKind*: str
-            Can begin with 's', 'p', '+-45', 'left-right', 'total', 'power',
+            Can begin with 's', 'p', '+/-45', 'left-right', 'total', 'power',
             'Es', 'Ep' and 'E'. Specifies what kind of flux to use for the
             brightness of 2D and for the height of 1D histograms. If it ends
             with 'log', the flux scale is logarithmic.
