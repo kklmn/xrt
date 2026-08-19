@@ -1558,16 +1558,32 @@ class Undulator(IntegratedSource):
 
     @taper.setter
     def taper(self, taper):
-        if isinstance(taper, (list, tuple)) and len(taper) == 2:
-            self._taper = taper
-            self._taperVal = taper[0] / self.Np / self.L0 / taper[1]
-            self.gap = taper[1]
-        elif taper is None:
+        if taper is None:
             self._taperVal = None
             self._taper = None
-        else:  # must be float
-            self._taperVal = taper
-            self._taper = taper
+
+        elif np.ndim(taper) == 0:
+            self._taperVal = float(taper)
+            self._taper = self._taperVal
+
+        else:
+            taper = np.asarray(taper, dtype=float).ravel()
+
+            if len(taper) == 1:
+                dgap, gap = 0., taper[0]
+            elif len(taper) == 2:
+                dgap, gap = taper
+            else:
+                raycing.colorPrint(
+                    'Cannot set taper from {0}; keeping previous value.'
+                    .format(taper),
+                    'YELLOW')
+                return
+
+            self._taper = (dgap, gap)
+            self.gap = gap
+            self._taperVal = None if dgap == 0 else\
+                dgap / self.Np / self.L0 / gap
         self.needReset = True
 
     @property

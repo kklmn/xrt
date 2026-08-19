@@ -1054,9 +1054,25 @@ class IntegratedSource(SourceBase):
         self.madBoundary = 20
         self.convergence_finder = 'mixed'  # , "mad"
         self._useGauLeg = False
-        self.maxIntegrationSteps = 9000  # Up to 511000 nodes
+        self.maxIntegrationNodes = int(6e5)  # Up to 600000 nodes
         self.convergenceSearchFlag = False
         self.trajectory = None
+
+    @property
+    def maxIntegrationNodes(self):
+        return self._maxIntegrationNodes
+
+    @maxIntegrationNodes.setter
+    def maxIntegrationNodes(self, maxIntegrationNodes):
+        try:
+            maxIntegrationNodes = int(maxIntegrationNodes)
+        except (TypeError, ValueError):
+            raycing.colorPrint(
+                "maxIntegrationNodes must be a positive integer", "YELLOW")
+            return
+
+        self._maxIntegrationNodes = maxIntegrationNodes
+        self.needReset = True
 
     @property
     def targetOpenCL(self):
@@ -1089,8 +1105,14 @@ class IntegratedSource(SourceBase):
 
     @gNodes.setter
     def gNodes(self, gNodes):
+        if gNodes is None:
+            self.needConvergence = True
+            self.needReset = True
+            return
         self.quadm = int(gNodes)
+        self.needConvergence = False
         self._build_integration_grid()
+        self.needReset = True
         # Need to recalculate the integration parameters
 
     def _set_cl(self):
@@ -1182,7 +1204,7 @@ class IntegratedSource(SourceBase):
             if raycing._VERBOSITY_ > 10:
                 print("G = {0}".format(
                     [self.gIntervals, self.quadm, quad_int_error, I2]))
-            if self.quadm > 400000:
+            if self.quadm > self.maxIntegrationNodes:
                 self.gIntervals *= 2
                 m = mstart
                 quad_int_error = self.gp * 10.
@@ -1224,7 +1246,7 @@ class IntegratedSource(SourceBase):
                     [self.gIntervals, self.quadm, mad, dimad]))
             if (dimad < self.gp) or (mad < self.gp):
                 break
-            if self.quadm > 400000:
+            if self.quadm > self.maxIntegrationNodes:
                 break
 
         # PHASE 2: Bisection last interval, locate the threshold precizely
