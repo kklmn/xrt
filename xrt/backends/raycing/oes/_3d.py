@@ -216,7 +216,7 @@ class MeshOE(OE):
                                 gridsizeY)
             xmesh, ymesh = np.meshgrid(xgrid, ygrid, indexing='ij')
             zmesh = griddata((ux, uy), uz, (xmesh, ymesh),
-                                         method='cubic')
+                             method='cubic')
 
             mask = np.isnan(zmesh)
             if np.any(mask):

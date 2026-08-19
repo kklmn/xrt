@@ -671,9 +671,11 @@ class SourceFromField(IntegratedSource):
                 kwargs = customField[1]
             elif isinstance(customField, np.ndarray):
                 self.customFieldData = customField
+                fname = None
             else:
                 fname = customField
                 kwargs = {}
+
             if fname:
                 self.customFieldData = self.read_custom_field(fname, kwargs)
         else:

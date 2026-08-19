@@ -531,8 +531,7 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
                             'Fresnel'])
             return combo
         elif 'fluxkind' in argNameL:  # plot only
-            combo.addItems(['total', 'power', 's', 'p',
-                            '+45', '-45', 'left', 'right'])
+            combo.addItems(['total', 'power', 's', 'p', '+-45', 'left-right'])
             return combo
         elif 'aspect' in argNameL:  # plot only
             combo.addItems(['equal', 'auto'])

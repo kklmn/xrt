@@ -448,12 +448,30 @@ class XYCAxis(object):
 
     @data.setter
     def data(self, data):
+        dataInit = data
+
         if isinstance(data, str):
-            data = getattr(raycing, f'get_{data}', 'auto')
+            data = data.strip()
+            if data == 'auto':
+                self._dataInit = 'auto'
+                if hasattr(self, '_label') and self.auto_assign_data():
+                    return
+                if not hasattr(self, '_data'):
+                    self._data = 'auto'
+                return
+
+            newData = getattr(raycing, f'get_{data}', None)
+            if newData is None:
+                raycing.colorPrint(
+                    'Cannot set axis data to "{0}"; keeping previous value.'
+                    .format(data),
+                    'YELLOW')
+                return
+
+            data = newData
+
         self._data = data
-        self._dataInit = data
-        if hasattr(self, '_label') and data == 'auto':
-            self.auto_assign_data()  # called with default backend
+        self._dataInit = dataInit
 
     @property
     def limits(self):
@@ -512,10 +530,7 @@ class XYCAxis(object):
             unit, factor = raycing.auto_unit(lbl, self.unit)
             self.unit = unit
 
-    def auto_assign_data(self, backend='raycing'):
-        """
-        Automatically assign data arrays given the axis label."""
-
+    def get_auto_data(self, backend='raycing'):
         lbl = self.label.strip("$ _\\").lower()
         if lbl in ["energy", "e"]:
             if backend == 'shadow':
@@ -583,9 +598,24 @@ class XYCAxis(object):
         elif backend == 'raycing' and "b" in _label_tokens(lbl):
             data = raycing.get_b
         else:
-            raise ValueError(
-                'cannot auto-assign data for axis "{0}"!'.format(self.label))
+            data = None
+
+        return data
+
+    def auto_assign_data(self, backend='raycing'):
+        """
+        Automatically assign data arrays given the axis label."""
+        data = self.get_auto_data(backend)
+        if data is None:
+            raycing.colorPrint(
+                'Cannot auto-assign data for axis "{0}"; '
+                'keeping previous value.'
+                .format(self.label),
+                'YELLOW')
+            return False
+
         self._data = data
+        return True
 
     def auto_assign_factor(self, backend='raycing'):
         """
