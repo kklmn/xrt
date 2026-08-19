@@ -200,7 +200,8 @@ class GeometricSource(object):
         distxprime='normal', dxprime=1e-3, distzprime='normal', dzprime=1e-4,
         distE='lines', energies=(defaultEnergy,), energyWeights=None,
         polarization='horizontal', filamentBeam=False,
-            uniformRayDensity=False, pitch=0, roll=0, yaw=0, **kwargs):
+        uniformRayDensity=False, pitch=0, roll=0, yaw=0, totalFlux=None,
+            **kwargs):
         """
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
 
@@ -272,6 +273,11 @@ class GeometricSource(object):
         *pitch*, *roll*, *yaw*: float
             rotation angles around x, y and z axes. Useful for canted sources.
 
+        *totalFlux*: float or None
+            Absolute source flux in ph/s to use for source normalization.
+            The normalization is preserved during propagation and beam
+            concatenation. If None, plot values remain relative intensities or
+            weighted ray counts.
 
         """
         self.bl = bl
@@ -317,7 +323,7 @@ class GeometricSource(object):
         self._pitch = raycing.auto_units_angle(pitch)
         self._roll = raycing.auto_units_angle(roll)
         self._yaw = raycing.auto_units_angle(yaw)
-        self.totalFlux = kwargs.get('totalFlux')
+        self.totalFlux = totalFlux
 
     center = raycing.center_property()
 
@@ -538,7 +544,8 @@ class GaussianBeam(object):
     def __init__(
         self, bl=None, name='', center=(0, 0, 0), w0=0.1,
         distE='lines', energies=(defaultEnergy,), energyWeights=None,
-            polarization='horizontal', pitch=0, roll=0, yaw=0, **kwargs):
+        polarization='horizontal', pitch=0, roll=0, yaw=0, totalFlux=None,
+            **kwargs):
         """
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
 
@@ -577,6 +584,11 @@ class GaussianBeam(object):
         *pitch*, *roll*, *yaw*: float
             rotation angles around x, y and z axes. Useful for canted sources.
 
+        *totalFlux*: float or None
+            Absolute source flux in ph/s to use for source normalization.
+            The normalization is preserved during propagation and beam
+            concatenation. If None, plot values remain relative intensities or
+            weighted ray counts.
 
         """
         self.bl = bl
@@ -614,7 +626,7 @@ class GaussianBeam(object):
         self.pitch = raycing.auto_units_angle(pitch)
         self.roll = raycing.auto_units_angle(roll)
         self.yaw = raycing.auto_units_angle(yaw)
-        self.totalFlux = kwargs.get('totalFlux')
+        self.totalFlux = totalFlux
 
     center = raycing.center_property()
 
@@ -849,7 +861,7 @@ class MeshSource(object):
         minzprime=-1e-4, maxzprime=1e-4, nx=11, nz=11,
         distE='lines', energies=(defaultEnergy,), energyWeights=None,
         polarization='horizontal', withCentralRay=True,
-            autoAppendToBL=False, **kwargs):
+            autoAppendToBL=False, totalFlux=None, **kwargs):
         """
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
 
@@ -894,6 +906,12 @@ class MeshSource(object):
             if True, the source is added to the list of beamline sources.
             Otherwise the user must manually start it with :meth:`shine`.
 
+        *totalFlux*: float or None
+            Absolute source flux in ph/s to use for source normalization.
+            The normalization is preserved during propagation and beam
+            concatenation. If None, plot values remain relative intensities or
+            weighted ray counts.
+
         """
         self.bl = bl
         if autoAppendToBL:
@@ -930,7 +948,7 @@ class MeshSource(object):
                 bl.oenamesToUUIDs[self.name] = self.uuid
 
         self.polarization = polarization
-        self.totalFlux = kwargs.get('totalFlux')
+        self.totalFlux = totalFlux
 
     center = raycing.center_property()
 
@@ -1100,7 +1118,7 @@ class CollimatedMeshSource(object):
             dx=1., dz=1., nx=11, nz=11,
             distE='lines', energies=(defaultEnergy,), energyWeights=None,
             polarization='horizontal', withCentralRay=True,
-            autoAppendToBL=False, **kwargs):
+            autoAppendToBL=False, totalFlux=None, **kwargs):
 
         self.bl = bl
         if autoAppendToBL:
@@ -1135,7 +1153,7 @@ class CollimatedMeshSource(object):
                 bl.oenamesToUUIDs[self.name] = self.uuid
 
         self.polarization = polarization
-        self.totalFlux = kwargs.get('totalFlux')
+        self.totalFlux = totalFlux
 
     center = raycing.center_property()
 

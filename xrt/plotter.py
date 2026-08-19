@@ -853,7 +853,7 @@ class XYCPlot(object):
             normalized to absolute flux and power.
 
         *fluxUnit*: 'auto' or None
-            If a synchrotron source is used and *fluxUnit* is 'auto', the
+            If source normalization is provided and *fluxUnit* is 'auto', the
             flux will be displayed as 'ph/s' or 'W' (if *fluxKind* == 'power').
             Otherwise the flux is a unitless number of rays times
             transmittivity | reflectivity.
