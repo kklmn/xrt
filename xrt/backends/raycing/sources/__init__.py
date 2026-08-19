@@ -135,7 +135,7 @@ other ``fluxKind`` values with the corresponding coherency-matrix component in
 place of :math:`J_{ss}+J_{pp}`.
 
 For synchrotron sources, ``sourceWeight`` is determined by the sampled source
-phase-space volume. In the usual far-field ray source this volume is
+bounding volume. In the usual far-field ray source this volume is
 
 .. math::
 
