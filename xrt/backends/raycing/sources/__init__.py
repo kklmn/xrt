@@ -86,33 +86,157 @@ See the example :ref:`Undulator radiation through rectangular aperture
 Absolute flux and power
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-Geometric sources do not provide an absolute physical source
-normalization; their plot values are relative intensities or weighted
-ray counts.
+Raycing plots calculate flux and power from the ray intensities already
+carried by the beam. For total flux, the per-ray intensity is the trace of the
+coherency matrix,
 
-For synchrotron sources, both Monte Carlo strategies use::
+.. math::
 
-    sourceNormalization = seededI / seeded
+    I_i = J_{ss,i} + J_{pp,i}.
 
-With rejection sampling, ``seededI / seeded`` is the sampled phase-space
-volume multiplied by the mean calculated intensity of the trial samples.
-Accepted rays have unit initial total intensity, and their density is
-proportional to the source intensity.
+For power plots, the same ray intensity is multiplied by photon energy and by
+the joule-per-eV conversion factor,
 
-With uniform ray density, ``seededI / seeded`` is the sampled phase-space
-volume. All trial samples are accepted, and the calculated source
-intensity is carried by their ray weights.
+.. math::
 
-Let *rayIntensity* be the per-ray intensity after beamline propagation.
-For the rays selected by a plot, absolute flux and power are::
+    P_i = I_i E_i e,
 
-    flux = (mean(rayIntensity) *
-            sourceNormalization)
+where :math:`E_i` is in eV.
 
-    power = (mean(rayIntensity * photonEnergy) *
-             sourceNormalization * joulesPerElectronvolt)
+If a beam has ``sourceWeight``, raycing treats it as the source normalization
+represented by the ray. For a run with :math:`N` rays, the histogram receives
 
-Here, *photonEnergy* is in eV. Flux is reported in ph/s and power in W.
+.. math::
+
+    N I_i w_i
+
+for flux, or
+
+.. math::
+
+    N I_i E_i e w_i
+
+for power, where :math:`w_i` is ``beam.sourceWeight``. The reported plot value
+is divided by the accumulated number of rays, so for one run this is equivalent
+to
+
+.. math::
+
+    \Phi = \sum_i I_i w_i,
+
+and
+
+.. math::
+
+    P = \sum_i I_i E_i e w_i.
+
+The same logic applies to the selected subset of rays in a plot, and to the
+other ``fluxKind`` values with the corresponding coherency-matrix component in
+place of :math:`J_{ss}+J_{pp}`.
+
+For synchrotron sources, ``sourceWeight`` is determined by the sampled source
+bounding volume. In the usual far-field ray source this volume is
+
+.. math::
+
+    V = (E_{\max} - E_{\min})
+        (\Theta_{\max} - \Theta_{\min})
+        (\Psi_{\max} - \Psi_{\min}).
+
+The calculated source intensity at a sampled point is denoted below as
+:math:`F_i`.
+
+With rejection sampling, trial points are sampled uniformly in this volume.
+Only a subset is accepted, and the accepted rays have unit initial total
+intensity. If :math:`M` trial points were tested, raycing estimates the source
+normalization as
+
+.. math::
+
+    C = {V \over M}\sum_{k=1}^{M} F_k.
+
+If :math:`N` rays are accepted and propagated, each propagated ray gets
+
+.. math::
+
+    w_i = {C \over N}.
+
+Then, for any downstream transmission or selection factor :math:`T_i`,
+
+.. math::
+
+    \Phi = \sum_i T_i w_i
+          = {C \over N}\sum_i T_i
+          \rightarrow \int_V T(\xi) F(\xi)\,d\xi.
+
+With uniform ray density, all sampled points are used and the calculated source
+intensity is carried by the ray intensities themselves. Raycing stores
+
+.. math::
+
+    w_i = \frac{V}{N}.
+
+The plot flux is then
+
+.. math::
+
+    \Phi = \sum_i T_i F_i {V \over N}
+          \rightarrow \int_V T(\xi) F(\xi)\,d\xi.
+
+Thus both sampling modes use the same plot-side calculation; they differ only
+in where the source intensity is represented: in ray density for rejection
+sampling, or in ray weights for uniform ray density. Power is calculated by the
+same estimator with the additional factor :math:`E_i e`.
+
+For geometric sources, there is no calculated synchrotron intensity map. If
+``totalFlux`` is supplied, raycing normalizes the generated beam directly. Let
+
+.. math::
+
+    I_i^0 = J_{ss,i}^0 + J_{pp,i}^0
+
+be the initial ray intensity after polarization and any source-specific
+amplitude weighting. Raycing sets
+
+.. math::
+
+    w_i = \frac{\Phi_0}{\sum_j I_j^0},
+
+where :math:`\Phi_0` is ``totalFlux``. Therefore the source beam satisfies
+
+.. math::
+
+    \sum_i I_i^0 w_i = \Phi_0.
+
+After propagation, the plotted flux is the same weighted sum of the remaining
+ray intensities,
+
+.. math::
+
+    \Phi = \sum_i I_i w_i,
+
+and power is
+
+.. math::
+
+    P = \sum_i I_i E_i e w_i.
+
+This also works for geometric sources generated with uniform ray density,
+because the normalization uses the actual initial ray intensities.
+
+The normalization is local to each ray, so it survives beam concatenation. If
+two beams are concatenated, their ray arrays and their ``sourceWeight`` values
+are concatenated together. The combined plot value is therefore
+
+.. math::
+
+    \Phi_{A+B}
+      = \sum_{i \in A} I_i w_i + \sum_{j \in B} I_j w_j
+      = \Phi_A + \Phi_B,
+
+and likewise for power. This is useful, for example, for adding independent
+sources such as canted or serial insertion devices, or an insertion device and
+a bending magnet. The addition is an incoherent sum of ray intensities.
 
 Grid sampling does not use these beam counters. Its absolute flux and
 power are obtained by directly integrating the intensity map, or the

@@ -403,8 +403,8 @@ class SourceBase:
         xPrimeMaxVal = self._xPrimeMax
 
         if hasattr(self, '_xPrimeMaxAutoReduce') and self._xPrimeMaxAutoReduce:
-            if all([hasattr(self, x) for x in ['_Ky', '_gamma']]):
-                K0 = self.Ky if abs(self.Ky) > 0 else 2.
+            if all([hasattr(self, x) for x in ['_Ky', 'gamma']]):
+                K0 = self._Ky if abs(self._Ky) > 0 else 2.
                 xPrimeMaxTmp = K0 / self.gamma
                 if abs(self._xPrimeMax) > abs(xPrimeMaxTmp):
                     print("Reducing xPrimeMax from {0} down to {1} mrad".format(
@@ -1651,8 +1651,10 @@ class IntegratedSource(SourceBase):
 
             if self.uniformRayDensity:
                 seededI += mcRays * self.xzE
+                sourceWeight = self.xzE
             else:
                 seededI += Intensity.sum() * self.xzE
+                sourceWeight = seededI / seeded
             tmp_max = np.max(Intensity)
 
             if tmp_max > self.Imax:
@@ -1780,6 +1782,8 @@ class IntegratedSource(SourceBase):
             bo.acceptedE = bo.E.sum() * self.fluxConst * SIE0
             bo.seeded = seeded
             bo.seededI = seededI
+            nnorm = self.nrays if wave is None else len(wave.a)
+            bo.sourceWeight = sourceWeight / nnorm
 
             if raycing._VERBOSITY_ > 0:
                 sys.stdout.flush()

@@ -199,7 +199,8 @@ class BendingMagnet(SourceBase):
 
         w_cr = 1.5 * gamma2 * self.B * SIE0 / SIM0
         if self.isMPW:
-            w_cr *= np.sin(np.arccos(ddtheta * gamma / self.K))
+            thetaArg = ddtheta * gamma / self.K
+            w_cr *= np.sqrt(np.clip(1. - thetaArg**2, 0., None))
         w_cr = np.where(np.isfinite(w_cr), w_cr, 0.)
 
         gammapsi = gamma * ddpsi
@@ -280,8 +281,10 @@ class BendingMagnet(SourceBase):
                     sourceSIGMAz = self.dz
                     rTheta0 = np.random.random_sample() *\
                         (self.Theta_max - self.Theta_min) + self.Theta_min
+                    thetaArg = np.clip(rTheta0 * self.gamma / self.K,
+                                       -1., 1.)
                     ryNp = 0.5 * self.L0 *\
-                        (np.arccos(rTheta0 * self.gamma / self.K) / PI) +\
+                        (np.arccos(thetaArg) / PI) +\
                         0.5 * self.L0 *\
                         np.random.random_integers(0, int(2*self.Np - 1))
                     rY = ryNp - 0.5*self.L0*self.Np
@@ -339,8 +342,10 @@ class BendingMagnet(SourceBase):
 
             if self.uniformRayDensity:
                 seededI += self.nrays * self.xzE
+                sourceWeight = self.xzE
             else:
                 seededI += Intensity.sum() * self.xzE
+                sourceWeight = seededI / seeded
 
             tmp_max = np.max(Intensity)
             if tmp_max > self.Imax:
@@ -403,7 +408,8 @@ class BendingMagnet(SourceBase):
                     bot.x[:] = rX
                     bot.y[:] = rY
                 else:
-                    bot.y[:] = ((np.arccos(Theta0*self.gamma/self.K) / PI) +
+                    thetaArg = np.clip(Theta0*self.gamma/self.K, -1., 1.)
+                    bot.y[:] = ((np.arccos(thetaArg) / PI) +
                                 np.random.randint(
                                     -int(self.Np), int(self.Np), npassed) -
                                 0.5) * 0.5 * self.L0
@@ -471,6 +477,7 @@ class BendingMagnet(SourceBase):
             bo.acceptedE = bo.E.sum() * self.fluxConst * SIE0
             bo.seeded = seeded
             bo.seededI = seededI
+            bo.sourceWeight = sourceWeight / self.nrays
 
         if length > self.nrays and not self.filamentBeam:
             bo.filter_by_index(slice(0, np.int64(self.nrays)))

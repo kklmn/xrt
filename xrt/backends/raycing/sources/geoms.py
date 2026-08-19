@@ -179,6 +179,17 @@ def make_polarization(polarization, bo, nrays=raycing.nrays):
         _fill_linear(angle)
 
 
+def make_flux_normalization(tFlux, beam):
+    if np.isscalar(tFlux) and tFlux > 0:
+        intensitySum = (beam.Jss + beam.Jpp).sum()
+        if intensitySum > 0:
+            beam.sourceWeight = tFlux / intensitySum
+            beam.seeded = len(beam.E)
+            beam.seededI = 1.
+            beam.accepted = 1.
+            beam.acceptedE = 1.
+
+
 class GeometricSource(object):
     """Implements a geometric source - a source with the ray origin,
     divergence and energy sampled with the given distribution laws."""
@@ -189,7 +200,8 @@ class GeometricSource(object):
         distxprime='normal', dxprime=1e-3, distzprime='normal', dzprime=1e-4,
         distE='lines', energies=(defaultEnergy,), energyWeights=None,
         polarization='horizontal', filamentBeam=False,
-            uniformRayDensity=False, pitch=0, roll=0, yaw=0, **kwargs):
+        uniformRayDensity=False, pitch=0, roll=0, yaw=0, totalFlux=None,
+            **kwargs):
         """
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
 
@@ -251,8 +263,9 @@ class GeometricSource(object):
             calculations. False is usual for ray-tracing. This parameter
             only affects normal distributions, as for flat and annulus
             distributions the density is already uniform. If you set it True,
-            the size parameter (*dx* or *dz*) must be given as
-            (sigma, cut_limit).
+            the size parameter (*dx* or *dz*) will use a +/-5 sigma sampling
+            interval. Use (sigma, cut_limit) sequence to set this half-width
+            explicitly.
 
             See :ref:`absolute-flux-and-power` for how ray density and ray
             weights affect plot intensity and normalization.
@@ -260,6 +273,11 @@ class GeometricSource(object):
         *pitch*, *roll*, *yaw*: float
             rotation angles around x, y and z axes. Useful for canted sources.
 
+        *totalFlux*: float or None
+            Absolute source flux in ph/s to use for source normalization.
+            The normalization is preserved during propagation and beam
+            concatenation. If None, plot values remain relative intensities or
+            weighted ray counts.
 
         """
         self.bl = bl
@@ -305,6 +323,7 @@ class GeometricSource(object):
         self._pitch = raycing.auto_units_angle(pitch)
         self._roll = raycing.auto_units_angle(roll)
         self._yaw = raycing.auto_units_angle(yaw)
+        self.totalFlux = totalFlux
 
     center = raycing.center_property()
 
@@ -351,11 +370,19 @@ class GeometricSource(object):
     def _apply_distribution(self, axis, distaxis, daxis, bo=None):
         if distaxis == 'normal':
             if self.uniformRayDensity:
-                if not isinstance(daxis, (list, tuple)):
-                    raise ValueError("Wrong distribution size!")
-                axis[:] = np.random.uniform(-daxis[1], daxis[1], self.nrays)
-                amp = np.exp(-axis**2 / daxis[0]**2 / 2) /\
-                    PI2**0.5 / daxis[0] * 2 * daxis[1]
+                daxisArr = np.atleast_1d(daxis)
+                if len(daxisArr) < 2:
+                    sigma = daxisArr[0]
+                    cutLim = 5 * abs(sigma)
+                else:
+                    sigma = daxisArr[0]
+                    cutLim = daxisArr[-1]
+                axis[:] = np.random.uniform(-cutLim, cutLim, self.nrays)
+#                if not isinstance(daxis, (list, tuple)):
+#                    raise ValueError("Wrong distribution size!")
+#                axis[:] = np.random.uniform(-daxis[-1], daxis[-1], self.nrays)
+                amp = np.exp(-axis**2 / sigma**2 / 2) /\
+                    PI2**0.5 / sigma * 2 * cutLim
                 bo.Jss *= amp
                 bo.Jpp *= amp
                 bo.Jsp *= amp
@@ -435,7 +462,7 @@ class GeometricSource(object):
 
         make_polarization(self.polarization, bo, self.nrays)
 # in local coordinate system:
-        self._apply_distribution(bo.y, self.disty, self.dy)
+        self._apply_distribution(bo.y, self.disty, self.dy, bo)
 
         isAnnulus = False
         if (self.distx == 'annulus') or (self.distz == 'annulus'):
@@ -468,8 +495,10 @@ class GeometricSource(object):
         if isAnnulus:
             self._set_annulus(bo.a, bo.c, rMin, rMax, phiMin, phiMax)
         else:
-            self._apply_distribution(bo.a, self.distxprime, self.dxprime)
-            self._apply_distribution(bo.c, self.distzprime, self.dzprime)
+            self._apply_distribution(bo.a, self.distxprime, self.dxprime, bo)
+            self._apply_distribution(bo.c, self.distzprime, self.dzprime, bo)
+
+        make_flux_normalization(self.totalFlux, bo)
 
 # normalize (a,b,c):
         ac = bo.a**2 + bo.c**2
@@ -515,7 +544,8 @@ class GaussianBeam(object):
     def __init__(
         self, bl=None, name='', center=(0, 0, 0), w0=0.1,
         distE='lines', energies=(defaultEnergy,), energyWeights=None,
-            polarization='horizontal', pitch=0, roll=0, yaw=0, **kwargs):
+        polarization='horizontal', pitch=0, roll=0, yaw=0, totalFlux=None,
+            **kwargs):
         """
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
 
@@ -554,6 +584,11 @@ class GaussianBeam(object):
         *pitch*, *roll*, *yaw*: float
             rotation angles around x, y and z axes. Useful for canted sources.
 
+        *totalFlux*: float or None
+            Absolute source flux in ph/s to use for source normalization.
+            The normalization is preserved during propagation and beam
+            concatenation. If None, plot values remain relative intensities or
+            weighted ray counts.
 
         """
         self.bl = bl
@@ -591,6 +626,7 @@ class GaussianBeam(object):
         self.pitch = raycing.auto_units_angle(pitch)
         self.roll = raycing.auto_units_angle(roll)
         self.yaw = raycing.auto_units_angle(yaw)
+        self.totalFlux = totalFlux
 
     center = raycing.center_property()
 
@@ -745,6 +781,8 @@ class GaussianBeam(object):
         wave.Jpp *= amp2
         wave.Jsp *= amp2
 
+        make_flux_normalization(self.totalFlux, wave)
+
         wave.a[:] = wave.xDiffr
         wave.c[:] = wave.zDiffr
         with np.errstate(divide='ignore'):
@@ -823,7 +861,7 @@ class MeshSource(object):
         minzprime=-1e-4, maxzprime=1e-4, nx=11, nz=11,
         distE='lines', energies=(defaultEnergy,), energyWeights=None,
         polarization='horizontal', withCentralRay=True,
-            autoAppendToBL=False, **kwargs):
+            autoAppendToBL=False, totalFlux=None, **kwargs):
         """
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
 
@@ -868,6 +906,12 @@ class MeshSource(object):
             if True, the source is added to the list of beamline sources.
             Otherwise the user must manually start it with :meth:`shine`.
 
+        *totalFlux*: float or None
+            Absolute source flux in ph/s to use for source normalization.
+            The normalization is preserved during propagation and beam
+            concatenation. If None, plot values remain relative intensities or
+            weighted ray counts.
+
         """
         self.bl = bl
         if autoAppendToBL:
@@ -904,6 +948,7 @@ class MeshSource(object):
                 bl.oenamesToUUIDs[self.name] = self.uuid
 
         self.polarization = polarization
+        self.totalFlux = totalFlux
 
     center = raycing.center_property()
 
@@ -1003,6 +1048,7 @@ class MeshSource(object):
             np.linspace(self.minxprime, self.maxxprime, self.nx),
             np.linspace(self.minzprime, self.maxzprime, self.nz))
         zz = np.flipud(zz)
+
         bo.a[int(self.withCentralRay):] = xx.flatten()
         bo.c[int(self.withCentralRay):] = zz.flatten()
 # normalize (a,b,c):
@@ -1014,6 +1060,7 @@ class MeshSource(object):
             bo.E[:] = make_energy(self.distE, self.energies, self.nrays,
                                   energyWeights=self.energyWeights)
         make_polarization(self.polarization, bo, self.nrays)
+        make_flux_normalization(self.totalFlux, bo)
         if toGlobal:  # in global coordinate system:
             raycing.virgin_local_to_global(self.bl, bo, self.center)
         raycing.append_to_flow(self.shine, [bo],
@@ -1071,7 +1118,7 @@ class CollimatedMeshSource(object):
             dx=1., dz=1., nx=11, nz=11,
             distE='lines', energies=(defaultEnergy,), energyWeights=None,
             polarization='horizontal', withCentralRay=True,
-            autoAppendToBL=False, **kwargs):
+            autoAppendToBL=False, totalFlux=None, **kwargs):
 
         self.bl = bl
         if autoAppendToBL:
@@ -1106,6 +1153,7 @@ class CollimatedMeshSource(object):
                 bl.oenamesToUUIDs[self.name] = self.uuid
 
         self.polarization = polarization
+        self.totalFlux = totalFlux
 
     center = raycing.center_property()
 
@@ -1177,6 +1225,7 @@ class CollimatedMeshSource(object):
             bo.E[:] = make_energy(self.distE, self.energies, self.nrays,
                                   energyWeights=self.energyWeights)
         make_polarization(self.polarization, bo, self.nrays)
+        make_flux_normalization(self.totalFlux, bo)
         if toGlobal:  # in global coordinate system:
             raycing.virgin_local_to_global(self.bl, bo, self.center)
         raycing.append_to_flow(self.shine, [bo],
