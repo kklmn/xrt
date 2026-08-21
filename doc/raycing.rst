@@ -1,41 +1,31 @@
 Raycing backend
 ---------------
 
-.. module:: xrt.backends.raycing
+.. automodule:: xrt.backends.raycing
 
-.. automodule:: xrt.backends.raycing.__init__
+.. toctree::
+   :maxdepth: 4
 
-.. autoclass:: xrt.backends.raycing.BeamLine
-   :members: __init__
+   raycing-intro.rst
 
-.. module:: xrt.backends.raycing.run
+   raycing-sources.rst
 
-.. autofunction:: xrt.backends.raycing.run.run_process
+   raycing-undulator-tests.rst
 
-.. automodule:: xrt.backends.raycing.sources
+   raycing-oes.rst
 
-.. automodule:: xrt.backends.raycing.oes
+   raycing-oes-tests.rst
 
-.. automodule:: test_oes
+   raycing-materials.rst
 
-.. automodule:: xrt.backends.raycing.materials
+   raycing-materials-tests.rst
 
-.. automodule:: test_materials
+   raycing-apertures.rst
 
-.. .. automodule:: xrt.backends.raycing.stages
-.. .. autoclass:: xrt.backends.raycing.stages.Tripod()
-..    :members: __init__, set_jacks, get_orientation
-.. .. autoclass:: xrt.backends.raycing.stages.OneXStage()
-..    :members: __init__, select_surface
-.. .. autoclass:: xrt.backends.raycing.stages.TwoXStages(OneXStage)
-..    :members: __init__, set_x_stages, get_orientation
+   raycing-screens.rst
 
-.. automodule:: xrt.backends.raycing.apertures
+   raycing-waves.rst
 
-.. automodule:: xrt.backends.raycing.screens
+   raycing-waves-tests.rst
 
-.. automodule:: xrt.backends.raycing.waves
-
-.. automodule:: xrt.backends.raycing.modes
-
-.. automodule:: test_waves
+   raycing-modes.rst

@@ -88,7 +88,7 @@ a VM, `pocl` may be useful::
 
 In Linux Anaconda you may encounter the situation when pyopencl finds no OpenCL
 driver, which is reported by xrtQook on its welcome screen. The solution is
-presented `here <https://documen.tician.de/pyopencl/misc.html#using-vendor-supplied-opencl-drivers-linux>`_. 
+presented `here <https://documen.tician.de/pyopencl/misc.html#using-vendor-supplied-opencl-drivers-linux>`_.
 It consists of copying \*.icd files from /etc/OpenCL/vendors to
 <your-anaconda>/etc/OpenCL/vendors or to your environment within anaconda if
 you use it.
@@ -102,4 +102,3 @@ If you use a system-wide Python on Linux, do similar to this (works on Ubuntu
 
 Instead of installing ocl-icd-opencl-dev, one can locate libOpenCL.so and
 create a symbolic link in /usr/lib or any other lib folder in the path search.
-
