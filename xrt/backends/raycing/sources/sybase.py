@@ -172,43 +172,6 @@ class SourceBase:
         self.eSigmaX = eSigmaX
         self.eSigmaZ = eSigmaZ
 
-
-
-#        self.dx = eSigmaX * 1e-3 if eSigmaX else None  # input in mkm
-#        self.dz = eSigmaZ * 1e-3 if eSigmaZ else None  # input in mkm
-#        # Beam size and divergence conversion
-#        self._betaX = betaX * 1e3 if betaX else None  # input in m
-#        self._betaZ = betaZ * 1e3 if betaX else None  # input in m
-#
-#        if (self.dx is not None) and (self._betaX is None):
-#            self._betaX = self.dx**2 / self._eEpsilonX if self._eEpsilonX\
-#                else 0.
-#        if (self.dz is not None) and (self._betaZ is None):
-#            self._betaZ = self.dz**2 / self._eEpsilonZ if self._eEpsilonZ\
-#                else 0.
-#
-#        if (self.dx is None) and (self._betaX is not None):
-#            self.dx = np.sqrt(self._eEpsilonX*self._betaX)
-#
-#        elif (self.dx is None) and (self._betaX is None):
-#            raycing.colorPrint("Set either dx or betaX!", "RED")
-#        if (self.dz is None) and (self._betaZ is not None):
-#            self.dz = np.sqrt(self._eEpsilonZ*self._betaZ)
-#        elif (self.dz is None) and (self._betaZ is None):
-#            raycing.colorPrint("Set either dz or betaZ!", "RED")
-#
-#        dxprime, dzprime = None, None
-#        if dxprime:
-#            self.dxprime = dxprime
-#        else:
-#            self.dxprime = self._eEpsilonX / self.dx if self.dx > 0\
-#                else 0.  # [rad]
-#        if dzprime:
-#            self.dzprime = dzprime
-#        else:
-#            self.dzprime = self._eEpsilonZ / self.dz if self.dz > 0\
-#                else 0.  # [rad]
-
         if raycing._VERBOSITY_ > 10:
             print('Beam horz. size dx = {0} mm'.format(self.dx))
             print('Beam vert. size dz = {0} mm'.format(self.dz))
@@ -273,6 +236,7 @@ class SourceBase:
 
         if epsilonX is not None:
             self.dxprime = self._eEpsilonX / self.dx if self.dx > 0 else 0
+        self.needReset = True
 
     @property
     def eSigmaZ(self):
@@ -294,6 +258,7 @@ class SourceBase:
 
         if epsilonZ is not None:
             self.dzprime = self._eEpsilonZ / self.dz if self.dz > 0 else 0
+        self.needReset = True
 
     @property
     def eSigmaXprime(self):
@@ -318,6 +283,7 @@ class SourceBase:
             if getattr(self, '_betaX', None) is not None:
                 self.dx = np.sqrt(self._eEpsilonX * self._betaX)
                 self.dxprime = self._eEpsilonX / self.dx if self.dx > 0 else 0
+        self.needReset = True
 
     @property
     def eEpsilonZ(self):
@@ -334,6 +300,7 @@ class SourceBase:
             if getattr(self, '_betaZ', None) is not None:
                 self.dz = np.sqrt(self._eEpsilonZ * self._betaZ)
                 self.dzprime = self._eEpsilonZ / self.dz if self.dz > 0 else 0
+        self.needReset = True
 
     @property
     def betaX(self):
@@ -355,6 +322,7 @@ class SourceBase:
             sigmaX = getattr(self, 'dx', None)
             if epsilonX is not None and sigmaX is not None:
                 self._betaX = 0 if epsilonX == 0 else sigmaX**2 / epsilonX
+        self.needReset = True
 
     @property
     def betaZ(self):
@@ -376,6 +344,7 @@ class SourceBase:
             sigmaZ = getattr(self, 'dz', None)
             if epsilonZ is not None and sigmaZ is not None:
                 self._betaZ = 0 if epsilonZ == 0 else sigmaZ**2 / epsilonZ
+        self.needReset = True
 
     @property
     def eMin(self):
