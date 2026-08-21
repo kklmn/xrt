@@ -17,7 +17,7 @@ except ImportError:  # pragma: no cover - optional dependency
     PortType = Node = NodeGraphicsObject = StyleCollection = None
     ConnectionGraphicsObject = NodeConnectionInteraction = None
 
-HAS_QTPYNODEEDITOR = FlowScene is not None
+HAS_QTPYNODEEDITOR = False  # FlowScene is not None
 
 
 if StyleCollection is not None:
