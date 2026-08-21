@@ -13,6 +13,7 @@ from .qookbase import XrtQookBase  # analysis:ignore
 from .._constants import _DEBUG_  # analysis:ignore
 from ...commons import qt  # analysis:ignore
 from ...xrtGlow import is_screen, is_aperture  # analysis:ignore
+from ...xrtGlow.widgets.inspector import _getBeamName  # analysis:ignore
 from ....backends import raycing  # analysis:ignore
 
 
@@ -438,6 +439,19 @@ class XrtQookElements(XrtQookBase):
 #        self.plotTree.setColumnWidth(0, int(self.plotTree.width()/3))
         self.isEmpty = False
         self.tabs.setCurrentWidget(self.plotTree)
+
+    def addInspectorPlot(self, plotProps):
+        plotProps = copy.deepcopy(plotProps)
+        beamTag = plotProps.get('beam')
+        if isinstance(beamTag, tuple):
+            beamName = _getBeamName(self.beamModel, beamTag[0], beamTag[1])
+            if beamName is None:
+                return
+            plotProps['beam'] = beamName
+
+        plotProps.pop('title', None)
+        plotProps.pop('useQtWidget', None)
+        self.addPlot(copyFrom=plotProps)
 
     def addPlotBeam(self, beamName):
         self.addPlot(beamName=beamName)

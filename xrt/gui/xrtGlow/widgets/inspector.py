@@ -28,12 +28,40 @@ __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "27 Jan 2026"
 
 
+def _getBeamName(beamModel, elementId, beamType=None):
+    preferredBeamName = None
+    fallbackBeamName = None
+    for row in range(beamModel.rowCount()):
+        beamItem = beamModel.item(row, 0)
+        typeItem = beamModel.item(row, 1)
+        ownerItem = beamModel.item(row, 2)
+        if beamItem is None or ownerItem is None:
+            continue
+        if str(ownerItem.text()) != str(elementId):
+            continue
+
+        beamName = str(beamItem.text())
+        currentBeamType = str(typeItem.text()) if typeItem is not None else ''
+        if beamType is not None:
+            if currentBeamType == str(beamType):
+                return beamName
+            continue
+
+        if fallbackBeamName is None:
+            fallbackBeamName = beamName
+        if currentBeamType == 'beamGlobal':
+            preferredBeamName = beamName
+            break
+    return preferredBeamName or fallbackBeamName
+
+
 class InstanceInspector(qt.QDialog):
     """
     This is a basic version of element editor.
     """
     propertiesChanged = qt.Signal(dict)
     scanCreated = qt.Signal(dict)
+    plotConfigCreated = qt.Signal(dict)
 
     def __init__(self, parent=None, dataDict={}, initDict={},
                  epicsDict={}, viewOnly=False, beamLine=None,
@@ -277,7 +305,10 @@ class InstanceInspector(qt.QDialog):
                     plotProps, parent=self, viewOnly=viewOnly,
                     beamLine=self.beamLine,
                     plotId=self.elementId,
-                    hiddenProps=hiddenProps)
+                    hiddenProps=hiddenProps,
+                    allowAddToPlots=True)
+            self.dynamicPlotWidget.addToPlotsRequested.connect(
+                    self.plotConfigCreated.emit)
 
             canvasSplitter = qt.QSplitter()
             canvasSplitter.setChildrenCollapsible(False)
@@ -687,13 +718,17 @@ class InstanceInspector(qt.QDialog):
 
 
 class ConfigurablePlotWidget(qt.QWidget):
+    addToPlotsRequested = qt.Signal(dict)
+
     def __init__(self, plotProps, parent=None, viewOnly=False,
-                 beamLine=None, plotId=None, hiddenProps={}):
+                 beamLine=None, plotId=None, hiddenProps={},
+                 allowAddToPlots=False):
         super().__init__(parent)
 #        self.setAttribute(qt.Qt.WA_DeleteOnClose)
 #        self.setWindowTitle("Live Plot Builder")
         self.plotId = plotId
         self.hiddenProps = hiddenProps
+        self.allowAddToPlots = allowAddToPlots
         plotProps['useQtWidget'] = True
         plotInit = {'Project': {'plots': {'plot': plotProps}}}
         plotObj = deserialize_plots(plotInit)
@@ -821,6 +856,38 @@ class ConfigurablePlotWidget(qt.QWidget):
             func = getattr(self, label.lower().replace(' ', '_'))
             button.clicked.connect(func)
             exportLayout.addWidget(button)
+
+        if self.allowAddToPlots:
+            button = qt.QPushButton('Add to plots')
+            button.setToolTip('Add this plot definition to the Plots tab.')
+            button.clicked.connect(self.addToPlots)
+            exportLayout.addWidget(button)
+
+    def currentPlotProps(self):
+        plotProps = copy.deepcopy(self.plotProps)
+        for modelName, model in self.models.items():
+            parentItem = model.invisibleRootItem()
+            for row in range(parentItem.rowCount()):
+                paramItem = parentItem.child(row, 0)
+                valueItem = parentItem.child(row, 1)
+                if paramItem is None or valueItem is None:
+                    continue
+
+                paramName = str(paramItem.text())
+                paramValue = raycing.parametrize(valueItem.text())
+                if modelName == 'top':
+                    if paramName == 'beam':
+                        paramValue = self.get_beam_tag(paramValue)
+                    plotProps[paramName] = paramValue
+                else:
+                    axisProps = plotProps.setdefault(modelName, {})
+                    axisProps[paramName] = paramValue
+
+        plotProps.pop('useQtWidget', None)
+        return plotProps
+
+    def addToPlots(self):
+        self.addToPlotsRequested.emit(self.currentPlotProps())
 
     def add_param(self, parent, paramName, value):
         """Add a pair of Parameter-Value Items"""

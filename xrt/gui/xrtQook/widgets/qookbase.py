@@ -62,9 +62,9 @@ from ...commons import gl  # analysis:ignore
 from .. import tutorial  # analysis:ignore
 
 from ... import xrtGlow as xrtglow  # analysis:ignore
-from ...xrtGlow import InstanceInspector  # analysis:ignore
 from ...xrtGlow._constants import DEFAULT_SCENE_SETTINGS as DEFAULT_GLOW_SCENE_SETTINGS
 from ...xrtGlow._utils import is_source, is_aperture, is_screen
+from ...xrtGlow.widgets.inspector import InstanceInspector, _getBeamName  # analysis:ignore
 from ...xrtGlow.widgets.scan import ScanRangeDialog, find_catalog_property
 from ...xrtGlow.widgets.nodeeditor import (
     HAS_QTPYNODEEDITOR, _FlowGraphPanel, FLOW_NODE_STYLES)
@@ -617,26 +617,6 @@ class XrtQookBase(qt.QMainWindow):
                         return branch_item.child(kch, 1)
         return None
 
-    def _findPreferredBeamNameForElement(self, element_id):
-        preferred = None
-        fallback = None
-        for row in range(self.beamModel.rowCount()):
-            beam_item = self.beamModel.item(row, 0)
-            type_item = self.beamModel.item(row, 1)
-            owner_item = self.beamModel.item(row, 2)
-            if beam_item is None or owner_item is None:
-                continue
-            if str(owner_item.text()) != str(element_id):
-                continue
-            beam_name = str(beam_item.text())
-            beam_type = str(type_item.text()) if type_item is not None else ''
-            if fallback is None:
-                fallback = beam_name
-            if beam_type == 'beamGlobal':
-                preferred = beam_name
-                break
-        return preferred or fallback
-
     def onFlowConnectionCreated(self, connection):
         input_node, output_node = connection.nodes
         if input_node is None or output_node is None:
@@ -647,7 +627,7 @@ class XrtQookBase(qt.QMainWindow):
         if target_id is None or source_id is None:
             return
 
-        beam_name = self._findPreferredBeamNameForElement(source_id)
+        beam_name = _getBeamName(self.beamModel, source_id)
         if beam_name is None:
             return
 
@@ -758,6 +738,9 @@ class XrtQookBase(qt.QMainWindow):
                                      viewOnly=False,
                                      beamLine=self.beamLine,
                                      categoriesDict=catDict)
+        addInspectorPlot = getattr(self, 'addInspectorPlot', None)
+        if addInspectorPlot is not None:
+            elViewer.plotConfigCreated.connect(addInspectorPlot)
 
         if glWidget is not None:
             glWidget.beamUpdated.connect(elViewer.update_beam)
