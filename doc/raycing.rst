@@ -16,6 +16,8 @@ Raycing backend
 
    raycing-oes-tests.rst
 
+   raycing-figure-error.rst
+
    raycing-materials.rst
 
    raycing-materials-tests.rst
