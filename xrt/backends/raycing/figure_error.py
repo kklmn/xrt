@@ -1,9 +1,24 @@
 # -*- coding: utf-8 -*-
 """
 Surface Roughness
-----------------
+-----------------
 
 Basic containers for surface roughness generators.
+
+.. autoclass:: xrt.backends.raycing.figure_error.FigureErrorBase()
+   :members: __init__
+
+.. autoclass:: xrt.backends.raycing.figure_error.FigureErrorImported()
+   :members: __init__
+
+.. autoclass:: xrt.backends.raycing.figure_error.RandomRoughness()
+   :members: __init__
+
+.. autoclass:: xrt.backends.raycing.figure_error.GaussianBump()
+   :members: __init__
+
+.. autoclass:: xrt.backends.raycing.figure_error.Waviness()
+   :members: __init__
 
 """
 
@@ -11,7 +26,7 @@ from __future__ import print_function
 __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "16 Jan 2026"
 __all__ = ('RandomRoughness', 'GaussianBump', 'Waviness',
-           'FigureErrorImported', 'PlanarRidge')
+           'FigureErrorImported')
 
 allArguments = ('bl', 'name', 'baseFE', 'limPhysX', 'limPhysY', 'gridStep',
                 'fileName', 'columnFactors', 'recenter', 'orientation',
@@ -464,8 +479,9 @@ class RandomRoughness(FigureErrorBase):
 
             - For ``rmsKind="slope"``, specifies RMS angular slope in [μrad].
               May be:
-                * scalar → isotropic slope RMS
-                * (pitch, roll) → directional RMS slopes
+
+              * scalar → isotropic slope RMS
+              * (pitch, roll) → directional RMS slopes
 
             Surface height and slope RMS are coupled through the spatial
             spectrum of the surface; only one can be enforced at a time.
