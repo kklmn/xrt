@@ -197,7 +197,7 @@ class Crystal(Material):
             if hasattr(self, '_VInit') and self._VInit is None:
                 self.V = (self.d * self.sqrthkl2)**3
 
-            if hasattr(self, '_V'):
+            if hasattr(self, '_V') and self._V > 0:
                 self.chiToF = -R0 / PI / self.V  # minus!
                 self.chiToFd2 = abs(self.chiToF) * self.d**2
 
@@ -208,7 +208,7 @@ class Crystal(Material):
     @d.setter
     def d(self, d):
         self._d = d
-        if hasattr(self, '_V') and self.V is not None:
+        if hasattr(self, '_V') and self.V is not None and self.V:
             self.chiToF = -R0 / PI / self.V  # minus!
             self.chiToFd2 = abs(self.chiToF) * d**2
 
@@ -222,7 +222,7 @@ class Crystal(Material):
         if V is None and hasattr(self, '_d') and hasattr(self, 'sqrthkl2'):
             V = (self.d * self.sqrthkl2)**3
         self._V = V
-        if hasattr(self, '_d') and V is not None:
+        if hasattr(self, '_d') and V is not None and V > 0:
             self.chiToF = -R0 / PI / V  # minus!
             self.chiToFd2 = abs(self.chiToF) * self.d**2
 

@@ -16,7 +16,6 @@ reflectivity, transmittivity, refractive index, absorption coefficient etc.
              get_amplitude
 .. autoclass:: TXMMaterial()
    :members: __init__, get_refractive_index, get_absorption_coefficient,
-             get_amplitude
 
 .. autoclass:: Multilayer()
    :members: __init__, get_t_thickness, get_b_thickness, get_amplitude,

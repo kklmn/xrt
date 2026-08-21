@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 """
+Tests of parametric mirrors
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 The following parametric mirrors are exemplified here:
 
 1. Elliptical. A point source is at focus f1 and a screen at f2.
@@ -15,12 +18,9 @@ The following parametric mirrors are exemplified here:
    of the two foci) and a screen at f2 that collects the imaginary
    (back-projected) beam reflected by the mirror.
 
-Can be viewed in 3D by `showIn3D = True`.
-
-If used in the histogram plotting (`showIn3D = False`), the observation screen
-has several positions around the focus point along the beam direction to
-demonstrate the focusing function. Note the femtometer (fm) axis unit for the
-plot right at the focus position.
+The observation screen has several positions around the focus point along the
+beam direction to demonstrate the focusing function. Note the femtometer (fm)
+axis unit for the plot right at the focus position.
 """
 __author__ = "Konstantin Klementiev"
 __date__ = "15 Jul 2025"

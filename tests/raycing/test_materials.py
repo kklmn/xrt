@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-.. _tests_materials:
+.. _test_materials:
 
 Tests of Materials
 ------------------

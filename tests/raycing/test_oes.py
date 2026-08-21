@@ -1,7 +1,9 @@
 ﻿# -*- coding: utf-8 -*-
 """
-Tests for Optical elements
---------------------------
+.. _test_oes:
+
+Tests of Optical elements
+-------------------------
 
 .. automodule:: tests.raycing.test_asymmetric_xtal
 
