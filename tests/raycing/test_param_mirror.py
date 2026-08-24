@@ -5,25 +5,43 @@ Tests of parametric mirrors
 
 The following parametric mirrors are exemplified here:
 
-1. Elliptical. A point source is at focus f1 and a screen at f2.
++---------------+---------------+
+|  |param1txt|  |  |param1img|  |
++---------------+---------------+
+|  |param2txt|  |  |param2img|  |
++---------------+---------------+
+|  |param3txt|  |  |param3img|  |
++---------------+---------------+
+|  |param4txt|  |  |param4img|  |
++---------------+---------------+
 
-2. Parabolical. A collimated (parallel) source of a finite square cross-section
-   illuminates the mirror and a screen is at the paraboloid focus.
+.. |param1txt| replace:: 1. Elliptical. A point source is at focus f1 and
+   a screen at f2.
+.. |param2txt| replace:: 2. Parabolical. A collimated (parallel) source of
+   a finite square cross-section illuminates the mirror and a screen is at
+   the paraboloid focus.
+.. |param3txt| replace:: 3. Hyperbolic with outer reflection. A point source is
+   at focus f1 (the farther of the two foci) and a screen at f2 that collects
+   the imaginary (back-projected) beam reflected by the mirror.
+.. |param4txt| replace:: 4. Hyperbolic with inner reflection. A point source is
+   at focus f1 (the closer of the two foci) and a screen at f2 that collects
+   the imaginary (back-projected) beam reflected by the mirror.
 
-3. Hyperbolic with outer reflection. A point source is at focus f1 (the farther
-   of the two foci) and a screen at f2 that collects the imaginary
-   (back-projected) beam reflected by the mirror.
-
-4. Hyperbolic with inner reflection. A point source is at focus f1 (the closer
-   of the two foci) and a screen at f2 that collects the imaginary
-   (back-projected) beam reflected by the mirror.
+.. |param1img| imagezoom:: _images/parametric_test_elliptical
+   :loc: upper-right-corner
+.. |param2img| imagezoom:: _images/parametric_test_parabolical
+   :loc: upper-right-corner
+.. |param3img| imagezoom:: _images/parametric_test_hyperbolic
+   :loc: upper-right-corner
+.. |param4img| imagezoom:: _images/parametric_test_hyperbolic-inner
+   :loc: lower-right-corner
 
 The observation screen has several positions around the focus point along the
 beam direction to demonstrate the focusing function. Note the femtometer (fm)
 axis unit for the plot right at the focus position.
 """
 __author__ = "Konstantin Klementiev"
-__date__ = "15 Jul 2025"
+__date__ = "24 Aug 2026"
 
 import sys
 import os, sys; sys.path.append(os.path.join('..', '..'))  # analysis:ignore
@@ -36,13 +54,14 @@ import xrt.backends.raycing.run as rr
 import xrt.plotter as xrtp
 import xrt.runner as xrtr
 import xrt.backends.raycing.screens as rsc
+raycing.zEps = 1e-16  # mm
 
 showIn3D = False
 
 E0, dE = 9000., 5.,
 p = 10000.
 pitch = 2e-3
-lim = [-0.25, 0.25]
+lim = [-25, 25]
 limZoom = [-1, 1]
 
 inclination = 0  # pitch of the source
@@ -119,12 +138,12 @@ def build_beamline(nrays=1e5):
     screenName = 'ImaginaryFocus' if case.startswith('hyperbolic') else 'Focus'
     beamLine.fsm2 = rsc.Screen(beamLine, screenName, [0, 0, 0])
     if showIn3D:
-        screenDY = [0]
+        beamLine.screenDY = [0]
     else:
-        screenDY = np.linspace(-2000, 2000, 5)  # positions around focus
+        beamLine.screenDY = np.linspace(-200, 200, 5)  # pos around focus
     qsign = -1 if case.startswith('hyperbolic') else 1
     beamLine.screen3D = []
-    for i, dy in enumerate(screenDY):
+    for i, dy in enumerate(beamLine.screenDY):
         dqs = qsign * (q+dy) * np.sin(2*pitch+inclination)
         dqc = qsign * (q+dy) * np.cos(2*pitch+inclination)
         beamLine.screen3D.append(
@@ -186,15 +205,19 @@ def main():
     plot = xrtp.XYCPlot('beamMlocal', aspect='auto', xaxis=xaxis, yaxis=yaxis)
     plots.append(plot)
 
-    for i, dy in enumerate(beamLine.screen3D):
+    for i, (pos, dy) in enumerate(zip(beamLine.screen3D, beamLine.screenDY)):
         if i == len(beamLine.screen3D) // 2:
             limits, unit = limZoom, 'fm'
         else:
-            limits, unit = lim, u'mm'
+            limits, unit = lim, u'µm'
         xaxis = xrtp.XYCAxis(r'$x$', unit, limits=limits)
         yaxis = xrtp.XYCAxis(r'$z$', unit, limits=limits)
         plot = xrtp.XYCPlot('beamFSM2-{0:d}'.format(i),
                             xaxis=xaxis, yaxis=yaxis, caxis='category')
+        plot.textPanel = plot.fig.text(
+            0.72, 0.85, '', transform=plot.fig.transFigure, size=10, color='r',
+            ha='left')
+        plot.textPanel.set_text(f'dy = \n{dy:.0f} mm')
         plots.append(plot)
 
     for plot in plots:

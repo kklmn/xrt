@@ -9,4 +9,5 @@ Tests of Optical elements
 
 .. automodule:: tests.raycing.test_backcattering_xtal_Shvydko
 
+.. automodule:: tests.raycing.test_param_mirror
 """
