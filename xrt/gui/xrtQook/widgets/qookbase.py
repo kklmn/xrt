@@ -2177,7 +2177,12 @@ class XrtQookBase(qt.QMainWindow):
             saveDialog.setAcceptMode(qt.QFileDialog.AcceptSave)
             saveDialog.setNameFilter("XML files (*.xml);;JSON files (*.json)")
             if (saveDialog.exec_()):
-                self.layoutFileName = saveDialog.selectedFiles()[0]
+                layoutFileName = saveDialog.selectedFiles()[0]
+                if layoutFileName and not os.path.splitext(layoutFileName)[1]:
+                    selectedFilter = str(saveDialog.selectedNameFilter())
+                    suffix = '.json' if '*.json' in selectedFilter else '.xml'
+                    layoutFileName += suffix
+                self.layoutFileName = layoutFileName
         if self.layoutFileName != "":
             if self.layoutFileName.lower().endswith("json"):
                 _ = self.beamLine.export_to_json()
