@@ -104,7 +104,7 @@ Version history
 
     - Add in-plane rotation to :meth:`Crystal.get_amplitude_pytte()`.
 
-    - Major update of :ref:`Tests of Materials <tests_materials>`. Add
+    - Major update of :ref:`Tests of Materials <test_materials>`. Add
       :ref:`Bent crystals: comparison tests for pyTTE backends <tests_pytte>`.
 
 1.6.0 (17 Jul 2023):
