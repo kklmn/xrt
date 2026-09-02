@@ -8,35 +8,19 @@ Notes on using xrtGlow
 .. imagezoom:: _images/xrtGlow1.png
    :align: right
 
-- 3D glasses button is a two-state button. When it is pressed, xrtGlow will
-  update its view whenever changes are made to the beamline in xrtQook. If you
-  close the window of xrtGlow and the button is pressed, xrtGlow will pop up
-  again after any change in xrtQook. To really close xrtGlow, deactivate the
-  button.
+- Examine a few examples in `.../examples/withRaycing/_QookBeamlines`.
 
-- You can use the CTRL-F1 shortcut to open xrtGlow, F4 to dock/undock it
-  into/from the xrtQook window.
-
-- The Navigation panel of xrtGlow has several columns. The last columns may be
-  hidden in the initial view. You can access them by enlarging the window.
-
-- The element will appear on the Navigation panel only if interacts with the
-  beam, i.e. has an assigned method returning Beams.
-
-- Export to Image is available under the context menu -> File. You can save and
+- Export to image is available under the context menu -> File. You can save and
   load the scene settings (camera position, model orientation, rays opacity and
   so on) as well.
-
-- Load the example `.../examples/withRaycing/_QookBeamlines/lens3.xml` and
-  follow the instructions in Description tab in order to understand the
-  visualization precision vs the swiftness of the 3D manipulations.
 
 - From xrtGlow, press F1 to see the available keyboard shortcuts. Also observe
   the available pop-up menu by right mouse click.
 
-- Movements of the model are separated for the transverse plane and
-  longitudinal direction. Use SHIFT-MouseLeft and ALT-MouseLeft for
-  corresponding movements.
+- Movements of the model are possible with Shift-MouseLeft. Centering the scene
+  can be done by (a) right click on the element name in Selection and then
+  "Center here" or (b) right click on the element itself in the scene and then
+  "Center view".
 
 - The color histogram without Virtual Screen shows the color map -- the
   correspondence between the selected physical parameter (e.g. energy) and the
@@ -45,22 +29,12 @@ Notes on using xrtGlow
   may select a sub-band on the color plot by the mouse. The vertical extent in
   that selection is irrelevant.
 
-- Virtual Screen is instantiated on the Beam as close as possible to the center
-  of the window. There are several ways to move it:
+- Examine dynamic properties of an optical elements or a screen by
+  right-clicking it. The plot in the inspectror panel shows a local footprint or
+  a screen view.
 
-  1) Holding CTRL-MouseLeft: moves the Virtual Screen along the Beam.
-
-  2) CTRL-SHIFT-MouseLeft and CTRL-ALT-MouseLeft: moves the whole beamline
-     through the fixed Virtual Screen in transverse or longitudinal directions
-     correspondingly.
-
-.. animation:: _images/colorBump
-   :align: left
-
-- If color gradients overlap on the Virtual Screen it can be useful to expand
-  the color axis in real space by enabling the Color Bump. Do not forget that
-  the resulting height distribution is artificial, does not present the real
-  intersections of rays and is only used for convenience.
+- Virtual Screen is instantiated by F3 nearly at the view center. It can be
+  moved along the beamline by Ctrl-MouseLeft drag.
 
 - Rays or footprints visualisation can be enabled/disabled either by setting
   corresponding checkboxes in the Navigation Panel for individual elements or
@@ -83,24 +57,18 @@ Notes on using xrtGlow
   of rays in the source if necessary.
 
 .. imagezoom:: _images/xrtGlow4.png
+   :align: right
 
 - If you have any doubts regarding the orientation of the optical element or
   trying to identify the directions, you can plot local coordinate axes by
   checking the corresponding option on the Scene panel or in the context menu.
-  Make sure that the surface rendering is enabled for this element on the
+  Make sure that the surface rendering is enabled for this element in the
   Navigation panel. Orientation of the diffraction planes will be represented
-  by the yellow arrow in case of the crystals with asymmetric cut.
+  by the yellow arrow in case of crystals with asymmetric cut.
 
-- Depth test is disabled by default for the Points. Enable it if you do not
-  want the footprints to shine through solid surfaces of the optical elements.
-  Be aware that the Points may be obscured by rays in this case.
-
-.. imagezoom:: _images/xrtGlow5.png
-   :align: right
-
-- Scene checkbox 'Virtual Screen for Indexing' can be used to filter the rays
-  hitting the Virtual Screen. This is convenient for retrospective analysis,
-  to highlight the rays of the initial beam that reach the final point.
+- Depth test is disabled by default for Points. Enable it if you do not want the
+  footprints to shine through solid surfaces of optical elements. Be aware that
+  Points may be obscured by Lines (rays) in this case.
 
 - Antialiasing can improve the visual quality of the scene, but it seriously
   affects the performance (depending on the number of rays / elements in the
@@ -109,7 +77,7 @@ Notes on using xrtGlow
   coordinate grid.
 
 - Default Zoom does not involve the coordinate grid, if you want to Zoom In/Out
-  the whole scene, use CTRL-MouseWheel.
+  the whole scene, use Ctrl-MouseWheel.
 
 
 """

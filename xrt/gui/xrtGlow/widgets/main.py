@@ -3421,23 +3421,17 @@ class xrtGlow(qt.QWidget):
         helpText = """
 - **F1**: Open this help window
 - **F3**: Add/Remove Virtual Screen
-- **F4**: Dock/Undock xrtGlow if launched from xrtQook
 - **F5/F6**: Quick Save/Load Scene
                     """
         helpText += "- **F7**: Start movie generator or scan"
         helpText += """
 - **LeftMouse**: Rotate the Scene
-- **SHIFT+LeftMouse**: Translate in perpendicular to the shortest view axis
-- **ALT+LeftMouse**: Translate in parallel to the shortest view axis
-- **CTRL+LeftMouse**: Drag Virtual Screen
-- **ALT+WheelMouse**: Scale Virtual Screen
-- **CTRL+SHIFT+LeftMouse**: Translate the Beamline around Virtual Screen
-                      (with Beamline along the longest view axis)
-- **CTRL+ALT+LeftMouse**: Translate the Beamline around Virtual Screen
-                    (with Beamline along the shortest view axis)
-- **CTRL+T**: Toggle Virtual Screen orientation (vertical/normal to the beam)
+- **Shift+LeftMouse**: Translate the view
+- **Ctrl+LeftMouse**: Drag Virtual Screen
+- **Alt+WheelMouse**: Scale Virtual Screen
+- **Ctrl+T**: Toggle Virtual Screen orientation (vertical/normal to the beam)
 - **WheelMouse**: Zoom the Beamline
-- **CTRL+WheelMouse**: Zoom the Scene
+- **Ctrl+WheelMouse**: Zoom the Scene
         """
         helpWidget = qt.QTextEdit()
         try:

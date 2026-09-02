@@ -1457,7 +1457,7 @@ class XrtQookBase(qt.QMainWindow):
 | See a brief `startup tutorial <{0}>`_, `the documentation <http://xrt.rtfd.io>`_ and check the latest updates on `GitHub <https://github.com/kklmn/xrt>`_.
 
 :Created by:
-    Roman Chernikov (`NSLS-II <http://https://www.bnl.gov/nsls2/>`_)\n
+    Roman Chernikov (`NSLS-II <https://www.bnl.gov/nsls2/>`_)\n
     Konstantin Klementiev (`MAX IV Laboratory <https://www.maxiv.lu.se/>`_)
 :License:
     MIT License, March 2016
