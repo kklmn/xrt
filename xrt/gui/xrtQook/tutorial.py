@@ -6,8 +6,8 @@ Using xrtQook for script generation
 -----------------------------------
 
 - Start xrtQook: type ``python xrtQookStart.pyw`` from xrt/gui or, if you have
-  installed xrt by running setup.py, type ``xrtQookStart.pyw`` from any
-  location.
+  installed xrt by running ``pip install xrt`` or ``python -m pip install .``,
+  type ``xrtQook`` from any location.
 
   .. note::
      The scaling of GUI may behave differently in different systems and Qt
@@ -18,8 +18,7 @@ Using xrtQook for script generation
      If you want to start xrtQook from Spyder, select the run option
      "Execute in an external system terminal".
 
-- Rename beamLine to myTestBeamline by double clicking on it (you do not have
-  to, only for demonstration).
+- Rename beamLine to myTestBeamline by double clicking on it (this is optional).
 
 - Right-click on myTestBeamline and Add Source → BendingMagnet. The same can be
   done from the icon buttons on the left.
@@ -28,11 +27,12 @@ Using xrtQook for script generation
    :align: center
    :scale: 60 %
 
-- In its properties change eMin to 10000-10 and eMax to 10000+10. The middle of
-  this range will be used to automatically align crystals (one crystal in this
-  example) unless the parameter myTestBeamline.alignE sets another value. Blue
-  color indicates non-default values. These will be included into the generated
-  script. All the default-valued parameters do not propagate into the script.
+- In its properties change the plot axes to x' and z' and the aspect ratio to
+  "auto". Set xPrimeMax and zPrimeMax to 0.5 (mrad), eMin to 9000-10 and
+  eMax to 9000+10. The middle of this range will be used to automatically align
+  crystals (one crystal in this example) unless the parameter
+  myTestBeamline.alignE sets another value. Press Apply, examine the plot and
+  press OK.
 
 .. imagezoom:: _images/qookTutor02.png
    :align: center
@@ -55,9 +55,8 @@ Using xrtQook for script generation
    :align: center
    :scale: 60 %
 
-- In its properties select the created crystal as 'material', put [0, 20000, 0]
-  as 'center' (i.e. 20 m from source) and "auto" (with or without quotes) as
-  'pitch'.
+- In its properties, set center.y as 20000 (mm), set pitch as "auto" (with or
+  without quotes) and material as crystalSi01.
 
 .. imagezoom:: _images/qookTutor05.png
    :align: center
@@ -69,14 +68,16 @@ Using xrtQook for script generation
    :align: center
    :scale: 60 %
 
-- Give it [0, 21000, auto] as 'center'. Its height -- the last coordinate --
-  will be automatically calculated from the previous elements.
+- Set center.y as 21000 and center.z as auto. Its height (center.z) will be
+  automatically calculated from the previous elements.
 
 .. imagezoom:: _images/qookTutor07.png
    :align: center
    :scale: 60 %
 
-- Check the beamline layout with xrtGlow.
+- Check the beamline layout with xrtGlow. In the selection list right click on
+  oe01 and "Center here". Adjust the x and y scale in Transformations. Set Color
+  Axis range as [8995, 9005]. Add Side (YZ) projection in Grid/Projections.
 
 .. imagezoom:: _images/qookTutor08.png
    :align: center
@@ -100,7 +101,9 @@ Using xrtQook for script generation
   save the script and run it.
 
 - In the console output you can read the actual pitch (Bragg angle) for the
-  crystal and the screen position.
+  crystal and the screen position. These values can also be seen in the dynamic
+  properties of oe1 and screen01 (double-click on the green line to the right of
+  their names).
 
 .. imagezoom:: _images/qookTutor11.png
    :align: center
