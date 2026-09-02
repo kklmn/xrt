@@ -1338,7 +1338,7 @@ class XrtQookBase(qt.QMainWindow):
             dNames, dVals = [], []
         if len(dNames) > 0:
             argDocStr += u'.. raw:: html\n\n   <div class="title"> '\
-                u'<h3> Properties: </h3> </div>\n'
+                u'<h3> Properties: </h3> </div>\n\n'
         for dName, dVal in zip(dNames, dVals):
             argDocStr += u'*{0}*: {1}\n\n'.format(dName, dVal)
         retValStr = '' if objP.__doc__ is None else \

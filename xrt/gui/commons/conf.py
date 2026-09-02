@@ -128,3 +128,6 @@ html_title = "xrtQook page"
 
 # Output file base name for HTML help builder.
 #htmlhelp_basename = 'xrtdoc'
+
+# with mathjax@4, :math: is broken in QWebEnginePage, so we use @3:
+mathjax_path = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js'

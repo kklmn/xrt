@@ -75,7 +75,8 @@ def generate_context(name='', argspec='', note=''):
     return context
 
 
-def sphinxify(docstring, context, buildername='html', img_path=''):
+def sphinxify(docstring, context, buildername='html', img_path='',
+              wantMessages=False):
     """
     Largely modified Spyder's sphinxify.
     """
@@ -109,12 +110,14 @@ def sphinxify(docstring, context, buildername='html', img_path=''):
     doc_file.write(docstring)
     doc_file.close()
 
-    confoverrides = {'html_context': context,
-                     'extensions': ['sphinx.ext.mathjax']}
+    confoverrides = {'html_context': context}
+    # confoverrides['extensions'] = [
+    #     'sphinx.ext.mathjax', 'sphinxcontrib.jquery']
 
     doctreedir = osp.join(DOCDIR, 'doctrees')
+    status, warning = [sys.stderr]*2 if wantMessages else [None]*2
     sphinx_app = Sphinx(srcdir, DOCDIR, DOCDIR, doctreedir, buildername,
-                        confoverrides, status=None, warning=None,
+                        confoverrides, status=status, warning=warning,
                         freshenv=True, warningiserror=False, tags=None)
 
     try:
