@@ -22,9 +22,9 @@ provides a complete list of parameters for the used objects. :mod:`xrtQook`
 writes/reads the recipes of beamlines into/from xml files.
 
 In the present version, :mod:`xrtQook` does not provide automated generation of
-*scans* and does not create *wave propagation* sequences. For these two tasks,
-the corresponding script parts have to be written manually based on the
-supplied examples and the present documentation.
+*wave propagation* sequences. For this task, the corresponding script parts have
+to be written manually based on the supplied examples and the present
+documentation.
 
 See a brief :ref:`tutorial for xrtQook <qook_tutorial>`.
 
