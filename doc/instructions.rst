@@ -65,23 +65,6 @@ spyder integrates matplotlib images (can be switched off) and prohibits the use
 of multiprocessing. Therefore, if you run an xrt script from spyder, select to
 run it in an external console.
 
-.. rubric:: GLUT
-
-If the xrtQook GUI reports "GLUT is not found", here are a few possible
-solutions.
-
-If on Windows, examine these solutions:
-`one <https://github.com/kklmn/xrt/issues/196>`_ and
-`two <https://github.com/kklmn/xrt/issues/180>`_.
-
-If using Anaconda, this installation may help::
-
-    conda install -c conda-forge freeglut  # reboot
-
-If on Linux, GLUT can be installed like this::
-
-    sudo apt install freeglut3-dev  # or  sudo dnf install freeglut-devel
-
 .. rubric:: PyOpenCL
 
 Before installing PyOpenCL you need at least one existing OpenCL implementation
