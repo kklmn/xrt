@@ -3,6 +3,10 @@
 Version history
 ---------------
 
+Current GitHub code (last modified 3 Sep 2026):
+    - Add scans to xrtGlow. Scans generate a series of scene images and can
+      create a scan generator in the output script (via Job Settings/generator).
+
 2.0.0b1 (beta) (26 Apr 2026):
     - Restoration and stabilization of xrtGlow and xrtQook workflows after
       the major GUI refactor in 2.0.0b0.
