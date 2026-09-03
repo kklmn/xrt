@@ -13,7 +13,7 @@ WinPython installations without mutual interference.
 `Anaconda <https://www.anaconda.com/download>`_ is another popular Python
 distribution. It works on Linux, MacOS and Windows.
 
-Automatic installation of xrt
+Installation of xrt from PyPI
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ::
@@ -24,18 +24,24 @@ or::
 
     conda install conda-forge::xrt
 
+Installation of xrt from GitHub
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Alternatively, install from the unzipped GitHub source. Navigate to the
+directory containing pyproject.toml and run: ``python -m pip install .``.
+
 Running xrt without installation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Because xrt does not build anything at the installation time, it can be used
+Because xrt does not build any binaries at the installation time, it can be used
 *without installation*, only its source code is required. One advantage of no
 installation is a single location of xrt served by all, possibly many, Python
 installations; that location can even span various OS's if it is on a network
 drive. Get xrt as a zip from GitHub and unzip it to a suitable location.
 
 For running xrt without installation, all required dependencies must be
-installed beforehand. Look into xrt's `setup.py` and find those dependencies in
-the lists `install_requires` and `extras_require`. They are pip installable.
+installed beforehand. Look the xrt's `pyproject.toml` for dependencies and
+optional dependencies. They are pip installable.
 
 ::
 
