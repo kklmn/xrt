@@ -562,7 +562,7 @@ class ScanInstructionDialog(qt.QDialog):
         layout.addLayout(form)
 
         hint = qt.QLabel(
-            '1 frame creates a single-frame injection. Equal start/end '
+            'One frame uses start value only. Equal start/end '
             'values over multiple frames create a hold/pause.')
         hint.setWordWrap(True)
         layout.addWidget(hint)
@@ -737,15 +737,6 @@ class ScanInstructionDialog(qt.QDialog):
                 item['duration'] = points
             return item
         item_id = f"{prop['target']}.{prop['property']}"
-
-        if points == 1:
-            item = OrderedDict([
-                ('type', 'event'),
-                ('id', item_id),
-                ('frame', start),
-                ])
-            item.update(self._patch_for_value(start_value))
-            return item
 
         values = OrderedDict([('type', 'constant'),
                               ('value', start_value),
