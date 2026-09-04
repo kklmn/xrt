@@ -56,6 +56,9 @@ def main(argv=None):
         default=0,
         help="verbosity level for diagnostic purpose, int 0 (default) to 50"
     )
+    parser.add_argument(
+        "-w", "--webInspector", action="store_true",
+        help="start with a browser inspector")
 
     args = parser.parse_args(argv)
 
@@ -73,7 +76,8 @@ def main(argv=None):
 
     app = xQ.qt.QApplication(sys.argv)
 
-    ex = xQ.XrtQook(projectFile=args.projectFile)
+    ex = xQ.XrtQook(projectFile=args.projectFile,
+                    webInspector=args.webInspector)
     ex.setWindowTitle("xrtQook")
     ex.show()
 

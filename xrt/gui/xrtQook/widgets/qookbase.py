@@ -83,6 +83,9 @@ if sys.version_info < (3, 1):
 else:
     from inspect import getfullargspec as getargspec
 
+WEB_INSPECTOR_PORT = '5588'
+WEB_INSPECTOR_URL = f'http://127.0.0.1:{WEB_INSPECTOR_PORT}'
+
 
 class XrtQookBase(qt.QMainWindow):
     plotParamUpdate = qt.Signal(tuple)
@@ -93,7 +96,8 @@ class XrtQookBase(qt.QMainWindow):
 
     TABICONSIZE = 36
 
-    def __init__(self, parent=None, loadLayout=None, projectFile=None):
+    def __init__(self, parent=None, loadLayout=None, projectFile=None,
+                 webInspector=False):
         super().__init__(parent)
         self.xrtQookDir = os.path.dirname(os.path.abspath(__file__))
         self.setAcceptDrops(True)
@@ -198,6 +202,19 @@ class XrtQookBase(qt.QMainWindow):
 
         if loadLayout is not None or projectFile is not None:
             self.importLayout(layoutJSON=loadLayout, filename=projectFile)
+
+        self.webHelp.loadFinished.connect(self.handleLoaded)
+        self.webInspector = webInspector
+        if webInspector:
+            os.environ['QTWEBENGINE_REMOTE_DEBUGGING'] = WEB_INSPECTOR_PORT
+            self.inspector = qt.QtWeb.QWebEngineView()
+            self.inspector.setWindowTitle('Web Inspector')
+            self.inspector.load(qt.QUrl(WEB_INSPECTOR_URL))
+
+    def handleLoaded(self, ok):
+        if self.webInspector and ok:
+            self.webHelp.page().setDevToolsPage(self.inspector.page())
+            self.inspector.show()
 
     def initDocWidgets(self):
         self.setTabPosition(qt.Qt.AllDockWidgetAreas,
@@ -339,7 +356,7 @@ class XrtQookBase(qt.QMainWindow):
 
         glowAction = qt.QAction(
             qt.QIcon(os.path.join(self.iconsDir, 'view-refresh-5.png')),
-#            qt.QIcon(os.path.join(self.iconsDir, '3dg_256.png')),
+            # qt.QIcon(os.path.join(self.iconsDir, '3dg_256.png')),
             'Enable xrtGlow Live Update',
             self)
         if gl.isOpenGL:
@@ -2695,7 +2712,7 @@ class XrtQookBase(qt.QMainWindow):
                         self._addAction(
                             tmodule, elname, self.addElement, tsubmenu)
         elif level == 1 and selText != "properties":
-#            tsubmenu = menu.addMenu(self.tr("Add method"))
+            # tsubmenu = menu.addMenu(self.tr("Add method"))
             if self.blViewer is not None:
                 elid = str(selectedItem.data(qt.Qt.UserRole))
                 menu.addAction('Center xrtGlow at ' + str(selectedItem.text()),
