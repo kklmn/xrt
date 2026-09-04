@@ -79,5 +79,23 @@ Notes on using xrtGlow
 - Default Zoom does not involve the coordinate grid, if you want to Zoom In/Out
   the whole scene, use Ctrl-MouseWheel.
 
+.. imagezoom:: _images/xrtGlow6.png
+   :align: right
+
+- You can scan the scene properties such as scale or camera position, and
+  properties of beamline elements like target energy of a crystal or
+  monochromator, mirror position/orientation, slit opening etc.
+  Scans tracks can be added to the table in the Scan Control widget by
+  selecting a property from the tree and providing starting and ending points
+  and a span in frames. Multiple tracks can span over independent or
+  overlapping frame intervals supporting multi-parametric scans. The scans can
+  be “played” immediately in xrtGlow, exported as JSON configuration, or
+  included in an auto-generated script by selecting the glow_scan option under
+  “Job Settings – generator”. For a provided filename template, the scan
+  started in xrtGlow will save the 3D scene for every frame, script-based
+  scans will instead save every plot in the list of plots under a name composed
+  of the plot title and scan filename template.
+
+
 
 """
