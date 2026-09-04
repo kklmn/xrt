@@ -7,7 +7,7 @@ Created on Tue Jan 27 18:01:38 2026
 __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "27 Jan 2026"
 
-from ...commons import qt  # analysis:ignore
+from ...commons import qt, ext  # analysis:ignore
 from ...xrtGlow import ConfigurablePlotWidget  # analysis:ignore
 from ....backends import raycing  # analysis:ignore
 
@@ -37,18 +37,10 @@ except AttributeError:
             Overloaded method to handle links ourselves
             """
             strURL = str(url.toString())
-            if strURL.endswith('png'):
-                return False
-            elif strURL.startswith('file'):
-                if strURL.endswith('tutorial.html') or\
-                        strURL.endswith('tutorial'):
-                    self.linkClicked.emit(url)
-                    return False
-                else:
-                    return True
-            else:
-                self.linkClicked.emit(url)
-                return False
+            if strURL.endswith(ext.xrtQookPageName+'.html'):
+                return True
+            self.linkClicked.emit(url)
+            return False
 
     class QWebView(qt.QtWeb.QWebEngineView):
         """Web view"""
