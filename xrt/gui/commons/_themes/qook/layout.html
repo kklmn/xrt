@@ -7,12 +7,12 @@
 {% block css %}{% endblock %}
 {% block footer %}{% endblock %}
 {% block extrahead %}
-    <link rel="stylesheet" href="file:///{{css_path}}/default.css" type="text/css" />
-    <link rel="stylesheet" href="file:///{{css_path}}/basic.css" type="text/css" />
-    <link rel="stylesheet" href="file:///{{css_path}}/pygments.css" type="text/css" />
-    <script type="text/javascript" src="file:///{{js_path}}/jquery.js"></script>
-    <script type="text/javascript" src="file:///{{js_path}}/utils.js"></script>
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/basic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/utils.js"></script>
     {% if shouldScaleMath %}
-    <script type="text/javascript" src="file:///{{js_path}}/math_config_win32.js"></script>
+    <script type="text/javascript" src="_static/math_config_win32.js"></script>
     {% endif %}
 {% endblock %}

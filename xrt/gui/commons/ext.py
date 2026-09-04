@@ -8,6 +8,11 @@ import os
 import os.path as osp
 import shutil
 
+import http.server
+import socketserver
+import threading
+from functools import partial
+
 #  Spyderlib modules can reside in either Spyder or Spyderlib, so we check both
 #  It's definitely not the optimal solution, but it works.
 
@@ -48,8 +53,6 @@ CSS_PATH = re.sub('\\\\', '/', CSS_PATH)
 JS_PATH = CSS_PATH
 
 xrtQookPageName = 'xrtQookPage'
-xrtQookPage = 'file:///' + osp.join(DOCDIR, xrtQookPageName+'.html')
-xrtQookPage = re.sub('\\\\', '/', xrtQookPage)
 
 from . import qt
 shouldScaleMath = qt.QtName == "PyQt4" and sys.platform == 'win32'
@@ -58,7 +61,7 @@ try:
     from xml.sax.saxutils import escape
     from docutils.utils import SystemMessage
     from sphinx.application import Sphinx
-    import sphinx
+    import sphinx  # analysis:ignore
     import codecs
     isSphinx = True
 except Exception:
@@ -126,3 +129,36 @@ def sphinxify(docstring, context, buildername='html', img_path='',
         pass
 #        output = ("It was not possible to generate rich text help for this "
 #                  "object.</br>Please see it in plain text.")
+
+
+class Handler(http.server.SimpleHTTPRequestHandler):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, directory=DOCDIR, **kwargs)
+
+    def log_message(self, format, *args):
+        if "404" in format % args:
+            print(format % args)
+
+
+class LocalWebServer:
+    HOST = "127.0.0.1"
+    PORT = 8000  # =0: OS chooses a free port
+
+    def __init__(self):
+        self.httpd = None
+        self.thread = None
+        self.port = None
+
+    def start(self):
+        self.httpd = socketserver.TCPServer((self.HOST, self.PORT), Handler)
+        self.host, self.port = self.httpd.server_address[:2]
+        self.thread = threading.Thread(
+            target=self.httpd.serve_forever, daemon=True)
+        self.thread.start()
+
+    def stop(self):
+        if self.httpd:
+            self.httpd.shutdown()
+            self.httpd.server_close()
+        if self.thread:
+            self.thread.join()

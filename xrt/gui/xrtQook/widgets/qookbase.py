@@ -138,6 +138,10 @@ class XrtQookBase(qt.QMainWindow):
 
         self.blViewer = None
 
+        self._webserver = ext.LocalWebServer()
+        self._webserver.start()
+        print(f"Serving http://{self._webserver.host}:{self._webserver.port}/")
+
         # Add worker thread for handling rich text rendering
         self.sphinxThread = qt.QThread(self)
         self.sphinxWorker = SphinxWorker()
@@ -164,6 +168,8 @@ class XrtQookBase(qt.QMainWindow):
         if ext.isSphinx:
             self.webHelp = QWebView()
             self.webHelp.page().setLinkDelegationPolicy(2)
+            self.webHelp.history().clear()
+            self.webHelp.page().history().clear()
             self.webHelp.setContextMenuPolicy(qt.Qt.CustomContextMenu)
             self.webHelp.customContextMenuRequested.connect(self.docMenu)
 
@@ -1373,7 +1379,9 @@ class XrtQookBase(qt.QMainWindow):
 
     def _on_sphinx_thread_html_ready(self):
         """Set our sphinx documentation based on thread result"""
-        self.webHelp.load(qt.QUrl(ext.xrtQookPage))
+        url = "http://{0}:{1}/{2}.html".format(
+            self._webserver.host, self._webserver.port, ext.xrtQookPageName)
+        self.webHelp.load(qt.QUrl(url))
 
     def _on_sphinx_thread_finished(self):
         if self._pendingSphinxRender is None:
@@ -1497,7 +1505,8 @@ class XrtQookBase(qt.QMainWindow):
             self.showTutorial(tutorial.__doc__[60:],
                               "Using xrtQook for script generation",
                               img_path='../_images')
-        elif strURL.startswith('http') or strURL.startswith('ftp'):
+        elif (strURL.startswith('http') or strURL.startswith('ftp')) and \
+                ext.xrtQookPageName not in strURL:
             if self.lastBrowserLink == strURL:
                 return
             webbrowser.open(strURL)
@@ -3156,4 +3165,5 @@ class XrtQookBase(qt.QMainWindow):
         self._shutdown_busy_icon_worker()
         self._shutdown_sphinx_worker()
         self._shutdown_qprocess()
+        self._webserver.stop()
         super().closeEvent(event)
