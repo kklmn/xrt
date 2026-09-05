@@ -1,13 +1,26 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """This script launches xrtQook. It optionally defines custom classes of
 optical elements and materials to be visible in xrtQook."""
 __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "12 Sep 2024"
 
-import sys
-import os
+import argparse  # analysis:ignore
+import sys  # analysis:ignore
+import os  # analysis:ignore
 sys.path.append(os.path.join('..', '..'))
-import xrt.gui.xrtQook as xQ
+
+# Fix opengl context mismatch on RHEL 9 / Wayland, should works on all linux OS
+# System packages required to run xrtQook on Wayland (tested on RHEL 9 KDE)
+# sudo dnf install \
+#  mesa-libGL mesa-dri-drivers \
+#  libglvnd-glx \
+#  xorg-x11-server-Xwayland
+if sys.platform == "linux":
+    os.environ["PYOPENGL_PLATFORM"] = "glx"
+
+import xrt.gui.xrtQook as xQ  # analysis:ignore
+
 
 """An example of adding custom classes of optical elements, here a class
 CustomMirror (change to your class) from module customOEs (your module).
@@ -30,23 +43,46 @@ material classes, see below."""
 # rm.__allSectioned__['My custom materials'] = ('MyMultilayer',)
 
 
-if __name__ == '__main__':
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="starter of xrtQook")
+    parser.add_argument(
+        "-p", "--projectFile",
+        metavar="NNN.xml",
+        help="load an xml project file"
+    )
+    parser.add_argument(
+        "-v", "--verbosity",
+        type=int,
+        default=0,
+        help="verbosity level for diagnostic purpose, int 0 (default) to 50"
+    )
+    parser.add_argument(
+        "-w", "--webInspector", action="store_true",
+        help="start with a browser inspector")
+
+    args = parser.parse_args(argv)
+
+    # DEBUG_LEVEL = args.verbosity
+
     if any('spyder' in name.lower() for name in os.environ):
-        pass  # spyder is present
+        pass
     else:
         if str(sys.executable).endswith('pythonw.exe'):
             sys.stdout = open("output.log", "w")
 
-    # If xrtQook looks too small, one can play with scaling:
-    # either with "auto" factor or with a manually set factor.
-    # os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1" # means "yes", not factor
+    # Optional Qt scaling:
+    # os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
     # os.environ["QT_SCALE_FACTOR"] = "1.5"
 
-    args = sys.argv
-    # args.append("--disable-web-security")
-    app = xQ.qt.QApplication(args)
+    app = xQ.qt.QApplication(sys.argv)
 
-    ex = xQ.XrtQook()
+    ex = xQ.XrtQook(projectFile=args.projectFile,
+                    webInspector=args.webInspector)
     ex.setWindowTitle("xrtQook")
     ex.show()
-    sys.exit(app.exec_())
+
+    return app.exec_()
+
+
+if __name__ == "__main__":
+    sys.exit(main())
