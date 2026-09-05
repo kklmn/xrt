@@ -28,6 +28,10 @@ documentation.
 
 See a brief :ref:`tutorial for xrtQook <qook_tutorial>`.
 
+.. raw:: html
+
+    <div class="clearer"> </div>
+
 """
 
 __author__ = "Roman Chernikov, Konstantin Klementiev"
