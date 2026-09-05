@@ -6,7 +6,7 @@ Notes on using xrtGlow
 ----------------------
 
 .. imagezoom:: _images/xrtGlow1.png
-   :align: right
+   :align: center
 
 - Examine a few examples in `.../examples/withRaycing/_QookBeamlines`.
 
@@ -58,7 +58,7 @@ Notes on using xrtGlow
   of rays in the source if necessary.
 
 .. imagezoom:: _images/xrtGlow4.png
-   :align: right
+   :align: center
 
 - If you have any doubts regarding the orientation of the optical element or
   trying to identify the directions, you can plot local coordinate axes by
@@ -80,9 +80,6 @@ Notes on using xrtGlow
 - Default Zoom does not involve the coordinate grid, if you want to Zoom In/Out
   the whole scene, use Ctrl-MouseWheel.
 
-.. imagezoom:: _images/xrtGlow6.png
-   :align: right
-
 - You can scan the scene properties such as scale or camera position, and
   properties of beamline elements like target energy of a crystal or
   monochromator, mirror position/orientation, slit opening etc.
@@ -97,6 +94,8 @@ Notes on using xrtGlow
   scans will instead save every plot in the list of plots under a name composed
   of the plot title and scan filename template.
 
+.. imagezoom:: _images/xrtGlow6.png
+   :align: center
 
 
 """
