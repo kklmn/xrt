@@ -146,7 +146,8 @@ DEFAULT_SCENE_SETTINGS = {
     }
 
 COLOR_CONTROL_LABELS = {
-    'globalNorm': 'Global Normalization',
+    'globalColors': 'Global color span',
+    'globalNorm': 'Global intensity normalization',
     'iHSV': 'Intensity as HSV Value'
     }
 
@@ -154,7 +155,6 @@ SCENE_CONTROL_LABELS = {
     # 'drawGrid': 'checkDrawGrid',
     # 'perspectiveEnabled': 'checkPerspect',
     'enableAA': 'Enable antialiasing',
-    'globalColors': 'Use global colors',
     'linesDepthTest': 'Depth test for Lines',
     'pointsDepthTest': 'Depth test for Points',
     'invertColors': 'Invert scene color',

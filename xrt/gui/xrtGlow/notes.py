@@ -22,12 +22,13 @@ Notes on using xrtGlow
   "Center here" or (b) right click on the element itself in the scene and then
   "Center view".
 
-- The color histogram without Virtual Screen shows the color map -- the
-  correspondence between the selected physical parameter (e.g. energy) and the
-  colors. With Virtual Screen active (by F3), the plot shows a histogram of the
-  selected parameter as distributed on Virtual Screen. In both cases the user
-  may select a sub-band on the color plot by the mouse. The vertical extent in
-  that selection is irrelevant.
+- The color plot shows the global color map: the correspondence between the
+  selected physical parameter (e.g. energy) and the colors. A sub-band
+  can be selected on the color plot with the mouse; the vertical extent of this
+  selection is ignored. If Global color span is disabled, each beam's colors
+  are normalized to that beam's local minimum and maximum. This is useful for
+  inspecting local height profiles. In this mode, the global color map and
+  global color-span controls are disabled.
 
 - Examine dynamic properties of an optical elements or a screen by
   right-clicking it. The plot in the inspectror panel shows a local footprint or

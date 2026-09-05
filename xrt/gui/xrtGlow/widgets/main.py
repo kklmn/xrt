@@ -372,6 +372,8 @@ class xrtGlow(qt.QWidget):
         if not isinstance(state, bool):  # editor
             state = float(re.sub(',', '.', str(state.text())))
         setattr(self.customGlWidget, pName, state)
+        if pName == 'globalColors':
+            self._syncColorScaleControls()
         self.customGlWidget.glDraw()
 
     def _setNestedGlFloat(self, rootName, pName, editor):
@@ -1608,6 +1610,7 @@ class xrtGlow(qt.QWidget):
 
         layout = qt.QHBoxLayout()
         self.colorControls = []
+        self.colorScaleControls = []
         colorCBLabel = qt.QLabel('Color Axis:')
         colorCB = qt.QComboBox()
         colorCB.setMaxVisibleItems(48)
@@ -1641,6 +1644,7 @@ class xrtGlow(qt.QWidget):
                 partial(self.updateColorAxis, icSel))
             selQLE.setMaximumWidth(80)
             self.colorControls.append(selQLE)
+            self.colorScaleControls.extend([selLabel, selQLE])
 
             layout.addWidget(selLabel)
             layout.addWidget(selQLE)
@@ -1663,6 +1667,7 @@ class xrtGlow(qt.QWidget):
                 partial(self.updateColorSelFromQLE, selQLE, icSel))
             selQLE.setMaximumWidth(80)
             self.colorControls.append(selQLE)
+            self.colorScaleControls.extend([selLabel, selQLE])
 
             layout.addWidget(selLabel)
             layout.addWidget(selQLE)
@@ -1678,6 +1683,7 @@ class xrtGlow(qt.QWidget):
         selSlider.setValue(rValue)
         selSlider.sliderMoved.connect(partial(self.updateColorSel, selSlider))
         self.colorControls.append(selSlider)
+        self.colorScaleControls.append(selSlider)
         colorLayout.addWidget(selSlider)
 
         layout = qt.QHBoxLayout()
@@ -1695,21 +1701,6 @@ class xrtGlow(qt.QWidget):
         layout.addStretch()
         colorLayout.addLayout(layout)
 
-        layout = qt.QHBoxLayout()
-        explLabel = qt.QLabel("Color bump height, mm")
-        explEdit = qt.QLineEdit("0.0")
-        explValidator = qt.QDoubleValidator()
-        explValidator.setRange(-1000, 1000, 3)
-        explEdit.setValidator(explValidator)
-        explEdit.editingFinished.connect(
-            partial(self.updateExplosionDepth, explEdit))
-        explLabel.setMinimumWidth(144)
-        layout.addWidget(explLabel)
-        explEdit.setMaximumWidth(48)
-        layout.addWidget(explEdit)
-        layout.addStretch()
-        colorLayout.addLayout(layout)
-
 #        axSlider = qt.glowSlider(
 #            self, qt.Qt.Horizontal, qt.glowTopScale)
 #        axSlider.setRange(0, 1, 0.001)
@@ -1722,19 +1713,8 @@ class xrtGlow(qt.QWidget):
                                             self.colorCbControls)
             colorLayout.addWidget(aaCheckBox)
 
-#        glNormCB = qt.QCheckBox('Global Normalization')
-#        glNormCB.setChecked(True)
-#        glNormCB.stateChanged.connect(self.checkGlobalNorm)
-#        colorLayout.addWidget(glNormCB)
-#        self.glNormCB = glNormCB
-#
-#        iHSVCB = qt.QCheckBox('Intensity as HSV Value')
-#        iHSVCB.setChecked(False)
-#        iHSVCB.stateChanged.connect(self.checkIHSV)
-#        colorLayout.addWidget(iHSVCB)
-#        self.iHSVCB = iHSVCB
-
         self.colorPanel.setLayout(colorLayout)
+        self._syncColorScaleControls(redraw=False)
 
         self.colorOpacityPanel = qt.QWidget(self)
         colorOpacityLayout = qt.QVBoxLayout()
@@ -2485,14 +2465,48 @@ class xrtGlow(qt.QWidget):
 #        self.centerCB.blockSignals(False)
         self.refreshNodeEditorPanel()
 
-    def drawColorMap(self, axis):
-        xv, yv = np.meshgrid(np.linspace(0, colorFactor, 200),
-                             np.linspace(0, 1, 200))
-        xv = xv.flatten()
-        yv = yv.flatten()
-        self.im = self.mplAx.imshow(hsv_to_rgb(np.vstack((
+    def _colorMapImage(self, mode='color', size=200):
+        if mode == 'gray':
+            return np.ones((size, size, 3)) * 0.85
+        if mode != 'color':
+            raise ValueError("Unknown color map mode: {}".format(mode))
+        xv, yv = np.meshgrid(np.linspace(0, colorFactor, size),
+                             np.linspace(0, 1, size))
+        xv = xv.ravel()
+        yv = yv.ravel()
+        return hsv_to_rgb(np.vstack((
             xv, np.ones_like(xv)*colorSaturation, yv)).T).reshape(
-                (200, 200, 3)),
+                (size, size, 3))
+
+    def _syncColorScaleControls(self, redraw=True):
+        globalColors = bool(self.customGlWidget.globalColors)
+        for control in self.colorScaleControls:
+            control.setEnabled(globalColors)
+
+        try:
+            self.paletteWidget.span.set_active(globalColors)
+        except AttributeError:
+            pass
+        try:
+            self.paletteWidget.span.set_visible(globalColors)
+        except AttributeError:
+            try:
+                self.paletteWidget.span.visible = globalColors
+            except AttributeError:
+                pass
+
+        self.im.set_data(self._colorMapImage(
+                'color' if globalColors else 'gray'))
+        if globalColors:
+            self.im.set_extent((self.customGlWidget.colorMin,
+                                self.customGlWidget.colorMax, 0, 1))
+        self.mplAx.set_title("")
+        if redraw:
+            self.mplFig.canvas.draw()
+
+    def drawColorMap(self, axis):
+        self.im = self.mplAx.imshow(
+            self._colorMapImage(),
             aspect='auto', origin='lower',
             extent=(self.customGlWidget.colorMin,
                     self.customGlWidget.colorMax,
@@ -2502,6 +2516,11 @@ class xrtGlow(qt.QWidget):
         # self.mplFig.tight_layout()
 
     def updateColorMap(self, histArray):
+        if not self.customGlWidget.globalColors:
+            self._syncColorScaleControls()
+            self.mplFig.canvas.blit()
+            return
+
         if histArray[0] is not None:
             size = len(histArray[0])
             histImage = np.zeros((size, size, 3))
@@ -2529,13 +2548,7 @@ class xrtGlow(qt.QWidget):
             self.mplFig.canvas.blit()
             self.paletteWidget.span.extents = self.paletteWidget.span.extents
         else:
-            xv, yv = np.meshgrid(np.linspace(0, colorFactor, 200),
-                                 np.linspace(0, 1, 200))
-            xv = xv.flatten()
-            yv = yv.flatten()
-            self.im.set_data(mpl.colors.hsv_to_rgb(np.vstack((
-                xv, np.ones_like(xv)*colorSaturation, yv)).T).reshape(
-                    (200, 200, 3)))
+            self.im.set_data(self._colorMapImage())
             self.mplAx.set_title("")
             self.mplFig.canvas.draw()
             self.mplFig.canvas.blit()
@@ -2549,6 +2562,9 @@ class xrtGlow(qt.QWidget):
 
     def setSceneParam(self, iAction, state):
         self.sceneControls[iAction].setChecked(state)
+
+    def setColorParam(self, iAction, state):
+        self.colorCbControls[iAction].setChecked(state)
 
     def setRenderingParam(self, iAction, state):
         self.renderingControls[iAction].setChecked(state)
@@ -2564,6 +2580,10 @@ class xrtGlow(qt.QWidget):
         self.customGlWidget.glDraw()
 
     def _syncColorLimitControls(self):
+        if not self.customGlWidget.globalColors:
+            self._syncColorScaleControls()
+            return
+
         try:
             colorMin = float(self.customGlWidget.colorMin)
             colorMax = float(self.customGlWidget.colorMax)
@@ -2619,6 +2639,10 @@ class xrtGlow(qt.QWidget):
         self.mplFig.canvas.draw()
 
     def updateColorAxis(self, icSel):
+        if not self.customGlWidget.globalColors:
+            self._syncColorScaleControls()
+            return
+
         try:
             newColorMin = float(re.sub(',', '.', str(
                 self.colorControls[1].text())))
@@ -2653,6 +2677,11 @@ class xrtGlow(qt.QWidget):
         oldColorMax = self.customGlWidget.colorMax
         self.customGlWidget.change_beam_colorax()
         self.mplAx.set_xlabel(selAxis)
+        if not self.customGlWidget.globalColors:
+            self._syncColorScaleControls()
+            self.customGlWidget.glDraw()
+            return
+
         if oldColorMin == self.customGlWidget.colorMin and\
                 oldColorMax == self.customGlWidget.colorMax and not newLimits:
             return
@@ -2693,6 +2722,9 @@ class xrtGlow(qt.QWidget):
         self.customGlWidget.glDraw()
 
     def updateColorSelFromMPL(self, eclick, erelease):
+        if not self.customGlWidget.globalColors:
+            return
+
         try:
             extents = list(self.paletteWidget.span.extents)
             self.customGlWidget.selColorMin = np.min([extents[0], extents[1]])
@@ -2719,6 +2751,9 @@ class xrtGlow(qt.QWidget):
             pass
 
     def updateColorSel(self, slider, position):
+        if not self.customGlWidget.globalColors:
+            return
+
         if isinstance(position, int):
             try:
                 position /= slider.scale
@@ -2742,6 +2777,9 @@ class xrtGlow(qt.QWidget):
             pass
 
     def updateColorSelFromQLE(self, editor, icSel):
+        if not self.customGlWidget.globalColors:
+            return
+
         try:
             txt = str(editor.text())
             value = float(txt)
@@ -3070,6 +3108,18 @@ class xrtGlow(qt.QWidget):
                 partial(self.setProjectionParam, iAction))
             subMenuP.addAction(mAction)
         menu.addSeparator()
+        subMenuC = menu.addMenu('Color')
+        for iAction in ('globalColors', 'globalNorm'):
+            actCnt = self.colorCbControls.get(iAction)
+            if actCnt is None:
+                continue
+            mAction = qt.QAction(self)
+            mAction.setText(actCnt.text())
+            mAction.setCheckable(True)
+            mAction.setChecked(bool(actCnt.checkState()))
+            mAction.triggered.connect(partial(self.setColorParam, iAction))
+            subMenuC.addAction(mAction)
+        menu.addSeparator()
         subMenuS = menu.addMenu('Scene')
         for iAction, actCnt in self.sceneControls.items():
             if 'Virtual Screen' in actCnt.text():
@@ -3345,6 +3395,7 @@ class xrtGlow(qt.QWidget):
                     textEdit.setText(str(tnv))
 
         self.blockSignals(False)
+        self._syncColorScaleControls(redraw=False)
         self.mplFig.canvas.draw()
         self.customGlWidget.glDraw()
 
@@ -3542,17 +3593,6 @@ class xrtGlow(qt.QWidget):
                           self.customGlWidget.cutoffI, extents[3])
             self.paletteWidget.span.extents = newExtents
             self.customGlWidget.glDraw()
-        except:  # analysis:ignore
-            pass
-
-    def updateExplosionDepth(self, editor):
-        try:
-            # editor = self.sender()
-            value = float(re.sub(',', '.', str(editor.text())))
-            self.customGlWidget.depthScaler = np.float32(value)
-            if self.customGlWidget.virtScreen is not None:
-                self.customGlWidget.populateVScreen()
-                self.customGlWidget.glDraw()
         except:  # analysis:ignore
             pass
 

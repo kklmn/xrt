@@ -361,6 +361,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self._globalColors = globalColors
         self.newColorAxis = True
         self.change_beam_colorax()
+        if globalColors and self.parent is not None and hasattr(
+                self.parent, 'colorControls'):
+            self.parent.updateColorAxis(None)
 
     @property
     def oeThickness(self):
@@ -1428,6 +1431,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             finiteSelection = all(np.isfinite([selColorMin, selColorMax]))
         except TypeError:
             finiteSelection = False
+
         if finiteSelection:
             if selColorMin > selColorMax:
                 selColorMin, selColorMax = selColorMax, selColorMin
@@ -1436,6 +1440,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
         else:
             selColorMin, selColorMax = colorMin, colorMax
             useColorSelection = 0
+
+        if not self.globalColors:
+            useColorSelection = 0
+
         shader.setUniformValue(
                 "colorSelMinMax", qt.QVector2D(selColorMin, selColorMax))
         shader.setUniformValue("useColorSelection", useColorSelection)
@@ -2217,10 +2225,11 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             gl.glStencilFunc(gl.GL_ALWAYS, np.uint8(oeNum),
                                              0xff)
                         try:
-                            if isinstance(oeToPlot, raycing.sources.GeometricSource):
+                            if isinstance(oeToPlot,
+                                          raycing.sources.GeometricSource):
                                 mesh3D.render_geometric_source(
                                     mMMLoc, self.mView, self.mProj,
-                                    scale = self.scaleVec,
+                                    scale=self.scaleVec,
                                     shape=self.geomSrcParam,
                                     isSelected=isSelected,
                                     shader=self.shaderGeo)
@@ -2535,7 +2544,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             if alpha is not None:
                                 alphas.append((ltr, alpha,
                                               ''.join(map(str, hkl))))
-                            
+
                         except Exception as e:
                             print(e)
                 self.cBox.vao_arrow.release()
@@ -2555,12 +2564,14 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             [[arl, 0, 0], [0, arl, 0], [0, 0, arl]],
                             [[0.4, 0.4, 1], [0.1, 1, 0.1], [1, 0.0, 0.0]]):
                         self.cBox.render_text(
-                            (axPos*qt.QVector4D(*labelPos, 1)).toVector3DAffine(),
+                            (axPos*qt.QVector4D(*labelPos,
+                                                1)).toVector3DAffine(),
                             label, alignment=('right', 'top'),
                             scale=0.052*self.cBox.fontScale,
                             textColor=qt.QVector3D(0, 0, 0))
                         self.cBox.render_text(
-                            (axPos*qt.QVector4D(*labelPos, 1)).toVector3DAffine(),
+                            (axPos*qt.QVector4D(*labelPos,
+                                                1)).toVector3DAffine(),
                             label, alignment=('right', 'top'),
                             scale=0.05*self.cBox.fontScale,
                             textColor=qt.QVector3D(*labelColor))
@@ -2585,7 +2596,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
                 self.cBox.textShader.release()
                 self.cBox.vaoText.release()
-
 
             # RENDER GRID ON SCREENS
 
