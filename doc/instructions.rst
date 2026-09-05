@@ -47,6 +47,7 @@ optional dependencies. They are pip installable.
 
     pip install numpy scipy matplotlib sphinx sphinxcontrib-jquery sphinx-tabs
     pip install colorama pyopencl pyopengl siphash24 pyqt5 PyQtWebEngine
+    pip install freetype-py qtpy
 
 After having dependencies installed, you may run any script from `examples` or
 `tests`. The scripts refer to xrt located a few levels higher.
