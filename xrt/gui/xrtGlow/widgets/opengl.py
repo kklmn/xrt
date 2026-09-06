@@ -264,6 +264,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.contourWidth = 2
         self.arrowSize = [0.4, 0.05, 0.025, 13]  # length, tip length, tip R
         self.labelLines = None
+        self.labelLineVertexCount = 0
 
         self.prevMPos = [0, 0]
         self.prevWC = np.float32([0, 0, 0])
@@ -2064,8 +2065,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.maxLen = np.max(np.abs(self.minmax[0, :] - self.minmax[1, :]))
         self.parent.updateMaxLenFromGL(self.maxLen)
         self.newColorAxis = False
-        self.labelLines = np.zeros((len(self.beamline.oesDict)*4, 3))
-        self.llVBO = create_qt_buffer(self.labelLines)  # TODO
+        self.labelLines = np.zeros((4, 3), dtype=np.float32)
+        self.llVBO = create_qt_buffer(self.labelLines)
         self.labelvao = qt.QOpenGLVertexArrayObject()
         self.labelvao.create()
         self.labelvao.bind()
@@ -2479,7 +2480,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
             self.cBox.textShader.release()
             self.cBox.vaoText.release()
 
-            if False:  # labelLines is not None:  # Must be dynamic
+            if labelLines is not None:
+                self.labelLineVertexCount = len(labelLines)
                 update_qt_buffer(self.llVBO, labelLines)
 
                 self.cBox.shader.bind()
@@ -2490,7 +2492,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 self.cBox.shader.setUniformValue(
                         "pvm", qt.QMatrix4x4())
                 gl.glLineWidth(min(self.cBoxLineWidth, 1.))
-                gl.glDrawArrays(gl.GL_LINES, 0, lineCounter*4)
+                gl.glDrawArrays(gl.GL_LINES, 0, self.labelLineVertexCount)
                 self.labelvao.release()
                 self.cBox.shader.release()
 
