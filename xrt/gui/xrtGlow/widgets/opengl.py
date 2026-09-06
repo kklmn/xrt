@@ -2414,12 +2414,28 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
             # RENDER LABELS
 
-            sclY = self.cBox.characters[124][1][1] * 0.04 *\
-                self.cBox.fontScale / float(self.viewPortGL[3])
+            labelScale = 0.04 * self.cBox.fontScale
+            sclY = self.cBox.characters[124][1][1] * labelScale /\
+                float(self.viewPortGL[3])
+            labelGap = 0.1
+            labelPadding = 0.5 * sclY
             labelBounds = []
             lineCounter = 0
-            labelLines = None
+            labelLines = []
             gl.glDisable(gl.GL_DEPTH_TEST)
+
+            def label_intersects(bounds, existingBounds):
+                xmin, ymin, xmax, ymax = bounds
+                for bminx, bminy, bmaxx, bmaxy in existingBounds:
+                    if not (xmin > bmaxx or ymin > bmaxy or
+                            xmax < bminx or ymax < bminy):
+                        return True
+                return False
+
+            def padded_bounds(bounds):
+                xmin, ymin, xmax, ymax = bounds[:4]
+                return (xmin - labelPadding, ymin - labelPadding,
+                        xmax + labelPadding, ymax + labelPadding)
 
             for oeuuid, mesh3D in self.meshDict.items():
                 item = self.parent.getItem(oeuuid, 'label')
@@ -2432,55 +2448,78 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     continue
 
                 oeString = oeToPlot.name
-                alignment = "middle"
-                dx = 0.1
                 oeCenterStr = makeCenterStr(oeToPlot.center,
                                             self.labelCoordPrec)
                 oeLabel = '  {0}: {1}mm'.format(
                     oeString, oeCenterStr)
 
-                oePos = (vpMat*qt.QVector4D(*oeCenter,
-                                            1)).toVector3DAffine()
-                lineHint = [oePos.x(), oePos.y(), oePos.z()]
-                labelPos = qt.QVector3D(*lineHint) + qt.QVector3D(dx, 0, 0)
+                oeClip = vpMat*qt.QVector4D(*oeCenter, 1)
+                if oeClip.w() <= 0:
+                    continue
+                oePos = oeClip.toVector3DAffine()
+                if not np.all(np.isfinite([oePos.x(), oePos.y(),
+                                           oePos.z()])):
+                    continue
+                if not (-1.5 <= oePos.x() <= 1.5 and
+                        -1.5 <= oePos.y() <= 1.5):
+                    continue
 
-                intersecting = True
-                fbCounter = 0
-                while intersecting and fbCounter < 3*(len(labelBounds)+1):
-                    labelYmin = labelPos.y()
-                    labelYmax = labelYmin + sclY
-                    for bmin, bmax in labelBounds:
-                        if labelYmax > bmin and labelYmin < bmax:
-                            labelPos += qt.QVector3D(0, 2*sclY, 0)
-                            break
-                        elif labelYmin > bmax and labelYmax < bmin:
-                            labelPos -= qt.QVector3D(0, 2*sclY, 0)
+                anchor = qt.QVector3D(oePos.x(), oePos.y(), 0.0)
+                baseSide = 1 if lineCounter % 2 == 0 else -1
+                labelPos = None
+                labelMetrics = None
+                labelBox = None
+                labelAlignment = None
+                side = baseSide
+                maxLane = 3*(len(labelBounds)+1)
+                for lane in range(maxLane):
+                    laneSign = 0 if lane == 0 else 1 if lane % 2 else -1
+                    laneOffset = ((lane + 1) // 2) * laneSign * 2*sclY
+                    for side in [baseSide, -baseSide]:
+                        labelAlignment = (
+                                'right' if side > 0 else 'left', 'middle')
+                        candidate = anchor + qt.QVector3D(
+                                side*labelGap, laneOffset, 0.0)
+                        metrics = self.cBox.text_bounds(
+                                candidate, oeLabel, alignment=labelAlignment,
+                                scale=labelScale)
+                        if metrics is None:
+                            continue
+                        bounds = padded_bounds(metrics)
+                        if not label_intersects(bounds, labelBounds):
+                            labelPos = candidate
+                            labelMetrics = metrics
+                            labelBox = bounds
                             break
                     else:
-                        intersecting = False
-                        labelBounds.append((labelPos.y(),
-                                            labelPos.y() + sclY))
-                    fbCounter += 1
+                        continue
+                    break
+
+                if labelPos is None:
+                    continue
 
                 try:
-                    endPos = self.cBox.render_text(
-                        labelPos, oeLabel, alignment=alignment,
-                        scale=0.04*self.cBox.fontScale,
+                    self.cBox.render_text(
+                        labelPos, oeLabel, alignment=labelAlignment,
+                        scale=labelScale,
                         textColor=qt.QVector3D(*self.textColor))
-                    labelLinesN = np.vstack(
-                        (np.array(lineHint),
-                         np.array([labelPos.x(), labelPos.y()-sclY, 0.0]),
-                         np.array([labelPos.x(), labelPos.y()-sclY, 0.0]),
-                         np.array([endPos.x(), labelPos.y()-sclY, 0.0])))
-                    labelLines = labelLinesN if labelLines is None else\
-                        np.vstack((labelLines, labelLinesN))
+                    xmin, ymin, xmax, _ = labelMetrics[:4]
+                    underlineY = ymin - 0.35*sclY
+                    stemX = xmin if side > 0 else xmax
+                    labelLines.extend((
+                        [anchor.x(), anchor.y(), 0.0],
+                        [stemX, underlineY, 0.0],
+                        [xmin, underlineY, 0.0],
+                        [xmax, underlineY, 0.0]))
+                    labelBounds.append(labelBox)
                     lineCounter += 1
                 except Exception as e:
                     print(e)
             self.cBox.textShader.release()
             self.cBox.vaoText.release()
 
-            if labelLines is not None:
+            if labelLines:
+                labelLines = np.asarray(labelLines, dtype=np.float32)
                 self.labelLineVertexCount = len(labelLines)
                 update_qt_buffer(self.llVBO, labelLines)
 

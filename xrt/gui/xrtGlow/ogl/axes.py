@@ -643,10 +643,7 @@ class CoordinateBox():
         self.vaoText.release()
         self.textShader.release()
 
-    def render_text(self, pos, text, alignment, scale, textColor=None):
-        tcValue = textColor or qt.QVector3D(1, 1, 1)
-        self.textShader.setUniformValue("textColor", tcValue)
-        self.textShader.setUniformValue("textOpacity", 0.75)
+    def text_bounds(self, pos, text, alignment, scale):
         char_x = 0
         pView = gl.glGetIntegerv(gl.GL_VIEWPORT)
         scaleX = scale/float(pView[2])
@@ -672,6 +669,9 @@ class CoordinateBox():
             axrel.append(xrel)
             ayrel.append(yrel)
 
+        if not axrel:
+            return None
+
         if alignment is not None:
             if alignment[0] == 'left':
                 coordShift[0] = -(axrel[-1]+2*aw[-1])
@@ -685,6 +685,24 @@ class CoordinateBox():
             else:
                 vOffset = -1
             coordShift[1] = vOffset*ah[-1]
+
+        xmin = pos.x() + min(axrel) + coordShift[0]
+        xmax = pos.x() + max(
+                x + w for x, w in zip(axrel, aw)) + coordShift[0]
+        ymin = pos.y() + min(ayrel) + coordShift[1]
+        ymax = pos.y() + max(
+                y + h for y, h in zip(ayrel, ah)) + coordShift[1]
+
+        return xmin, ymin, xmax, ymax, axrel, ayrel, aw, ah, coordShift
+
+    def render_text(self, pos, text, alignment, scale, textColor=None):
+        tcValue = textColor or qt.QVector3D(1, 1, 1)
+        self.textShader.setUniformValue("textColor", tcValue)
+        self.textShader.setUniformValue("textOpacity", 0.75)
+        metrics = self.text_bounds(pos, text, alignment, scale)
+        if metrics is None:
+            return qt.QVector4D(pos.x(), pos.y(), pos.z(), 1.0)
+        axrel, ayrel, aw, ah, coordShift = metrics[4:]
 
         for ic, c in enumerate(text):
             c = ord(c)
