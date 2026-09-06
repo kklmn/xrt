@@ -112,6 +112,7 @@ class CoordinateBox():
         self.parent = parent
         self.axPosModifier = np.ones(3)
         self.perspectiveEnabled = True
+        self.tickType = "ticks"
         self.shader = None
         self.origShader = None
         self.textShader = None
@@ -354,7 +355,8 @@ class CoordinateBox():
             fineGrid = self._without_coarse_ticks(fineGrid, gridX, fineStep)
             fineGridArray.extend([fineGrid - self.parent.coordOffset[iAx]])
 
-        self.axisL, self.axGrid = self.populate_grid(axisGridArray)
+        self.axisL, self.axGrid = self.populate_grid(
+            axisGridArray, tickType=self.tickType)
         self.gridLen = len(self.axGrid)
         _, self.fineAxGrid = self.populate_grid(fineGridArray)
         self.fineGridLen = len(self.fineAxGrid)
@@ -504,7 +506,7 @@ class CoordinateBox():
         vao.release()
         self.vao_arrow = vao
 
-    def populate_grid(self, grids):
+    def populate_grid(self, grids, tickType=None):
         pModel = np.array(self.parent.mView.data()).reshape(4, 4)[:-1, :-1]
 #                print(pModel)
 #        self.visibleAxes = np.argmax(np.abs(pModel), axis=0)
@@ -565,7 +567,40 @@ class CoordinateBox():
             (zAxis, zAxisB, zAxisB, axisLabelC[2])).T.flatten().reshape(
             4*zAxisB.shape[1], 3)
 
-        return axisLabelC, np.float32(np.vstack((xLines, yLines, zLines)))
+        gridLines = [xLines, yLines, zLines]
+        if tickType:
+            tickFactor = 1.05
+            axisTextC = [axisC.copy() for axisC in axisLabelC]
+            v0, v1, v2 = self.parent.visibleAxes
+            axisTextC[v1][[v2, v0], :] *= tickFactor
+            axisTextC[v0][[v1, v2], :] *= tickFactor
+            if self.perspectiveEnabled:
+                axisTextC[v2][[v1, v0], :] *= tickFactor
+
+            if tickType == "leads":
+                axisTickC = axisTextC
+            elif tickType == "ticks":
+                tickScale = 0.5 * (tickFactor - 1.)
+                axisTickC = [
+                    axisLabelC[0] + tickScale * (axisLabelC[0] - xAxisB),
+                    axisLabelC[1] + tickScale * (axisLabelC[1] - yAxisB),
+                    axisLabelC[2] + tickScale * (axisLabelC[2] - zAxisB)]
+            else:
+                raise ValueError("unknown tickType: {0}".format(tickType))
+
+            tickLines = [
+                np.vstack((axisLabelC[v1], axisTickC[v1])).T.flatten(
+                    ).reshape(2*axisLabelC[v1].shape[1], 3),
+                np.vstack((axisLabelC[v0], axisTickC[v0])).T.flatten(
+                    ).reshape(2*axisLabelC[v0].shape[1], 3)]
+            if self.perspectiveEnabled:
+                tickLines.append(
+                    np.vstack((axisLabelC[v2], axisTickC[v2])).T.flatten(
+                        ).reshape(2*axisLabelC[v2].shape[1], 3))
+            gridLines.extend(tickLines)
+            axisLabelC = axisTextC
+
+        return axisLabelC, np.float32(np.vstack(gridLines))
 
     def render_grid(self, model, view, projection):
 
