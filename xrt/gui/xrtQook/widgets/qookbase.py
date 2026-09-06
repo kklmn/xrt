@@ -768,7 +768,7 @@ class XrtQookBase(qt.QMainWindow):
         if glWidget is not None:
             glWidget.beamUpdated.connect(elViewer.update_beam)
             glWidget.oePropsUpdated.connect(elViewer.update_param)
-            # TODO: update tree
+            # TODO: update/redraw Qook tree immediately after inspector edits
             elViewer.propertiesChanged.connect(
                     partial(glWidget.update_beamline, oeuuid,
                             sender='OEE'))
@@ -1913,7 +1913,7 @@ class XrtQookBase(qt.QMainWindow):
                             self.setIFontColor(parent.child(itemRow, 0), color)
                             break
             item.model().blockSignals(False)
-        elif item.column() == 0 and item.isEnabled():  # TODO: Move to method. Rename only
+        elif item.column() == 0 and item.isEnabled():  # TODO: extract rename/back-reference update
             for i in range(item.rowCount()):
                 child0 = item.child(i, 0)
                 if str(child0.text()) == 'properties':
@@ -2230,7 +2230,6 @@ class XrtQookBase(qt.QMainWindow):
                           encoding="utf-8") as json_file:
                     raycing.json.dump(
                         self.beamLine.layoutStr, json_file, indent=4)
-                    # TODO: plots, run, description
             elif self.layoutFileName.lower().endswith("xml"):
                 self.confText = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
                 self.confText += "<Project>\n"

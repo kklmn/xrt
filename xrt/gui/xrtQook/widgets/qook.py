@@ -408,7 +408,6 @@ class XrtQook(XrtQookElements):
         tree.update()
 
     def updateBeamlineMaterials(self, item=None, newElement=None):
-        # TODO: move deletion here
         kwargs = {}
         if item is None or (item.column() == 0 and newElement is None):
             return
@@ -636,8 +635,6 @@ class XrtQook(XrtQookElements):
             if parent is None:
                 # print("No parent")
                 return
-            # else:
-            #     print(str(parent.text()))  # TODO: print
 
             if str(parent.text()) in ['properties']:
                 oeItem = parent.parent()

@@ -167,8 +167,6 @@ class XrtQookElements(XrtQookBase):
         self.blUpdateLatchOpen = True
         elementItem.model().blockSignals(False)
 
-#        if not isinstance(copyFrom, dict):  # Not import from file
-#       TODO: load all elements first, then run propagation
         if tree is self.tree:
             self.updateBeamline(elementItem, newElement=obj)
         elif tree is self.feTree:
@@ -244,7 +242,6 @@ class XrtQookElements(XrtQookBase):
                                ['material'])
             item.model().invisibleRootItem().removeRow(item.index().row())
 
-        # TODO: consider non-glow case, beamline belongs to Qook widget?
         self.refreshFlowPanel()
 
     def addMethod(self, name, parentItem, outBeams, methProps=None):
@@ -327,7 +324,7 @@ class XrtQookElements(XrtQookBase):
 #        self.tree.setCurrentIndex(methodProps.index())
 #        self.tree.setColumnWidth(0, int(self.tree.width()/2))
         self.blUpdateLatchOpen = True
-        self.updateBeamline(methodItem, newElement=True)  # TODO:
+        self.updateBeamline(methodItem, newElement=True)  # TODO: support user-selected methods
         self.isEmpty = False
 
     def addPlot(self, copyFrom=None, plotName=None, beamName=None):
