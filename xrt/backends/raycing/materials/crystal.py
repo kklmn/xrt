@@ -52,6 +52,11 @@ class Crystal(Material):
             Unit cell volume in Å³. If not given, is calculated from *d*
             assuming a cubic symmetry.
 
+        *t*: float or None
+            Crystal thickness in mm. Infinite if None. Finite values are
+            used by Bragg, Laue, TT and volumetric diffraction
+            where applicable.
+
         *factDW*: float
             Debye-Waller factor applied to the structure factor.
 

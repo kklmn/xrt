@@ -41,8 +41,9 @@ class Material(object):
         *rho*: float
             Density in g/cm³.
 
-        *t*: float
-            Thickness in mm, required only for 'thin mirror'.
+        *t*: float or None
+            Thickness in mm. Required for 'thin mirror'; also used by
+            finite-thickness materials such as crystals where supported.
 
         *table*: str
             At the time of instantiation the tabulated scattering factors of

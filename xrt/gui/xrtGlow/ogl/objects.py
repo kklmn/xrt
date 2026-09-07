@@ -1377,6 +1377,11 @@ class OEMesh3D():
         isPlate = is_plate(self.oe)
         isScreen = is_screen(self.oe)
         isAperture = is_aperture(self.oe)
+        oeMaterial = getattr(self.oe, 'material', None)
+        isCrystalPlate = not isPlate and not isinstance(
+            oeMaterial, rmats.Multilayer) and\
+            getattr(oeMaterial, 'kind', None) == 'crystal'
+        useShapedBack = isPlate or isCrystalPlate
         oeShape = getattr(self.oe, 'shape', 'rect')
         oeDx = 0 if isAperture else getattr(self.oe, 'dx', 0)
         isOeParametric = getattr(self.oe, 'isParametric', False)
@@ -1387,6 +1392,11 @@ class OEMesh3D():
         isClosedSurface = isinstance(self.oe, roes.SurfaceOfRevolution)
 
         thickness = get_thickness()
+        try:
+            if not np.isfinite(thickness):
+                thickness = self.oeThickness
+        except TypeError:
+            thickness = self.oeThickness
 
         if oeShape == 'round':
             rX = np.abs((xLimits[1] - xLimits[0]))*0.5
@@ -1494,6 +1504,9 @@ class OEMesh3D():
 
             if isScreen or isClosedSurface:
                 bottomNormals = -1 * nv.copy()
+            elif isCrystalPlate:
+                bottomPoints[:, 2] -= thickness
+                bottomNormals = -1 * nv.copy()
             else:
                 bottomNormals = np.zeros((len(points), 3))
                 bottomPoints[:, 2] = -thickness
@@ -1522,7 +1535,8 @@ class OEMesh3D():
         zB = zs[3]
 
         tL = np.vstack((xs[0], ys[0], np.ones_like(zL)*thickness))
-        bottomLine = zL - thickness if isPlate else -np.ones_like(zL)*thickness
+        bottomLine = zL - thickness if useShapedBack else\
+            -np.ones_like(zL)*thickness
         tL = np.hstack((tL, np.vstack((np.flip(xs[0]), np.flip(ys[0]),
                                        -np.ones_like(zL)*thickness)))).T
         normsL = np.zeros((len(zL)*2, 3))
@@ -1537,14 +1551,16 @@ class OEMesh3D():
         tL[len(zL):, 2] = bottomLine
 
         tR = np.vstack((xs[1], ys[1], zR))
-        bottomLine = zR - thickness if isPlate else -np.ones_like(zR)*thickness
+        bottomLine = zR - thickness if useShapedBack else\
+            -np.ones_like(zR)*thickness
         tR = np.hstack((tR, np.vstack((np.flip(xs[1]), np.flip(ys[1]),
                                        bottomLine)))).T
         normsR = np.zeros((len(zR)*2, 3))
         normsR[:, 0] = 1
 
         tF = np.vstack((xs[2], ys[2], np.ones_like(zF)*thickness))
-        bottomLine = zF - thickness if isPlate else -np.ones_like(zF)*thickness
+        bottomLine = zF - thickness if useShapedBack else\
+            -np.ones_like(zF)*thickness
         tF = np.hstack((tF, np.vstack((np.flip(xs[2]), np.flip(ys[2]),
                                        bottomLine)))).T
         normsF = np.zeros((len(zF)*2, 3))
@@ -1559,7 +1575,7 @@ class OEMesh3D():
 
         if oeShape == 'round':
             tB = np.vstack((xC, yC, zC))
-            bottomLine = zC - thickness if isPlate else\
+            bottomLine = zC - thickness if useShapedBack else\
                 -np.ones_like(zC)*thickness
             tB = np.hstack((tB, np.vstack((xC, np.flip(yC), bottomLine)))).T
             normsB = np.vstack((tB[:, 0], tB[:, 1], np.zeros_like(tB[:, 0]))).T
@@ -1567,7 +1583,7 @@ class OEMesh3D():
             normsB /= norms
         else:
             tB = np.vstack((xs[3], ys[3], zB))
-            bottomLine = zB - thickness if isPlate else\
+            bottomLine = zB - thickness if useShapedBack else\
                 -np.ones_like(zB)*thickness
             tB = np.hstack((tB, np.vstack((np.flip(xs[3]), np.flip(ys[3]),
                                            bottomLine)))).T

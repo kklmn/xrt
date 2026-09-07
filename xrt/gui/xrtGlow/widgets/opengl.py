@@ -450,6 +450,24 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         oeid not in self.needMeshUpdate:
                     self.needMeshUpdate.append(oeid)
 
+    def is_mat_in_oe(self, oe, matuuid):
+        def mat_found(material):
+            if material is None:
+                return False
+            if isinstance(material, dict):  # mostly type protection
+                return any(mat_found(mat) for mat in material.values())
+            if raycing.is_sequence(material):  # multiple surfaces
+                return any(mat_found(mat) for mat in material)
+
+            materialId = raycing.normalize_ref(
+                material, self.beamline, 'material', target='uuid')
+            return materialId == matuuid
+
+        for attrName in ('material', 'material2'):  # for DCMs
+            if mat_found(getattr(oe, attrName, None)):
+                return True
+        return False
+
     @property
     def invertColors(self):
         return self._invertColors
@@ -661,6 +679,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     if matId == oeid:
                         del self.beamline.matnamesToUUIDs[matName]
                 self.beamline.matnamesToUUIDs[str(updObj.name)] = oeid
+            elif obj_type == "mat" and arg0 in {'t', 'kind'}:
+                self.queue_mesh_update(
+                    predicate=lambda oe: self.is_mat_in_oe(oe, oeid))
+                self.glDraw()
             elif obj_type == "oe" and arg0 == "name":
                 for oeName, elId in list(self.beamline.oenamesToUUIDs.items()):
                     if elId == oeid:
@@ -710,6 +732,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             self.needMeshUpdate.append(oeid)
                         meshUpdateQueued = True
                 elif arg0 in shapeArgSet:
+                    if oeid not in self.needMeshUpdate:
+                        self.needMeshUpdate.append(oeid)
+                    meshUpdateQueued = True
+                elif arg0 in {'material', 'material2'}:
                     if oeid not in self.needMeshUpdate:
                         self.needMeshUpdate.append(oeid)
                     meshUpdateQueued = True
