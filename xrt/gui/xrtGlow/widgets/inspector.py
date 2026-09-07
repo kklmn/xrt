@@ -29,6 +29,8 @@ __date__ = "27 Jan 2026"
 
 
 def _getBeamName(beamModel, elementId, beamType=None):
+    if beamModel is None:
+        return None
     preferredBeamName = None
     fallbackBeamName = None
     for row in range(beamModel.rowCount()):
@@ -53,6 +55,24 @@ def _getBeamName(beamModel, elementId, beamType=None):
             preferredBeamName = beamName
             break
     return preferredBeamName or fallbackBeamName
+
+
+def _getBeamTag(beamModel, beamName):
+    if beamModel is None or beamName is None:
+        return []
+    if raycing.is_sequence(beamName) and len(beamName) == 2:
+        return tuple(beamName)
+    beams = beamModel.findItems(str(beamName), column=0)
+    beamTag = []
+    for bItem in beams:
+        row = bItem.row()
+        typeItem = beamModel.item(row, 1)
+        ownerItem = beamModel.item(row, 2)
+        if typeItem is None or ownerItem is None:
+            continue
+        beamTag = (str(ownerItem.text()), str(typeItem.text()))
+        break
+    return beamTag
 
 
 class InstanceInspector(qt.QDialog):
@@ -729,8 +749,9 @@ class ConfigurablePlotWidget(qt.QWidget):
         self.plotId = plotId
         self.hiddenProps = hiddenProps
         self.allowAddToPlots = allowAddToPlots
-        plotProps['useQtWidget'] = True
-        plotInit = {'Project': {'plots': {'plot': plotProps}}}
+        plotInitProps = copy.deepcopy(plotProps)
+        plotInitProps['useQtWidget'] = True
+        plotInit = {'Project': {'plots': {'plot': plotInitProps}}}
         plotObj = deserialize_plots(plotInit)
 
         self.objectFlag = qt.Qt.ItemFlags(0)
@@ -747,6 +768,9 @@ class ConfigurablePlotWidget(qt.QWidget):
         self.liveUpdateEnabled = True
         self.yAxisUserSet = False
         self.beamLine = beamLine
+        beamModel = getattr(parent, 'beamModel', None)
+        if beamModel is not None:
+            self.beamModel = beamModel
         self.dynamicPlot = plotObj[0]
 
         self.set_beam(plotProps.get('beam'))
@@ -835,9 +859,14 @@ class ConfigurablePlotWidget(qt.QWidget):
             else:
                 model = self.models['top']
                 parentItem = model.invisibleRootItem()
-                if key in ['beam'] and\
-                        raycing.is_valid_uuid(self.elementId):
-                    value = value[-1]
+                if key in ['beam'] and raycing.is_sequence(value) and\
+                        len(value) == 2:
+                    beamModel = getattr(self, 'beamModel', None)
+                    if beamModel is None:
+                        value = value[-1]
+                    else:
+                        value = _getBeamName(beamModel, value[0], value[1])\
+                            or value[-1]
 
                 if key not in self.hiddenProps:
                     self.add_param(parentItem, key, value)
@@ -940,19 +969,13 @@ class ConfigurablePlotWidget(qt.QWidget):
                 self.dynamicPlot.plot_plots()
 
     def get_beam_tag(self, value):
-        if raycing.is_valid_uuid(self.plotId):  # oe id
+        if raycing.is_sequence(value) and len(value) == 2:
+            return tuple(value)
+        beamModel = getattr(self, 'beamModel', None)
+        if beamModel is not None:  # plot name, run from Qook
+            return _getBeamTag(beamModel, value)
+        else:  # oe inspector; value contains a local/global beam key
             return (self.plotId, value)
-        else:  # plot name, run from Qook. value contains beam name
-            pass
-#            beams = self.beamModel.findItems(beamName, column=0)
-#            beamTag = []
-#            for bItem in beams:
-#                row = bItem.row()
-#                btype = self.beamModel.item(row, 1).text()
-#                oeid = self.beamModel.item(row, 2).text()
-#                beamTag = (oeid, btype)
-#                break
-#            return beamTag
 
     def update_plot_param(self, paramTuple):
         """(PlotUUID, obj: XYCPlot or XYCAxis, pName, pValue)"""
@@ -983,6 +1006,13 @@ class ConfigurablePlotWidget(qt.QWidget):
             self.plot_beam()
 
     def set_beam(self, beamTag):
+        beamTag = self.get_beam_tag(beamTag)
+        if len(beamTag) != 2:
+            self.elementId = None
+            self.beamDict = {}
+            self.dynamicPlot.beam = 'None'
+            self.dynamicPlot.beamAbsorb = None
+            return
         elementId, beamKey = beamTag
         self.elementId = elementId
         bdu = self.beamLine.beamsDictU
@@ -1016,15 +1046,21 @@ class ConfigurablePlotWidget(qt.QWidget):
                 self.beamDict['beamAbsorb'] = beamAbsorb
                 self.dynamicPlot.beamAbsorb = 'beamAbsorb'
 
-        # TODO:
-        # implement behavior for standalone plots
-
         oeLine = self.beamLine.oesDict.get(self.elementId)
         oeObj = oeLine[0] if oeLine is not None else None
-        if (is_screen(oeObj) or is_aperture(oeObj)) and \
-                not self.yAxisUserSet:
-            self.dynamicPlot.yaxis.label = r"z"
-            self.dynamicPlot.yaxis.data = 'auto'
+        if not self.yAxisUserSet:
+            realBeamKeys = [key for key in sourceBeamDict.keys()
+                            if key != 'beamAbsorb']
+            if is_screen(oeObj) or is_aperture(oeObj) or\
+                    beamKey.endswith('lobal'):
+                self.dynamicPlot.yaxis.label = r"z"
+                self.dynamicPlot.yaxis.data = 'auto'
+            elif len(realBeamKeys) > 1:
+                self.dynamicPlot.yaxis.label = r"y"
+                self.dynamicPlot.yaxis.data = 'auto'
+            else:
+                self.dynamicPlot.yaxis.label = r"z"
+                self.dynamicPlot.yaxis.data = 'auto'
 
     def update_beam(self, beamTag):
         currentTag = (getattr(self, 'elementId', None),

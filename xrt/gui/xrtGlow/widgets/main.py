@@ -481,7 +481,6 @@ class xrtGlow(qt.QWidget):
 
             self.customGlWidget.beamUpdated.connect(elViewer.update_beam)
             self.customGlWidget.oePropsUpdated.connect(elViewer.update_param)
-            # TODO: update tree
             elViewer.propertiesChanged.connect(
                 partial(self.customGlWidget.update_beamline, oeuuid,
                         sender='OEE'))

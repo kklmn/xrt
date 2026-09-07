@@ -416,6 +416,8 @@ class XrtQookElements(XrtQookBase):
                 if pname in ['_object']:
                     self.addObject(self.plotTree, plotItem,
                                    "xrt.plotter.XYCPlot")
+                elif pname == 'useQtWidget':
+                    continue
                 elif pname in ['xaxis', 'yaxis', 'caxis']:
                     child0 = self.addProp(plotItem, pname)
                     for axname, axval in pval.items():
