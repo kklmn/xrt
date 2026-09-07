@@ -813,7 +813,6 @@ class XrtQookBase(qt.QMainWindow):
 
         plotsDict = self.treeToDict(plotItem)
         plotId = plotItem.data(qt.Qt.UserRole)
-        plotsDict['beam'] = self.getBeamTag(plotsDict.get('beam'))
 
         plotViewer = PlotViewer(plotsDict, self, viewOnly=False,
                                 beamLine=self.beamLine, plotId=plotId)
@@ -850,17 +849,6 @@ class XrtQookBase(qt.QMainWindow):
             surfViewer.propertiesChanged.connect(
                     surfViewer.dynamicPlotWidget.update_surface)
         surfViewer.show()
-
-    def getBeamTag(self, beamName):
-        beams = self.beamModel.findItems(beamName, column=0)
-        beamTag = []
-        for bItem in beams:
-            row = bItem.row()
-            btype = self.beamModel.item(row, 1).text()
-            oeid = self.beamModel.item(row, 2).text()
-            beamTag = (oeid, btype)
-            break
-        return beamTag
 
     def adjustUndockedPos(self, isFloating):
         if isFloating:
@@ -1858,8 +1846,6 @@ class XrtQookBase(qt.QMainWindow):
                 plotId = str(parent.data(qt.Qt.UserRole))
             row = item.row()
             paramName = str(parent.child(row, 0).text())
-            if paramName == 'beam':
-                paramValue = self.getBeamTag(paramValue)
             plotParamTuple = plotId, objChng, paramName, paramValue
             self.plotParamUpdate.emit(plotParamTuple)
 
