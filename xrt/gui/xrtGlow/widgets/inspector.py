@@ -749,8 +749,9 @@ class ConfigurablePlotWidget(qt.QWidget):
         self.plotId = plotId
         self.hiddenProps = hiddenProps
         self.allowAddToPlots = allowAddToPlots
-        plotProps['useQtWidget'] = True
-        plotInit = {'Project': {'plots': {'plot': plotProps}}}
+        plotInitProps = copy.deepcopy(plotProps)
+        plotInitProps['useQtWidget'] = True
+        plotInit = {'Project': {'plots': {'plot': plotInitProps}}}
         plotObj = deserialize_plots(plotInit)
 
         self.objectFlag = qt.Qt.ItemFlags(0)

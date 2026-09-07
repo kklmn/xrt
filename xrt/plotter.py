@@ -690,7 +690,7 @@ class XYCPlot(object):
         contourFmt='%.1f', contourFactor=1., saveName=None,
         persistentName=None, oe=None, raycingParam=0,
         beamState=None, beamC=None, beamAbsorb=None,
-            showAbsorbed=False, useQtWidget=False):
+            showAbsorbed=False, **kwargs):
         u"""
         *beam*: str
             The beam to be visualized.
@@ -934,6 +934,7 @@ class XYCPlot(object):
 
 
         """
+        useQtWidget = kwargs.pop('useQtWidget', False)
         if not hasQt:
             useQtWidget = False
         if not useQtWidget:
