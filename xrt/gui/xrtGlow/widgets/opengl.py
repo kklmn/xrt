@@ -1929,6 +1929,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
         maxs = -1 * mins
 
         for oeid, elline in self.beamline.oesDict.items():
+            if oeid == self.virtScreen['uuid'] and \
+                    len(self.beamline.oesDict) > 1:
+                continue
             elCenter = elline[0].center
             for ic, coord in enumerate(elCenter):
                 if isinstance(coord, str):

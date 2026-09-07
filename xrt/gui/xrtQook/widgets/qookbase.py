@@ -2552,6 +2552,20 @@ class XrtQookBase(qt.QMainWindow):
                 self.toggleGlow(True)
                 self.docks[1].raise_()
 
+            if self.blViewer is not None:
+                glWidget = self.blViewer.customGlWidget
+                firstElId = next(iter(glWidget.beamline.flowU), None)
+                firstElLine = glWidget.beamline.oesDict.get(firstElId)
+                if firstElLine is not None:
+                    try:
+                        center = np.asarray(firstElLine[0].center, dtype=float)
+                    except (TypeError, ValueError):
+                        pass
+                    else:
+                        if center.shape == (3,) and np.all(
+                                np.isfinite(center)):
+                            glWidget.coordOffset = center
+
     def intToRegexp(self, intStr):
         a = list(str(int(intStr)))
         oeClassStr = str(self.getClassName(
