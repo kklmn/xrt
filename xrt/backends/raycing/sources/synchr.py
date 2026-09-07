@@ -55,9 +55,13 @@ def _build_undulator_trajectory(grid, period, Kx, Ky, phase, gamma,
     if center:
         length = grid[-1] - grid[0]
         if length:
-            trajx = trajx - np.trapz(trajx, grid) / length
-            trajy = trajy - np.trapz(trajy, grid) / length
-            trajz = trajz - np.trapz(trajz, grid) / length
+            try:
+                trapz = np.trapezoid
+            except AttributeError:
+                trapz = np.trapz
+            trajx = trajx - trapz(trajx, grid) / length
+            trajy = trajy - trapz(trajy, grid) / length
+            trajz = trajz - trapz(trajz, grid) / length
         else:
             trajx = trajx - trajx.mean()
             trajy = trajy - trajy.mean()
