@@ -2565,6 +2565,8 @@ class XrtQookBase(qt.QMainWindow):
                         if center.shape == (3,) and np.all(
                                 np.isfinite(center)):
                             glWidget.coordOffset = center
+                            glWidget.update_coord_grid()
+                            glWidget.glDraw()
 
     def intToRegexp(self, intStr):
         a = list(str(int(intStr)))
