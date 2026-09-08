@@ -54,9 +54,8 @@ div.document {
 }
 
 div.documentwrapper {
-/*    float: left;
-    width: 100%;*/
-	float: none !important;
+    float: left;
+    width: 100%;
 }
 
 div.bodywrapper {
