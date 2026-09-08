@@ -47,8 +47,20 @@ except AttributeError:
 
         def __init__(self):
             qt.QtWeb.QWebEngineView.__init__(self)
+            self.loadFinished.connect(self.lock_viewport_width)
             web_page = WebPage(self)
             self.setPage(web_page)
+
+        def lock_viewport_width(self, success):
+            if success:
+                # Force the document layout structure to clip at exactly 100vw
+                # and kill the horizontal scrollbar track completely.
+                js_fix = """
+                var style = document.createElement('style');
+                style.innerHTML = 'html, body {overscroll-behavior: none; overflow-x: hidden !important; width: 100vw !important; max-width: 100vw !important; margin: 0 !important; }';
+                document.head.appendChild(style);
+                """
+                self.page().runJavaScript(js_fix)
 
 
 class TreeViewEx(qt.QTreeView):
