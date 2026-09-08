@@ -1809,16 +1809,26 @@ class Curve1dWidget(qt.QWidget):
         outLines, outNames = [], []
         for line, name in zip(lines, names):
             if line.get_visible():
-                if len(outLines) == 0:
-                    outLines.append(line.get_xdata())
-                    outNames.append('energy')
-                outLines.append(line.get_ydata())
+                xdata = line.get_xdata()
+                if len(xdata) == 0:
+                    continue
+                outLines.append(xdata)
+                outNames.append('energy')
+                break
+        for line, name in zip(lines, names):
+            if line.get_visible():
+                ydata = line.get_ydata()
+                if len(ydata) == 0:
+                    continue
+                outLines.append(ydata)
                 outNames.append(name)
         what = self.axes.get_ylabel()
         now = datetime.now()
         nowStr = now.strftime("%d/%m/%Y %H:%M:%S")
         header = f"{what} calculated by xrt on {nowStr}\n"
         header += "\t".join(outNames)
+        shapes = [line.shape for line in outLines]
+        print(f'{shapes=}')
         np.savetxt(file_name, np.array(outLines).T, fmt='%#.7g',
                    delimiter='\t', header=header, encoding='utf-8')
 

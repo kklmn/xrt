@@ -2173,7 +2173,7 @@ class XYCPlot(object):
         the binary file *persistentName*.
         """
         saved = SaveResults(self)
-        if runner.runCardVals.globalNorm:
+        if runner.runCardVals is not None and runner.runCardVals.globalNorm:
             runner.runCardVals.savedResults.append(saved)
         if self.persistentName and (self.nRaysAll > self.nRaysAllRestored):
             if raycing.is_sequence(self.persistentName):
