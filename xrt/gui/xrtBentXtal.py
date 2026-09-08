@@ -51,10 +51,10 @@ from datetime import datetime
 from scipy.interpolate import make_interp_spline, PPoly
 
 try:  # RTFD compatibility
-    from .commons import qt  # analysis:ignore
+    from .commons import qt, config  # analysis:ignore
 except ImportError:
     sys.path.append('commons')  # analysis:ignore
-    import qt  # analysis:ignore
+    import qt, config  # analysis:ignore
 
 import matplotlib as mpl
 #from matplotlib.backend_tools import ToolBase
@@ -846,6 +846,9 @@ class PlotWidget(qt.QWidget):
 
         options = qt.QFileDialog.Options()
         options |= qt.QFileDialog.ReadOnly
+        section, opt = 'xrtBentXtal', 'export'
+        if config.configPaths.has_option(section, opt):
+            fileName = '/'.join([config.path(section, opt), fileName])
         file_name, _ = qt.QFileDialog.getSaveFileName(
                 self, "Save File", fileName,
                 "Text Files (*.txt);;All Files (*)", options=options)
@@ -871,6 +874,8 @@ class PlotWidget(qt.QWidget):
             header += "\t".join(outNames)
             np.savetxt(file_name, np.array(outLines).T, fmt='%#.7g',
                        delimiter='\t', header=header, encoding='utf-8')
+            config.put(config.configPaths, section, opt, file_name)
+            config.write_configs()
 
     def calculate_amplitudes(self, crystal, geometry, hkl, thickness,
                              asymmetry,  radius, energy, npoints, limits,

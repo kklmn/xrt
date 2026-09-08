@@ -40,7 +40,7 @@ except cl.LogicError:
 import platform as pythonplatform  # analysis:ignore
 import webbrowser  # analysis:ignore
 
-from ...commons import ext  # analysis:ignore
+from ...commons import ext, config  # analysis:ignore
 
 sys.path.append(os.path.join('..', '..', '..', '..'))
 import xrt  #analysis:ignore
@@ -2188,6 +2188,9 @@ class XrtQookBase(qt.QMainWindow):
             saveDialog.setFileMode(qt.QFileDialog.AnyFile)
             saveDialog.setAcceptMode(qt.QFileDialog.AcceptSave)
             saveDialog.setNameFilter("XML files (*.xml);;JSON files (*.json)")
+            section, what = 'Qook', 'layout'
+            if config.configPaths.has_option(section, what):
+                saveDialog.setDirectory(config.path(section, what))
             if (saveDialog.exec_()):
                 layoutFileName = saveDialog.selectedFiles()[0]
                 if layoutFileName and not os.path.splitext(layoutFileName)[1]:
@@ -2195,6 +2198,8 @@ class XrtQookBase(qt.QMainWindow):
                     suffix = '.json' if '*.json' in selectedFilter else '.xml'
                     layoutFileName += suffix
                 self.layoutFileName = layoutFileName
+                config.put(config.configPaths, section, what, layoutFileName)
+                config.write_configs()
         if self.layoutFileName != "":
             if self.layoutFileName.lower().endswith("json"):
                 _ = self.beamLine.export_to_json()
@@ -2418,8 +2423,14 @@ class XrtQookBase(qt.QMainWindow):
                     openDialog.setAcceptMode(qt.QFileDialog.AcceptOpen)
                     openDialog.setNameFilter(
                             "XML and JSON files (*.xml *.json)")
+                    section, what = 'Qook', 'layout'
+                    if config.configPaths.has_option(section, what):
+                        openDialog.setDirectory(config.path(section, what))
                     if (openDialog.exec_()):
                         openFileName = openDialog.selectedFiles()[0]
+                        config.put(
+                            config.configPaths, section, what, openFileName)
+                        config.write_configs()
 
                 if not openFileName:
                     self.progressBar.setFormat(
@@ -3122,8 +3133,13 @@ class XrtQookBase(qt.QMainWindow):
             saveDialog.setFileMode(qt.QFileDialog.AnyFile)
             saveDialog.setAcceptMode(qt.QFileDialog.AcceptSave)
             saveDialog.setNameFilter("Python files (*.py)")
-            if (saveDialog.exec_()):
+            section, what = 'Qook', 'code'
+            if config.configPaths.has_option(section, what):
+                saveDialog.setDirectory(config.path(section, what))
+            if saveDialog.exec_():
                 self.saveFileName = saveDialog.selectedFiles()[0]
+                config.put(config.configPaths, section, what, self.saveFileName)
+                config.write_configs()
         if self.saveFileName != "":
             if not str(self.saveFileName).endswith('.py'):
                 self.saveFileName += '.py'

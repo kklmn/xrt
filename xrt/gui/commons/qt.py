@@ -2,6 +2,11 @@
 __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "16 Nov 2025"
 
+from ctypes import c_int, sizeof
+from functools import partial
+from math import isfinite
+import os.path as osp
+
 import qtpy
 from qtpy.QtCore import *
 from qtpy.QtGui import *
@@ -24,13 +29,9 @@ from qtpy.QtOpenGL import *
 #    QShortcut, QSplitter, QStackedWidget, QStyle, QStyledItemDelegate, QTabBar,
 #    QTabWidget, QTextEdit, QToolBar, QToolButton, QToolTip, QTreeView,
 #    QVBoxLayout, QWidget)
-from ctypes import c_int, sizeof
-from functools import partial
-from math import isfinite
 
 from qtpy.QtSql import (QSqlDatabase, QSqlQuery, QSqlTableModel,
                         QSqlQueryModel)
-
 
 RAW_VALUE_ROLE = Qt.UserRole + 1
 EDITOR_HINT_ROLE = Qt.UserRole + 2
@@ -607,17 +608,18 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
 
             for i in range(prtItem.rowCount()):  # query siblings
                 fieldName = str(prtItem.child(i, 0).text())
-                if fieldName.lower() == 'distributions':
+                what = fieldName.lower()
+                if what == 'distributions':
                     fExts = ["NPY", "NPZ"]
                     break
-                elif fieldName.lower() == 'basefe':
+                elif what == 'basefe':
                     fExts = ["All"]
                     break
-                elif fieldName.lower() == 'materialsindex':
+                elif what == 'materialsindex':
                     fExts = ["H5", "HDF5", "All"]
                     break
             btn = QPushButton("Open file...", parent)
-            btn.clicked.connect(partial(self.openDialog, index, fExts))
+            btn.clicked.connect(partial(self.openDialog, index, fExts, what))
             return btn
         elif "from source" in argNameL:
             elList = ['None']
@@ -728,7 +730,9 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
     def updateEditorGeometry(self, editor, option, index):
         editor.setGeometry(option.rect)
 
-    def openDialog(self, index, fileFormats):
+    def openDialog(self, index, fileFormats, what):
+        from ...gui.commons import config
+
         openDialog = QFileDialog()
         openDialog.setFileMode(QFileDialog.ExistingFile)
         openDialog.setAcceptMode(QFileDialog.AcceptOpen)
@@ -743,10 +747,19 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
         if not filters:
             filters.append("All files (*)")
         openDialog.setNameFilters(filters)
+
+        section = 'Inspector'
+        if config.configPaths.has_option(section, what):
+            path = config.configPaths.get(section, what)
+            d = osp.dirname(path)
+            openDialog.setDirectory(d)
+
         if (openDialog.exec_()):
             openFileName = openDialog.selectedFiles()[0]
             if openFileName:
                 self._setModelValue(index.model(), index, openFileName)
+                config.put(config.configPaths, section, what, openFileName)
+                config.write_configs()
 
     def openDictDialog(self, index, hint):
         dialog = DictEditorDialog(

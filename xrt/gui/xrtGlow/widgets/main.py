@@ -30,7 +30,7 @@ from .scan import (
     TimelineFrameListWidget, default_scan_description)
 from .opengl import xrtGlWidget
 
-from ...commons import qt
+from ...commons import qt, config
 from .nodeeditor import _FlowGraphPanel, FLOW_NODE_STYLES, FLOW_SCENE_STYLE
 
 from ....backends import raycing
@@ -187,7 +187,11 @@ class xrtGlow(qt.QWidget):
         self.generatorArgs = []
         self.scanDescription = self._scan_description_from_input(
             scanDescription)
-        self.scanOutputDirectory = None
+
+        section, what = 'Glow', 'scan'
+        if config.configPaths.has_option(section, what):
+            self.scanOutputDirectory = config.path(section, what)
+
         self.scanRunning = False
         self.scanPaused = False
         self.scanStopRequested = False
@@ -640,6 +644,8 @@ class xrtGlow(qt.QWidget):
                       newline='\r\n') as jsonFile:
                 json.dump(description, jsonFile, indent=2)
                 jsonFile.write('\n')
+            config.put(config.configPaths, 'Glow', 'scan', filename)
+            config.write_configs()
         except Exception as exc:
             qt.QMessageBox.warning(
                 self, 'Save scan', f'Cannot save scan JSON: {exc}')
@@ -660,6 +666,8 @@ class xrtGlow(qt.QWidget):
         filename = loadDialog.selectedFiles()[0]
         try:
             self.setScanDescription(filename)
+            config.put(config.configPaths, 'Glow', 'scan', filename)
+            config.write_configs()
         except Exception as exc:
             qt.QMessageBox.warning(
                 self, 'Load scan', f'Cannot load scan JSON: {exc}')
@@ -3169,6 +3177,9 @@ class xrtGlow(qt.QWidget):
             "BMP files (*.bmp);;JPG files (*.jpg);;JPEG files (*.jpeg);;"
             "PNG files (*.png);;TIFF files (*.tif)")
         saveDialog.selectNameFilter("JPG files (*.jpg)")
+        section, what = 'Glow', 'image'
+        if config.configPaths.has_option(section, what):
+            saveDialog.setDirectory(config.path(section, what))
         if (saveDialog.exec_()):
             image = self.customGlWidget.grabFramebuffer()
             filename = saveDialog.selectedFiles()[0]
@@ -3176,6 +3187,8 @@ class xrtGlow(qt.QWidget):
             if not filename.endswith(extension):
                 filename = "{0}.{1}".format(filename, extension)
             image.save(filename)
+            config.put(config.configPaths, section, what, filename)
+            config.write_configs()
 
     def copyImageToClipboard(self):
         image = self.customGlWidget.grabFramebuffer()
@@ -3191,6 +3204,9 @@ class xrtGlow(qt.QWidget):
         saveDialog.setAcceptMode(qt.QFileDialog.AcceptSave)
         saveDialog.setNameFilter("STL files (*.stl)")
         saveDialog.selectNameFilter("STL files (*.stl)")
+        section, what = 'Glow', 'oeshape'
+        if config.configPaths.has_option(section, what):
+            saveDialog.setDirectory(config.path(section, what))
         if (saveDialog.exec_()):
             filename = saveDialog.selectedFiles()[0]
             extension = str(saveDialog.selectedNameFilter())[-5:-1].strip('.')
@@ -3199,30 +3215,42 @@ class xrtGlow(qt.QWidget):
             mesh = self.customGlWidget.meshDict.get(oeid)
             if mesh is not None:
                 mesh.export_stl(filename)
+            config.put(config.configPaths, section, what, filename)
+            config.write_configs()
 
     def saveSceneDialog(self):
         saveDialog = qt.QFileDialog()
         saveDialog.setFileMode(qt.QFileDialog.AnyFile)
         saveDialog.setAcceptMode(qt.QFileDialog.AcceptSave)
         saveDialog.setNameFilter("Numpy files (*.npy)")
+        section, what = 'Glow', 'scene'
+        if config.configPaths.has_option(section, what):
+            saveDialog.setDirectory(config.path(section, what))
         if (saveDialog.exec_()):
             filename = saveDialog.selectedFiles()[0]
             extension = 'npy'
             if not filename.endswith(extension):
                 filename = "{0}.{1}".format(filename, extension)
             self.saveScene(filename)
+            config.put(config.configPaths, section, what, filename)
+            config.write_configs()
 
     def loadSceneDialog(self):
         loadDialog = qt.QFileDialog()
         loadDialog.setFileMode(qt.QFileDialog.AnyFile)
         loadDialog.setAcceptMode(qt.QFileDialog.AcceptOpen)
         loadDialog.setNameFilter("Numpy files (*.npy)")  # analysis:ignore
+        section, what = 'Glow', 'scene'
+        if config.configPaths.has_option(section, what):
+            loadDialog.setDirectory(config.path(section, what))
         if (loadDialog.exec_()):
             filename = loadDialog.selectedFiles()[0]
             extension = 'npy'
             if not filename.endswith(extension):
                 filename = "{0}.{1}".format(filename, extension)
             self.loadScene(filename)
+            config.put(config.configPaths, section, what, filename)
+            config.write_configs()
 
     def saveScene(self, filename):
         params = dict()

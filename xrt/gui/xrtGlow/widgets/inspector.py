@@ -13,7 +13,7 @@ from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
 from matplotlib.colors import TABLEAU_COLORS
 
-from ...commons import qt
+from ...commons import qt, config
 from .._utils import is_aperture, is_screen
 
 from ....backends import raycing
@@ -1149,6 +1149,11 @@ class ConfigurablePlotWidget(qt.QWidget):
             "JPG files (*.jpg);;PDF files (*.pdf);;SVG files (*.svg);;"
             "PNG files (*.png);;TIFF files (*.tif)")
         saveDialog.selectNameFilter("JPG files (*.jpg)")
+
+        section, what = 'Inspector', 'plot'
+        if config.configPaths.has_option(section, what):
+            saveDialog.setDirectory(config.path(section, what))
+
         if (saveDialog.exec_()):
             filename = saveDialog.selectedFiles()[0]
             extension =\
@@ -1159,6 +1164,8 @@ class ConfigurablePlotWidget(qt.QWidget):
                 self.dynamicPlot.saveName = filename
                 self.dynamicPlot.save()
                 self.dynamicPlot.saveName = None
+                config.put(config.configPaths, section, what, filename)
+                config.write_configs()
             except Exception as e:
                 print(e)
 
@@ -1171,6 +1178,11 @@ class ConfigurablePlotWidget(qt.QWidget):
             "Matlab files (*.mat);;"
             "Pickle files (*.pickle)")
         saveDialog.selectNameFilter("Pickle files (*.pickle)")
+
+        section, what = 'Inspector', 'plotpickle'
+        if config.configPaths.has_option(section, what):
+            saveDialog.setDirectory(config.path(section, what))
+
         if (saveDialog.exec_()):
             filename = saveDialog.selectedFiles()[0]
             extension =\
@@ -1181,6 +1193,8 @@ class ConfigurablePlotWidget(qt.QWidget):
                 self.dynamicPlot.persistentName = filename
                 self.dynamicPlot.store_plots()
                 self.dynamicPlot.persistentName = None
+                config.put(config.configPaths, section, what, filename)
+                config.write_configs()
             except Exception as e:
                 print(e)
 
@@ -1193,6 +1207,11 @@ class ConfigurablePlotWidget(qt.QWidget):
             "Matlab files (*.mat);;NPY files (*.npy);;"
             "Pickle files (*.pickle)")
         saveDialog.selectNameFilter("NPY files (*.npy)")
+
+        section, what = 'Inspector', 'beam'
+        if config.configPaths.has_option(section, what):
+            saveDialog.setDirectory(config.path(section, what))
+
         if (saveDialog.exec_()):
             filename = saveDialog.selectedFiles()[0]
             extension =\
@@ -1203,6 +1222,8 @@ class ConfigurablePlotWidget(qt.QWidget):
             if beam is not None:
                 try:
                     beam.export_beam(filename, fformat=extension)
+                    config.put(config.configPaths, section, what, filename)
+                    config.write_configs()
                 except Exception as e:
                     print(e)
 
@@ -1770,11 +1791,18 @@ class Curve1dWidget(qt.QWidget):
         fileName = re.sub(r'[^a-zA-Z0-9_\-.]+', '_', plot_item.text())
         options = qt.QFileDialog.Options()
         options |= qt.QFileDialog.ReadOnly
+
+        section, what = '1DCurve', 'plot'
+        if config.configPaths.has_option(section, what):
+            fileName = '/'.join([config.path(section, what), fileName])
+
         file_name, _ = qt.QFileDialog.getSaveFileName(
             self, "Save File", fileName,
             "Text Files (*.txt);;All Files (*)", options=options)
         if not file_name:
             return
+        config.put(config.configPaths, section, what, file_name)
+        config.write_configs()
 
         lines = self.plot_lines[plot_item.plot_index]
         names = self.allCurves.keys()
@@ -1904,6 +1932,11 @@ class SurfacePlotWidget(qt.QWidget):
         saveDialog.setNameFilter("DAT files (*.dat);;All files (*)")
         saveDialog.selectNameFilter("DAT files (*.dat)")
         saveDialog.selectFile("{0}.dat".format(fileName))
+
+        section, what = '2DSurface', 'plot'
+        if config.configPaths.has_option(section, what):
+            saveDialog.setDirectory(config.path(section, what))
+
         if not saveDialog.exec_():
             return
 
@@ -1919,5 +1952,7 @@ class SurfacePlotWidget(qt.QWidget):
         data = np.column_stack((x.ravel(), y.ravel(), z.ravel()))
         try:
             np.savetxt(fileName, data)
+            config.put(config.configPaths, section, what, fileName)
+            config.write_configs()
         except Exception as e:
             print(e)
