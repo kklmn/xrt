@@ -142,7 +142,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
 class LocalWebServer:
     HOST = "127.0.0.1"
-    PORT = 8000  # =0: OS chooses a free port
+    PORT = 0  # OS chooses a free port
 
     def __init__(self):
         self.httpd = None

@@ -7,6 +7,8 @@ Created on Tue Jan 27 18:01:38 2026
 __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "27 Jan 2026"
 
+import sys
+
 from ...commons import qt, ext  # analysis:ignore
 from ...xrtGlow import ConfigurablePlotWidget  # analysis:ignore
 from ....backends import raycing  # analysis:ignore
@@ -47,7 +49,8 @@ except AttributeError:
 
         def __init__(self):
             qt.QtWeb.QWebEngineView.__init__(self)
-            self.loadFinished.connect(self.lock_viewport_width)
+            if sys.platform == 'darwin':  # fix 15% larger width on macOS
+                self.loadFinished.connect(self.lock_viewport_width)
             web_page = WebPage(self)
             self.setPage(web_page)
 
