@@ -3103,19 +3103,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
         mouseY = yView - mEvent.y()
         self.makeCurrent()
         try:
-            try:
-                outStencil = gl.glReadPixels(
-                        mouseX, mouseY-1, 1, 1, gl.GL_STENCIL_INDEX,
-                        gl.GL_UNSIGNED_INT)
-            except OSError:
-                return
-            overOE = np.squeeze(np.array(outStencil))
-
             ctrlOn = bool(int(mEvent.modifiers()) & int(qt.Qt.ControlModifier))
 #        altOn = bool(int(mEvent.modifiers()) & int(qt.Qt.AltModifier))
             shiftOn = bool(int(mEvent.modifiers()) & int(qt.Qt.ShiftModifier))
 #        polarAx = qt.QVector3D(0, 0, 1)
-
             dx = mouseX - self.prevMPos[0]
             dy = mouseY - self.prevMPos[1]
 
@@ -3125,6 +3116,17 @@ class xrtGlWidget(qt.QOpenGLWidget):
             ysn = ys * np.tan(np.radians(60))
             xm = xsn * self.cameraDistance / 3.5
             ym = ysn * self.cameraDistance / 3.5
+
+            self.prevMPos[0] = mouseX
+            self.prevMPos[1] = mouseY
+
+            try:
+                outStencil = gl.glReadPixels(
+                        mouseX, mouseY-1, 1, 1, gl.GL_STENCIL_INDEX,
+                        gl.GL_UNSIGNED_INT)
+            except OSError:
+                return
+            overOE = np.squeeze(np.array(outStencil))
 
             if mEvent.buttons() == qt.Qt.LeftButton:
                 if mEvent.modifiers() == qt.Qt.NoModifier:
@@ -3201,8 +3203,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 if overOE != self.selectedOE:
                     self.selectedOE = int(overOE)
                     self.glDraw()
-            self.prevMPos[0] = mouseX
-            self.prevMPos[1] = mouseY
         finally:
             self.doneCurrent()
 
@@ -3212,6 +3212,12 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                                           'None'))
 
     def mousePressEvent(self, mpevent):
+        mouseX = mpevent.x()
+        mouseY = self.viewPortGL[3] - mpevent.y()
+
+        if mpevent.button() == qt.Qt.LeftButton:
+            self.prevMPos[:] = [mouseX, mouseY]
+
         ctrlOn = bool(int(mpevent.modifiers()) & int(qt.Qt.ControlModifier))
         self.virtScreen['offsetOn'] = ctrlOn
         super().mousePressEvent(mpevent)
