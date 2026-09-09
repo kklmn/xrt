@@ -83,9 +83,6 @@ if sys.version_info < (3, 1):
 else:
     from inspect import getfullargspec as getargspec
 
-WEB_INSPECTOR_PORT = '5588'
-WEB_INSPECTOR_URL = f'http://127.0.0.1:{WEB_INSPECTOR_PORT}'
-
 
 class XrtQookBase(qt.QMainWindow):
     plotParamUpdate = qt.Signal(tuple)
@@ -170,7 +167,7 @@ class XrtQookBase(qt.QMainWindow):
         mainWidget.setLayout(mainBox)
 
         if ext.isSphinx:
-            self.webHelp = QWebView()
+            self.webHelp = QWebView(webInspector)
             self.webHelp.page().setLinkDelegationPolicy(2)
             self.webHelp.history().clear()
             self.webHelp.page().history().clear()
@@ -202,19 +199,6 @@ class XrtQookBase(qt.QMainWindow):
 
         if loadLayout is not None or projectFile is not None:
             self.importLayout(layoutJSON=loadLayout, filename=projectFile)
-
-        self.webHelp.loadFinished.connect(self.handleLoaded)
-        self.webInspector = webInspector
-        if webInspector:
-            os.environ['QTWEBENGINE_REMOTE_DEBUGGING'] = WEB_INSPECTOR_PORT
-            self.inspector = qt.QtWeb.QWebEngineView()
-            self.inspector.setWindowTitle('Web Inspector')
-            self.inspector.load(qt.QUrl(WEB_INSPECTOR_URL))
-
-    def handleLoaded(self, ok):
-        if self.webInspector and ok:
-            self.webHelp.page().setDevToolsPage(self.inspector.page())
-            self.inspector.show()
 
     def initDocWidgets(self):
         self.setTabPosition(qt.Qt.AllDockWidgetAreas,

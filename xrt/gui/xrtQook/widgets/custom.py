@@ -8,6 +8,7 @@ __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "27 Jan 2026"
 
 import sys
+import os
 
 from ...commons import qt, ext  # analysis:ignore
 from ...xrtGlow import ConfigurablePlotWidget  # analysis:ignore
@@ -45,17 +46,31 @@ except AttributeError:
             return False
 
     class QWebView(qt.QtWeb.QWebEngineView):
-        """Web view"""
+        INSPECTOR_PORT = '5588'
+        INSPECTOR_URL = f'http://127.0.0.1:{INSPECTOR_PORT}'
 
-        def __init__(self):
+        def __init__(self, webInspector=False):
             qt.QtWeb.QWebEngineView.__init__(self)
-            if sys.platform == 'darwin':  # fix 15% larger width on macOS
-                self.loadFinished.connect(self.lock_viewport_width)
             web_page = WebPage(self)
             self.setPage(web_page)
+            self.loadFinished.connect(self.handleLoaded)
 
-        def lock_viewport_width(self, success):
-            if success:
+            self.webInspector = webInspector
+            if webInspector:
+                os.environ['QTWEBENGINE_REMOTE_DEBUGGING'] = self.INSPECTOR_PORT
+                self.inspector = qt.QtWeb.QWebEngineView()
+                self.inspector.setWindowTitle('Web Inspector')
+                self.inspector.load(qt.QUrl(self.INSPECTOR_URL))
+
+        def handleLoaded(self, ok):
+            if not ok:
+                return
+
+            if self.webInspector:
+                self.page().setDevToolsPage(self.inspector.page())
+                self.inspector.show()
+
+            if sys.platform == 'darwin':  # fix 15% larger width on macOS
                 # Force the document layout structure to clip at exactly 100vw
                 # and kill the horizontal scrollbar track completely.
                 js_fix = """
