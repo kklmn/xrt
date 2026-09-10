@@ -1467,7 +1467,7 @@ class IntegratedSource(SourceBase):
                       's' if self.gIntervals > 1 else ''))
 
     @raycing.append_to_flow_decorator
-    def shine(self, toGlobal=True, withAmplitudes=True, fixedEnergy=False,
+    def shine(self, toGlobal=True, withAmplitudes=True, fixedEnergy=None,
               wave=None, accuBeam=None):
         u"""
         Returns the source beam. If *toGlobal* is True, the output is in
@@ -1491,10 +1491,6 @@ class IntegratedSource(SourceBase):
         if self.needReset:
             self.reset()
 
-        kwArgsIn = {'toGlobal': toGlobal,
-                    'withAmplitudes': withAmplitudes,
-                    'fixedEnergy': fixedEnergy}
-
         if self.bl is not None:
             try:
                 self.bl._alignE = float(self.bl.alignE)
@@ -1502,20 +1498,12 @@ class IntegratedSource(SourceBase):
                 self.bl._alignE = 0.5 * (self.eMin + self.eMax)
 
             if raycing.is_valid_uuid(accuBeam):
-                kwArgsIn['accuBeam'] = accuBeam
                 accuBeam = self.bl.beamsDictU[accuBeam][
                         'beamGlobal' if toGlobal else 'beamLocal']
-            elif accuBeam is not None:
-                kwArgsIn['accuBeam'] = accuBeam.parentId
-            else:
-                kwArgsIn['accuBeam'] = None
 
         if wave is not None:
             if raycing.is_valid_uuid(wave):
-                kwArgsIn['wave'] = wave
                 wave = self.bl.beamsDictU[accuBeam]['wave']
-            else:
-                kwArgsIn['wave'] = wave.parentId
 
             if not hasattr(wave, 'rDiffr'):
                 raise ValueError("If you want to use a `wave`, run a" +
@@ -1524,7 +1512,6 @@ class IntegratedSource(SourceBase):
             mcRays = len(wave.a)
         else:
             mcRays = self.nrays
-            kwArgsIn['wave'] = wave
 
         if self.uniformRayDensity:
             withAmplitudes = True
@@ -1799,14 +1786,8 @@ class IntegratedSource(SourceBase):
 
         if toGlobal:  # in global coordinate system:
             raycing.virgin_local_to_global(self.bl, bor, self.center)
-#            self.bl.beamsDictU[self.uuid] = {'beamGlobal': bo}
-#        else:
-#            self.bl.beamsDictU[self.uuid] = {'beamLocal': bo}
 
         raycing.append_to_flow(self.shine, [bor],
                                inspect.currentframe())
-#
-#        self.bl.flowU[self.uuid] = {'method': self.shine,
-#                                    'kwArgsIn': kwArgsIn}
 
         return bor

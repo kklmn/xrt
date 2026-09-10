@@ -146,7 +146,7 @@ argumentInputGroups = {
         'limPhysX', 'limPhysX2', 'limPhysY', 'limPhysY2', 'p', 'q', 'R0',
         'Rm', 'RmBragg', 'rho', 'Rs', 'RsBragg', 'seed', 't', 'thinnestZone',
         'totalFlux', 'zmax', 'pickleEvery', 'repeats', 'updateEvery',
-        'factor', 'a', 'V'},
+        'factor', 'a', 'V', 'fixedEnergy'},
     ('scalar', 'inf'): {'substThickness'},
     ('scalar', 'string'): {'processes', 'threads'},
     ('scalar', 'auto'): {'center', 'nrays', 'x', 'z'},

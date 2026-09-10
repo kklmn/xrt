@@ -230,7 +230,7 @@ class BendingMagnet(SourceBase):
                 np.sqrt(Amp2Flux) * ampP)
 
     @raycing.append_to_flow_decorator
-    def shine(self, toGlobal=True, withAmplitudes=True, fixedEnergy=False,
+    def shine(self, toGlobal=True, withAmplitudes=True, fixedEnergy=None,
               accuBeam=None):
         u"""
         Returns the source beam. If *toGlobal* is True, the output is in
@@ -238,31 +238,25 @@ class BendingMagnet(SourceBase):
         contains arrays Es and Ep with the *s* and *p* components of the
         electric field.
 
+        *fixedEnergy* is either None or a value in eV. If *fixedEnergy* is
+        specified, the energy band is not 0.1%BW relative to *fixedEnergy*, as
+        probably expected but is given by (eMax - eMin) of the constructor.
+
+        *accuBeam* is used in wave diffraction. *accuBeam* is only needed
+        with *several* repeats of diffraction integrals when the parameters of
+        the filament beam must be preserved for all the repeats.
+
 
         .. Returned values: beamGlobal
         """
         if self.needReset:
             self.reset()
 
-#        kwArgsIn = {'toGlobal': toGlobal,
-#                    'withAmplitudes': withAmplitudes,
-#                    'fixedEnergy': fixedEnergy}
-
         if self.bl is not None:
             try:
                 self.bl._alignE = float(self.bl.alignE)
             except ValueError:
                 self.bl._alignE = 0.5 * (self.eMin + self.eMax)
-
-#            if accuBeam is None:
-#                kwArgsIn['accuBeam'] = accuBeam
-#            else:
-#                if raycing.is_valid_uuid(accuBeam):
-#                    kwArgsIn['accuBeam'] = accuBeam
-#                    accuBeam = self.bl.beamsDictU[accuBeam][
-#                            'beamGlobal' if toGlobal else 'beamLocal']
-#                else:
-#                    kwArgsIn['accuBeam'] = accuBeam.parentId
 
         if self.uniformRayDensity:  # Force withAmplitudes=True
             withAmplitudes = True
@@ -329,15 +323,18 @@ class BendingMagnet(SourceBase):
             3: Monte-Carlo discriminator"""
             rnd_r = np.random.rand(mcRays, 4)
             seeded += mcRays
+            if self.filamentBeam or fixedEnergy:
+                rE *= np.ones(mcRays)
+            else:
+                rE = rnd_r[:, 0] * float(self.E_max - self.E_min) +\
+                    self.E_min
+
             if self.filamentBeam:
                 rThetaMin = np.max((self.Theta_min, rTheta0 - 1. / self.gamma))
                 rThetaMax = np.min((self.Theta_max, rTheta0 + 1. / self.gamma))
                 rTheta = (rnd_r[:, 1]) * (rThetaMax - rThetaMin) +\
                     rThetaMin
-                rE *= np.ones(mcRays)
             else:
-                rE = rnd_r[:, 0] * float(self.E_max - self.E_min) +\
-                    self.E_min
                 rTheta = (rnd_r[:, 1]) * (self.Theta_max - self.Theta_min) +\
                     self.Theta_min
             rPsi = rnd_r[:, 2] * (self.Psi_max - self.Psi_min) +\
@@ -500,15 +497,10 @@ class BendingMagnet(SourceBase):
             raycing.rotate_beam(bo, pitch=self.pitch, yaw=self.yaw)
         if toGlobal:  # in global coordinate system:
             raycing.virgin_local_to_global(self.bl, bo, self.center)
-#            self.bl.beamsDictU[self.uuid] = {'beamGlobal': bo}
-#        else:
-#            self.bl.beamsDictU[self.uuid] = {'beamLocal': bo}
 
         raycing.append_to_flow(self.shine, [bo],
                                inspect.currentframe())
 
-#        self.bl.flowU[self.uuid] = {'method': self.shine,
-#                                    'kwArgsIn': kwArgsIn}
         return bo
 
 
