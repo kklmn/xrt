@@ -284,12 +284,14 @@ ANGLE = r'{0}(?:\s*(?:{1}))?'.format(
     NUMBER, _unit_pattern(allUnitsAng))
 ENERGY = r'{0}(?:\s*(?:{1}))?'.format(
     NUMBER, _unit_pattern(allUnitsEnergy))
-
+FORMAT_STR = (r'(?=.*%(?!%))'
+              r'(?:[^%]|%%|%[-+# 0]*\d*(?:\.\d+)?[eEfFgGpG])+')
 
 VAL_PATTERNS = {
     'scalar': NUMBER,
     'angle': ANGLE,
     'energy': ENERGY,
+    'format': FORMAT_STR,
     'None': r'None',
     'auto': r'auto',
     'inf': r'inf',
@@ -307,7 +309,7 @@ def _argument_input_types(argName):
     for inputTypes, argNames in argumentInputGroups.items():
         if argName in argNames:
             return _as_input_types(inputTypes)
-    return ('scalar',)
+    return ('string',)
 
 
 def _compound_fields(argName):
@@ -467,9 +469,6 @@ def make_argument_validator(argName, parent=None):
     argName = str(argName)
     rootName, separator, component = argName.partition('.')
     fields = _compound_fields(rootName)
-
-#    if rootName in comboBoxType or rootName in unknownType:
-#        return None
 
     inputTypes = _argument_input_types(rootName)
     if separator and fields is not None and component in fields:

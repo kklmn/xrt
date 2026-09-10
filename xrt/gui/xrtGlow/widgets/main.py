@@ -1579,6 +1579,10 @@ class xrtGlow(qt.QWidget):
                 partial(self.updateOpacityFromQLE, axEdit, axSlider))
             axSlider.valueChanged.connect(
                 partial(self.updateOpacity, axSlider, iaxis, axEdit))
+            if iaxis == 1:  # Line width is unsupported by the shaders
+                axLabel.setEnabled(False)
+                axEdit.setEnabled(False)
+                axSlider.setEnabled(False)
             self.opacitySliders.append(axSlider)
             self.opacityEditors.append(axEdit)
 

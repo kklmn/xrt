@@ -136,7 +136,7 @@ def auto_unit(lbl, unit):
 
 
 # Input grammars shared by the GUI argument delegates. Tuple keys describe
-# accepted alternatives. Arguments not found here are scalars by default. For
+# accepted alternatives. Arguments not found here are strings by default. For
 # names present in compoundArgs, the grammar is applied to every component and
 # compoundArgs supplies the required length.
 argumentInputGroups = {
@@ -145,7 +145,8 @@ argumentInputGroups = {
         'fixedOffset', 'limOptX', 'limOptX2', 'limOptY', 'limOptY2',
         'limPhysX', 'limPhysX2', 'limPhysY', 'limPhysY2', 'p', 'q', 'R0',
         'Rm', 'RmBragg', 'rho', 'Rs', 'RsBragg', 'seed', 't', 'thinnestZone',
-        'totalFlux', 'zmax', 'pickleEvery', 'factor', 'a', 'V'},
+        'totalFlux', 'zmax', 'pickleEvery', 'repeats', 'updateEvery',
+        'factor', 'a', 'V'},
     ('scalar', 'inf'): {'substThickness'},
     ('scalar', 'string'): {'processes', 'threads'},
     ('scalar', 'auto'): {'center', 'nrays', 'x', 'z'},
@@ -164,12 +165,12 @@ argumentInputGroups = {
         'dxprime', 'dzprime', 'xPrimeMax', 'zPrimeMax'},
     'energy': {'E', 'eE', 'eMax', 'eMin'},
     'string': {
-        'afterScript', 'beam', 'crossSection', 'extraRotationSequence',
-        'contourFmt', 'name', 'orientation', 'rotationSequence', 'title'},
-    ('string', 'None'): {
-        'bl', 'customField', 'efficiencyFile', 'fileName', 'fwhmFormatStr',
-        'persistentName', 'saveName'},
-    ('string', 'auto'): {'fluxFormatStr'},
+        'afterScript', 'crossSection', 'extraRotationSequence',
+        'name', 'orientation', 'rotationSequence', 'title',
+        'bl', 'customField', 'efficiencyFile', 'fileName',
+        'persistentName', 'saveName', 'beam',
+        },
+    'format': {'fwhmFormatStr', 'contourFmt', 'fluxFormatStr'},
     'sequence': {
         'atoms', 'atomsXYZ', 'coeffs', 'columnFactors', 'energies',
         'histShape', 'hkl', 'plots', 'vertices'},
@@ -182,6 +183,21 @@ argumentInputGroups = {
     ('string', 'sequence', 'None'): {'refractiveIndex'},
     'dict': {'afterScriptKWargs', 'blades', 'generatorKWargs'},
     ('sequence', 'inf', 'None'): {'f1', 'f2'},
+    'scalar': {
+        'amplitude', 'B0', 'B0x', 'B0y', 'betaX', 'betaZ', 'bumpHeight',
+        'b', 'bThickness', 'bThicknessLow', 'c',
+        'corrLength', 'cryst2longTransl', 'cryst2perpTransl', 'cX', 'cY',
+        'd', 'depth', 'dxFacet', 'dxGap', 'dyFacet', 'dyGap', 'eEpsilonX',
+        'eEpsilonZ', 'eEspread', 'eI', 'eN', 'ellipseA', 'ellipseB', 'f',
+        'factDW', 'gIntervals', 'gp', 'gridStep', 'idThickness', 'K', 'Kx',
+        'Ky', 'L0', 'materialsIndex', 'n', 'N', 'nPairs', 'nRK', 'nSpokes',
+        'nx', 'nz', 'period', 'phaseShift', 'phi0',
+        'contourFactor', 'ePos', 'offset', 'phiOffset', 'ppb', 'px', 'pz',
+        'r0', 'raycingParam', 'rx', 'rz',
+        'nu', 'power', 'shadeFraction', 'sigmaX', 'sigmaY', 'substRoughness',
+        'tK', 'tThickness', 'tThicknessLow', 'thetaOffset', 'vortex',
+        'vortexNradial', 'vorticity', 'workingDistance', 'xPos', 'yPos',
+        'xWaveLength', 'yWaveLength', 'bins', 'outline', 'beta', 'gamma'},
     }
 
 
