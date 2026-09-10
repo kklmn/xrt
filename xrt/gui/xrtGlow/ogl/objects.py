@@ -7,7 +7,6 @@ Created on Tue Jan 27 13:23:24 2026
 import copy
 import inspect
 import numpy as np
-from scipy.spatial import Delaunay
 
 from .._utils import create_qt_buffer, update_qt_buffer
 from .._utils import (is_oe, is_plate, is_aperture, is_screen)
@@ -1357,20 +1356,74 @@ class OEMesh3D():
                 z = np.sqrt(R**2 - x**2 - y**2)
                 return x/R, y/R, z/R
 
-        def triangulate_closed(ns, nphi):
+        def triangulate_grid(ns, nphi, isClosed=False):
+            if ns < 2 or nphi < 2:
+                return np.empty(0, dtype=np.uint32)
+
             idx = np.arange(nphi * ns, dtype=np.uint32).reshape(nphi, ns)
 
-            row0 = idx
-            row1 = np.roll(idx, -1, axis=0)
+            if isClosed:
+                row0 = idx
+                row1 = np.roll(idx, -1, axis=0)
+            else:
+                row0 = idx[:-1]
+                row1 = idx[1:]
 
             tra = row0[:, :-1]
             trb = row0[:, 1:]
             trc = row1[:, :-1]
             trd = row1[:, 1:]
 
-            triangles = np.empty((nphi, ns - 1, 2, 3), dtype=np.uint32)
+            triangles = np.empty(
+                (len(row0), ns - 1, 2, 3), dtype=np.uint32)
             triangles[:, :, 0, :] = np.stack((tra, trc, trb), axis=-1)
             triangles[:, :, 1, :] = np.stack((trb, trc, trd), axis=-1)
+
+            return triangles.ravel()
+
+        def triangulate_polar_grid(ns, nphi):
+            if ns < 2 or nphi < 2:
+                return np.empty(0, dtype=np.uint32)
+
+            idx = np.arange(nphi * ns, dtype=np.uint32).reshape(nphi, ns)
+
+            # All vertices in the first column coincide at the disk center.
+            # Use one triangle per center cell to avoid degenerate facets.
+            center = np.full(nphi - 1, idx[0, 0], dtype=np.uint32)
+            centerTriangles = np.stack(
+                (idx[:-1, 1], center, idx[1:, 1]), axis=-1)
+
+            if ns == 2:
+                return centerTriangles.ravel()
+
+            row0 = idx[:-1, 1:]
+            row1 = idx[1:, 1:]
+            tra = row0[:, :-1]
+            trb = row0[:, 1:]
+            trc = row1[:, :-1]
+            trd = row1[:, 1:]
+
+            triangles = np.empty(
+                (nphi - 1, ns - 2, 2, 3), dtype=np.uint32)
+            triangles[:, :, 0, :] = np.stack((tra, trc, trb), axis=-1)
+            triangles[:, :, 1, :] = np.stack((trb, trc, trd), axis=-1)
+
+            return np.hstack((centerTriangles.ravel(), triangles.ravel()))
+
+        def triangulate_strip(npoints):
+            if npoints < 2:
+                return np.empty(0, dtype=np.uint32)
+
+            top0 = np.arange(npoints - 1, dtype=np.uint32)
+            top1 = top0 + 1
+            bottom0 = 2 * npoints - 1 - top0
+            bottom1 = bottom0 - 1
+
+            triangles = np.empty((npoints - 1, 2, 3), dtype=np.uint32)
+            triangles[:, 0, :] = np.stack(
+                (top0, bottom0, top1), axis=-1)
+            triangles[:, 1, :] = np.stack(
+                (top1, bottom0, bottom1), axis=-1)
 
             return triangles.ravel()
 
@@ -1479,20 +1532,20 @@ class OEMesh3D():
 #        zmin =
 #        self.bBox[:, 1] = yLimit
 
-        if oeShape == 'round':
-            xC, yC = rX*sideR[:, 0]*np.cos(sideR[:, -1]) +\
-                     cX, rY*sideR[:, 0]*np.sin(sideR[:, -1]) + cY
-            zC = np.array(local_z(xC, yC))
-            if isOeParametric:
-                xC, yC, zC = self.oe.param_to_xyz(xC, yC, zC)
-
         points = np.vstack((xv, yv, zv)).T
 
+        if oeShape == 'round':
+            # Reuse the evaluated outer ring. Re-evaluating it here would
+            # pass Cartesian x and y to local_r() as parametric s and phi.
+            contour = points.reshape(localTiles[1], localTiles[0], 3)[:, -1]
+            xC, yC, zC = contour.T
+
         if isClosedSurface:
-            allIndices = triangulate_closed(*localTiles)
+            allIndices = triangulate_grid(*localTiles, isClosed=True)
+        elif oeShape == 'round':
+            allIndices = triangulate_polar_grid(*localTiles)
         else:
-            triS = Delaunay(points[:, :-1])
-            allIndices = triS.simplices.flatten()
+            allIndices = triangulate_grid(*localTiles)
 
         if not isPlate:
             bottomPoints = points.copy()
@@ -1541,12 +1594,8 @@ class OEMesh3D():
                                        -np.ones_like(zL)*thickness)))).T
         normsL = np.zeros((len(zL)*2, 3))
         normsL[:, 0] = -1
-        if not (isScreen or isClosedSurface):  # or isAperture):
-            try:
-                triLR = Delaunay(tL[:, [1, -1]])  # Works for round elements
-                useLR = True
-            except:
-                useLR = False
+        triLR = triangulate_strip(len(zL))
+        useLR = len(triLR) > 0
         tL[:len(zL), 2] = zL
         tL[len(zL):, 2] = bottomLine
 
@@ -1565,19 +1614,16 @@ class OEMesh3D():
                                        bottomLine)))).T
         normsF = np.zeros((len(zF)*2, 3))
         normsF[:, 1] = -1
-        if not (isScreen or isClosedSurface):  # or isAperture):
-            try:
-                triFB = Delaunay(tF[:, [0, -1]])
-                useFB = True
-            except:
-                useFB = False
+        triFB = triangulate_strip(len(zF))
+        useFB = len(triFB) > 0
         tF[:len(zF), 2] = zF
 
         if oeShape == 'round':
             tB = np.vstack((xC, yC, zC))
             bottomLine = zC - thickness if useShapedBack else\
                 -np.ones_like(zC)*thickness
-            tB = np.hstack((tB, np.vstack((xC, np.flip(yC), bottomLine)))).T
+            tB = np.hstack((tB, np.vstack((np.flip(xC), np.flip(yC),
+                                           np.flip(bottomLine))))).T
             normsB = np.vstack((tB[:, 0], tB[:, 1], np.zeros_like(tB[:, 0]))).T
             norms = np.linalg.norm(normsB, axis=1, keepdims=True)
             normsB /= norms
@@ -1609,26 +1655,21 @@ class OEMesh3D():
                     allSurfaces = np.vstack((allSurfaces, tB))
                     allNormals = np.vstack((allNormals, normsB))
                     allIndices = np.hstack((allIndices,
-                                            triLR.simplices.flatten() +
-                                            indArrOffset))
+                                            triLR + indArrOffset))
             else:
                 if useLR:
                     allSurfaces = np.vstack((allSurfaces, tL, tR))
                     allNormals = np.vstack((allNormals, normsL, normsR))
                     allIndices = np.hstack((allIndices,
-                                            triLR.simplices.flatten() +
-                                            indArrOffset,
-                                            triLR.simplices.flatten() +
-                                            indArrOffset+len(tL)))
+                                            triLR + indArrOffset,
+                                            triLR + indArrOffset+len(tL)))
                     indArrOffset += len(tL)*2
                 if useFB:
                     allSurfaces = np.vstack((allSurfaces, tF, tB))
                     allNormals = np.vstack((allNormals, normsF, normsB))
                     allIndices = np.hstack((allIndices,
-                                            triFB.simplices.flatten() +
-                                            indArrOffset,
-                                            triFB.simplices.flatten() +
-                                            indArrOffset+len(tF)))
+                                            triFB + indArrOffset,
+                                            triFB + indArrOffset+len(tF)))
 
         if isScreen or isAperture:
             if hasattr(self.oe, 'R'):
