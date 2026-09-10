@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 __author__ = "Konstantin Klementiev", "Roman Chernikov"
 __date__ = "12 Aug 2021"
 
@@ -608,7 +608,7 @@ class Wiggler(BendingMagnet):
 class SourceFromField(IntegratedSource):
     """Dedicated class for the sources based on a custom field table."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, uniformRayDensity=True, gp=1e-3, **kwargs):
         """
         *customField*: float or str or tuple(fileName, kwargs) or numpy array.
             If float, adds a constant longitudinal field.
@@ -621,10 +621,15 @@ class SourceFromField(IntegratedSource):
             coordinate in mm, {B_hor,} B_ver {, B_long}, all in T. The field
             can be provided as a numpy array with the same structure as the
             table from file.
+            If None, a mock undulator will be calculated with K=1, period=50mm,
+            n=50.
 
         """
         customField = kwargs.pop('customField', None)
-        super(SourceFromField, self).__init__(*args, **kwargs)
+        urd = kwargs.pop("uniformRayDensity", True)
+        gpi = kwargs.pop("gp", 1e-3)
+        super(SourceFromField, self).__init__(*args, uniformRayDensity=urd,
+             gp=gpi, **kwargs)
 
         self.spl_kw = {'kind': 'cubic',
                        'bounds_error': False,
@@ -646,10 +651,10 @@ class SourceFromField(IntegratedSource):
                 self.customFieldData = self.read_custom_field(fname, readkw)
         else:  # Test with periodic field
             self.Kx = 0.
-            self.Ky = 4.4  # 17.274 #1.7
+            self.Ky = 1  # 17.274 #1.7
             self.phase = 0
-            self.L0 = 53.96  # 100 #10.
-            self.Np = 41  # 70 #30
+            self.L0 = 50  # 100 #10.
+            self.Np = 50  # 70 #30
             self.quadm = 50
             self.gIntervals = 2  # *self.Np
             self.wtGrid = np.linspace(-self.L0*self.Np*0.5,

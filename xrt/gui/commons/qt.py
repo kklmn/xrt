@@ -865,6 +865,9 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
                 elif what == 'efficiency':
                     fExts = ["All"]
                     break
+                elif what == 'filamentbeam':
+                    fExts = ["All"]
+                    break
                 elif what == 'materialsindex':
                     fExts = ["H5", "HDF5", "All"]
                     break

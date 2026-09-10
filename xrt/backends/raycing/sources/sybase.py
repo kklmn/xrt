@@ -1066,6 +1066,17 @@ class IntegratedSource(SourceBase):
             self._set_cl()
 
     @property
+    def gp(self):
+        return self._gp
+
+    @gp.setter
+    def gp(self, gp):
+        self._gp = gp
+        self.needConvergence = True
+        self.needReset = True
+        # Need to recalculate the integration parameters
+
+    @property
     def gNodes(self):
         try:
             return self.quadm
