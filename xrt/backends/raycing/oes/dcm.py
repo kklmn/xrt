@@ -179,6 +179,24 @@ class DCM(OE):
         self.get_surface_limits()
 
     @property
+    def limOptX2(self):
+        return self._limOptX2
+
+    @limOptX2.setter
+    def limOptX2(self, limOptX2):
+        self._limOptX2 = None if limOptX2 is None else raycing.Limits(limOptX2)
+        self.get_surface_limits()
+
+    @property
+    def limOptY2(self):
+        return self._limOptY2
+
+    @limOptY2.setter
+    def limOptY2(self, limOptY2):
+        self._limOptY2 = None if limOptY2 is None else raycing.Limits(limOptY2)
+        self.get_surface_limits()
+
+    @property
     def fixedOffset(self):
         return self._fixedOffset
 

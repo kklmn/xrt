@@ -54,7 +54,8 @@ from ._sets_units import (
     renderOnlyArgSet, compoundArgs, dependentArgs, diagnosticArgs, allUnitsAng,
     allUnitsAngStr, allUnitsLen, allUnitsLenStr, allUnitsEnergy,
     allUnitsEnergyStr, allUnitsEmittance, allUnitsEmittanceStr,
-    allUnitsCurrent, allUnitsCurrentStr, lengthUnitParams, auto_unit)
+    allUnitsCurrent, allUnitsCurrentStr, lengthUnitParams, auto_unit,
+    argumentInputGroups)
 
 from .epics import to_valid_var_name, EpicsDevice, DynamicBeamline
 

@@ -71,6 +71,20 @@ __all__ = ('Material', 'TXMMaterial', 'EmptyMaterial',
            'Coated', 'Crystal', 'CrystalFcc',
            'CrystalDiamond', 'CrystalSi', 'CrystalFromCell',
            'Powder', 'CrystalHarmonics', 'MonoCrystal')
+
+# Constructor arguments exposed by the material editors.  This is the union
+# of the arguments accepted by the material classes in this package; classes
+# with fixed defaults simply ignore the entries that do not apply to them.
+allArguments = (
+    'bl', 'name', 'elements', 'quantities', 'kind', 'rho', 't', 'table',
+    'efficiency', 'efficiencyFile', 'refractiveIndex', 'fileName',
+    'materialsIndex', 'tLayer', 'tThickness', 'bLayer', 'bThickness',
+    'nPairs', 'substrate', 'tThicknessLow', 'bThicknessLow', 'idThickness',
+    'power', 'substRoughness', 'substThickness', 'geom', 'hkl', 'd', 'V',
+    'factDW', 'volumetricDiffraction', 'useTT', 'nu', 'mosaicity', 'a', 'b',
+    'c', 'alpha', 'beta', 'gamma', 'atoms', 'atomsXYZ', 'atomsFraction',
+    'tK')
+
 import collections
 __allSectioned__ = collections.OrderedDict([
     ('Material', None),

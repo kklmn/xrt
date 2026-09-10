@@ -488,6 +488,24 @@ class OE(OEMainMethods):
         self.get_surface_limits()
 
     @property
+    def limOptX(self):
+        return self._limOptX
+
+    @limOptX.setter
+    def limOptX(self, limOptX):
+        self._limOptX = None if limOptX is None else raycing.Limits(limOptX)
+        self.get_surface_limits()
+
+    @property
+    def limOptY(self):
+        return self._limOptY
+
+    @limOptY.setter
+    def limOptY(self, limOptY):
+        self._limOptY = None if limOptY is None else raycing.Limits(limOptY)
+        self.get_surface_limits()
+
+    @property
     def gratingDensity(self):
         return self._gratingDensity
 
@@ -805,7 +823,7 @@ class OE(OEMainMethods):
         x = x0 + a*t
         y = y0 + b*t
         z = z0 + c*t
-        
+
         if derivOrder == 0:
             if self.isParametric:
                 if local_f is None:
@@ -1049,7 +1067,7 @@ class OE(OEMainMethods):
 
     def get_surface_limits(self):
         """Returns surface_limits."""
-        
+
         if not all([hasattr(self, arg) for arg in [
                 'curSurface', 'limPhysX', 'limPhysY', 'limOptX', 'limOptY']]):
             return

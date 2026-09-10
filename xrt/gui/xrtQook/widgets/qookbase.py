@@ -1815,7 +1815,9 @@ class XrtQookBase(qt.QMainWindow):
 
     def plotItemChanged(self, item):
         parent = item.parent()
-        if item.column() == 0:
+        if item is self.rootPlotItem:
+            self.colorizeChangedParam(item)
+        elif item.column() == 0:
             return
         elif str(parent.text()) == 'plots' and\
                 str(item.text()).startswith('Preview'):
@@ -1884,6 +1886,16 @@ class XrtQookBase(qt.QMainWindow):
                             break
             item.model().blockSignals(False)
         elif item.column() == 0 and item.isEnabled():  # TODO: extract rename/back-reference update
+            if item is self.rootPlotItem:
+                pyname = raycing.to_valid_var_name(item.text())
+                item.model().blockSignals(True)
+                item.setText(pyname)
+                item.model().blockSignals(False)
+                for j in range(self.rootRunItem.rowCount()):
+                    if str(self.rootRunItem.child(j, 0).text()) == 'plots':
+                        self.rootRunItem.child(j, 1).setText(pyname)
+                        break
+                return
             for i in range(item.rowCount()):
                 child0 = item.child(i, 0)
                 if str(child0.text()) == 'properties':

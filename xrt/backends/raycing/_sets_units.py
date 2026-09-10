@@ -32,6 +32,10 @@ compoundArgs = {'center': ['x', 'y', 'z'],
                 'limPhysY': ['lmin', 'lmax'],
                 'limPhysX2': ['lmin', 'lmax'],
                 'limPhysY2': ['lmin', 'lmax'],
+                'limOptX': ['lmin', 'lmax'],
+                'limOptY': ['lmin', 'lmax'],
+                'limOptX2': ['lmin', 'lmax'],
+                'limOptY2': ['lmin', 'lmax'],
                 'opening': ['left', 'right', 'bottom', 'top'],
                 'blades': ['left', 'right', 'bottom', 'top'],
                 'image': ['width', 'height']}
@@ -130,3 +134,72 @@ def auto_unit(lbl, unit):
 
     return uRet, fRet
 
+
+# Input grammars shared by the GUI argument delegates. Tuple keys describe
+# accepted alternatives. Arguments not found here are scalars by default. For
+# names present in compoundArgs, the grammar is applied to every component and
+# compoundArgs supplies the required length.
+argumentInputGroups = {
+    ('scalar', 'None'): {
+        'alarmLevel', 'compressX', 'compressZ', 'eSigmaX', 'eSigmaZ',
+        'fixedOffset', 'limOptX', 'limOptX2', 'limOptY', 'limOptY2',
+        'limPhysX', 'limPhysX2', 'limPhysY', 'limPhysY2', 'p', 'q', 'R0',
+        'Rm', 'RmBragg', 'rho', 'Rs', 'RsBragg', 'seed', 't', 'thinnestZone',
+        'totalFlux', 'zmax', 'pickleEvery', 'factor', 'a', 'V'},
+    ('scalar', 'inf'): {'substThickness'},
+    ('scalar', 'string'): {'processes', 'threads'},
+    ('scalar', 'auto'): {'center', 'nrays', 'x', 'z'},
+    ('scalar', 'sequence'): {'dx', 'dy', 'dz', 'focus', 'nCRL', 'rms', 'r',
+                             'R'},
+    ('scalar', 'sequence', 'None'): {'order', 'taper'},
+    'angle': {
+        'antiblaze', 'blaze', 'braggOffset', 'cryst1roll',
+        'cryst2finePitch', 'cryst2pitch', 'cryst2roll', 'extraPitch',
+        'extraRoll', 'extraYaw', 'grazingAngle', 'maxxprime', 'maxzprime',
+        'minxprime', 'minzprime', 'orientationAngle', 'phaseDeg',
+        'positionRoll', 'roll', 'slopeAngle', 'theta', 'wedgeAngle', 'yaw'},
+    ('angle', 'None'): {'alpha'},
+    ('angle', 'energy', 'auto'): {'bragg', 'pitch'},
+    ('angle', 'sequence'): {
+        'dxprime', 'dzprime', 'xPrimeMax', 'zPrimeMax'},
+    'energy': {'E', 'eE', 'eMax', 'eMin'},
+    'string': {
+        'afterScript', 'beam', 'crossSection', 'extraRotationSequence',
+        'contourFmt', 'name', 'orientation', 'rotationSequence', 'title'},
+    ('string', 'None'): {
+        'bl', 'customField', 'efficiencyFile', 'fileName', 'fwhmFormatStr',
+        'persistentName', 'saveName'},
+    ('string', 'auto'): {'fluxFormatStr'},
+    'sequence': {
+        'atoms', 'atomsXYZ', 'coeffs', 'columnFactors', 'energies',
+        'histShape', 'hkl', 'plots', 'vertices'},
+    ('sequence', 'None'): {
+        'afterScriptArgs', 'atomsFraction', 'cLimits', 'contourColors',
+        'contourLevels', 'efficiency', 'energyRange', 'generatorArgs',
+        'gratingDensity', 'limits', 'pAxis', 'parabolaAxis', 'quantities',
+        'surface', 'targetE'},
+    ('string', 'sequence'): {'elements'},
+    ('string', 'sequence', 'None'): {'refractiveIndex'},
+    'dict': {'afterScriptKWargs', 'blades', 'generatorKWargs'},
+    ('sequence', 'inf', 'None'): {'f1', 'f2'},
+    }
+
+
+# No unresolved argument input types at present.
+# unknownType = set()
+
+
+# Arguments for which DynamicArgumentDelegate creates a populated QComboBox.
+# comboBoxType = {
+#    'aspect', 'autoAppendToBL', 'baseFE', 'distE', 'distx', 'distxprime',
+#    'disty', 'distz', 'distzprime', 'figureError', 'filamentBeam',
+#    'isCentralZoneBlack', 'isClosed', 'isCylindrical', 'isParametric',
+#    'material', 'material2', 'polarization', 'precisionOpenCL', 'recenter',
+#    'renderStyle', 'rmsKind', 'shape', 'shouldCheckCenter', 'surfaceHint',
+#    'targetOpenCL', 'uniformRayDensity', 'withCentralRay',
+#    'xPrimeMaxAutoReduce', 'zPrimeMaxAutoReduce', 'generator', 'beamAbsorb',
+#    'beamC', 'beamState', 'bLayer', 'geom', 'kind', 'substrate', 'tLayer',
+#    'table',
+#    # Plot and axis delegates provide populated selectors for these fields.
+#    'beam', 'data', 'density', 'fluxKind', 'fluxUnit', 'label',
+#    'rayFlag', 'unit'}

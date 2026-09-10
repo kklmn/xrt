@@ -6,6 +6,7 @@ from ctypes import c_int, sizeof
 from functools import partial
 from math import isfinite
 import os.path as osp
+import re
 
 import qtpy
 from qtpy.QtCore import *
@@ -32,6 +33,9 @@ from qtpy.QtOpenGL import *
 
 from qtpy.QtSql import (QSqlDatabase, QSqlQuery, QSqlTableModel,
                         QSqlQueryModel)
+
+from ...backends.raycing._sets_units import (
+    allUnitsAng, allUnitsEnergy, argumentInputGroups, compoundArgs)
 
 RAW_VALUE_ROLE = Qt.UserRole + 1
 EDITOR_HINT_ROLE = Qt.UserRole + 2
@@ -267,6 +271,230 @@ class DictEditorDialog(QDialog):
         super().accept()
 
 
+NUMBER = r'[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?'
+
+
+def _unit_pattern(unitDict):
+    units = sorted((re.escape(str(unit)) for unit in unitDict),
+                   key=len, reverse=True)
+    return '|'.join(units)
+
+
+ANGLE = r'{0}(?:\s*(?:{1}))?'.format(
+    NUMBER, _unit_pattern(allUnitsAng))
+ENERGY = r'{0}(?:\s*(?:{1}))?'.format(
+    NUMBER, _unit_pattern(allUnitsEnergy))
+
+
+VAL_PATTERNS = {
+    'scalar': NUMBER,
+    'angle': ANGLE,
+    'energy': ENERGY,
+    'None': r'None',
+    'auto': r'auto',
+    'inf': r'inf',
+    'bool': r'(?:True|False)',
+    'string': r'.+'}
+
+
+def _as_input_types(inputTypes):
+    if isinstance(inputTypes, tuple):
+        return inputTypes
+    return (inputTypes,)
+
+
+def _argument_input_types(argName):
+    for inputTypes, argNames in argumentInputGroups.items():
+        if argName in argNames:
+            return _as_input_types(inputTypes)
+    return ('scalar',)
+
+
+def _compound_fields(argName):
+    fields = compoundArgs.get(argName)
+    if fields is None and argName.startswith(('limPhys', 'limOpt')):
+        fields = compoundArgs.get('lim')
+    return fields
+
+
+def _atomic_validator(inputTypes, parent=None):
+    patterns = [VAL_PATTERNS[inputType] for inputType in inputTypes
+                if inputType in VAL_PATTERNS]
+    if not patterns:
+        return None
+    pattern = r'\s*(?:{0})\s*'.format('|'.join(patterns))
+    return QRegularExpressionValidator(QRegularExpression(pattern), parent)
+
+
+class ParsedSequenceValidator(QValidator):
+    """Validates normalized sequence input and compound argument lengths."""
+
+    def __init__(self, argName, inputTypes, fields=None, parent=None):
+        super().__init__(parent)
+        from ...backends import raycing
+        self.raycing = raycing
+        self.argName = argName
+        self.inputTypes = _as_input_types(inputTypes)
+        self.fields = fields
+        self.isLimit = argName == 'lim' or\
+            argName.startswith(('limPhys', 'limOpt'))
+        self.wholeValidator = _atomic_validator(
+            self._whole_input_types(), self)
+        self.memberValidator = _atomic_validator(
+            self._member_input_types(), self)
+        self.scalarValidator = _atomic_validator(('scalar',), self)
+
+    def _whole_input_types(self):
+        if self.fields is not None:
+            if self.argName in ('x', 'z'):
+                return ('auto',)
+            if self.isLimit and 'None' in self.inputTypes:
+                return ('None',)
+            return ()
+        return tuple(inputType for inputType in self.inputTypes
+                     if inputType != 'sequence')
+
+    def _member_input_types(self):
+        if self.fields is not None:
+            if self.argName == 'center':
+                return ('scalar', 'auto')
+            if self.isLimit:
+                return ('scalar', 'None')
+            return ('scalar',)
+        if self.argName == 'energies':
+            return ('energy',)
+        if self.argName == 'surface':
+            return ('string',)
+        if self.argName == 'gratingDensity':
+            return ('scalar', 'string')
+        if self.argName == 'targetE':
+            return ('scalar', 'bool')
+        if 'angle' in self.inputTypes:
+            return ('angle',)
+        return ('scalar',)
+
+    @staticmethod
+    def _validator_state(validator, value):
+        if validator is None:
+            return QValidator.Invalid
+        text = str(value)
+        return validator.validate(text, len(text))[0]
+
+    def _is_sequence(self, value):
+        return not isinstance(value, self.raycing.basestring) and\
+            self.raycing.is_sequence(value)
+
+    @staticmethod
+    def _looks_like_sequence_prefix(text):
+        return any(char in text for char in '[](),')
+
+    def _validate_scalar_sequence(self, value):
+        if not self._is_sequence(value) or len(value) == 0:
+            return QValidator.Invalid
+        state = QValidator.Acceptable
+        for item in value:
+            itemState = self._validator_state(self.scalarValidator, item)
+            if itemState == QValidator.Invalid:
+                return itemState
+            if itemState == QValidator.Intermediate:
+                state = itemState
+        return state
+
+    def _validate_members(self, value):
+        if self.argName == 'vertices':
+            state = QValidator.Acceptable
+            for vertex in value:
+                if not self._is_sequence(vertex) or len(vertex) != 2:
+                    return QValidator.Invalid
+                vertexState = self._validate_scalar_sequence(vertex)
+                if vertexState == QValidator.Invalid:
+                    return vertexState
+                if vertexState == QValidator.Intermediate:
+                    state = vertexState
+            return state
+
+        state = QValidator.Acceptable
+        for item in value:
+            if self.isLimit and self._is_sequence(item):
+                itemState = self._validate_scalar_sequence(item)
+            else:
+                itemState = self._validator_state(
+                    self.memberValidator, item)
+            if itemState == QValidator.Invalid:
+                return itemState
+            if itemState == QValidator.Intermediate:
+                state = itemState
+        return state
+
+    def validate(self, inputText, pos):
+        text = str(inputText)
+        stripped = text.strip()
+        if not stripped:
+            return QValidator.Intermediate, inputText, pos
+
+        value = self.raycing.parametrize(stripped)
+        if not self._is_sequence(value):
+            wholeState = self._validator_state(self.wholeValidator, value)
+            if wholeState != QValidator.Invalid:
+                return wholeState, inputText, pos
+
+            memberState = self._validator_state(self.memberValidator, value)
+            if memberState != QValidator.Invalid or\
+                    self._looks_like_sequence_prefix(stripped):
+                return QValidator.Intermediate, inputText, pos
+            return QValidator.Invalid, inputText, pos
+
+        memberState = self._validate_members(value)
+        if memberState == QValidator.Invalid:
+            return memberState, inputText, pos
+
+        if self.fields is not None:
+            expectedLength = len(self.fields)
+            if len(value) < expectedLength:
+                return QValidator.Intermediate, inputText, pos
+            if len(value) > expectedLength:
+                return QValidator.Invalid, inputText, pos
+            if self.argName == 'center':
+                autoCount = sum(str(item) == 'auto' for item in value)
+                if autoCount > 2:
+                    return QValidator.Invalid, inputText, pos
+
+        return memberState, inputText, pos
+
+
+def make_argument_validator(argName, parent=None):
+    """Returns the fallback validator for an argument QLineEdit."""
+    argName = str(argName)
+    rootName, separator, component = argName.partition('.')
+    fields = _compound_fields(rootName)
+
+#    if rootName in comboBoxType or rootName in unknownType:
+#        return None
+
+    inputTypes = _argument_input_types(rootName)
+    if separator and fields is not None and component in fields:
+        if rootName == 'center':
+            componentTypes = ('scalar', 'auto')
+        elif rootName in ('x', 'z', 'blades'):
+            componentTypes = ('scalar',)
+        elif rootName == 'lim' or\
+                rootName.startswith(('limPhys', 'limOpt')):
+            componentTypes = ('scalar', 'sequence', 'None')
+        else:
+            componentTypes = ('scalar',)
+        if 'sequence' in componentTypes:
+            return ParsedSequenceValidator(
+                rootName, componentTypes, parent=parent)
+        return _atomic_validator(componentTypes, parent)
+
+    if 'string' in inputTypes or 'dict' in inputTypes:
+        return None
+    if fields is not None or 'sequence' in inputTypes:
+        return ParsedSequenceValidator(
+            rootName, inputTypes, fields=fields, parent=parent)
+    return _atomic_validator(inputTypes, parent)
+
+
 class DynamicArgumentDelegate(QStyledItemDelegate):
     def __init__(self, nameToModel=None, parent=None, mainWidget=None,
                  bl=None):
@@ -274,6 +502,14 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
         self.nameToModel = nameToModel
         self.mainWidget = mainWidget
         self.bl = bl
+
+    @staticmethod
+    def _createLineEditor(parent, argName):
+        editor = QLineEdit(parent)
+        validator = make_argument_validator(argName, editor)
+        if validator is not None:
+            editor.setValidator(validator)
+        return editor
 
     def argumentEditorHint(self, index, argName):
         model = index.model()
@@ -351,6 +587,8 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
         nameIndex = model.index(row, 0, index.parent())
         argName = str(nameIndex.data())
         argNameL = argName.lower()
+        if argNameL in ['bl', 'backend', 'plots']:
+            return None
         argValue = str(index.data())
         parentIndex = index.parent()
         if parentIndex is not None:
@@ -392,6 +630,8 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
 #            combo.setEditable(True)
 #            combo.setModel(self.mainWidget.beamLineModel)
 #            return combo
+        elif argName.startswith('beamLine'):
+            return None
         elif argName.startswith('beam'):
             if hasattr(self.mainWidget, 'beamModel'):
                 if parentIndexName == 'parameters':
@@ -414,7 +654,7 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
                     itemsList.remove('beamAbsorb')
                 combo.addItems(itemsList)
             else:
-                return QLineEdit(parent)
+                return self._createLineEditor(parent, argName)
             return combo
         elif argName.startswith('wave'):
             fpModel = MultiColumnFilterProxy({1: "Local"}, combo)
@@ -445,7 +685,7 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
                 proxy.setSourceModel(self.mainWidget.materialsModel)
                 combo.setModel(proxy)
             else:
-                return QLineEdit(parent)
+                return self._createLineEditor(parent, argName)
             return combo
         elif any(argNameL.startswith(v) for v in
                  ['figureerr', 'basefe']):  # mat and bl
@@ -466,7 +706,7 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
                 proxy.setSourceModel(self.mainWidget.fesModel)
                 combo.setModel(proxy)
             else:
-                return QLineEdit(parent)
+                return self._createLineEditor(parent, argName)
             return combo
         elif argNameL == 'kind':  # material and bl
             matKindItems = ['mirror', 'thin mirror',
@@ -527,12 +767,20 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
             combo.addItems(self.mainWidget.fluxDataList)
             return combo
         elif 'geom' in argNameL:  # mat only
-            combo.addItems(['Bragg reflected', 'Bragg transmitted',
-                            'Laue reflected', 'Laue transmitted',
-                            'Fresnel'])
+            crGeoms = ['Bragg reflected', 'Bragg transmitted',
+                       'Laue reflected', 'Laue transmitted',
+                       'Fresnel']
+            mlGeoms = ['reflected', 'transmitted']
+            if argValue in crGeoms:
+                combo.addItems(crGeoms)
+            elif argValue in mlGeoms:
+                combo.addItems(mlGeoms)
             return combo
         elif 'fluxkind' in argNameL:  # plot only
             combo.addItems(['total', 'power', 's', 'p', '+/-45', 'left-right'])
+            return combo
+        elif 'fluxunit' in argNameL:  # plot only
+            combo.addItems(['auto', 'None'])
             return combo
         elif 'aspect' in argNameL:  # plot only
             combo.addItems(['equal', 'auto'])
@@ -551,14 +799,14 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
                 combo.setEditable(True)
                 return combo
             else:
-                return QLineEdit(parent)
+                return self._createLineEditor(parent, argName)
         elif argNameL.endswith('label'):  # plot only
             if parentIndexName.lower() in ['xaxis', 'yaxis']:
                 combo.addItems(['x', 'y', 'z', 'x\'', 'z\'', 'energy'])
             elif hasattr(self.mainWidget, 'fluxLabelList'):  # caxis
                 combo.addItems(self.mainWidget.fluxLabelList)
             else:
-                return QLineEdit(parent)
+                return self._createLineEditor(parent, argName)
             return combo
         elif 'rayflag' in argNameL:  # plot only
             group = QWidget(parent)
@@ -592,13 +840,13 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
                             combo.addItems(self.mainWidget.energyUnitList)
 #                            combo.setModel(self.mainWidget.energyUnitModel)
                         else:
-                            return QLineEdit(parent)
+                            return self._createLineEditor(parent, argName)
                         break
                 return combo
             else:
                 combo.addItems(self.mainWidget.angleUnitList)
                 return combo
-        elif argNameL in ['filename', 'customField']:
+        elif argNameL in ['filename', 'customfield', 'efficiencyfile']:
             fExts = ["STL"]
             if parentIndex is not None:
                 prtItem = model.itemFromIndex(parentIndex)
@@ -613,6 +861,9 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
                     fExts = ["NPY", "NPZ"]
                     break
                 elif what == 'basefe':
+                    fExts = ["All"]
+                    break
+                elif what == 'efficiency':
                     fExts = ["All"]
                     break
                 elif what == 'materialsindex':
@@ -643,7 +894,7 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
             combo.setMaxVisibleItems(30)
             return combo
         else:
-            return QLineEdit(parent)
+            return self._createLineEditor(parent, argName)
 
     def _collect_sibling_output_beams(self, model, index):
         hiddenBeams = set()
@@ -707,6 +958,9 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
         if isinstance(editor, QComboBox):
             self._setModelValue(model, index, editor.currentText())
         elif isinstance(editor, QLineEdit):
+            if editor.validator() is not None and\
+                    not editor.hasAcceptableInput():
+                return
             self._setModelValue(model, index, editor.text())
         elif isinstance(editor, QPushButton):
             pass
