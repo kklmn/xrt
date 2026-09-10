@@ -249,35 +249,19 @@ class InstanceInspector(qt.QDialog):
         layoutL.addWidget(self.button_box)
 
         if self.beamLine is None:
-            layout.addWidget(widgetL)
             self.liveUpdateEnabled = False
+            self.dynamicPlotWidget = None
         elif self.beamLine.materialsDict.get(elementId) is not None:
             self.widgetType = 'mat'
-            canvasSplitter = qt.QSplitter()
-            canvasSplitter.setChildrenCollapsible(False)
             self.dynamicPlotWidget = Curve1dWidget(
-                    beamLine=beamLine, elementId=elementId)
-            widgetR = qt.QWidget()
-            layoutR = qt.QVBoxLayout(widgetR)
-            layoutR.addWidget(self.dynamicPlotWidget)
-            layout.addWidget(canvasSplitter)
-            canvasSplitter.addWidget(widgetL)
-            canvasSplitter.addWidget(widgetR)
+                beamLine=beamLine, elementId=elementId)
         elif self.beamLine.fesDict.get(elementId) is not None:
             self.widgetType = 'fe'
-            canvasSplitter = qt.QSplitter()
-            canvasSplitter.setChildrenCollapsible(False)
             self.dynamicPlotWidget = SurfacePlotWidget(
                     beamLine=beamLine, elementId=elementId)
-            widgetR = qt.QWidget()
-            layoutR = qt.QVBoxLayout(widgetR)
-            layoutR.addWidget(self.dynamicPlotWidget)
-            layout.addWidget(canvasSplitter)
-            canvasSplitter.addWidget(widgetL)
-            canvasSplitter.addWidget(widgetR)
         elif self.beamLine.beamsDictU.get(elementId) is None:
-            layout.addWidget(widgetL)
             self.liveUpdateEnabled = False
+            self.dynamicPlotWidget = None
         else:  # create dynamicPlotWidget
             plotDefArgs = dict(raycing.get_params("xrt.plotter.XYCPlot"))
             axDefArgs = dict(raycing.get_params("xrt.plotter.XYCAxis"))
@@ -330,15 +314,16 @@ class InstanceInspector(qt.QDialog):
             self.dynamicPlotWidget.addToPlotsRequested.connect(
                     self.plotConfigCreated.emit)
 
-            canvasSplitter = qt.QSplitter()
-            canvasSplitter.setChildrenCollapsible(False)
-
-            widgetR = qt.QWidget()
-            layoutR = qt.QVBoxLayout(widgetR)
-            layoutR.addWidget(self.dynamicPlotWidget)
-            layout.addWidget(canvasSplitter)
-            canvasSplitter.addWidget(widgetL)
-            canvasSplitter.addWidget(widgetR)
+        if self.dynamicPlotWidget is not None:
+            splitter = qt.QSplitter()
+            splitter.setChildrenCollapsible(False)
+            splitter.addWidget(widgetL)
+            splitter.addWidget(self.dynamicPlotWidget)
+            if hasattr(self.dynamicPlotWidget, 'rWidget'):
+                splitter.addWidget(self.dynamicPlotWidget.rWidget)
+            layout.addWidget(splitter)
+        else:
+            layout.addWidget(widgetL)
 
         self.edited_data = {}
         self.scanItems = []
@@ -367,26 +352,23 @@ class InstanceInspector(qt.QDialog):
             nvalue = blades.get(field, None)
             nvalue = '0.0' if nvalue is None else str(nvalue)
             epv = epicsTree.get(nkey) if epicsTree is not None else None
-            child0, child1 = self.add_param(parentItem, nkey, nvalue,
-                                            epv=epv)
+            child0, child1 = self.add_param(parentItem, nkey, nvalue, epv=epv)
             self.configure_blade_row(child0, child1,
                                      blades.get(field) is not None)
-            self.original_data[nkey] = nvalue if\
-                blades.get(field) is not None else None
+            self.original_data[nkey] = \
+                nvalue if blades.get(field) is not None else None
         self.add_param(parentItem, "blades rbk", value)
 
     def configure_blade_row(self, keyItem, valueItem, isEnabled):
         keyItem.setFlags(self.checkFlag)
         keyItem.setCheckable(True)
-        keyItem.setCheckState(qt.Qt.Checked if
-                              isEnabled else qt.Qt.Unchecked)
+        keyItem.setCheckState(qt.Qt.Checked if isEnabled else qt.Qt.Unchecked)
         valueItem.setEditable(not self.viewOnly and isEnabled)
 
     def is_blade_row(self, item):
         rowItem = item if item.column() == 0 else item.parent().child(
             item.row(), 0)
-        return rowItem is not None and\
-            str(rowItem.text()).startswith('blades.')
+        return rowItem is not None and str(rowItem.text()).startswith('blades.')
 
     def add_prop(self, parent, propName):
         """Add non-editable Item"""
@@ -778,7 +760,7 @@ class ConfigurablePlotWidget(qt.QWidget):
         layout = qt.QHBoxLayout(self)
         self.dynamicPlot.canvas.setSizePolicy(
             qt.QSizePolicy.Minimum, qt.QSizePolicy.Minimum)
-        layout.addWidget(self.dynamicPlot.canvas, 1)
+        layout.addWidget(self.dynamicPlot.canvas)
 
         self.fluxLabelList = raycing.allBeamFields
         self.fluxDataList = ['auto'] + list(self.fluxLabelList)
@@ -814,10 +796,11 @@ class ConfigurablePlotWidget(qt.QWidget):
                 }
             """)
 
+            self.rWidget = qt.QWidget()  # will be added to the main splitter
             layoutCtrl = qt.QVBoxLayout()
             layoutCtrl.addWidget(tabs)
             layoutCtrl.addWidget(self.exportsPanel)
-            layout.addLayout(layoutCtrl, 0)
+            self.rWidget.setLayout(layoutCtrl)
 
         self.plot_beam()
 
@@ -874,21 +857,24 @@ class ConfigurablePlotWidget(qt.QWidget):
         self.exportsPanel = qt.QGroupBox(self)
         self.exportsPanel.setSizePolicy(qt.QSizePolicy.Minimum,
                                         qt.QSizePolicy.Minimum)
-        self.exportsPanel.setFlat(False)
-        self.exportsPanel.setTitle("File Export")
-        exportLayout = qt.QHBoxLayout(self.exportsPanel)
+        # self.exportsPanel.setFlat(False)
+        # self.exportsPanel.setTitle("File Export")
+        exportLayout = qt.QVBoxLayout(self.exportsPanel)
         exportLayout.setSpacing(0)
         exportLayout.setContentsMargins(0, 0, 0, 0)
 
+        butLayout = qt.QHBoxLayout()
+        butLayout.setContentsMargins(0, 0, 0, 0)
         for label in ['Save plot', 'Pickle plot', 'Export beam']:
             button = qt.QPushButton(label)
             func = getattr(self, label.lower().replace(' ', '_'))
             button.clicked.connect(func)
-            exportLayout.addWidget(button)
+            butLayout.addWidget(button)
+        exportLayout.addLayout(butLayout)
 
         if self.allowAddToPlots:
-            button = qt.QPushButton('Add to plots')
-            button.setToolTip('Add this plot definition to the Plots tab.')
+            button = qt.QPushButton('Add to Plots')
+            button.setToolTip('Add this plot definition to the Plots tab')
             button.clicked.connect(self.addToPlots)
             exportLayout.addWidget(button)
 
@@ -1007,11 +993,12 @@ class ConfigurablePlotWidget(qt.QWidget):
 
     def set_beam(self, beamTag):
         beamTag = self.get_beam_tag(beamTag)
+        plot = self.dynamicPlot
         if len(beamTag) != 2:
             self.elementId = None
             self.beamDict = {}
-            self.dynamicPlot.beam = 'None'
-            self.dynamicPlot.beamAbsorb = None
+            plot.beam = 'None'
+            plot.beamAbsorb = None
             return
         elementId, beamKey = beamTag
         self.elementId = elementId
@@ -1019,16 +1006,16 @@ class ConfigurablePlotWidget(qt.QWidget):
         sourceBeamDict = bdu.get(elementId)
         if sourceBeamDict is None:
             self.beamDict = {}
-            self.dynamicPlot.beam = str(beamKey)
-            self.dynamicPlot.beamAbsorb = None
+            plot.beam = str(beamKey)
+            plot.beamAbsorb = None
             return
         self.beamDict = copy.copy(sourceBeamDict)
-        self.dynamicPlot.beam = str(beamKey)
+        plot.beam = str(beamKey)
 
         flowLine = self.beamLine.flowU.get(self.elementId)
         incomingElementId = None
         beamAbsorb = None
-        self.dynamicPlot.beamAbsorb = None
+        plot.beamAbsorb = None
         _ = self.beamDict.pop('beamAbsorb', None)
 
         if flowLine is not None:
@@ -1044,7 +1031,7 @@ class ConfigurablePlotWidget(qt.QWidget):
 
             if beamAbsorb is not None:
                 self.beamDict['beamAbsorb'] = beamAbsorb
-                self.dynamicPlot.beamAbsorb = 'beamAbsorb'
+                plot.beamAbsorb = 'beamAbsorb'
 
         oeLine = self.beamLine.oesDict.get(self.elementId)
         oeObj = oeLine[0] if oeLine is not None else None
@@ -1053,67 +1040,62 @@ class ConfigurablePlotWidget(qt.QWidget):
                             if key != 'beamAbsorb']
             if is_screen(oeObj) or is_aperture(oeObj) or\
                     beamKey.endswith('lobal'):
-                self.dynamicPlot.yaxis.label = r"z"
-                self.dynamicPlot.yaxis.data = 'auto'
+                plot.yaxis.label = r"z"
+                plot.yaxis.data = 'auto'
             elif len(realBeamKeys) > 1:
-                self.dynamicPlot.yaxis.label = r"y"
-                self.dynamicPlot.yaxis.data = 'auto'
+                plot.yaxis.label = r"y"
+                plot.yaxis.data = 'auto'
             else:
-                self.dynamicPlot.yaxis.label = r"z"
-                self.dynamicPlot.yaxis.data = 'auto'
+                plot.yaxis.label = r"z"
+                plot.yaxis.data = 'auto'
 
     def update_beam(self, beamTag):
-        currentTag = (getattr(self, 'elementId', None),
-                      self.dynamicPlot.beam)
+        currentTag = (getattr(self, 'elementId', None), self.dynamicPlot.beam)
         if self.liveUpdateEnabled and beamTag == currentTag:
             self.dynamicPlot.clean_plots()
             self.set_beam(beamTag)
             self.plot_beam()
 
     def update_plot(self, outList, iteration=0):
-        self.dynamicPlot.nRaysAll += outList[13]
+        plot = self.dynamicPlot
+        plot.nRaysAll += outList[13]
         nRaysVarious = outList[14]
-        self.dynamicPlot.nRaysAlive += nRaysVarious[0]
-        self.dynamicPlot.nRaysGood += nRaysVarious[1]
-        self.dynamicPlot.nRaysOut += nRaysVarious[2]
-        self.dynamicPlot.nRaysOver += nRaysVarious[3]
-        self.dynamicPlot.nRaysDead += nRaysVarious[4]
-        self.dynamicPlot.nRaysAccepted += nRaysVarious[5]
-        self.dynamicPlot.nRaysAcceptedE += nRaysVarious[6]
-        self.dynamicPlot.nRaysSeeded += nRaysVarious[7]
-        self.dynamicPlot.nRaysSeededI += nRaysVarious[8]
-        self.dynamicPlot.displayAsAbsorbedPower = outList[15]
+        plot.nRaysAlive += nRaysVarious[0]
+        plot.nRaysGood += nRaysVarious[1]
+        plot.nRaysOut += nRaysVarious[2]
+        plot.nRaysOver += nRaysVarious[3]
+        plot.nRaysDead += nRaysVarious[4]
+        plot.nRaysAccepted += nRaysVarious[5]
+        plot.nRaysAcceptedE += nRaysVarious[6]
+        plot.nRaysSeeded += nRaysVarious[7]
+        plot.nRaysSeededI += nRaysVarious[8]
+        plot.displayAsAbsorbedPower = outList[15]
 
-        for iaxis, axis in enumerate(
-                [self.dynamicPlot.xaxis,
-                 self.dynamicPlot.yaxis,
-                 self.dynamicPlot.caxis]):
-            if (iaxis == 2) and (not self.dynamicPlot.ePos):
+        for iaxis, axis in enumerate([plot.xaxis, plot.yaxis, plot.caxis]):
+            if (iaxis == 2) and (not plot.ePos):
                 continue
             axis.total1D += outList[0+iaxis*3]
             axis.total1D_RGB += outList[1+iaxis*3]
             if iteration == 0:
                 axis.binEdges = outList[2+iaxis*3]
 
-        self.dynamicPlot.total2D += outList[9]
-        self.dynamicPlot.total2D_RGB += outList[10]
-        if self.dynamicPlot.fluxKind.lower().endswith('4d'):
-            self.dynamicPlot.total4D += outList[11]
-        elif self.dynamicPlot.fluxKind.lower().endswith('pca'):
-            self.dynamicPlot.total4D.append(outList[11])
-        self.dynamicPlot.intensity += outList[12]
+        plot.total2D += outList[9]
+        plot.total2D_RGB += outList[10]
+        if plot.fluxKind.lower().endswith('4d'):
+            plot.total4D += outList[11]
+        elif plot.fluxKind.lower().endswith('pca'):
+            plot.total4D.append(outList[11])
+        plot.intensity += outList[12]
 
-        if self.dynamicPlot.fluxKind.startswith('E') and \
-                self.dynamicPlot.fluxKind.lower().endswith('pca'):
-            xbin, zbin =\
-                self.dynamicPlot.xaxis.bins, self.dynamicPlot.yaxis.bins
-            self.dynamicPlot.total4D = np.concatenate(
-                    self.dynamicPlot.total4D).reshape(-1, xbin, zbin)
-            self.dynamicPlot.field3D = self.dynamicPlot.total4D
-        self.dynamicPlot.textStatus.set_text('')
-        self.dynamicPlot.plot_plots()
+        if plot.fluxKind.startswith('E') and \
+                plot.fluxKind.lower().endswith('pca'):
+            xbin, zbin = plot.xaxis.bins, plot.yaxis.bins
+            plot.total4D = np.concatenate(plot.total4D).reshape(-1, xbin, zbin)
+            plot.field3D = plot.total4D
+        plot.textStatus.set_text('')
+        plot.plot_plots()
         self.resizeEvent()
-        self.dynamicPlot.plot_plots()
+        plot.plot_plots()
 
     def plot_beam(self, key=None):
         locCard = RunCardVals(threads=0,
@@ -1214,8 +1196,7 @@ class ConfigurablePlotWidget(qt.QWidget):
 
         if (saveDialog.exec_()):
             filename = saveDialog.selectedFiles()[0]
-            extension =\
-                str(saveDialog.selectedNameFilter())[-5:-1].strip('.')
+            extension = str(saveDialog.selectedNameFilter())[-5:-1].strip('.')
             if not filename.endswith(extension):
                 filename = "{0}.{1}".format(filename, extension)
             beam = self.beamDict.get(self.dynamicPlot.beam)
@@ -1228,31 +1209,26 @@ class ConfigurablePlotWidget(qt.QWidget):
                     print(e)
 
     def resizeEvent(self, event=None):
-        b2 = self.dynamicPlot.ax2dHist.get_position().bounds
-        x1 = self.dynamicPlot.ax1dHistX.get_position().bounds
-        y1 = self.dynamicPlot.ax1dHistY.get_position().bounds
-        xp = self.dynamicPlot.xaxis.pixels
-        yp = self.dynamicPlot.yaxis.pixels
-        if self.dynamicPlot.ePos != 0:
-            e1 = self.dynamicPlot.ax1dHistE.get_position().bounds
-            b1 = self.dynamicPlot.ax1dHistEbar.get_position().bounds
-            ep = self.dynamicPlot.caxis.pixels
+        plot = self.dynamicPlot
+        b2 = plot.ax2dHist.get_position().bounds
+        x1 = plot.ax1dHistX.get_position().bounds
+        y1 = plot.ax1dHistY.get_position().bounds
+        xp = plot.xaxis.pixels
+        yp = plot.yaxis.pixels
+        if plot.ePos != 0:
+            e1 = plot.ax1dHistE.get_position().bounds
+            b1 = plot.ax1dHistEbar.get_position().bounds
+            ep = plot.caxis.pixels
 
-        self.dynamicPlot.ax1dHistX.set_position(
-                [b2[0], x1[1], b2[2], x1[3]])
-        self.dynamicPlot.ax1dHistY.set_position(
-                [y1[0], b2[1], y1[2], b2[3]])
+        plot.ax1dHistX.set_position([b2[0], x1[1], b2[2], x1[3]])
+        plot.ax1dHistY.set_position([y1[0], b2[1], y1[2], b2[3]])
 
-        if self.dynamicPlot.ePos == 1:
-            self.dynamicPlot.ax1dHistE.set_position(
-                [e1[0], b2[1], e1[2], b2[3]*ep/yp])
-            self.dynamicPlot.ax1dHistEbar.set_position(
-                [b1[0], b2[1], b1[2], b2[3]*ep/yp])
-        elif self.dynamicPlot.ePos == 2:
-            self.dynamicPlot.ax1dHistE.set_position(
-                [b2[0], e1[1], b2[2]*ep/xp, e1[3]])
-            self.dynamicPlot.ax1dHistEbar.set_position(
-                [b2[0], b1[1], b2[2]*ep/xp, b1[3]])
+        if plot.ePos == 1:
+            plot.ax1dHistE.set_position([e1[0], b2[1], e1[2], b2[3]*ep/yp])
+            plot.ax1dHistEbar.set_position([b1[0], b2[1], b1[2], b2[3]*ep/yp])
+        elif plot.ePos == 2:
+            plot.ax1dHistE.set_position([b2[0], e1[1], b2[2]*ep/xp, e1[3]])
+            plot.ax1dHistEbar.set_position([b2[0], b1[1], b2[2]*ep/xp, b1[3]])
 
 
 class Curve1dWidget(qt.QWidget):
@@ -1281,7 +1257,6 @@ class Curve1dWidget(qt.QWidget):
         self.beamLine = beamLine
         self.elementId = elementId
         self.layout = qt.QHBoxLayout()
-        self.mainSplitter = qt.QSplitter(qt.Qt.Horizontal, self)
 
         # Create a QVBoxLayout for the plot and the toolbar
         plot_widget = qt.QWidget(self)
@@ -1308,9 +1283,9 @@ class Curve1dWidget(qt.QWidget):
         self.plot_layout.addWidget(self.canvas)
 
         plot_widget.setLayout(self.plot_layout)
-        self.mainSplitter.addWidget(plot_widget)
+        self.layout.addWidget(plot_widget)
 
-        tree_widget = qt.QWidget(self)
+        self.rWidget = qt.QWidget(self)  # will be added to the main splitter
         self.tree_layout = qt.QVBoxLayout()
         self.model = qt.QStandardItemModel()
         self.tree_view = qt.QTreeView(self)
@@ -1321,8 +1296,7 @@ class Curve1dWidget(qt.QWidget):
 #        self.tree_view.setContextMenuPolicy(qt.Qt.CustomContextMenu)
 #        self.tree_view.customContextMenuRequested.connect(
 #                self.show_context_menu)
-        comboDelegate = qt.DynamicArgumentDelegate(bl=beamLine,
-                                                   mainWidget=self)
+        comboDelegate = qt.DynamicArgumentDelegate(bl=beamLine, mainWidget=self)
         self.tree_view.setItemDelegateForColumn(1, comboDelegate)
 #        self.add_plot_button = qt.QPushButton("Add curve")
 #        self.add_plot_button.clicked.connect(self.add_plot)
@@ -1335,9 +1309,7 @@ class Curve1dWidget(qt.QWidget):
         self.tree_layout.addWidget(self.tree_view)
         self.tree_layout.addLayout(self.buttons_layout)
 
-        tree_widget.setLayout(self.tree_layout)
-        self.mainSplitter.addWidget(tree_widget)
-        self.layout.addWidget(self.mainSplitter)
+        self.rWidget.setLayout(self.tree_layout)
         self.setLayout(self.layout)
 
 #       keep it here for crystals
@@ -1639,7 +1611,7 @@ class Curve1dWidget(qt.QWidget):
                     try:
                         eMin = energies[0] - energies[-1]*5
                         eMax = energies[0] + energies[-1]*5
-                    except:
+                    except Exception:
                         commons = self.initParams['common1']
                         eMin = commons[0][1]
                         eMax = commons[1][1]
