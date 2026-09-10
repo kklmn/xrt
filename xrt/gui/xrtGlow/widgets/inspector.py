@@ -776,9 +776,12 @@ class ConfigurablePlotWidget(qt.QWidget):
         self.set_beam(plotProps.get('beam'))
 
         layout = qt.QHBoxLayout(self)
+        canvasSplitter = qt.QSplitter(qt.Qt.Horizontal)
+        canvasSplitter.setChildrenCollapsible(False)
         self.dynamicPlot.canvas.setSizePolicy(
-            qt.QSizePolicy.Minimum, qt.QSizePolicy.Minimum)
-        layout.addWidget(self.dynamicPlot.canvas, 1)
+            qt.QSizePolicy.Expanding, qt.QSizePolicy.Expanding)
+        canvasSplitter.addWidget(self.dynamicPlot.canvas)
+        layout.addWidget(canvasSplitter, 1)
 
         self.fluxLabelList = raycing.allBeamFields
         self.fluxDataList = ['auto'] + list(self.fluxLabelList)
@@ -814,10 +817,15 @@ class ConfigurablePlotWidget(qt.QWidget):
                 }
             """)
 
-            layoutCtrl = qt.QVBoxLayout()
+            ctrlWidget = qt.QWidget()
+#            ctrlWidget.setSizePolicy(qt.QSizePolicy.Expanding,
+#                                     qt.QSizePolicy.Expanding)
+            layoutCtrl = qt.QVBoxLayout(ctrlWidget)
             layoutCtrl.addWidget(tabs)
             layoutCtrl.addWidget(self.exportsPanel)
-            layout.addLayout(layoutCtrl, 0)
+            canvasSplitter.addWidget(ctrlWidget)
+#            canvasSplitter.setStretchFactor(0, 1)
+#            canvasSplitter.setStretchFactor(1, 0)
 
         self.plot_beam()
 
