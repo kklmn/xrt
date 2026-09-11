@@ -403,16 +403,16 @@ class ParsedSequenceValidator(QValidator):
         return state
 
     def _validate_members(self, value):
-        if self.argName == 'vertices':
+        if self.argName in ['vertices', 'efficiency']:
             state = QValidator.Acceptable
-            for vertex in value:
-                if not self._is_sequence(vertex) or len(vertex) != 2:
+            for item in value:
+                if not self._is_sequence(item) or len(item) != 2:
                     return QValidator.Invalid
-                vertexState = self._validate_scalar_sequence(vertex)
-                if vertexState == QValidator.Invalid:
-                    return vertexState
-                if vertexState == QValidator.Intermediate:
-                    state = vertexState
+                itemState = self._validate_scalar_sequence(item)
+                if itemState == QValidator.Invalid:
+                    return itemState
+                if itemState == QValidator.Intermediate:
+                    state = itemState
             return state
 
         state = QValidator.Acceptable

@@ -18,6 +18,7 @@ from .._utils import is_aperture, is_screen
 
 from ....backends import raycing
 from ....backends.raycing import materials as rmats
+from ....backends.raycing import sources as rs
 from ....backends.raycing.myopencl import ALL_CL_DEVICES
 from ....multipro import GenericProcessOrThread as GP
 from ....runner import RunCardVals
@@ -1246,6 +1247,7 @@ class Curve1dWidget(qt.QWidget):
         plate=[],
         mirror=[(u"θ from OE", None), (u"Grazing angle θ (mrad)", 5.),
                 ("Curves", ['σ', ])],
+        FZP=[("Diffraction order", 0), ("Curves", ['σ', ])],
         crystal=[(u"θ from OE", None), (u"Grazing angle θ (°)", 15.),
                  ("Asymmetry angle", 0), ("Curves", ['σ', ])],
         common2=[("Curve Color", "blue")],
@@ -1330,6 +1332,7 @@ class Curve1dWidget(qt.QWidget):
     def add_plot(self):
         eMin = eMax = None
         angle_rad = None
+        diffractionOrder = 0
         srcName = "None"
         fromOeTxt = "None"
         self.kindParams = None
@@ -1346,7 +1349,7 @@ class Curve1dWidget(qt.QWidget):
                 plot_name = f"{matName} abs coeff"
                 self.axes.set_ylabel('Absorption coefficient (cm⁻¹)')
                 self.kindParams = 'plate'
-            elif matKind in ('mirror', 'multilayer'):
+            elif matKind in ('mirror', 'multilayer', 'grating'):
                 if hasattr(mat, 'geom'):
                     if mat.geom.endswith('transmitted'):
                         plot_name = f"{matName} transmittivity"
@@ -1362,6 +1365,12 @@ class Curve1dWidget(qt.QWidget):
                         plot_name = f"{matName} reflectivity"
                 self.axes.set_ylabel(plot_name)
                 self.kindParams = 'crystal'
+            elif matKind == 'FZP':
+                plot_name = f"{matName} efficiency"
+                self.axes.set_ylabel('Efficiency')
+                self.kindParams = 'FZP'
+                if getattr(mat, 'efficiency', None) is not None:
+                    diffractionOrder = mat.efficiency[0][0]
 
             for oeLine in self.beamLine.oesDict.values():
                 oeObj = oeLine[0]
@@ -1458,6 +1467,8 @@ class Curve1dWidget(qt.QWidget):
                 #     item_name.setEnabled(False)
                 #     item_value.setEnabled(False)
                 item_value.setData(0, role=qt.Qt.UserRole)
+            elif iname == "Diffraction order":
+                item_value.setText(str(diffractionOrder))
             elif iname == "Curve Color":
                 cb = qt.QComboBox()
                 cb.setMaxVisibleItems(25)
@@ -1718,6 +1729,24 @@ class Curve1dWidget(qt.QWidget):
             elif self.kindParams == 'plate':
                 ampS = mat.get_amplitude(xenergy, 0.5)[2]
                 ampP = np.zeros_like(xenergy)
+            elif self.kindParams == 'FZP':
+                if getattr(mat, 'efficiency', None) is None:
+                    ampS, ampP = mat.get_amplitude(
+                        xenergy, np.ones_like(xenergy))[0:2]
+                else:
+                    orderIndex = self.findIndexFromText("Diffraction order")
+                    try:
+                        diffractionOrder = int(
+                            plot_item.child(orderIndex, 1).text())
+                    except (AttributeError, TypeError, ValueError):
+                        diffractionOrder = mat.efficiency[0][0]
+                    efficiencyBeam = rs.Beam(nrays=len(xenergy))
+                    efficiencyBeam.E = xenergy
+                    efficiencyBeam.order = np.full(
+                        xenergy.shape, diffractionOrder, dtype=int)
+                    good = np.ones(xenergy.shape, dtype=bool)
+                    ampS, ampP = mat.get_grating_efficiency(
+                        efficiencyBeam, good)[0:2]
         except ValueError as e:
             print(e)
             ampS = np.zeros_like(xenergy)

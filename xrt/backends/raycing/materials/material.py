@@ -92,7 +92,7 @@ class Material(object):
             calculation can be found in
             ``\examples\withRaycing\11_Wave\waveGrating.py``.
 
-        *efficiencyFile*: str
+        *efficiencyFile*: str or None
             See the definition of *efficiency*.
 
         *name*: str
@@ -121,26 +121,7 @@ class Material(object):
         self.table = table
         self.elements = elements
         self.quantities = quantities
-
-#        if isinstance(elements, basestring):
-#            elements = elements,
-#
-#        if quantities is None:
-#            self.quantities = [1. for elem in elements]
-#        else:
-#            self.quantities = quantities
-#        self.elements = []
-#        self.mass = 0.
         self.refractiveIndex = refractiveIndex
-
-#        for elem, xi in zip(elements, self.quantities):
-#            newElement = Element(elem, table)
-#            self.elements.append(newElement)
-#            self.mass += xi * newElement.mass
-#            if autoName:
-#                self.name += elem
-#                if xi != 1:
-#                    self.name += '$_{' + '{0}'.format(xi) + '}$'
         self.t = t
         self.kind = kind  # 'mirror', 'thin mirror', 'plate', 'lens'
 
@@ -148,8 +129,6 @@ class Material(object):
         self.geom = ''
         self.efficiency = efficiency
         self.efficiencyFile = efficiencyFile
-        if efficiencyFile is not None:
-            self.read_efficiency_file()
         if not hasattr(self, 'uuid'):  # uuid must not change on re-init
             self.uuid = kwargs['uuid'] if 'uuid' in kwargs else\
                 str(raycing.uuid.uuid4())
@@ -203,12 +182,23 @@ class Material(object):
     @elements.setter
     def elements(self, elements):
         self._elements = []
+        if elements is None:
+            elements = []
         if isinstance(elements, raycing.basestring):
             elements = elements,
+
         if hasattr(self, 'table'):
-            for elem in elements:
-                newElement = Element(elem, self.table)
-                self._elements.append(newElement)
+            try:
+                for elem in elements:
+                    newElement = Element(elem, self.table)
+                    self._elements.append(newElement)
+            except (ValueError, NameError):
+                return
+
+        if not hasattr(self, '_quantities') or \
+                len(self._quantities) != len(self._elements):
+            self._quantities = [1. for elem in self._elements]
+
         self.set_mass()
 
     @property
@@ -222,10 +212,11 @@ class Material(object):
                 self._quantities = [1. for elem in self.elements]
             else:
                 self._quantities = [1]
-        elif not isinstance(quantities, (list, tuple)):
+        elif np.isscalar(quantities):
             self._quantities = [quantities]
         else:
-            self._quantities = quantities
+            self._quantities = list(quantities)
+
         self.set_mass()
 
     @property
@@ -235,6 +226,9 @@ class Material(object):
     @table.setter
     def table(self, table):
         self._table = table
+        if hasattr(self, '_elements'):
+            for elem in self._elements:
+                elem.table = table
         self.set_mass()
 
     @property
@@ -267,12 +261,77 @@ class Material(object):
         else:
             self._refractiveIndexVal = None
 
+    @property
+    def efficiency(self):
+        return getattr(self, '_efficiency',
+                       self.__dict__.get('efficiency'))
+
+    @efficiency.setter
+    def efficiency(self, efficiency):
+        self._efficiency = None
+        self.efficiency_E = None
+        self.efficiency_I = None
+
+        if efficiency is None:
+            return
+
+        try:
+            newEfficiency = []
+            for eff in efficiency:
+                if isinstance(eff, raycing.basestring) or len(eff) != 2:
+                    raise ValueError("Expected (order, value) pairs")
+                if not np.isscalar(eff[0]) or not np.isscalar(eff[1]):
+                    raise ValueError("Efficiency pair values must be scalars")
+                order = int(eff[0])
+                value = float(eff[1])
+                if order != eff[0]:
+                    raise ValueError("Diffraction orders must be integers")
+                if not np.isfinite(value):
+                    raise ValueError("Efficiency values must be finite")
+                newEfficiency.append((order, value))
+        except (TypeError, ValueError) as e:
+            print("Cannot set grating efficiency: {0}".format(e))
+            return
+
+        if len(newEfficiency) == 0:
+            return
+
+        self._efficiency = newEfficiency
+
+        if getattr(self, '_efficiencyFile', None) is not None:
+            try:
+                self.read_efficiency_file()
+            except Exception as e:
+                print("Cannot read efficiency file '{0}': {1}".format(
+                    self.efficiencyFile, e))
+
+    @property
+    def efficiencyFile(self):
+        return getattr(self, '_efficiencyFile',
+                       self.__dict__.get('efficiencyFile'))
+
+    @efficiencyFile.setter
+    def efficiencyFile(self, efficiencyFile):
+        self._efficiencyFile = efficiencyFile
+        self.efficiency_E = None
+        self.efficiency_I = None
+
+        if efficiencyFile is not None and self.efficiency is not None:
+            try:
+                self.read_efficiency_file()
+            except Exception as e:
+                print("Cannot read efficiency file '{0}': {1}".format(
+                    efficiencyFile, e))
+
     def set_mass(self):
         self.mass = 0.
         if self.autoName:
             self.name = ''
         if not all([hasattr(self, v) for v in
                     ['_elements', '_quantities']]):
+            return
+
+        if len(self.elements) != len(self.quantities):
             return
 
         for elem, xi in zip(self.elements, self.quantities):
@@ -334,7 +393,13 @@ class Material(object):
             return complex(1.)
 
     def read_efficiency_file(self):
-        cols = [c[1] for c in self.efficiency]
+        cols = []
+        for efficiency in self.efficiency:
+            col = int(efficiency[1])
+            if col != efficiency[1] or col < 0:
+                raise ValueError(
+                    "Efficiency file columns must be non-negative integers")
+            cols.append(col)
         if self.efficiencyFile.endswith('.pickle'):
             with open(self.efficiencyFile, 'rb') as f:
                 res = pickle.load(f)
@@ -343,6 +408,22 @@ class Material(object):
             es = np.loadtxt(self.efficiencyFile, usecols=(0,), unpack=True)
             eff = (np.loadtxt(self.efficiencyFile, usecols=cols,
                               unpack=True)).reshape(len(cols), -1)
+
+        es = np.asarray(es, dtype=float)
+        eff = np.asarray(eff, dtype=float)
+
+        if es.ndim != 1 or es.size == 0:
+            raise ValueError("Efficiency energy data are empty or malformed")
+        if eff.shape != (len(self.efficiency), es.size):
+            raise ValueError("Efficiency data have an unexpected shape")
+        if not np.all(np.isfinite(es)) or \
+                not np.all(np.isfinite(eff)):
+            raise ValueError("Efficiency data contain non-finite values")
+        if np.any(np.diff(es) <= 0):
+            raise ValueError("Efficiency energies must be increasing")
+        if np.any(eff < 0) or np.any(eff > 1):
+            raise ValueError("Efficiency values must be between 0 and 1")
+
         self.efficiency_E = es
         self.efficiency_I = eff
 
@@ -361,6 +442,8 @@ class Material(object):
         :math:`f_i(0)` are the complex atomic scattering factor for the forward
         scattering.
         """
+        E = np.asarray(E)
+
         if self.refractiveIndex is not None:
             if isinstance(self.refractiveIndex, (tuple, list)):
                 if np.min(E) > self.refractiveIndex[0][0] and\
@@ -372,7 +455,19 @@ class Material(object):
                           "Using atomic scattering factors")
             elif isinstance(self.refractiveIndex, complex):
                 return self.refractiveIndex
-        xf = np.zeros_like(E) * 0j
+
+        if not hasattr(self, '_elements') or \
+                not hasattr(self, '_quantities') or \
+                len(self.elements) != len(self.quantities) or \
+                len(self.elements) == 0 or \
+                self.mass == 0 or \
+                any(len(elem.E) == 0 or
+                    len(elem.f1) == 0 or
+                    len(elem.f2) == 0
+                    for elem in self.elements):
+            return np.ones_like(E, dtype=complex)
+
+        xf = np.zeros_like(E, dtype=complex)
         for elem, xi in zip(self.elements, self.quantities):
             xf += (elem.Z + elem.get_f1f2(E)) * xi
         return 1 - 1e-24 * AVOGADRO * R0 / PI2 * (CH/E)**2 * self.rho * \
@@ -387,28 +482,42 @@ class Material(object):
 
             \mu = 2 \Im(n) k.
         """
-        return abs((self.get_refractive_index(E)).imag) * E / CHBAR * 2e8
+        E = np.asarray(E)
+        refractiveIndex = self.get_refractive_index(E)
+        return np.abs(np.imag(refractiveIndex)) * E / CHBAR * 2e8
 
     def get_grating_efficiency(self, beam, good):
         """Gets grating efficiency from the parameters *efficiency* and
         *efficiencyFile* supplied at the instantiation."""
+        good = np.asarray(good, dtype=bool)
         resI = np.zeros(good.sum())
-        order = beam.order[good]
+        order = np.asarray(beam.order)[good]
+
+        if self.efficiency is None:
+            resA = resI**0.5
+            return resA, resA, 0
+
         if self.efficiencyFile is None:
             for eff in self.efficiency:
-                resI[order == eff[0]] = eff[1]
+                try:
+                    value = float(eff[1])
+                except (TypeError, ValueError):
+                    continue
+                if np.isfinite(value) and 0 <= value <= 1:
+                    resI[order == eff[0]] = value
         else:
-            E = beam.E[good]
+            if self.efficiency_E is None or self.efficiency_I is None:
+                resA = resI**0.5
+                return resA, resA, 0
+
+            E = np.asarray(beam.E)[good]
             Emin = self.efficiency_E[0]
             Emax = self.efficiency_E[-1]
-            if (np.any(E < Emin) or np.any(E > Emax)):
-                raise ValueError(
-                    ('E={0} is out of the efficiency table range ' +
-                     '[{1}, {2}]!!! Use another table.').format(
-                        E[np.where((E < Emin) | (E > Emax))], Emin, Emax))
+            inRange = np.isfinite(E) & (E >= Emin) & (E <= Emax)
             for ieff, eff in enumerate(self.efficiency):
-                resI[order == eff[0]] = np.interp(
-                    E[order == eff[0]], self.efficiency_E,
+                selected = (order == eff[0]) & inRange
+                resI[selected] = np.interp(
+                    E[selected], self.efficiency_E,
                     self.efficiency_I[ieff])
         resA = resI**0.5
         return resA, resA, 0
@@ -457,7 +566,9 @@ class Material(object):
 
 #        if self.kind in ('grating', 'FZP'):
         if self.kind in ('FZP'):
-            return 1, 1, 0
+            ones = np.ones_like(E, dtype=complex)
+            zeros = np.zeros_like(E, dtype=float)
+            return ones, ones, zeros
         n = self.get_refractive_index(E)
         if fromVacuum:
             n1 = 1.
