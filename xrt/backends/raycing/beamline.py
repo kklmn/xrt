@@ -1287,7 +1287,24 @@ class BeamLine(object):
             return
 
         from .run import run_process
-        run_process(self)
+        outDict = run_process(self)
+
+        namedBeams = {}
+        beamLineBeams = getattr(self, 'beams', None)
+        if isinstance(beamLineBeams, dict):
+            namedBeams.update(beamLineBeams)
+        if isinstance(outDict, dict):
+            namedBeams.update(outDict)
+
+        beamTagsById = {
+            id(beam): (oeid, beamType)
+            for oeid, outputs in self.beamsDictU.items()
+            for beamType, beam in outputs.items()
+            if beam is not None}
+        for beamName, beam in namedBeams.items():
+            beamTag = beamTagsById.get(id(beam))
+            if beamTag is not None:
+                self.beamNamesDict[str(beamName)] = beamTag
 
         app = xrtqook.qt.QApplication.instance()
         if app is None:
@@ -1303,7 +1320,14 @@ class BeamLine(object):
                     layout['description'] = description
 
             if plots is not None and not layout['plots']:
-                layout['plots'].update(plots)
+                importedPlots = copy.deepcopy(plots)
+                for plotProps in importedPlots.values():
+                    beamName = plotProps.get('beam')
+                    if isinstance(beamName, str):
+                        beamTag = self.beamNamesDict.get(beamName)
+                        if beamTag is not None:
+                            plotProps['beam'] = beamTag
+                layout['plots'].update(importedPlots)
 
             self.blExplorer = xrtqook.XrtQook(loadLayout=layout)
             self.blExplorer.setWindowTitle("xrtQook")
