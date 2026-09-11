@@ -14,6 +14,7 @@ if _XRT_ROOT not in sys.path:
 
 from xrt import plotter as xrtp
 from xrt.backends import raycing
+from xrt.backends.raycing import oes as roes
 
 from tests.raycing.auto._property_test_helpers import (
     assert_equivalent, assert_metadata_contract)
@@ -439,6 +440,28 @@ class PlotPropertyRoundTripTest(unittest.TestCase):
             expected_axis_state(
                 'energy', 'keV', raycing.get_energy, 1e-3, [8., 9.], 6,
                 factor_init=1e-3, fwhm_format='%.4f'))
+
+    def test_plot_oe_serializes_as_gui_boolean(self):
+        beamLine = raycing.BeamLine()
+        oe = roes.OE(bl=beamLine, name='Mirror')
+        plot = xrtp.XYCPlot(beam='beamLocal', oe=oe)
+        self.addCleanup(close_plot, plot)
+
+        serialized = xrtp.serialize_plots([plot])
+        plotProps = serialized['plot01']
+        self.assertNotIn('oe', plotProps)
+        self.assertTrue(raycing.parametrize(plotProps['drawOeArea']))
+
+        plotProps['beam'] = (oe.uuid, 'beamLocal')
+        restored = xrtp.deserialize_plots(
+            {'Project': {'plots': serialized}}, beamLine=beamLine)[0]
+        self.addCleanup(close_plot, restored)
+        self.assertIs(restored.oe, oe)
+        self.assertEqual(len(restored.oeSurfacePatches), 1)
+
+        restored.drawOeArea = False
+        self.assertIsNone(restored.oe)
+        self.assertEqual(restored.oeSurfacePatches, [])
 
 
 if __name__ == '__main__':

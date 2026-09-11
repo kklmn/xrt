@@ -735,7 +735,7 @@ class ConfigurablePlotWidget(qt.QWidget):
         plotInitProps = copy.deepcopy(plotProps)
         plotInitProps['useQtWidget'] = True
         plotInit = {'Project': {'plots': {'plot': plotInitProps}}}
-        plotObj = deserialize_plots(plotInit)
+        plotObj = deserialize_plots(plotInit, beamLine=beamLine)
 
         self.objectFlag = qt.Qt.ItemFlags(0)
         self.paramFlag = qt.Qt.ItemFlags(
@@ -988,7 +988,8 @@ class ConfigurablePlotWidget(qt.QWidget):
             self.dynamicPlot.reset_bins2D()
             self.dynamicPlot.reset_fig_layout()
 
-        if paramTuple[2] not in ['negative', 'invertColorMap']:
+        if paramTuple[2] not in [
+                'negative', 'invertColorMap', 'drawOeArea']:
             self.dynamicPlot.clean_plots()
             self.plot_beam()
 
@@ -1011,7 +1012,7 @@ class ConfigurablePlotWidget(qt.QWidget):
             plot.beamAbsorb = None
             return
         self.beamDict = copy.copy(sourceBeamDict)
-        plot.beam = str(beamKey)
+        plot.beam = beamTag
 
         flowLine = self.beamLine.flowU.get(self.elementId)
         incomingElementId = None

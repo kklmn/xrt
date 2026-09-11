@@ -332,6 +332,11 @@ class XrtQookElements(XrtQookBase):
         axDefArgs = dict(raycing.get_params("xrt.plotter.XYCAxis"))
         plotProps = plotDefArgs
 
+        if isinstance(copyFrom, dict):
+            oe = raycing.parametrize(copyFrom.pop('oe', None))
+            if oe is not None:
+                copyFrom['drawOeArea'] = True
+
         if plotName is None:
             for i in range(99):
                 plotName = 'plot{:02d}'.format(i+1)
@@ -416,7 +421,7 @@ class XrtQookElements(XrtQookBase):
                 if pname in ['_object']:
                     self.addObject(self.plotTree, plotItem,
                                    "xrt.plotter.XYCPlot")
-                elif pname == 'useQtWidget':
+                elif pname in ['useQtWidget', 'oe', 'bl']:
                     continue
                 elif pname in ['xaxis', 'yaxis', 'caxis']:
                     child0 = self.addProp(plotItem, pname)

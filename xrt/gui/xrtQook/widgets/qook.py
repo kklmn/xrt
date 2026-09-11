@@ -989,9 +989,9 @@ if __name__ == '__main__':
         codeMain += e0str
         codeMain += '{1}{0}.alignE = E0\n'.format(BLName, myTab)
         if not self.glowOnly:
-            codeMain += '{0}{1} = define_plots()\n'.format(
-                myTab, self.rootPlotItem.text())
-        codePlots = 'def define_plots():\n{0}{1} = []\n'.format(
+            codeMain += '{0}{1} = define_plots({2})\n'.format(
+                myTab, self.rootPlotItem.text(), BLName)
+        codePlots = 'def define_plots(bl):\n{0}{1} = []\n'.format(
             myTab, self.rootPlotItem.text())
         self.progressBar.setValue(70)
         self.progressBar.setFormat("Adding plots.")
@@ -1066,6 +1066,57 @@ if __name__ == '__main__':
                         paraname = str(tItem.child(iep, 0).text())
                         paravalue = str(tItem.child(iep, 1).text())
                         arg_def = str(plotDefArgs.get(paraname))
+                        if paraname == "drawOeArea":
+                            if raycing.parametrize(paravalue):
+                                beamName = None
+                                raycingParam = 0
+                                for ipp in range(tItem.rowCount()):
+                                    plotParamName = str(
+                                        tItem.child(ipp, 0).text())
+                                    if plotParamName == 'beam':
+                                        beamName = str(
+                                            tItem.child(ipp, 1).text())
+                                    elif plotParamName == 'raycingParam':
+                                        raycingParam = raycing.parametrize(
+                                            tItem.child(ipp, 1).text())
+
+                                oeName = None
+                                beamItems = self.beamModel.findItems(
+                                    beamName, column=0)
+                                if beamItems:
+                                    beamRow = beamItems[0].row()
+                                    oeid = str(self.beamModel.item(
+                                        beamRow, 2).text())
+                                    oeLine = self.beamLine.oesDict.get(oeid)
+                                    oeObj = oeLine[0] if oeLine is not None\
+                                        else None
+                                    requiredAttrs = (
+                                        'surface', 'limPhysX', 'limPhysY',
+                                        'limOptX', 'limOptY', 'shape')
+                                    if raycingParam == 2:
+                                        requiredAttrs += (
+                                            'limPhysX2', 'limPhysY2',
+                                            'limOptX2', 'limOptY2')
+                                    if oeObj is not None and all(
+                                            hasattr(oeObj, attr)
+                                            for attr in requiredAttrs):
+                                        for ibl in range(
+                                                self.rootBLItem.rowCount()):
+                                            oeItem = self.rootBLItem.child(
+                                                ibl, 0)
+                                            if str(oeItem.data(
+                                                    qt.Qt.UserRole)) == oeid:
+                                                oeName = str(oeItem.text())
+                                                break
+                                if oeName is not None:
+                                    ieinit += '\n{1}oe=bl.{0},'.format(
+                                        oeName, myTab*2)
+                                else:
+                                    print('Cannot generate oe for plot '
+                                          '"{}": its beam has no valid '
+                                          'optical element.'.format(
+                                              tItem.text()))
+                            continue
                         if paravalue != arg_def:
                             if paraname == "fluxKind":
                                 ieinit += '\n{2}{0}={1},'.format(

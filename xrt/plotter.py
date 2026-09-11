@@ -185,7 +185,7 @@ def serialize_plots(data):
     return plotsDict
 
 
-def deserialize_plots(data):
+def deserialize_plots(data, beamLine=None):
     plotsList = []
     plotDefArgs = dict(raycing.get_params("xrt.plotter.XYCPlot"))
     axDefArgs = dict(raycing.get_params("xrt.plotter.XYCAxis"))
@@ -211,6 +211,8 @@ def deserialize_plots(data):
             else:
                 if pname in plotDefArgs and pval != str(plotDefArgs[pname]):
                     plotKwargs[pname] = raycing.parametrize(pval)
+        if beamLine is not None:
+            plotKwargs['bl'] = beamLine
         try:
             newPlot = XYCPlot(**plotKwargs)
             plotsList.append(newPlot)
@@ -681,6 +683,8 @@ class XYCPlot(object):
 
     """
 
+    hiddenParams = {'oe', 'bl'}
+
     def __init__(
         self, beam=None, rayFlag=(1,), xaxis=None, yaxis=None, caxis=None,
         aspect='equal', xPos=1, yPos=1, ePos=1, title='',
@@ -914,6 +918,10 @@ class XYCPlot(object):
             specified, will be overdrawn. Useful with raycing backend for
             footprint images.
 
+        *drawOeArea*: bool
+            GUI-facing equivalent of *oe*. If true and the plot has beamline
+            context, the optical element is inferred from the plotted beam.
+
         *raycingParam*: int
             Used together with the *oe* parameter above for drawing footprint
             envelopes. If =2, the limits of the second crystal of DCM are taken
@@ -935,6 +943,8 @@ class XYCPlot(object):
 
         """
         useQtWidget = kwargs.pop('useQtWidget', False)
+        self.bl = kwargs.pop('bl', None)
+        drawOeArea = kwargs.pop('drawOeArea', False)
         if not hasQt:
             useQtWidget = False
         if not useQtWidget:
@@ -944,11 +954,12 @@ class XYCPlot(object):
         self.runCardVals = None
 
         self.beam = beam  # binary shadow image: star, mirr or screen
-        if beam is None:
+        if self.beam is None:
             self.backend = 'raycing'
-        elif 'star.' in beam or 'mirr.' in beam or 'screen.' in beam:
+        elif 'star.' in self.beam or 'mirr.' in self.beam or\
+                'screen.' in self.beam:
             self.backend = 'shadow'
-        elif ('dummy' in beam) or (beam == ''):
+        elif ('dummy' in self.beam) or (self.beam == ''):
             self.backend = 'dummy'
         elif isinstance(rayFlag, (tuple, list)):
             self.backend = 'raycing'
@@ -1174,10 +1185,13 @@ class XYCPlot(object):
         self.contours2D = None
         self.contours2DLabels = None
 
-        self.oe = oe
-        self.oeSurfaceLabels = []
         self.raycingParam = raycingParam
-        self.draw_footprint_area()
+        self.oeSurfaceLabels = []
+        self.oeSurfacePatches = []
+        self._oe = None
+        self._drawOeArea = False
+        self.oe = oe
+        self.drawOeArea = bool(drawOeArea or self.oe is not None)
 
         if self.xaxis.limits is not None:
             if not isinstance(self.xaxis.limits, str):
@@ -1457,6 +1471,64 @@ class XYCPlot(object):
         self.yaxis.limits = [ymin, ymax]
         self.caxis.limits = [emin, emax]
 
+    @property
+    def beam(self):
+        return self._beam
+
+    @beam.setter
+    def beam(self, value):
+        ownerId = None
+        if raycing.is_sequence(value) and len(value) == 2:
+            ownerId, value = value
+        elif self.bl is not None:
+            beamTag = getattr(self.bl, 'beamNamesDict', {}).get(str(value))
+            if raycing.is_sequence(beamTag) and len(beamTag) == 2:
+                ownerId = beamTag[0]
+        self._beamOwnerId = ownerId
+        self._beam = value
+        if getattr(self, '_drawOeArea', False) and\
+                hasattr(self, 'oeSurfaceLabels'):
+            self.drawOeArea = True
+
+    @property
+    def oe(self):
+        return self._oe
+
+    @oe.setter
+    def oe(self, value):
+        requiredAttrs = (
+            'surface', 'limPhysX', 'limPhysY', 'limOptX', 'limOptY', 'shape')
+        if getattr(self, 'raycingParam', 0) == 2:
+            requiredAttrs += (
+                'limPhysX2', 'limPhysY2', 'limOptX2', 'limOptY2')
+        self._oe = value if value is not None and all(
+            hasattr(value, attr) for attr in requiredAttrs) else None
+
+    @property
+    def drawOeArea(self):
+        return self._drawOeArea if self.bl is not None else\
+            self.oe is not None
+
+    @drawOeArea.setter
+    def drawOeArea(self, value):
+        self._drawOeArea = bool(value)
+        if self._drawOeArea and self.bl is not None and\
+                self._beamOwnerId is not None:
+            oeLine = getattr(self.bl, 'oesDict', {}).get(self._beamOwnerId)
+            self.oe = oeLine[0] if oeLine is not None else None
+        elif not self._drawOeArea:
+            self.oe = None
+
+        if hasattr(self, 'ax2dHist') and self.ax2dHist is not None:
+            for patch in self.oeSurfacePatches:
+                patch.remove()
+            for label in self.oeSurfaceLabels:
+                label.remove()
+            self.oeSurfacePatches = []
+            self.oeSurfaceLabels = []
+            self.draw_footprint_area()
+            self.fig.canvas.draw_idle()
+
     def draw_footprint_area(self):
         """
         Useful with raycing backend for footprint images.
@@ -1464,8 +1536,8 @@ class XYCPlot(object):
         if self.oe is None:
             return
         if self.oe.surface is None:
-            return
-        if isinstance(self.oe.surface, basestring):
+            surface = '',
+        elif isinstance(self.oe.surface, basestring):
             surface = self.oe.surface,
         else:
             surface = self.oe.surface
@@ -1549,6 +1621,7 @@ class XYCPlot(object):
                 envelope = mpl.patches.Polygon(self.oe.shape, closed=True,
                                                fc="#aaaaaa", lw=0, alpha=0.25)
             self.ax2dHist.add_patch(envelope)
+            self.oeSurfacePatches.append(envelope)
             if self.raycingParam < 1000:
                 if self.yaxis.limits is not None:
                     yTextPos = max(r[2], self.yaxis.limits[0])
