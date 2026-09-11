@@ -195,11 +195,16 @@ class PlotViewer(qt.QDialog):
         self.setWindowTitle("Live Plot Builder")
         hiddenProps = {'_object', 'fluxUnit'}
 
+        splitter = qt.QSplitter()
+        splitter.setChildrenCollapsible(False)
         self.dynamicPlot = ConfigurablePlotWidget(
                 plotProps, parent, viewOnly, beamLine,
                 plotId, hiddenProps=hiddenProps)
+        splitter.addWidget(self.dynamicPlot)
+        if hasattr(self.dynamicPlot, 'rWidget'):
+            splitter.addWidget(self.dynamicPlot.rWidget)
         layout = qt.QVBoxLayout(self)
-        layout.addWidget(self.dynamicPlot)
+        layout.addWidget(splitter)
 
     def update_plot_param(self, paramTuple):
         self.dynamicPlot.update_plot_param(paramTuple)
