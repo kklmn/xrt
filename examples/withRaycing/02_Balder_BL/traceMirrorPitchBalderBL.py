@@ -10,7 +10,7 @@ import xrt.backends.raycing.sources as rs
 import xrt.backends.raycing.run as rr
 import BalderBL
 
-showIn3D = False
+showIn3D = True
 BalderBL.showIn3D = showIn3D
 
 stripe = 'Ir'

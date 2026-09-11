@@ -11,7 +11,7 @@ import xrt.runner as xrtr
 import xrt.backends.raycing.materials as rm
 import BalderBL
 
-showIn3D = False
+showIn3D = True
 BalderBL.showIn3D = showIn3D
 
 stripe = 'Si'
@@ -197,6 +197,7 @@ def main():
     myBalder = BalderBL.build_beamline(
         stripe=stripe, eMinRays=E0-dE, eMaxRays=E0+dE)
     if showIn3D:
+        BalderBL.align_beamline(myBalder, energy=E0)
         scan = make_glow_scan(myBalder)
         myBalder.glow(centerAt='VFM', startFrom=7,
                       scan=scan)
