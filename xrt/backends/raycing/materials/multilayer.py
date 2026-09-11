@@ -74,8 +74,6 @@ class Multilayer(object):
 
         self.kind = 'multilayer'
         self.geom = geom
-        if not self.geom:
-            self.geom = 'reflected'
 
         self.idThickness = idThickness
         self.substRoughness = substRoughness
@@ -113,9 +111,23 @@ class Multilayer(object):
 
     @nPairs.setter
     def nPairs(self, n):
-        self._nPairs = int(n)
+        try:
+            self._nPairs = max(0, int(n))
+        except (TypeError, ValueError):
+            self._nPairs = 0
         self.set_dti()
         self.set_dbi()
+
+    @property
+    def geom(self):
+        return self._geom
+
+    @geom.setter
+    def geom(self, geom):
+        if geom in ('reflected', 'transmitted'):
+            self._geom = geom
+        elif not hasattr(self, '_geom'):
+            self._geom = 'reflected'
 
     @property
     def tThickness(self):
@@ -194,14 +206,29 @@ class Multilayer(object):
                      '_power']]):
             return
 
-        if self.tThicknessLow:
-            layers = np.arange(1, self.nPairs+1)
-            tqRoot = (self.tThicknessHigh/self.tThicknessLow)**(1./self.power)
-            tqB = (self.nPairs-tqRoot) / (tqRoot-1.)
-            tqA = self.tThicknessHigh * (tqB+1)**self.power
-            self.dti = tqA * (tqB+layers)**(-self.power)
-        else:
-            self.dti = np.ones(self.nPairs) * float(self.tThickness)
+        if self.nPairs == 0:
+            self.dti = np.empty(0)
+            return
+
+        canGrade = self.nPairs > 1 and \
+            self.tThicknessHigh > 0 and \
+            self.tThicknessLow > 0 and \
+            self.power != 0 and \
+            np.isfinite(self.power) and \
+            self.tThicknessHigh != self.tThicknessLow
+
+        if not canGrade:
+            self.dti = np.full(self.nPairs, self.tThicknessHigh)
+            return
+
+        layers = np.arange(1, self.nPairs+1)
+        tqRoot = (self.tThicknessHigh/self.tThicknessLow)**(1./self.power)
+        tqB = (self.nPairs-tqRoot) / (tqRoot-1.)
+        tqA = self.tThicknessHigh * (tqB+1)**self.power
+        self.dti = tqA * (tqB+layers)**(-self.power)
+
+        if not np.all(np.isfinite(self.dti)):
+            self.dti = np.full(self.nPairs, self.tThicknessHigh)
 
     def set_dbi(self):
         if not all([hasattr(self, v) for v in
@@ -209,14 +236,29 @@ class Multilayer(object):
                      '_power']]):
             return
 
-        if self.bThicknessLow:
-            layers = np.arange(1, self.nPairs+1)
-            bqRoot = (self.bThicknessHigh/self.bThicknessLow)**(1./self.power)
-            bqB = (self.nPairs-bqRoot) / (bqRoot-1.)
-            bqA = self.bThicknessHigh * (bqB+1)**self.power
-            self.dbi = bqA * (bqB+layers)**(-self.power)
-        else:
-            self.dbi = np.ones(self.nPairs) * float(self.bThickness)
+        if self.nPairs == 0:
+            self.dbi = np.empty(0)
+            return
+
+        canGrade = self.nPairs > 1 and \
+            self.bThicknessHigh > 0 and \
+            self.bThicknessLow > 0 and \
+            self.power != 0 and \
+            np.isfinite(self.power) and \
+            self.bThicknessHigh != self.bThicknessLow
+
+        if not canGrade:
+            self.dbi = np.full(self.nPairs, self.bThicknessHigh)
+            return
+
+        layers = np.arange(1, self.nPairs+1)
+        bqRoot = (self.bThicknessHigh/self.bThicknessLow)**(1./self.power)
+        bqB = (self.nPairs-bqRoot) / (bqRoot-1.)
+        bqA = self.bThicknessHigh * (bqB+1)**self.power
+        self.dbi = bqA * (bqB+layers)**(-self.power)
+
+        if not np.all(np.isfinite(self.dbi)):
+            self.dbi = np.full(self.nPairs, self.bThicknessHigh)
 
     def get_sin_Bragg_angle(self, E, order=1):
         """ensures that -1 <= sin(theta) <= 1"""
