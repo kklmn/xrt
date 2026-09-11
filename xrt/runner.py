@@ -14,6 +14,19 @@ import inspect
 import pickle
 import numpy as np
 import matplotlib as mpl
+
+try:
+    from matplotlib.backends import BackendFilter, backend_registry
+    _NON_INTERACTIVE_BACKENDS = tuple(
+        name.lower()
+        for name in backend_registry.list_builtin(
+                BackendFilter.NON_INTERACTIVE))
+except (ImportError, AttributeError):
+    _NON_INTERACTIVE_BACKENDS = tuple(
+        name.lower()
+        for name in mpl.rcsetup.non_interactive_bk
+    )
+
 import matplotlib.pyplot as plt
 import multiprocessing
 import errno
@@ -149,8 +162,7 @@ def start_jobs():
 
     runCardVals.iteration = np.int64(0)
     noTimer = len(_plots) == 0 or\
-        (plt.get_backend().lower() in (x.lower() for x in
-                                       mpl.rcsetup.non_interactive_bk))
+        (plt.get_backend().lower() in _NON_INTERACTIVE_BACKENDS)
     if noTimer:
         print("The job is running... ")
         while True:
@@ -323,8 +335,7 @@ def on_finish():
     """Executed on exit from the ray-tracing iteration loop."""
     if len(_plots) > 0:
         plot = _plots[0]
-        if plt.get_backend().lower() not in (
-                x.lower() for x in mpl.rcsetup.non_interactive_bk):
+        if plt.get_backend().lower() not in _NON_INTERACTIVE_BACKENDS:
             plot.timer.stop()
             plot.timer.remove_callback(plot.timer_callback)
         plot.areProcessAlreadyRunning = False
