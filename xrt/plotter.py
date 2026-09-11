@@ -1832,7 +1832,10 @@ class XYCPlot(object):
                     for contour in self.contours2D.collections:
                         contour.remove()
                 else:
-                    self.contours2D.remove()
+                    try:
+                        self.contours2D.remove()
+                    except ValueError:  # already removed
+                        pass
                 for label in self.contours2DLabels:
                     try:
                         label.remove()
@@ -2127,8 +2130,11 @@ class XYCPlot(object):
                     contour.remove()
             else:
                 self.contours2D.remove()
-            for label in self.contours2DLabels:
-                label.remove()
+            try:
+                for label in self.contours2DLabels:
+                    label.remove()
+            except ValueError:  # already removed by contours
+                pass
             for artist in self.ax2dHist.collections:
                 artist.remove()
 
