@@ -1311,6 +1311,17 @@ class BeamLine(object):
             app = xrtqook.qt.QApplication(sys.argv)
 
         if self.blExplorer is None:
+            for oeLine in self.oesDict.values():
+                oe = oeLine[0]
+                for attrName in ('material', 'material2'):
+                    if not hasattr(oe, attrName):
+                        continue
+                    attrValue = getattr(oe, attrName)
+                    if is_sequence(attrValue):
+                        setattr(oe, attrName, attrValue[0])
+                    elif isinstance(attrValue, (list, tuple)):
+                        setattr(oe, attrName, None)
+
             self.index_materials()
             layout = self.export_to_json()
 
