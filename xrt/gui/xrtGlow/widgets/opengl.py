@@ -2125,6 +2125,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 retStr += '{0:.{1}f}, '.format(dim, prec)
             return retStr[:-2] + ')'
 
+        self.frameBufferGL = gl.glGetIntegerv(gl.GL_VIEWPORT)
+
         if True:
             gl.glClearColor(*self.bgColor, 1.0)
 
@@ -3121,8 +3123,14 @@ class xrtGlWidget(qt.QOpenGLWidget):
             self.prevMPos[1] = mouseY
 
             try:
+                frameBufferGL = getattr(
+                    self, 'frameBufferGL', self.viewPortGL)
+                xScale = float(frameBufferGL[2]) / xView
+                yScale = float(frameBufferGL[3]) / yView
+                readX = int(frameBufferGL[0] + mouseX*xScale)
+                readY = int(frameBufferGL[1] + mouseY*yScale) - 1
                 outStencil = gl.glReadPixels(
-                        mouseX, mouseY-1, 1, 1, gl.GL_STENCIL_INDEX,
+                        readX, readY, 1, 1, gl.GL_STENCIL_INDEX,
                         gl.GL_UNSIGNED_INT)
             except OSError:
                 return
