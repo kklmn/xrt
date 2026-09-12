@@ -481,7 +481,8 @@ class xrtGlow(qt.QWidget):
                 epicsDict=getattr(self.customGlWidget, 'epicsInterface', None),
                 viewOnly=viewOnly,
                 beamLine=self.customGlWidget.beamline,
-                categoriesDict=catDict)
+                categoriesDict=catDict,
+                transformDict=self.customGlWidget.meshDict)
 
             self.customGlWidget.beamUpdated.connect(elViewer.update_beam)
             self.customGlWidget.oePropsUpdated.connect(elViewer.update_param)

@@ -744,7 +744,9 @@ class XrtQookBase(qt.QMainWindow):
                                              glWidget, 'epicsInterface', None),
                                      viewOnly=False,
                                      beamLine=self.beamLine,
-                                     categoriesDict=catDict)
+                                     categoriesDict=catDict,
+                                     transformDict=getattr(
+                                             glWidget, 'meshDict', None))
         addInspectorPlot = getattr(self, 'addInspectorPlot', None)
         if addInspectorPlot is not None:
             elViewer.plotConfigCreated.connect(addInspectorPlot)

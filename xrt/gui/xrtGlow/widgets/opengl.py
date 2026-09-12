@@ -599,6 +599,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                            }
                 if hasattr(self, 'input_queue'):
                     self.input_queue.put(message)
+                self.oePropsUpdated.emit((oeid, None, None))
 
             return
 
@@ -752,6 +753,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 if meshUpdateQueued or renderUpdateQueued or\
                         arg0 in renderOnlyArgSet:
                     self.glDraw()
+
+                if arg0 in orientationArgSet or arg0 == 'name':
+                    self.oePropsUpdated.emit((oeid, None, None))
 
                 # updating the beamline model in the runner
             if self.epicsPrefix is not None:
@@ -1775,6 +1779,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
     def update_oe_transform(self, posData):
         oeid, pName, pValue = posData
+        if pName is None:  # notification for derived inspector diagnostics
+            return
         if oeid == self.virtScreen['uuid'] and pName in ['center', 'x', 'z']:
             return
         if pName in ['center']:

@@ -28,6 +28,9 @@ from .scan import ScanRangeDialog, find_catalog_property
 __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "27 Jan 2026"
 
+oeDiagnosticArgs = ('incoming from', 'center distance (mm)',
+                    'grazing angle (°)', 'incidence angle (°)')
+
 
 def _getBeamName(beamModel, elementId, beamType=None):
     if beamModel is None:
@@ -86,7 +89,7 @@ class InstanceInspector(qt.QDialog):
 
     def __init__(self, parent=None, dataDict={}, initDict={},
                  epicsDict={}, viewOnly=False, beamLine=None,
-                 categoriesDict=None):
+                 categoriesDict=None, transformDict=None):
         super().__init__(parent)
         self.setAttribute(qt.Qt.WA_DeleteOnClose)
         self.windowTitleStr =\
@@ -117,7 +120,19 @@ class InstanceInspector(qt.QDialog):
         self.elementId = elementId
         self.elementName = dataDict.get('name', elementId)
         self.beamLine = beamLine
+        self.transformDict = transformDict
         self.editorObject = self.editor_object(elementId)
+        elementLine = beamLine.oesDict.get(elementId) if\
+            beamLine is not None else None
+        if categoriesDict is not None and elementLine is not None and\
+                elementLine[-1] != 0:
+            dataDict = dataDict.copy()
+            dataDict.update({arg: '—' for arg in oeDiagnosticArgs})
+            categoriesDict = categoriesDict.copy()
+            currentDiagnostics = tuple(categoriesDict.get('Diagnostic', ()))
+            categoriesDict['Diagnostic'] = currentDiagnostics + tuple(
+                arg for arg in oeDiagnosticArgs if
+                arg not in currentDiagnostics)
         epicsTree = None
         if epicsDict:
             epicsTree = epicsDict.pv_map.get(elementId)
@@ -226,6 +241,9 @@ class InstanceInspector(qt.QDialog):
         comboDelegate = qt.DynamicArgumentDelegate(bl=beamLine,
                                                    mainWidget=self)
         self.table.setItemDelegateForColumn(1, comboDelegate)
+
+        if all(arg in dataDict for arg in oeDiagnosticArgs):
+            self.update_param((elementId, None, None))
 
         # Buttons
         self.button_box = qt.QDialogButtonBox()
@@ -663,6 +681,90 @@ class InstanceInspector(qt.QDialog):
         return changedData
 
     def update_param(self, pTuple):
+        if self.beamLine is not None and\
+                all(arg in self.original_data for arg in oeDiagnosticArgs):
+            incomingIds = []
+            flowLine = self.beamLine.flowU.get(self.elementId, {})
+            for operation in flowLine.values():
+                incomingId = operation.get('beam')
+                if incomingId in self.beamLine.oesDict and\
+                        incomingId != self.elementId and\
+                        incomingId not in incomingIds:
+                    incomingIds.append(incomingId)
+
+            if pTuple[1] is None or pTuple[0] == self.elementId or\
+                    pTuple[0] in incomingIds:
+                values = {arg: '—' for arg in oeDiagnosticArgs}
+                if len(incomingIds) > 1:
+                    values['incoming from'] = 'ambiguous'
+                elif len(incomingIds) == 1:
+                    incomingObj = self.beamLine.oesDict[incomingIds[0]][0]
+                    currentLine = self.beamLine.oesDict.get(self.elementId)
+                    currentObj = currentLine[0] if currentLine is not None\
+                        else None
+                    values['incoming from'] = getattr(
+                        incomingObj, 'name', incomingIds[0])
+                    try:
+                        incomingCenter = np.asarray(
+                            incomingObj.center, dtype=float)
+                        currentCenter = np.asarray(
+                            currentObj.center, dtype=float)
+                        displacement = currentCenter - incomingCenter
+                        distance = np.linalg.norm(displacement)
+                        if np.isfinite(distance):
+                            values['center distance (mm)'] = f'{distance:.8g}'
+
+                            mesh = self.transformDict.get(self.elementId) if\
+                                self.transformDict is not None else None
+                            transform = mesh.transMatrix.get(0) if\
+                                mesh is not None else None
+                            unresolved = any(raycing.is_auto_align_value(
+                                getattr(currentObj, arg)) for arg in (
+                                    'pitch', 'roll', 'yaw', 'positionRoll',
+                                    'extraPitch', 'extraRoll', 'extraYaw',
+                                    'alpha', 'bragg', 'braggOffset',
+                                    'cryst1roll', 'cryst2roll', 'cryst2pitch',
+                                    'cryst2finePitch') if
+                                hasattr(currentObj, arg))
+
+                            if transform is not None and distance > 0 and\
+                                    not unresolved:
+                                if is_screen(currentObj) or\
+                                        is_aperture(currentObj):
+                                    localNormal = qt.QVector4D(
+                                        0., 1., 0., 0.)
+                                else:
+                                    localNormal = qt.QVector4D(
+                                        0., 0., 1., 0.)
+                                globalNormal = transform * localNormal
+                                normal = np.array([globalNormal.x(),
+                                                   globalNormal.y(),
+                                                   globalNormal.z()])
+                                normalLength = np.linalg.norm(normal)
+                                if np.isfinite(normalLength) and\
+                                        normalLength > 0:
+                                    sineGrazing = np.clip(abs(np.dot(
+                                        displacement / distance,
+                                        normal / normalLength)), 0., 1.)
+                                    grazing = np.degrees(
+                                        np.arcsin(sineGrazing))
+                                    values['grazing angle (°)'] =\
+                                        f'{grazing:.8g}'
+                                    values['incidence angle (°)'] =\
+                                        f'{90. - grazing:.8g}'
+                    except (AttributeError, TypeError, ValueError):
+                        pass
+
+                diagnosticItem = self.itemGroups.get('Diagnostic')
+                if diagnosticItem is not None:
+                    for row in range(diagnosticItem.rowCount()):
+                        keyItem = diagnosticItem.child(row, 0)
+                        key = str(keyItem.text())
+                        if key in values:
+                            self.set_param_item_value(
+                                diagnosticItem.child(row, 1), key,
+                                values[key])
+
         parentItem = None
         if pTuple[0] == self.elementId:
             if self.categoriesDict is not None:
