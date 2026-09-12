@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 import os
 import numpy as np
@@ -356,9 +356,9 @@ class OE(OEMainMethods):
         if hasattr(self, '_R') and isinstance(self._R, (tuple, list)):
             if hasattr(self, '_braggVal'):
                 pass
-            elif hasattr(self, '_pitchVal') and self._pitchVal != 0:
-                self._RVal = self.get_Rmer_from_Coddington(
-                        self._R[0], self._R[1], self._pitchVal)
+            elif len(self._R) == 3 or\
+                    hasattr(self, '_pitchVal') and self._pitchVal != 0:
+                self._RVal = self.get_Rmer_from_Coddington(*self._R)
             else:
                 self._RVal = np.inf
 
@@ -368,9 +368,9 @@ class OE(OEMainMethods):
         if hasattr(self, '_Rm') and isinstance(self._Rm, (tuple, list)):
             if hasattr(self, '_braggVal'):
                 pass
-            elif hasattr(self, '_pitchVal') and self._pitchVal != 0:
-                self._RmVal = self.get_Rmer_from_Coddington(
-                        self._Rm[0], self._Rm[1], self._pitchVal)
+            elif len(self._Rm) == 3 or\
+                    hasattr(self, '_pitchVal') and self._pitchVal != 0:
+                self._RmVal = self.get_Rmer_from_Coddington(*self._Rm)
             else:
                 self._RmVal = np.inf
 
