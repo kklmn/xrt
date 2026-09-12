@@ -273,6 +273,10 @@ class DictEditorDialog(QDialog):
 
 NUMBER = r'[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?'
 
+SCALAR = (
+    rf'{NUMBER}'
+    rf'(?:\s*[+\-*/]\s*{NUMBER})*')
+
 
 def _unit_pattern(unitDict):
     units = sorted((re.escape(str(unit)) for unit in unitDict),
@@ -281,14 +285,14 @@ def _unit_pattern(unitDict):
 
 
 ANGLE = r'{0}(?:\s*(?:{1}))?'.format(
-    NUMBER, _unit_pattern(allUnitsAng))
+    SCALAR, _unit_pattern(allUnitsAng))
 ENERGY = r'{0}(?:\s*(?:{1}))?'.format(
-    NUMBER, _unit_pattern(allUnitsEnergy))
+    SCALAR, _unit_pattern(allUnitsEnergy))
 FORMAT_STR = (r'(?=.*%(?!%))'
               r'(?:[^%]|%%|%[-+# 0]*\d*(?:\.\d+)?[eEfFgGpG])+')
 
 VAL_PATTERNS = {
-    'scalar': NUMBER,
+    'scalar': SCALAR,
     'angle': ANGLE,
     'energy': ENERGY,
     'format': FORMAT_STR,
