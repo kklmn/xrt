@@ -41,7 +41,7 @@ beam direction to demonstrate the focusing function. Note the femtometer (fm)
 axis unit for the plot right at the focus position.
 """
 __author__ = "Konstantin Klementiev"
-__date__ = "24 Aug 2026"
+__date__ = "12 Sep 2026"
 
 import sys
 import os, sys; sys.path.append(os.path.join('..', '..'))  # analysis:ignore
@@ -127,11 +127,15 @@ def build_beamline(nrays=1e5):
         beamLine.mirror.invertNormal = 1  # the inner surface is reflective
 
     if case == 'elliptical':
-        print('ellipseA', beamLine.mirror.ellipseA,
-              'ellipseB', beamLine.mirror.ellipseB)
+        print(f'{beamLine.mirror.ellipseA=}, {beamLine.mirror.ellipseB=}')
+        print(f'{beamLine.mirror.f1diag=}')
+        print(f'{beamLine.mirror.f2diag=}')
     elif case.startswith('hyperbolic'):
-        print('hyperbolaA', beamLine.mirror.hyperbolaA,
-              'hyperbolaB', beamLine.mirror.hyperbolaB)
+        print(f'{beamLine.mirror.hyperbolaA=}, {beamLine.mirror.hyperbolaB=}')
+        print(f'{beamLine.mirror.f1diag=}')
+        print(f'{beamLine.mirror.f2diag=}')
+    elif case == 'parabolical':
+        print(f'{beamLine.mirror.fdiag=}')
 
     # The screen beamLine.fsm2 will be placed at the focus of ellipse, parabola
     # or hyperbola plus a few positions up- and downstream
@@ -146,10 +150,12 @@ def build_beamline(nrays=1e5):
     for i, dy in enumerate(beamLine.screenDY):
         dqs = qsign * (q+dy) * np.sin(2*pitch+inclination)
         dqc = qsign * (q+dy) * np.cos(2*pitch+inclination)
-        beamLine.screen3D.append(
-            [beamLine.mirror.center[0] + dqs*np.sin(globalRoll),
-             beamLine.mirror.center[1] + dqc,
-             beamLine.mirror.center[2] + dqs*np.cos(globalRoll)])
+        pos = [beamLine.mirror.center[0] + dqs*np.sin(globalRoll),
+               beamLine.mirror.center[1] + dqc,
+               beamLine.mirror.center[2] + dqs*np.cos(globalRoll)]
+        if dy == 0:
+            print('focus:', pos)
+        beamLine.screen3D.append(pos)
 
     if case.startswith('hyperbolic'):  # add a screen for the real reflection
         dqs = (q*0.1) * np.sin(2*pitch+inclination)

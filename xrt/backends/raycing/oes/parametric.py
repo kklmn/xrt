@@ -93,6 +93,7 @@ class EllipticalMirrorParam(OE):
         kwargs = self.__pop_kwargs(**kwargs)
         OE.__init__(self, *args, **kwargs)
         self.isParametric = True
+        self.f1diag, self.f2diag = None, None
         self._reset_pq()  # self.p, self.q, self.f1, self.f2, self.pAxis)
 
     def _to_global(self, lb):
@@ -100,11 +101,11 @@ class EllipticalMirrorParam(OE):
         #     raycing.rotate_beam(
         #         lb, rotationSequence='-'+self.extraRotationSequence,
         #         pitch=self.extraPitch, roll=self.extraRoll,
-        #         yaw=self.extraYaw, skip_xyz=True)
+        #         yaw=self.extraYaw)
         raycing.rotate_beam(lb, rotationSequence='-'+self.rotationSequence,
                             pitch=self.pitch, roll=self.roll+self.positionRoll,
-                            yaw=self.yaw, skip_xyz=True)
-        raycing.virgin_local_to_global(self.bl, lb, self.center, skip_xyz=True)
+                            yaw=self.yaw)
+        raycing.virgin_local_to_global(self.bl, lb, self.center)
 
     def reset_pqpitch(self, p=None, q=None, pitch=None):
         """Compatibility method. To pass pitch is not needed any longer."""
@@ -145,15 +146,24 @@ class EllipticalMirrorParam(OE):
 
         # gamma is angle between the major axis and the mirror surface
         if self.p and self.q:
-            gamma = np.arctan2((self.p - self.q) * np.sin(absPitch),
-                               (self.p + self.q) * np.cos(absPitch))
+            gamma = np.arctan2((self.p-self.q) * np.sin(absPitch),
+                               (self.p+self.q) * np.cos(absPitch))
             self.cosGamma = np.cos(gamma)
             self.sinGamma = np.sin(gamma)
             # (y0, z0) is the ellipse center in local coordinates
-            self.y0 = (self.q - self.p)/2. * np.cos(absPitch)
-            self.z0 = (self.q + self.p)/2. * np.sin(absPitch)
-            self.ellipseA = (self.q + self.p)/2.
+            pcos, qcos = self.p*np.cos(absPitch), self.q*np.cos(absPitch)
+            psin, qsin = self.p*np.sin(absPitch), self.q*np.sin(absPitch)
+            self.y0 = (qcos-pcos) * 0.5
+            self.z0 = (qsin+psin) * 0.5
+            self.ellipseA = (self.q+self.p) * 0.5
             self.ellipseB = np.sqrt(self.q * self.p) * np.sin(absPitch)
+
+            lbf = rs.Beam(nrays=2)
+            lbf.x[0], lbf.y[0], lbf.z[0] = 0, -pcos, psin
+            lbf.x[1], lbf.y[1], lbf.z[1] = 0, qcos, qsin
+            self._to_global(lbf)
+            self.f1diag = lbf.x[0], lbf.y[0], lbf.z[0]
+            self.f2diag = lbf.x[1], lbf.y[1], lbf.z[1]
 
     @property
     def p(self):
@@ -204,8 +214,8 @@ class EllipticalMirrorParam(OE):
         self.f1 = kwargs.pop('f1', None)
         self.f2 = kwargs.pop('f2', None)
         self.pAxis = kwargs.pop('pAxis', None)
-        self.p = kwargs.pop('p', 1000)  # source-to-mirror
-        self.q = kwargs.pop('q', 1000)  # mirror-to-focus
+        self.p = kwargs.pop('p', None)  # source-to-mirror
+        self.q = kwargs.pop('q', None)  # mirror-to-focus
         self.isCylindrical = kwargs.pop('isCylindrical', False)
         self.isClosed = kwargs.pop('isClosed', False)
         return kwargs
@@ -302,13 +312,14 @@ class ParabolicalMirrorParam(OE):
         kwargs = self.__pop_kwargs(**kwargs)
         OE.__init__(self, *args, **kwargs)
         self.isParametric = True
+        self.fdiag = None
         self._reset_pq()
 
     def _to_global(self, lb):
         raycing.rotate_beam(lb, rotationSequence='-'+self.rotationSequence,
                             pitch=self.pitch, roll=self.roll+self.positionRoll,
-                            yaw=self.yaw, skip_xyz=True)
-        raycing.virgin_local_to_global(self.bl, lb, self.center, skip_xyz=True)
+                            yaw=self.yaw)
+        raycing.virgin_local_to_global(self.bl, lb, self.center)
 
     @property
     def p(self):
@@ -425,10 +436,15 @@ class ParabolicalMirrorParam(OE):
         self.cosGamma = np.cos(gamma)
         self.sinGamma = np.sin(gamma)
 
+        lbf = rs.Beam(nrays=1)
+        lbf.x[0], lbf.y[0], lbf.z[0] = 0, self.y0, self.z0
+        self._to_global(lbf)
+        self.fdiag = lbf.x[0], lbf.y[0], lbf.z[0]
+
     def __pop_kwargs(self, **kwargs):
         self.f1 = kwargs.pop('f1', None)
         self.f2 = kwargs.pop('f2', None)
-        self.p = kwargs.pop('p', 10000)  # source-to-mirror
+        self.p = kwargs.pop('p', None)  # source-to-mirror
         self.q = kwargs.pop('q', None)  # mirror-to-focus
         self.parabolaAxis = kwargs.pop('parabolaAxis', None)
         self.isCylindrical = kwargs.pop('isCylindrical', False)
@@ -555,9 +571,10 @@ class HyperbolicMirrorParam(OE):
 
         """
         kwargs = self.__pop_kwargs(**kwargs)
+        self.invertNormal = -1  # the outer surface is reflective
         OE.__init__(self, *args, **kwargs)
         self.isParametric = True
-        self.invertNormal = -1  # the outer surface is reflective
+        self.f1diag, self.f2diag = None, None
         self._reset_pq()  # self.p, self.q, self.f1, self.f2, self.pAxis)
 
     def _to_global(self, lb):
@@ -565,11 +582,11 @@ class HyperbolicMirrorParam(OE):
         #     raycing.rotate_beam(
         #         lb, rotationSequence='-'+self.extraRotationSequence,
         #         pitch=self.extraPitch, roll=self.extraRoll,
-        #         yaw=self.extraYaw, skip_xyz=True)
+        #         yaw=self.extraYaw)
         raycing.rotate_beam(lb, rotationSequence='-'+self.rotationSequence,
                             pitch=self.pitch, roll=self.roll+self.positionRoll,
-                            yaw=self.yaw, skip_xyz=True)
-        raycing.virgin_local_to_global(self.bl, lb, self.center, skip_xyz=True)
+                            yaw=self.yaw)
+        raycing.virgin_local_to_global(self.bl, lb, self.center)
 
     def reset_pqpitch(self, p=None, q=None, pitch=None):
         """Compatibility method. To pass pitch is not needed any longer."""
@@ -610,15 +627,24 @@ class HyperbolicMirrorParam(OE):
 
         # gamma is angle between the major axis and the mirror surface
         if self.p and self.q:
-            gamma = np.arctan2((self.p + self.q) * np.sin(absPitch),
-                               (self.p - self.q) * np.cos(absPitch))
+            gamma = np.arctan2((self.p+self.q) * np.sin(absPitch),
+                               (self.p-self.q) * np.cos(absPitch))
             self.cosGamma = np.cos(gamma)
             self.sinGamma = np.sin(gamma)
+            pcos, qcos = self.p*np.cos(absPitch), self.q*np.cos(absPitch)
+            psin, qsin = self.p*np.sin(absPitch), self.q*np.sin(absPitch)
             # (y0, z0) is the hyperbola center in local coordinates
-            self.y0 = -(self.p + self.q)/2. * np.cos(absPitch)
-            self.z0 = (self.p - self.q)/2. * np.sin(absPitch)
-            self.hyperbolaA = abs(self.p - self.q)/2.
+            self.y0 = -(pcos+qcos) * 0.5
+            self.z0 = (psin-qsin) * 0.5
+            self.hyperbolaA = abs(self.p-self.q) * 0.5
             self.hyperbolaB = np.sqrt(self.p*self.q) * np.sin(absPitch)
+
+            lbf = rs.Beam(nrays=2)
+            lbf.x[0], lbf.y[0], lbf.z[0] = 0, -pcos, psin
+            lbf.x[1], lbf.y[1], lbf.z[1] = 0, -qcos, qsin*self.invertNormal
+            self._to_global(lbf)
+            self.f1diag = lbf.x[0], lbf.y[0], lbf.z[0]
+            self.f2diag = lbf.x[1], lbf.y[1], lbf.z[1]
 
     @property
     def p(self):
@@ -669,8 +695,8 @@ class HyperbolicMirrorParam(OE):
         self.f1 = kwargs.pop('f1', None)
         self.f2 = kwargs.pop('f2', None)
         self.pAxis = kwargs.pop('pAxis', None)
-        self.p = kwargs.pop('p', 1000)  # source-to-mirror
-        self.q = kwargs.pop('q', 1000)  # mirror-to-focus
+        self.p = kwargs.pop('p', None)  # source-to-mirror
+        self.q = kwargs.pop('q', None)  # mirror-to-focus
         self.isCylindrical = kwargs.pop('isCylindrical', False)
         self.isClosed = kwargs.pop('isClosed', False)
         return kwargs
