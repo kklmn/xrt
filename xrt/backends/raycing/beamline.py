@@ -646,6 +646,8 @@ class BeamLine(object):
                         oe._pitchVal = 0
                     elif autoBragg:
                         oe._braggVal = 0
+                    if hasattr(oe, '_reset_pq'):
+                        oe._reset_pq()
                     return
                 braggT = mat.get_Bragg_angle(alignE)
                 alphaT = 0.
@@ -684,6 +686,9 @@ class BeamLine(object):
                     raise e
                 else:
                     pass
+
+        if hasattr(oe, '_reset_pq'):
+            oe._reset_pq()
 
     def propagate_flow(self, startFrom=0, signal=None):
         if self.oesDict is None or self.flow is None:

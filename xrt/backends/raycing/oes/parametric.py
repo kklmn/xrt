@@ -41,6 +41,10 @@ class EllipticalMirrorParam(OE):
     *pAxis* -- the *p* arm direction in global coordinates -- should be
     supplied.
 
+    While either focal arm is missing or cannot yet be resolved, the OE behaves
+    as a flat mirror. The elliptical surface and diagnostics are restored
+    automatically when the configuration becomes complete.
+
     .. note::
 
         Any of *p*, *q*, *f1*, *f2* or *pAxis* can be set as instance
@@ -96,16 +100,17 @@ class EllipticalMirrorParam(OE):
         self.f1diag, self.f2diag = None, None
         self._reset_pq()  # self.p, self.q, self.f1, self.f2, self.pAxis)
 
-    def _to_global(self, lb):
+    def _to_global(self, lb, skip_xyz=True):
         # if self.extraPitch or self.extraRoll or self.extraYaw:
         #     raycing.rotate_beam(
         #         lb, rotationSequence='-'+self.extraRotationSequence,
         #         pitch=self.extraPitch, roll=self.extraRoll,
-        #         yaw=self.extraYaw)
+        #         yaw=self.extraYaw, skip_xyz=skip_xyz)
         raycing.rotate_beam(lb, rotationSequence='-'+self.rotationSequence,
                             pitch=self.pitch, roll=self.roll+self.positionRoll,
-                            yaw=self.yaw)
-        raycing.virgin_local_to_global(self.bl, lb, self.center)
+                            yaw=self.yaw, skip_xyz=skip_xyz)
+        raycing.virgin_local_to_global(
+            self.bl, lb, self.center, skip_xyz=skip_xyz)
 
     def reset_pqpitch(self, p=None, q=None, pitch=None):
         """Compatibility method. To pass pitch is not needed any longer."""
@@ -124,10 +129,13 @@ class EllipticalMirrorParam(OE):
                      '_pitchVal', '_roll', '_yaw',
                      '_positionRoll', 'rotationSequence']]):
             return
-        lbn = rs.Beam(nrays=1)
-        lbn.a[:], lbn.b[:], lbn.c[:] = 0, 0, 1
-        self._to_global(lbn)
-        normal = lbn.a[0], lbn.b[0], lbn.c[0]
+        centerIsResolved = getattr(self, '_centerVal', None) is not None
+        if self._pitchVal is None or\
+                not centerIsResolved and\
+                (self.f1 is not None or self.f2 is not None):
+            self.ellipseA, self.ellipseB = None, None
+            self.f1diag, self.f2diag = None, None
+            return
 
         if self.f1 is not None:
             p = (sum((x-y)**2 for x, y in zip(self.center, self.f1)))**0.5
@@ -136,13 +144,22 @@ class EllipticalMirrorParam(OE):
         else:
             axis = self.pAxis if self.pAxis is not None else [0, 1, 0]
 
-        norm = sum([a**2 for a in axis])**0.5
-        sintheta = sum([a*n for a, n in zip(axis, normal)]) / norm
-        absPitch = abs(np.arcsin(sintheta))
-
         if self.f2 is not None:
             q = (sum((x-y)**2 for x, y in zip(self.center, self.f2)))**0.5
             self._q = q
+
+        self.f1diag, self.f2diag = None, None
+        if not self.p or not self.q:
+            self.ellipseA, self.ellipseB = None, None
+            return
+
+        lbn = rs.Beam(nrays=1)
+        lbn.a[:], lbn.b[:], lbn.c[:] = 0, 0, 1
+        self._to_global(lbn)
+        normal = lbn.a[0], lbn.b[0], lbn.c[0]
+        norm = sum([a**2 for a in axis])**0.5
+        sintheta = sum([a*n for a, n in zip(axis, normal)]) / norm
+        absPitch = abs(np.arcsin(sintheta))
 
         # gamma is angle between the major axis and the mirror surface
         if self.p and self.q:
@@ -161,9 +178,10 @@ class EllipticalMirrorParam(OE):
             lbf = rs.Beam(nrays=2)
             lbf.x[0], lbf.y[0], lbf.z[0] = 0, -pcos, psin
             lbf.x[1], lbf.y[1], lbf.z[1] = 0, qcos, qsin
-            self._to_global(lbf)
-            self.f1diag = lbf.x[0], lbf.y[0], lbf.z[0]
-            self.f2diag = lbf.x[1], lbf.y[1], lbf.z[1]
+            if centerIsResolved:
+                self._to_global(lbf, skip_xyz=False)
+                self.f1diag = lbf.x[0], lbf.y[0], lbf.z[0]
+                self.f2diag = lbf.x[1], lbf.y[1], lbf.z[1]
 
     @property
     def p(self):
@@ -221,11 +239,15 @@ class EllipticalMirrorParam(OE):
         return kwargs
 
     def xyz_to_param(self, x, y, z):
+        if self.ellipseA is None:
+            return OE.xyz_to_param(self, x, y, z)
         yNew, zNew = raycing.rotate_x(y - self.y0, z - self.z0, self.cosGamma,
                                       self.sinGamma)
         return yNew, np.arctan2(x, zNew), np.sqrt(x**2 + zNew**2)  # s, phi, r
 
     def param_to_xyz(self, s, phi, r):
+        if self.ellipseA is None:
+            return OE.param_to_xyz(self, s, phi, r)
         x = r * np.sin(phi)
         y = s
         z = r * np.cos(phi)
@@ -233,6 +255,8 @@ class EllipticalMirrorParam(OE):
         return x, yNew + self.y0, zNew + self.z0
 
     def local_r(self, s, phi):
+        if self.ellipseA is None:
+            return OE.local_r(self, s, phi)
         r = self.ellipseB * np.sqrt(abs(1 - s**2 / self.ellipseA**2))
         if self.isCylindrical:
             r /= abs(np.cos(phi))
@@ -241,6 +265,8 @@ class EllipticalMirrorParam(OE):
         return np.where(abs(phi) > np.pi/2, r, np.ones_like(phi)*1e20)
 
     def local_n(self, s, phi):
+        if self.ellipseA is None:
+            return OE.local_n(self, s, phi)
         A2s2 = np.array(self.ellipseA**2 - s**2)
         A2s2[A2s2 <= 0] = 1e22  # this rays will be lost
         nr = -self.ellipseB / self.ellipseA * s / np.sqrt(A2s2)
@@ -283,6 +309,10 @@ class ParabolicalMirrorParam(OE):
     :class:`ParaboloidCapillaryMirror` that can produce the same surface, just
     with another meaning of *center* and *pitch* parameters.
 
+    While the focal arm is missing, ambiguous or cannot yet be resolved, the
+    OE behaves as a flat mirror. The parabolic surface and diagnostics are
+    restored automatically when the configuration becomes valid.
+
     .. note::
 
         Any of *p*, *q*, *f1*, *f2* or *parabolaAxis* can be set as instance
@@ -315,11 +345,12 @@ class ParabolicalMirrorParam(OE):
         self.fdiag = None
         self._reset_pq()
 
-    def _to_global(self, lb):
+    def _to_global(self, lb, skip_xyz=True):
         raycing.rotate_beam(lb, rotationSequence='-'+self.rotationSequence,
                             pitch=self.pitch, roll=self.roll+self.positionRoll,
-                            yaw=self.yaw)
-        raycing.virgin_local_to_global(self.bl, lb, self.center)
+                            yaw=self.yaw, skip_xyz=skip_xyz)
+        raycing.virgin_local_to_global(
+            self.bl, lb, self.center, skip_xyz=skip_xyz)
 
     @property
     def p(self):
@@ -330,9 +361,7 @@ class ParabolicalMirrorParam(OE):
         self._p = p
         if p is not None:
             self._q = None
-        settings = [getattr(self, s, None) for s in ['_p', '_q', '_f1', '_f2']]
-        if sum(s is not None for s in settings) == 1:
-            self._reset_pq()
+        self._reset_pq()
 
     @property
     def q(self):
@@ -343,9 +372,7 @@ class ParabolicalMirrorParam(OE):
         self._q = q
         if q is not None:
             self._p = None
-        settings = [getattr(self, s, None) for s in ['_p', '_q', '_f1', '_f2']]
-        if sum(s is not None for s in settings) == 1:
-            self._reset_pq()
+        self._reset_pq()
 
     @property
     def f1(self):
@@ -354,9 +381,7 @@ class ParabolicalMirrorParam(OE):
     @f1.setter
     def f1(self, f1):
         self._f1 = f1
-        settings = [getattr(self, s, None) for s in ['_p', '_q', '_f1', '_f2']]
-        if sum(s is not None for s in settings) == 1:
-            self._reset_pq()
+        self._reset_pq()
 
     @property
     def f2(self):
@@ -365,9 +390,7 @@ class ParabolicalMirrorParam(OE):
     @f2.setter
     def f2(self, f2):
         self._f2 = f2
-        settings = [getattr(self, s, None) for s in ['_p', '_q', '_f1', '_f2']]
-        if sum(s is not None for s in settings) == 1:
-            self._reset_pq()
+        self._reset_pq()
 
     @property
     def parabolaAxis(self):
@@ -391,36 +414,50 @@ class ParabolicalMirrorParam(OE):
                      '_pitchVal', '_roll', '_yaw',
                      '_positionRoll', 'rotationSequence']]):
             return
+        centerIsResolved = getattr(self, '_centerVal', None) is not None
+        if self._pitchVal is None or\
+                not centerIsResolved and\
+                (self.f1 is not None or self.f2 is not None):
+            self.parabParam = None
+            self.fdiag = None
+            return
+
+        hasP = self.p is not None or self.f1 is not None
+        hasQ = self.q is not None or self.f2 is not None
+        self.fdiag = None
+        if hasP == hasQ:
+            self.parabParam = None
+            return
+
+        p = None
+        q = None
+        if hasP and self.f1 is not None:
+            p = (sum((x-y)**2 for x, y in zip(self.center, self.f1)))**0.5
+            axis = [c-f for c, f in zip(self.center, self.f1)]
+        elif hasQ and self.f2 is not None:
+            q = (sum((x-y)**2 for x, y in zip(self.center, self.f2)))**0.5
+            axis = [c-f for c, f in zip(self.center, self.f2)]
+        else:
+            p = self.p if hasP else None
+            q = self.q if hasQ else None
+            axis = self.parabolaAxis if self.parabolaAxis is not None else \
+                [0, 1, 0]
+
+        if not (p or q):
+            self.parabParam = None
+            return
 
         lbn = rs.Beam(nrays=1)
         lbn.a[:], lbn.b[:], lbn.c[:] = 0, 0, 1
         self._to_global(lbn)
         normal = lbn.a[0], lbn.b[0], lbn.c[0]
-        p = None
-        q = None
-        if self.f1 is not None:
-            p = (sum((x-y)**2 for x, y in zip(self.center, self.f1)))**0.5
-            axis = [c-f for c, f in zip(self.center, self.f1)]
-        elif self.f2 is not None:
-            q = (sum((x-y)**2 for x, y in zip(self.center, self.f2)))**0.5
-            axis = [c-f for c, f in zip(self.center, self.f2)]
-        else:
-            axis = self.parabolaAxis if self.parabolaAxis is not None else \
-                [0, 1, 0]
 
         norm = sum([a**2 for a in axis])**0.5
         sintheta = sum([a*n for a, n in zip(axis, normal)]) / norm
         absPitch = abs(np.arcsin(sintheta))
 
-        if p is not None:
-            self._p = p
-        if q is not None:
-            self._q = q
-        if ((self.p is not None) and (self.q is not None)) or\
-                ((self.p is None) and (self.q is None)):
-            print('p={0}, q={1}'.format(self.p, self.q))
-            raise ValueError('One and only one of p (or f1) or q (or f2)'
-                             ' must be None!')
+        self._p = p
+        self._q = q
         # (y0, z0) is the focus point in local coordinates
         # gamma is angle between the parabola axis and the mirror surface
         if self.p is None:
@@ -438,8 +475,9 @@ class ParabolicalMirrorParam(OE):
 
         lbf = rs.Beam(nrays=1)
         lbf.x[0], lbf.y[0], lbf.z[0] = 0, self.y0, self.z0
-        self._to_global(lbf)
-        self.fdiag = lbf.x[0], lbf.y[0], lbf.z[0]
+        if centerIsResolved:
+            self._to_global(lbf, skip_xyz=False)
+            self.fdiag = lbf.x[0], lbf.y[0], lbf.z[0]
 
     def __pop_kwargs(self, **kwargs):
         self.f1 = kwargs.pop('f1', None)
@@ -452,11 +490,15 @@ class ParabolicalMirrorParam(OE):
         return kwargs
 
     def xyz_to_param(self, x, y, z):
+        if self.parabParam is None:
+            return OE.xyz_to_param(self, x, y, z)
         yNew, zNew = raycing.rotate_x(y - self.y0, z - self.z0, self.cosGamma,
                                       self.sinGamma)
         return yNew, np.arctan2(x, zNew), np.sqrt(x**2 + zNew**2)  # s, phi, r
 
     def param_to_xyz(self, s, phi, r):
+        if self.parabParam is None:
+            return OE.param_to_xyz(self, s, phi, r)
         x = r * np.sin(phi)
         y = s
         z = r * np.cos(phi)
@@ -464,6 +506,8 @@ class ParabolicalMirrorParam(OE):
         return x, yNew + self.y0, zNew + self.z0
 
     def local_r(self, s, phi):
+        if self.parabParam is None:
+            return OE.local_r(self, s, phi)
         r2 = self.parabParam*s + self.parabParam**2
         r2[r2 < 0] = 0
         r = 2 * r2**0.5
@@ -474,6 +518,8 @@ class ParabolicalMirrorParam(OE):
         return np.where(abs(phi) > np.pi/2, r, np.ones_like(phi)*1e20)
 
     def local_n(self, s, phi):
+        if self.parabParam is None:
+            return OE.local_n(self, s, phi)
         nr = self.parabParam / (self.parabParam*s + self.parabParam**2)**0.5
         norm = np.sqrt(nr**2 + 1)
         b = nr / norm
@@ -539,6 +585,10 @@ class HyperbolicMirrorParam(OE):
     *pAxis* -- the *p* arm direction in global coordinates -- should be
     supplied.
 
+    While either focal arm is missing or cannot yet be resolved, the OE behaves
+    as a flat mirror. The hyperbolic surface and diagnostics are restored
+    automatically when the configuration becomes complete.
+
     .. note::
 
         Any of *p*, *q*, *f1*, *f2* or *pAxis* can be set as instance
@@ -577,7 +627,7 @@ class HyperbolicMirrorParam(OE):
         self.f1diag, self.f2diag = None, None
         self._reset_pq()  # self.p, self.q, self.f1, self.f2, self.pAxis)
 
-    def _to_global(self, lb):
+    def _to_global(self, lb, skip_xyz=True):
         # if self.extraPitch or self.extraRoll or self.extraYaw:
         #     raycing.rotate_beam(
         #         lb, rotationSequence='-'+self.extraRotationSequence,
@@ -585,8 +635,9 @@ class HyperbolicMirrorParam(OE):
         #         yaw=self.extraYaw)
         raycing.rotate_beam(lb, rotationSequence='-'+self.rotationSequence,
                             pitch=self.pitch, roll=self.roll+self.positionRoll,
-                            yaw=self.yaw)
-        raycing.virgin_local_to_global(self.bl, lb, self.center)
+                            yaw=self.yaw, skip_xyz=skip_xyz)
+        raycing.virgin_local_to_global(
+            self.bl, lb, self.center, skip_xyz=skip_xyz)
 
     def reset_pqpitch(self, p=None, q=None, pitch=None):
         """Compatibility method. To pass pitch is not needed any longer."""
@@ -605,10 +656,13 @@ class HyperbolicMirrorParam(OE):
                      '_pitchVal', '_roll', '_yaw',
                      '_positionRoll', 'rotationSequence']]):
             return
-        lbn = rs.Beam(nrays=1)
-        lbn.a[:], lbn.b[:], lbn.c[:] = 0, 0, 1
-        self._to_global(lbn)
-        normal = lbn.a[0], lbn.b[0], lbn.c[0]
+        centerIsResolved = getattr(self, '_centerVal', None) is not None
+        if self._pitchVal is None or\
+                not centerIsResolved and\
+                (self.f1 is not None or self.f2 is not None):
+            self.hyperbolaA, self.hyperbolaB = None, None
+            self.f1diag, self.f2diag = None, None
+            return
 
         if self.f1 is not None:
             p = (sum((x-y)**2 for x, y in zip(self.center, self.f1)))**0.5
@@ -617,13 +671,22 @@ class HyperbolicMirrorParam(OE):
         else:
             axis = self.pAxis if self.pAxis is not None else [0, 1, 0]
 
-        norm = sum([a**2 for a in axis])**0.5
-        sintheta = sum([a*n for a, n in zip(axis, normal)]) / norm
-        absPitch = abs(np.arcsin(sintheta))
-
         if self.f2 is not None:
             q = (sum((x-y)**2 for x, y in zip(self.center, self.f2)))**0.5
             self._q = q
+
+        self.f1diag, self.f2diag = None, None
+        if not self.p or not self.q:
+            self.hyperbolaA, self.hyperbolaB = None, None
+            return
+
+        lbn = rs.Beam(nrays=1)
+        lbn.a[:], lbn.b[:], lbn.c[:] = 0, 0, 1
+        self._to_global(lbn)
+        normal = lbn.a[0], lbn.b[0], lbn.c[0]
+        norm = sum([a**2 for a in axis])**0.5
+        sintheta = sum([a*n for a, n in zip(axis, normal)]) / norm
+        absPitch = abs(np.arcsin(sintheta))
 
         # gamma is angle between the major axis and the mirror surface
         if self.p and self.q:
@@ -642,9 +705,10 @@ class HyperbolicMirrorParam(OE):
             lbf = rs.Beam(nrays=2)
             lbf.x[0], lbf.y[0], lbf.z[0] = 0, -pcos, psin
             lbf.x[1], lbf.y[1], lbf.z[1] = 0, -qcos, qsin*self.invertNormal
-            self._to_global(lbf)
-            self.f1diag = lbf.x[0], lbf.y[0], lbf.z[0]
-            self.f2diag = lbf.x[1], lbf.y[1], lbf.z[1]
+            if centerIsResolved:
+                self._to_global(lbf, skip_xyz=False)
+                self.f1diag = lbf.x[0], lbf.y[0], lbf.z[0]
+                self.f2diag = lbf.x[1], lbf.y[1], lbf.z[1]
 
     @property
     def p(self):
@@ -702,11 +766,20 @@ class HyperbolicMirrorParam(OE):
         return kwargs
 
     def xyz_to_param(self, x, y, z):
+        if self.hyperbolaA is None:
+            if self.invertNormal < 0:
+                z = -z
+            return OE.xyz_to_param(self, x, y, z)
         yNew, zNew = raycing.rotate_x(y - self.y0, z - self.z0, self.cosGamma,
                                       self.sinGamma)
         return yNew, np.arctan2(x, zNew), np.sqrt(x**2 + zNew**2)  # s, phi, r
 
     def param_to_xyz(self, s, phi, r):
+        if self.hyperbolaA is None:
+            x, y, z = OE.param_to_xyz(self, s, phi, r)
+            if self.invertNormal < 0:
+                z = -z
+            return x, y, z
         x = r * np.sin(phi)
         y = s
         z = r * np.cos(phi)
@@ -714,6 +787,8 @@ class HyperbolicMirrorParam(OE):
         return x, yNew + self.y0, zNew + self.z0
 
     def local_r(self, s, phi):
+        if self.hyperbolaA is None:
+            return OE.local_r(self, s, phi)
         r = self.hyperbolaB * np.sqrt(abs(s**2/self.hyperbolaA**2 - 1))
         if self.isCylindrical:
             r /= abs(np.cos(phi))
@@ -722,6 +797,8 @@ class HyperbolicMirrorParam(OE):
         return np.where(abs(phi) < np.pi/2, r, np.ones_like(phi)*1e20)
 
     def local_n(self, s, phi):
+        if self.hyperbolaA is None:
+            return OE.local_n(self, s, phi)
         A2s2 = np.array(s**2 - self.hyperbolaA**2)
         A2s2[A2s2 <= 0] = 1e22  # this rays will be lost
         nr = -self.hyperbolaB / self.hyperbolaA * s / np.sqrt(A2s2)
