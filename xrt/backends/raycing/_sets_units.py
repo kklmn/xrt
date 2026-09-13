@@ -151,7 +151,7 @@ argumentInputGroups = {
     ('scalar', 'string'): {'processes', 'threads'},
     ('scalar', 'auto'): {'center', 'nrays', 'x', 'z'},
     ('scalar', 'sequence'): {'dx', 'dy', 'dz', 'focus', 'nCRL', 'rms', 'r',
-                             'R'},
+                             'R', 'w0'},
     ('scalar', 'sequence', 'None'): {'order', 'taper'},
     'angle': {
         'antiblaze', 'blaze', 'braggOffset', 'cryst1roll',

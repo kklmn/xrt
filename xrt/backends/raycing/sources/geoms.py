@@ -417,7 +417,29 @@ class GeometricSource(object):
         axis2[:] = r * np.sin(phi)
 
     @raycing.append_to_flow_decorator
-    def shine(self, toGlobal=True, withAmplitudes=False, accuBeam=None):
+    def shine(self, toGlobal=True, withAmplitudes=False, accuBeam=None,
+              wave=None):
+        u"""
+        Returns the source beam. If *toGlobal* is True, the output is in
+        the global system. If *withAmplitudes* is True, the resulted beam
+        contains arrays Es and Ep with the *s* and *p* components of the
+        electric field. If *wave* is provided, wave generation is delegated
+        to the source implementation.
+
+
+        .. Returned values: beamGlobal
+        """
+        if wave is None:
+            return self._shine_rays(toGlobal, withAmplitudes, accuBeam)
+        else:
+            return self._shine_wave(toGlobal, wave, accuBeam)
+
+    def _shine_wave(self, toGlobal=True, wave=None, accuBeam=None):
+        raise NotImplementedError(
+            "wave generation is not implemented for GeometricSource")
+
+    def _shine_rays(self, toGlobal=True, withAmplitudes=False,
+                    accuBeam=None):
         u"""
         Returns the source beam. If *toGlobal* is True, the output is in
         the global system. If *withAmplitudes* is True, the resulted beam
@@ -427,9 +449,6 @@ class GeometricSource(object):
 
         .. Returned values: beamGlobal
         """
-
-#        kwArgsIn = {'toGlobal': toGlobal,
-#                    'withAmplitudes': withAmplitudes}
 
         if self.bl is not None:
             try:
@@ -445,70 +464,12 @@ class GeometricSource(object):
                 else:
                     self.bl._alignE = alignE[0]
 
-#            if accuBeam is None:
-#                kwArgsIn['accuBeam'] = accuBeam
-#            else:
-#                if raycing.is_valid_uuid(accuBeam):
-#                    kwArgsIn['accuBeam'] = accuBeam
-#                    accuBeam = self.bl.beamsDictU[accuBeam][
-#                            'beamGlobal' if toGlobal else 'beamLocal']
-#                else:
-#                    kwArgsIn['accuBeam'] = accuBeam.parentId
-
         if self.uniformRayDensity:
             withAmplitudes = True
         bo = Beam(self.nrays, withAmplitudes=withAmplitudes)  # beam-out
         bo.state[:] = 1
 
         make_polarization(self.polarization, bo, self.nrays)
-# in local coordinate system:
-        self._apply_distribution(bo.y, self.disty, self.dy, bo)
-
-        isAnnulus = False
-        if (self.distx == 'annulus') or (self.distz == 'annulus'):
-            isAnnulus = True
-            if raycing.is_sequence(self.dx):
-                rMin, rMax = self.dx
-            else:
-                isAnnulus = False
-            if raycing.is_sequence(self.dz):
-                phiMin, phiMax = self.dz
-            else:
-                phiMin, phiMax = 0, PI2
-        if isAnnulus:
-            self._set_annulus(bo.x, bo.z, rMin, rMax, phiMin, phiMax)
-        else:
-            self._apply_distribution(bo.x, self.distx, self.dx, bo)
-            self._apply_distribution(bo.z, self.distz, self.dz, bo)
-
-        isAnnulus = False
-        if (self.distxprime == 'annulus') or (self.distzprime == 'annulus'):
-            isAnnulus = True
-            if raycing.is_sequence(self.dxprime):
-                rMin, rMax = self.dxprime
-            else:
-                isAnnulus = False
-            if raycing.is_sequence(self.dzprime):
-                phiMin, phiMax = self.dzprime
-            else:
-                phiMin, phiMax = 0, PI2
-        if isAnnulus:
-            self._set_annulus(bo.a, bo.c, rMin, rMax, phiMin, phiMax)
-        else:
-            self._apply_distribution(bo.a, self.distxprime, self.dxprime, bo)
-            self._apply_distribution(bo.c, self.distzprime, self.dzprime, bo)
-
-        make_flux_normalization(self.totalFlux, bo)
-
-# normalize (a,b,c):
-        ac = bo.a**2 + bo.c**2
-        if sum(ac > 1) > 0:
-            bo.b[:] = (ac + 1)**0.5
-            bo.a[:] /= bo.b
-            bo.c[:] /= bo.b
-            bo.b[:] = 1.0 / bo.b
-        else:
-            bo.b[:] = (1 - ac)**0.5
         if self.distE is not None:
             if accuBeam is None:
                 bo.E[:] = make_energy(
@@ -517,118 +478,138 @@ class GeometricSource(object):
             else:
                 bo.E[:] = accuBeam.E[:]
 
+        if isinstance(self, GaussianBeam):
+            if self.vortex is not None or self.tem is not None:
+                raise NotImplementedError(
+                    "geometric ray generation is only implemented for the "
+                    "fundamental Gaussian mode")
+            if raycing.is_sequence(self.w0):
+                w0x, w0z = self.w0
+            else:
+                w0x = w0z = self.w0
+            k = bo.E / CHBAR * 1e7  # mm^-1
+            dx, dz = w0x * 0.5, w0z * 0.5
+            dxprime, dzprime = 1 / (k*w0x), 1 / (k*w0z)
+        else:
+            dx, dz = self.dx, self.dz
+            dxprime, dzprime = self.dxprime, self.dzprime
+
+        # in local coordinate system:
+        self._apply_distribution(bo.y, self.disty, self.dy, bo)
+
+        isAnnulus = False
+        if (self.distx == 'annulus') or (self.distz == 'annulus'):
+            isAnnulus = True
+            if raycing.is_sequence(dx):
+                rMin, rMax = dx
+            else:
+                isAnnulus = False
+            if raycing.is_sequence(dz):
+                phiMin, phiMax = dz
+            else:
+                phiMin, phiMax = 0, PI2
+        if isAnnulus:
+            self._set_annulus(bo.x, bo.z, rMin, rMax, phiMin, phiMax)
+        else:
+            self._apply_distribution(bo.x, self.distx, dx, bo)
+            self._apply_distribution(bo.z, self.distz, dz, bo)
+
+        isAnnulus = False
+        if (self.distxprime == 'annulus') or (self.distzprime == 'annulus'):
+            isAnnulus = True
+            if raycing.is_sequence(dxprime):
+                rMin, rMax = dxprime
+            else:
+                isAnnulus = False
+            if raycing.is_sequence(dzprime):
+                phiMin, phiMax = dzprime
+            else:
+                phiMin, phiMax = 0, PI2
+        if isAnnulus:
+            self._set_annulus(bo.a, bo.c, rMin, rMax, phiMin, phiMax)
+        else:
+            self._apply_distribution(bo.a, self.distxprime, dxprime, bo)
+            self._apply_distribution(bo.c, self.distzprime, dzprime, bo)
+
+        make_flux_normalization(self.totalFlux, bo)
+
+        # normalize (a,b,c):
+        ac = bo.a**2 + bo.c**2
+        if sum(ac > 1) > 0:
+            bo.b[:] = (ac + 1)**0.5
+            bo.a[:] /= bo.b
+            bo.c[:] /= bo.b
+            bo.b[:] = 1.0 / bo.b
+        else:
+            bo.b[:] = (1 - ac)**0.5
         if self.pitch or self.roll or self.yaw:
             raycing.rotate_beam(
                 bo, pitch=self.pitch, roll=self.roll, yaw=self.yaw)
         if toGlobal:  # in global coordinate system:
             raycing.virgin_local_to_global(self.bl, bo, self.center)
-#            self.bl.beamsDictU[self.uuid] = {'beamGlobal': bo}
-#        else:
-#            self.bl.beamsDictU[self.uuid] = {'beamLocal': bo}
 
         raycing.append_to_flow(self.shine, [bo],
                                inspect.currentframe())
 
-#        self.bl.flowU[self.uuid] = {'method': self.shine,
-#                                    'kwArgsIn': kwArgsIn}
-
         return bo
 
 
-class GaussianBeam(object):
+class GaussianBeam(GeometricSource):
     r"""Implements a Gaussian beam https://en.wikipedia.org/wiki/Gaussian_beam.
-    It *must* be used for an already available set of 3D points which are
-    obtained by :meth:`prepare_wave` of a slit, oe or screen. See a usage
-    example in ``\tests\raycing\laguerre_hermite_gaussian_beam.py``."""
 
-    def __init__(
-        self, bl=None, name='', center=(0, 0, 0), w0=0.1,
-        distE='lines', energies=(defaultEnergy,), energyWeights=None,
-        polarization='horizontal', pitch=0, roll=0, yaw=0, totalFlux=None,
-            **kwargs):
+    .. warning::
+        Without a prepared wave it generates geometric rays, which is
+        primarily meant for visualization.
+
+    With a wave obtained by :meth:`prepare_wave` of a slit, oe or screen, it
+    calculates the Gaussian field at the available 3D points. See an example in
+    ``\tests\raycing\laguerre_hermite_gaussian_beam.py``."""
+
+    hiddenParams = {
+        'distx', 'dx', 'disty', 'dy', 'distz', 'dz',
+        'distxprime', 'dxprime', 'distzprime', 'dzprime',
+        'filamentBeam', 'uniformRayDensity'}
+
+    def __init__(self, *args, **kwargs):
         """
-        *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
-
-        *name*: str
-
-        *center*: tuple of 3 floats
-            3D point in global system
-
         *w0*: float or 2-sequence
             Gaussian beam waist size. If a 2-sequence, the sizes refer to
             the horizontal and the vertical axes.
 
-        *distE*: 'normal', 'flat', 'lines', None
+        *nrays*: int
+            Number of rays generated when no wave is supplied to
+            :meth:`shine`.
 
-        *energies*: all in eV. (centerE, sigmaE) for *distE* = 'normal',
-            (minE, maxE) for *distE* = 'flat', a sequence of E values for
-            *distE* = 'lines'
-
-            .. note::
-                Erroneous input (size/type mismatch) will default to
-                monochromatic distribution.
-                If *sigmaE* exceeds 10% of *centerE*, *sigmaE* is taken as zero
-                to avoid sampling negative energies.
-
-        *energyWeights*: 1-D array-like
-            Can be used together with *distE* = 'lines' to specify the weight
-            of each line. Must be of the shape of *energies*.
-
-        *polarization*:
-            'h[orizontal]', 'v[ertical]', '+45', '-45', 'r[ight]', 'l[eft]',
-            None, numeric angle in degrees, custom. In the latter case the
-            polarization is given by a sequence of 4 components of the
-            coherency matrix:
-            (Jss, Jpp, Re(Jsp), Im(Jsp)).
-
-        *pitch*, *roll*, *yaw*: float
-            rotation angles around x, y and z axes. Useful for canted sources.
-
-        *totalFlux*: float or None
-            Absolute source flux in ph/s to use for source normalization.
-            The normalization is preserved during propagation and beam
-            concatenation. If None, plot values remain relative intensities or
-            weighted ray counts.
 
         """
-        self.bl = bl
-        if bl is not None:
-            if self not in bl.sources:
-                bl.sources.append(self)
-                self.ordinalNum = len(bl.sources)
-        raycing.set_name(self, name)
-#        if name in [None, 'None', '']:
-#            self.name = '{0}{1}'.format(self.__class__.__name__,
-#                                        self.ordinalNum)
-#        else:
-#            self.name = name
-        if not hasattr(self, 'uuid'):  # uuid must not change on re-init
-            self.uuid = kwargs['uuid'] if 'uuid' in kwargs else\
-                str(raycing.uuid.uuid4())
+        self.w0 = kwargs.pop('w0', 0.1)
+        if raycing.is_sequence(self.w0):
+            w0x, w0z = self.w0
+        else:
+            w0x = w0z = self.w0
+        kwargs.update(
+            distx='normal', dx=w0x*0.5, disty=None, dy=0,
+            distz='normal', dz=w0z*0.5,
+            distxprime='normal', dxprime=0,
+            distzprime='normal', dzprime=0,
+            filamentBeam=False, uniformRayDensity=False)
+        super(GaussianBeam, self).__init__(*args, **kwargs)
 
-        self.center = center
-        self.w0 = w0
-#        if raycing.is_sequence(self.w0):
-#            if len(self.w0) != 2:
-#                raise ValueError('wrong length of w0')
-        self.distE = distE
-        self.energies = energies
-        self.energyWeights = energyWeights
-
-        if bl is not None:
-            if self.bl.flowSource != 'Qook0':
-                bl.oesDict[self.uuid] = [self, 0]
-                bl.oenamesToUUIDs[self.name] = self.uuid
-
-        self.polarization = polarization
+        energy = np.atleast_1d(self.energies)
+        try:
+            if self.distE == 'flat' and len(energy) == 2:
+                energy = 0.5 * (energy[0] + (energy[1] or energy[0]))
+            else:
+                energy = energy[0]
+            if energy <= 0:
+                energy = defaultEnergy
+        except (IndexError, TypeError, ValueError):
+            energy = defaultEnergy
+        k = energy / CHBAR * 1e7  # mm^-1
+        self.dxprime = 1 / (k*w0x)
+        self.dzprime = 1 / (k*w0z)
         self.vortex = None
         self.tem = None
-        self.pitch = raycing.auto_units_angle(pitch)
-        self.roll = raycing.auto_units_angle(roll)
-        self.yaw = raycing.auto_units_angle(yaw)
-        self.totalFlux = totalFlux
-
-    center = raycing.center_property()
 
     @property
     def w0(self):
@@ -641,31 +622,17 @@ class GaussianBeam(object):
             if not hasattr(self, '_w0'):
                 self._w0 = 0.1
             return
-        self._w0 = w0
-
-    @property
-    def pitch(self):
-        return self._pitch
-
-    @pitch.setter
-    def pitch(self, pitch):
-        self._pitch = raycing.auto_units_angle(pitch)
-
-    @property
-    def roll(self):
-        return self._roll
-
-    @roll.setter
-    def roll(self, roll):
-        self._roll = raycing.auto_units_angle(roll)
-
-    @property
-    def yaw(self):
-        return self._yaw
-
-    @yaw.setter
-    def yaw(self, yaw):
-        self._yaw = raycing.auto_units_angle(yaw)
+        try:
+            if raycing.is_sequence(w0):
+                newW0 = [float(w) for w in w0]
+            else:
+                newW0 = float(w0)
+        except (TypeError, ValueError):
+            print("Wrong w0: expected a scalar or a 2-sequence of numbers")
+            if not hasattr(self, '_w0'):
+                self._w0 = 0.1
+            return
+        self._w0 = newW0
 
     def rayleigh_range(self, E, w0=None):
         if w0 is None:
@@ -680,8 +647,7 @@ class GaussianBeam(object):
             yR = self.rayleigh_range(E, w0)
         return w0 * (1 + (y/yR)**2)**0.5
 
-    @raycing.append_to_flow_decorator
-    def shine(self, toGlobal=True, wave=None, accuBeam=None):
+    def _shine_wave(self, toGlobal=True, wave=None, accuBeam=None):
         u"""
         Returns the source beam. If *toGlobal* is True, the output is in
         the global system.
@@ -789,7 +755,7 @@ class GaussianBeam(object):
             wave.b[:] = 1/invR
         wave.b[invR == 0] = 1e20
         wave.b[:] = (wave.b**2 - wave.a**2 - wave.c**2)**0.5
-# normalize (a,b,c):
+        # normalize (a,b,c):
         norm = (wave.a**2 + wave.b**2 + wave.c**2)**0.5
         wave.a /= norm
         wave.b /= norm

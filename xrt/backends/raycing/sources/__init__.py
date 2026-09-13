@@ -885,8 +885,8 @@ undulator field at zero energy spread and emittance.
 
 """
 __author__ = "Konstantin Klementiev", "Roman Chernikov"
-__all__ = ('GeometricSource', 'MeshSource', 'BendingMagnet', 'Wiggler',
-           'Undulator', 'SourceFromField', 'BeamFromFile')
+__all__ = ('GeometricSource', 'GaussianBeam', 'MeshSource', 'BendingMagnet',
+           'Wiggler', 'Undulator', 'SourceFromField', 'BeamFromFile')
 
 from .beams import Beam, BeamProxy,\
     copy_beam, rotate_coherency_matrix, defaultEnergy
