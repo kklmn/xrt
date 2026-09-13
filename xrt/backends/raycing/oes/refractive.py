@@ -422,10 +422,13 @@ class ParaboloidFlatLens(Plate):
         return self.local_n(x, y)
 
     def local_z(self, x, y):
-        return self.local_z1(x, y)
+        return np.zeros_like(y)  # just flat
 
     def local_n(self, x, y):
-        return self.local_n1(x, y)
+        a = np.zeros_like(y)
+        b = np.zeros_like(y)
+        c = -np.ones_like(y)
+        return [a, b, c]
 
     def get_nCRL(self, f, E):
         nCRL = 1
