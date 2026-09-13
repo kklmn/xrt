@@ -305,11 +305,11 @@ class OE(OEMainMethods):
         self.shape = shape
         self.overEdge = kwargs['overEdge'] if 'overEdge' in kwargs else 'yMax'
 
+        self.curSurface = 0
         self.surface = surface
         self.material = material  # can be uuid
         self.figureError = figureError
         self.alpha = alpha
-        self.curSurface = 0
         self.dx = 0
         self.limOptX = limOptX
         self.limOptY = limOptY
@@ -317,10 +317,9 @@ class OE(OEMainMethods):
         self.limPhysY = limPhysY
         self.use_rays_good_gn = False  # use rays_good_gn instead of rays_good
 
-
         self.gratingDensity = gratingDensity
         self.order = order
-#        self.get_surface_limits()
+        # self.get_surface_limits()
         self.cl_ctx = None
         self.ucl = None
         self.footprint = []

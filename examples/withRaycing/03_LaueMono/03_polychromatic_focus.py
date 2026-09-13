@@ -314,13 +314,13 @@ def define_plots():
 
     return plots
 
-#def plot_generator(plots, beamLine):
+# def plot_generator(plots, beamLine):
 #    for radius in Rbend:
 #        beamLine.lauePlate01.R = radius
 #        beamLine.lauePlate02.R = radius
 #        for plot in plots:
 #            plot.saveName=plot.title+'_R{:.1f}m.png'.format(radius/1000)
-#
+
 #        yield
 
 
@@ -330,7 +330,7 @@ def main():
     beamLine.alignE = E0
 
     if showIn3D:
-        beamLine.glow()
+        beamLine.glow(scale=[1000, 30, 1000])
         return
 
     plots = define_plots()

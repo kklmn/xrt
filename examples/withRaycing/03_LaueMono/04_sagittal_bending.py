@@ -126,8 +126,8 @@ def build_beamline():
         dzprime=sourceDzPrime,
         energies=eLims,
         distE='flat',
-#        energies=eLimsSource,
-#        distE='lines'
+        # energies=eLimsSource,
+        # distE='lines'
         )
 
     beamLine.lauePlate02 = roes.BentLaue2D(
@@ -311,13 +311,14 @@ def define_plots():
 
     return plots
 
-#def plot_generator(plots, beamLine):
+
+# def plot_generator(plots, beamLine):
 #    for radius in Rbend:
 #        beamLine.lauePlate01.R = radius
 #        beamLine.lauePlate02.R = radius
 #        for plot in plots:
 #            plot.saveName=plot.title+'_R{:.1f}m.png'.format(radius/1000)
-#
+
 #        yield
 
 
@@ -327,7 +328,7 @@ def main():
     beamLine.alignE = E0
 
     if showIn3D:
-        beamLine.glow()
+        beamLine.glow(scale=[1000, 30, 1000])
 
     plots = define_plots()
     xrtrun.run_ray_tracing(
@@ -335,7 +336,7 @@ def main():
         backend=r"raycing",
         repeats=1,
         processes='half',
-#        generator=plot_generator,
+        # generator=plot_generator,
         beamLine=beamLine)
 
 

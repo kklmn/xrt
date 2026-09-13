@@ -17,7 +17,7 @@ import xrt.backends.raycing.screens as rsc
 import xrt.plotter as xrtp
 import xrt.runner as xrtr
 
-showIn3D = False
+showIn3D = True
 
 prefix = '02_bentLaueDCM'
 
@@ -36,7 +36,7 @@ nThetas = 51
 si111 = rm.CrystalSi(hkl=(1, 1, 1), geom='Laue', t=0.2)
 fixedExit = 51.
 pLaueDCM = 1000.
-qLaueDCM = 100.
+qLaueDCM = 500.
 
 
 def build_beamline(nrays=1e5):
@@ -48,6 +48,16 @@ def build_beamline(nrays=1e5):
         beamLine, 'LaueDCM1', (0, pLaueDCM, 0), material=(si111,))
     beamLine.laueDCM2 = roe.BentLaueCylinder(
         beamLine, 'LaueDCM2', [0, 0, fixedExit], material=(si111,))
+    radius = radii[0]
+    beamLine.laueDCM1.R = radius
+    beamLine.laueDCM2.R = radius
+    theta0 = math.asin(rm.ch / (2 * si111.d * energies[0]))
+    pitch = math.pi/2 + theta0
+    beamLine.laueDCM1.pitch = pitch
+    beamLine.laueDCM2.pitch = pitch
+    beamLine.laueDCM2.center[1] = pLaueDCM + fixedExit *\
+        math.cos(theta0) / math.tan(2*theta0)
+
     beamLine.fsm2 = rsc.Screen(
         beamLine, 'FSM2', [0, pLaueDCM + qLaueDCM, fixedExit])
     return beamLine
@@ -115,7 +125,7 @@ def define_plots(beamLine):
         0.86, 0.8, '', transform=plot2.fig.transFigure, size=14, color='r',
         ha='center')
     plots.append(plot2)
-    
+
     return plots
 
 
@@ -304,6 +314,7 @@ def main():
     xrtr.run_ray_tracing(
         plots, repeats=36, generator=plot_generator,
         beamLine=beamLine, processes='half')
+
 
 #this is necessary to use multiprocessing in Windows, otherwise the new Python
 #contexts cannot be initialized:

@@ -50,6 +50,10 @@ def build_beamline():
         beamLine, 'LaueSCM', (0, pLaueSCM, 0), material=siCrystal,
         # Note: with precisionOpenCL='float32' may not converge!
         targetOpenCL=tOCL if useTT else None, precisionOpenCL='float64')
+    beamLine.laueSCM.R = radii[0]
+    theta0 = np.arcsin(rm.ch / (2*siCrystal.d*energies[0]))
+    beamLine.laueSCM.pitch = np.pi/2 + theta0
+
     beamLine.fsm2 = rsc.Screen(beamLine, 'FSM2', [0, pLaueSCM + qLaueSCM, 0])
     return beamLine
 
