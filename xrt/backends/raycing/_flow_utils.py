@@ -738,10 +738,11 @@ def get_init_kwargs(oeObj, compact=True, needRevG=False, blname=None,
             if hasattr(oeObj, arg):
                 if arg == 'data':
                     continue
-                rawCurvature = getattr(oeObj, f'_{arg}', None)
-                if not resolveAuto and arg in ('R', 'r', 'Rm', 'Rs') and\
-                        isinstance(rawCurvature, (list, tuple)):
-                    realval = rawCurvature
+                rawValue = getattr(oeObj, f'_{arg}', None)
+                if not resolveAuto and arg in (
+                        'R', 'r', 'Rm', 'Rs', 'focus', 'nCRL') and\
+                        isinstance(rawValue, (list, tuple)):
+                    realval = rawValue
                 elif hasattr(oeObj, f'_{arg}Init') and not resolveAuto:
                     realval = getattr(oeObj, f'_{arg}Init')
 #                    print(oeObj.name, f'_{arg}Init', realval)

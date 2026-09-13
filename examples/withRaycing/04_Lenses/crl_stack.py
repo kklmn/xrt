@@ -99,11 +99,11 @@ else:
     raise ValueError('Unknown mirror')
 
 mBeryllium = rm.Material('Be', rho=1.848, kind='lens')
-# mDiamond = rm.Material('C', rho=3.52, kind='lens')
-# mAluminum = rm.Material('Al', rho=2.7, kind='lens')
-# mSilicon = rm.Material('Si', rho=2.33, kind='lens')
-# mNickel = rm.Material('Ni', rho=8.9, kind='lens')
-# mLead = rm.Material('Pb', rho=11.35, kind='lens')
+mDiamond = rm.Material('C', rho=3.52, kind='lens')
+mAluminum = rm.Material('Al', rho=2.7, kind='lens')
+mSilicon = rm.Material('Si', rho=2.33, kind='lens')
+mNickel = rm.Material('Ni', rho=8.9, kind='lens')
+mLead = rm.Material('Pb', rho=11.35, kind='lens')
 
 
 def build_beamline(nrays=1e4):
@@ -117,7 +117,8 @@ def build_beamline(nrays=1e4):
     beamLine.fsm1 = rsc.Screen(beamLine, 'FSM1', (0, p - 100, 0))
 
     kwargs = dict(pitch=np.pi/2, t=0, material=mBeryllium, focus=parabolaParam,
-                  zmax=zmax, nCRL=(q, E0), alarmLevel=0.1)
+                  zmax=zmax, nCRL=(q, E0), alarmLevel=0.1, limPhysX=[-5, 5],
+                  limPhysY=[-5, 5], shape='round')
     beamLine.lens = Lens(beamLine, 'CRL', [0, p, 0], **kwargs)
 
     beamLine.fsm2 = rsc.Screen(beamLine, 'FSM2')
@@ -135,8 +136,8 @@ def run_process(beamLine):
     for i, dq in enumerate(beamLine.fsm2.dqs):
         beamLine.fsm2.center[1] = p + q + dq
         outDict['beamFSM2_{0:02d}'.format(i)] = beamLine.fsm2.expose(lglobal)
-    if showIn3D:
-        beamLine.prepare_flow()
+#    if showIn3D:
+#        beamLine.prepare_flow()
     return outDict
 
 rr.run_process = run_process

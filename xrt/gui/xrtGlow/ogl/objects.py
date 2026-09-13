@@ -1438,6 +1438,8 @@ class OEMesh3D():
         oeShape = getattr(self.oe, 'shape', 'rect')
         oeDx = 0 if isAperture else getattr(self.oe, 'dx', 0)
         isOeParametric = getattr(self.oe, 'isParametric', False)
+        isCRLStack = isinstance(self.oe, roes.ParaboloidFlatLens) and \
+            self.oe.nCRL > 1
 
         tiles = self.parent.tiles if self.parent is not None else self.tiles
         localTiles = np.array(tiles)
@@ -1533,6 +1535,10 @@ class OEMesh3D():
 #        self.bBox[:, 1] = yLimit
 
         points = np.vstack((xv, yv, zv)).T
+        if isCRLStack and is2ndXtal:
+            # The regular Plate transform positions the second surface of the
+            # first lenslet. Move it by the remaining lenslet pitches.
+            points[:, 2] += (self.oe.nCRL - 1) * thickness
 
         if oeShape == 'round':
             # Reuse the evaluated outer ring. Re-evaluating it here would
@@ -1648,8 +1654,9 @@ class OEMesh3D():
             allIndices = np.hstack((allIndices, allIndices + indArrOffset))
             indArrOffset += len(points)
 
-        # Side Surface, do not plot for 2ndXtal of Plate
-        if not ((isPlate and is2ndXtal) or isScreen or isClosedSurface):
+        # Side Surface, omit the open span between CRL end surfaces.
+        if not ((isPlate and is2ndXtal) or isCRLStack or isScreen or
+                isClosedSurface):
             if oeShape == 'round':  # Side surface
                 if useLR:
                     allSurfaces = np.vstack((allSurfaces, tB))

@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import copy
 import numpy as np
 import inspect
 
@@ -143,11 +142,6 @@ class Plate(DCM):
                     .format(name, "plate or lens or FZP"),
                     "YELLOW"
                 )
-
-        if hasattr(self, '_nCRLlist') and self._nCRLlist is not None:
-            self.nCRL = self._nCRLlist
-        if hasattr(self, '_focuslist') and self._focuslist is not None:
-            self.focus = self._focuslist
 
     @property
     def wedgeAngle(self):
@@ -335,54 +329,58 @@ class ParaboloidFlatLens(Plate):
 
     @property
     def nCRL(self):
-        return self._nCRL
+        nCRL = getattr(self, '_nCRL', 1)
+        if isinstance(nCRL, (list, tuple)):
+            material = self.material
+            if material is not None and hasattr(
+                    material, 'get_refractive_index'):
+                return max(int(round(self.get_nCRL(*nCRL))), 1)
+            return 1
+        return nCRL
 
     @nCRL.setter
     def nCRL(self, nCRL):
         if isinstance(nCRL, (int, float)):
             self._nCRL = max(int(round(nCRL)), 1)
-            self._nCRLlist = None
-            if hasattr(self, '_focuslist') and self._focuslist is not None:
-                self.focus = self._focuslist
         elif isinstance(nCRL, (list, tuple)):
-            self._nCRL = max(int(round(self.get_nCRL(*nCRL))), 1)
-            self._nCRLlist = copy.copy(nCRL)
+            if isinstance(getattr(self, '_focus', None), (list, tuple)):
+                self._focus = self.focus
+            self._nCRL = tuple(nCRL)
         else:
             self._nCRL = 1
 #            raise ValueError("wrong nCRL value!")
 
     @property
     def focus(self):
-        return self._focus
+        focus = getattr(self, '_focus', 1.)
+        if isinstance(focus, (list, tuple)):
+            material = self.material
+            if material is not None and hasattr(
+                    material, 'get_refractive_index'):
+                return self.get_focus(*focus)
+            return 1.
+        return focus
 
     @focus.setter
     def focus(self, focus):
         if isinstance(focus, (int, float)):
             self._focus = focus
-            self._focuslist = None
-            if hasattr(self, '_nCRLlist') and self._nCRLlist is not None:
-                self.nCRL = self._nCRLlist
         elif isinstance(focus, (list, tuple)):
-            self._focus = self.get_focus(*focus)
-            self._focuslist = copy.copy(focus)
+            if isinstance(getattr(self, '_nCRL', None), (list, tuple)):
+                self._nCRL = self.nCRL
+            self._focus = tuple(focus)
         else:
             self._focus = 1.
 
     def __pop_kwargs(self, **kwargs):
         focus = kwargs.pop('focus', 1.)
         nCRL = kwargs.pop('nCRL', 1)
-        if isinstance(focus, (list, tuple)):
-            if isinstance(nCRL, (list, tuple)):
-                print("'focus' and 'nCRL' cannot be both automatic")
-                nCRL = 1
-            self.nCRL = nCRL  # int, float
-            self.focus = focus
-        elif isinstance(nCRL, (list, tuple)):
-            self.focus = focus  # int, float
-            self.nCRL = nCRL
-        else:
-            self.nCRL = nCRL  # int, float
-            self.focus = focus  # int, float
+        if isinstance(focus, (list, tuple)) and isinstance(
+                nCRL, (list, tuple)):
+            print("'focus' and 'nCRL' cannot be both automatic")
+            nCRL = 1
+        self.focus = focus
+        self.nCRL = nCRL
 
         self.zmax = kwargs.pop('zmax', None)
         kwargs['pitch'] = kwargs.get('pitch', np.pi/2)
@@ -464,8 +462,8 @@ class ParaboloidFlatLens(Plate):
         lenses, center of each of *nCRL* lens is shifted by *zmax* mm
         relative to the previous one along the beam propagation direction.
         Returned global beam emerges from the exit surface of the last lens,
-        returned local beams correspond to the entrance and exit surfaces of
-        the first lens.
+        returned local beams correspond to the entrance surface of the first
+        lens and the exit surface of the last lens.
 
         *returnLocalAbsorbed*: None, 0 or 1
             --DEPRECATED--
@@ -516,7 +514,10 @@ class ParaboloidFlatLens(Plate):
                     self.center[2] -= step * toward[2]
                 beamIn = lglobal
                 if ilens == 0:
-                    llocal1, llocal2 = tlocal1, tlocal2
+                    llocal1 = tlocal1
+            llocal2 = tlocal2
+            if needLocal:
+                llocal2.z += (self.nCRL - 1) * step
             self.centerShift = step * np.array(toward)
             self.center = tempCenter
 
