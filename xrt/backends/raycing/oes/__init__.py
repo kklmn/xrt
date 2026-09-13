@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 Optical elements
 ----------------
@@ -382,7 +382,10 @@ class ToroidMirror(OE):
     def r(self, r):
         if isinstance(r, (list, tuple)):
             self._r = r
-            self._rVal = self.get_rsag_from_Coddington(*r)
+            self._rVal = self.get_rsag_from_Coddington(*r) \
+                if len(r) in (2, 3) else None
+            if self._rVal in [None, 0] or not np.isfinite(self._rVal):
+                self._rVal = 1e100
         elif r in [0, None]:
             self._r = None
             self._rVal = 1e100
@@ -655,6 +658,14 @@ class DCMwithSagittalFocusing(DCM):  # composed by Roelof van Silfhout
     def __pop_kwargs(self, **kwargs):
         self.Rs = kwargs.pop('Rs', 1e12)
         return kwargs
+
+    @property
+    def Rs(self):
+        return self._Rs
+
+    @Rs.setter
+    def Rs(self, Rs):
+        self._Rs = 1e100 if Rs in [None, 0] else Rs
 
     def local_z2(self, x, y):
         return self.Rs - np.sqrt(self.Rs**2 - x**2)

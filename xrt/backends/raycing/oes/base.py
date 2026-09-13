@@ -359,10 +359,13 @@ class OE(OEMainMethods):
                     hasattr(self, '_pitchVal') and self._pitchVal != 0:
                 self._RVal = self.get_Rmer_from_Coddington(*self._R)
             else:
-                self._RVal = np.inf
+                self._RVal = 1e100
 
         if hasattr(self, '_r') and isinstance(self._r, (list, tuple)):
-            self._rVal = self.get_rsag_from_Coddington(*self._r)
+            self._rVal = self.get_rsag_from_Coddington(*self._r) \
+                if len(self._r) in (2, 3) else None
+            if self._rVal in [None, 0] or not np.isfinite(self._rVal):
+                self._rVal = 1e100
 
         if hasattr(self, '_Rm') and isinstance(self._Rm, (tuple, list)):
             if hasattr(self, '_braggVal'):
@@ -371,7 +374,7 @@ class OE(OEMainMethods):
                     hasattr(self, '_pitchVal') and self._pitchVal != 0:
                 self._RmVal = self.get_Rmer_from_Coddington(*self._Rm)
             else:
-                self._RmVal = np.inf
+                self._RmVal = 1e100
 
         if hasattr(self, '_Rs') and isinstance(self._Rs, (tuple, list)):
             if hasattr(self, '_braggVal'):
@@ -380,7 +383,7 @@ class OE(OEMainMethods):
                 self._RsVal = self.get_rsag_from_Coddington(
                         self._Rs[0], self._Rs[1], self._pitchVal)
             else:
-                self._RsVal = np.inf
+                self._RsVal = 1e100
 
         if hasattr(self, '_reset_material'):
             self._reset_material()

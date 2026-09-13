@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 import copy
 import numpy as np
 import inspect
@@ -58,8 +58,8 @@ class Plate(DCM):
 
     @t.setter
     def t(self, t):
-        self._t = t
-        self.cryst2perpTransl = -t
+        self._t = 0 if t is None else t
+        self.cryst2perpTransl = -self._t
 
     @property
     def limPhysX(self):

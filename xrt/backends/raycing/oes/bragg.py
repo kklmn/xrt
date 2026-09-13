@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 import numpy as np
 
 from ... import raycing
@@ -142,6 +142,14 @@ class JohannCylinder(OE):
             raise ValueError('unknown crossSection!')
         return kwargs
 
+    @property
+    def Rm(self):
+        return self._Rm
+
+    @Rm.setter
+    def Rm(self, Rm):
+        self._Rm = 1e100 if Rm in [None, 0] else Rm
+
     def local_z(self, x, y):
         """Determines the surface of OE at (*x*, *y*) position."""
         if self.crossSection.startswith('circ'):  # 'circular'
@@ -223,12 +231,20 @@ class JohannToroid(OE):
         OE.__init__(self, *args, **kwargs)
 
     @property
+    def Rm(self):
+        return self._Rm
+
+    @Rm.setter
+    def Rm(self, Rm):
+        self._Rm = 1e100 if Rm in [None, 0] else Rm
+
+    @property
     def Rs(self):
         return self._Rs if self._Rs is not None else self.Rm
 
     @Rs.setter
     def Rs(self, Rs):
-        self._Rs = Rs
+        self._Rs = 1e100 if Rs == 0 else Rs
 
     def pop_kwargs(self, **kwargs):
         self.Rm = kwargs.pop('Rm', 1000.)  # R meridional

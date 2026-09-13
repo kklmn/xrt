@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 import os
 import numpy as np
 
@@ -75,7 +75,7 @@ class BentLaueCylinder(OE):
     @R.setter
     def R(self, R):
         if R in [None, 0]:
-            self._RVal = np.inf
+            self._RVal = 1e100
             self._R = None
         elif isinstance(R, (tuple, list)):
             if hasattr(self, '_braggVal') and self._braggVal != 0:
@@ -85,7 +85,7 @@ class BentLaueCylinder(OE):
                 self._RVal = self.get_Rmer_from_Coddington(
                         R[0], R[1], self._pitchVal)
             else:
-                self._RVal = np.inf
+                self._RVal = 1e100
             self._R = R
         else:
             self._RVal = R
@@ -269,7 +269,7 @@ class BentLaue2D(OE):
     @Rm.setter
     def Rm(self, Rm):
         if Rm in [None, 0]:
-            self._RmVal = np.inf
+            self._RmVal = 1e100
             self._Rm = None
         elif isinstance(Rm, (tuple, list)):
             if hasattr(self, '_braggVal') and self._braggVal != 0:
@@ -279,7 +279,7 @@ class BentLaue2D(OE):
                 self._RmVal = self.get_Rmer_from_Coddington(
                         Rm[0], Rm[1], self._pitchVal)
             else:
-                self._RmVal = np.inf
+                self._RmVal = 1e100
             self._Rm = Rm
         else:
             self._RmVal = Rm
@@ -294,7 +294,7 @@ class BentLaue2D(OE):
     @Rs.setter
     def Rs(self, Rs):
         if Rs in [None, 0]:
-            self._RsVal = np.inf
+            self._RsVal = 1e100
             self._Rs = None
         elif isinstance(Rs, (tuple, list)):
             if hasattr(self, '_braggVal') and self._braggVal != 0:
@@ -304,7 +304,7 @@ class BentLaue2D(OE):
                 self._RsVal = self.get_rsag_from_Coddington(
                         Rs[0], Rs[1], self._pitchVal)
             else:
-                self._RsVal = np.inf
+                self._RsVal = 1e100
             self._Rs = Rs
         else:
             self._RsVal = Rs

@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 import numpy as np
 
 from ... import raycing
@@ -872,6 +872,10 @@ class ParaboloidCapillaryMirror(SurfaceOfRevolution):
         if not all([hasattr(self, v) for v in
                     ['_q', '_r0']]):
             return
+        if self.q is None:
+            self.focus = None
+            self.s0 = None
+            return
         self.focus = -0.5*(self.q-(self.q**2+self.r0**2)**0.5)
         self.s0 = self.focus + self.q
 
@@ -881,10 +885,16 @@ class ParaboloidCapillaryMirror(SurfaceOfRevolution):
         return kwargs
 
     def local_r(self, s, phi):
+        if self.focus is None:
+            return np.zeros_like(s, dtype=float) + self.r0
         return 2*np.sqrt((self.s0-s)*self.focus)
 
     def local_n(self, s, phi):
         a = -np.sin(phi)
+        if self.focus is None:
+            b = np.zeros_like(phi, dtype=float)
+            c = -np.cos(phi)
+            return a, b, c
         b = -np.sqrt(self.focus/(self.s0-s))
         c = -np.cos(phi)
         norm = np.sqrt(a**2 + b**2 + c**2)
