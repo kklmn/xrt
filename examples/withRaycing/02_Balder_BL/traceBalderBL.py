@@ -248,11 +248,9 @@ def main(pitch, fixedExit, hkl, stripe, eMinRays, eMaxRays, eTune, vfmR,
     plots = define_plots(myBalder, prefix, suffix)
     if showIn3D:
         myBalder.explore(plots=xrtp.serialize_plots(plots))
-        processes = 1
     else:
-        processes = 'half'
-    xrtr.run_ray_tracing(plots, repeats=8, beamLine=myBalder,
-                         processes=processes)
+        xrtr.run_ray_tracing(plots, repeats=8, beamLine=myBalder,
+                             processes='half')
 
 
 if __name__ == '__main__':

@@ -320,6 +320,10 @@ def align_beamline(beamLine, pitch=None, bragg=None, energy=9000.,
         bottom=heightVFM - beamLine.height - dz/2,
         top=heightVFM - beamLine.height + dz/2)
 
+    beamLine.fsmDCM.center[2] = heightVFM
+    beamLine.fsmVFM.center[2] = heightVFM
+    beamLine.fsmSample.center[2] = heightVFM
+
 
 if __name__ == '__main__':
     myBalder = build_beamline(nrays=25000)
