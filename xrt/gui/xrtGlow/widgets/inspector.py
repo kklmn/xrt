@@ -852,6 +852,7 @@ class ConfigurablePlotWidget(qt.QWidget):
         self.plotProps = plotProps
         self.liveUpdateEnabled = True
         self.yAxisUserSet = False
+        self.yAxisUnitUserSet = False
         self.beamLine = beamLine
         beamModel = getattr(parent, 'beamModel', None)
         if beamModel is not None:
@@ -1073,6 +1074,8 @@ class ConfigurablePlotWidget(qt.QWidget):
 
         if paramTuple[1] == 'yaxis' and paramTuple[2] in ['label', 'data']:
             self.yAxisUserSet = True
+        elif paramTuple[1] == 'yaxis' and paramTuple[2] == 'unit':
+            self.yAxisUnitUserSet = True
 
         if paramTuple[2] == 'beam':
             self.set_beam(paramTuple[3])
@@ -1140,6 +1143,7 @@ class ConfigurablePlotWidget(qt.QWidget):
         oeLine = self.beamLine.oesDict.get(self.elementId)
         oeObj = oeLine[0] if oeLine is not None else None
         if not self.yAxisUserSet:
+            yAxisUnit = plot.yaxis.unit
             realBeamKeys = [key for key in sourceBeamDict.keys()
                             if key != 'beamAbsorb']
             if is_screen(oeObj) or is_aperture(oeObj) or\
@@ -1152,6 +1156,8 @@ class ConfigurablePlotWidget(qt.QWidget):
             else:
                 plot.yaxis.label = r"z"
                 plot.yaxis.data = 'auto'
+            if self.yAxisUnitUserSet:
+                plot.yaxis.unit = yAxisUnit
 
     def update_beam(self, beamTag):
         currentTag = (getattr(self, 'elementId', None), self.dynamicPlot.beam)
