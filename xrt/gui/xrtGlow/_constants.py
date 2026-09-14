@@ -48,6 +48,7 @@ scr_m = qt.QMatrix4x4(1, 0, 0, 0,  0, 0, -1, 0,  0, 1, 0, 0,  0, 0, 0, 1)
 _DEBUG_ = True  # If False, exceptions inside the module are ignored
 MAXRAYS = 500000
 DISPLAY_NUMBER_FORMAT = '{:.6g}'
+AXIS_TICK_STYLE = 'ticks' # 'leads'
 
 DEFAULT_SCENE_SETTINGS = {
     'aspect': 1,

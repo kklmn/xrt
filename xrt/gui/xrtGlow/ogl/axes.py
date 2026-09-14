@@ -13,6 +13,7 @@ from freetype import Face, FT_LOAD_RENDER  # analysis:ignore
 from matplotlib import font_manager  # analysis:ignore
 
 from .._utils import (create_qt_buffer, update_qt_buffer, basis_rotation_q)  # analysis:ignore
+from .._constants import AXIS_TICK_STYLE
 
 from ...commons import qt  # analysis:ignore
 from ...commons import gl  # analysis:ignore
@@ -112,7 +113,7 @@ class CoordinateBox():
         self.parent = parent
         self.axPosModifier = np.ones(3)
         self.perspectiveEnabled = True
-        self.tickType = "ticks"
+        self.tickType = AXIS_TICK_STYLE
         self.shader = None
         self.origShader = None
         self.textShader = None
