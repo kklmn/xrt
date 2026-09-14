@@ -73,6 +73,7 @@ import xrt.plotter as xrtp
 import xrt.runner as xrtr
 
 showIn3D = False
+showIn3D = True
 
 parabolaParam = 1.  # mm
 zmax = 1.5  # mm
@@ -117,8 +118,9 @@ def build_beamline(nrays=1e4):
     beamLine.fsm1 = rsc.Screen(beamLine, 'FSM1', (0, p - 100, 0))
 
     kwargs = dict(pitch=np.pi/2, t=0, material=mBeryllium, focus=parabolaParam,
-                  zmax=zmax, nCRL=(q, E0), alarmLevel=0.1, limPhysX=[-5, 5],
-                  limPhysY=[-5, 5], shape='round')
+                  zmax=zmax, nCRL=(q, E0), alarmLevel=0.1,
+#                  limPhysX=[-5, 5], limPhysY=[-5, 5], shape='round'
+                  )
     beamLine.lens = Lens(beamLine, 'CRL', [0, p, 0], **kwargs)
 
     beamLine.fsm2 = rsc.Screen(beamLine, 'FSM2')

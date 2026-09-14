@@ -161,6 +161,15 @@ class Plate(DCM):
     def assign_auto_material_kind(self, material):
         material.kind = 'plate'
 
+    @staticmethod
+    def _get_surface_footprint(beam):
+        good = beam.state > 0
+        if not np.any(good):
+            return None
+        coordinates = np.vstack((beam.x[good], beam.y[good], beam.z[good]))
+        return np.vstack((np.min(coordinates, axis=1),
+                          np.max(coordinates, axis=1)))
+
     @raycing.append_to_flow_decorator
     def double_refract(self, beam=None, needLocal=True,
                        returnLocalAbsorbed=None):
@@ -194,6 +203,14 @@ class Plate(DCM):
         gb, lb1, lb2 = self.double_reflect(beam=beam, needLocal=needLocal,
                                            fromVacuum1=True,
                                            fromVacuum2=False)
+
+        if needLocal:
+            footprints = [self._get_surface_footprint(lb)
+                          for lb in (lb1, lb2)]
+            self.footprint = footprints if all(
+                footprint is not None for footprint in footprints) else []
+        else:
+            self.footprint = []
 
         if self.bl is not None:
             if self.bl.flowSource == 'double_refract':
@@ -495,6 +512,8 @@ class ParaboloidFlatLens(Plate):
             # self.bl.flowSource = 'multiple_refract'
             tempCenter = [c for c in self.center]
             beamIn = beam
+            firstFootprint = None
+            lastFootprint = None
             zmax = 5 if self.zmax is None else self.zmax
             if isinstance(self, (DoubleParaboloidLens,
                                  DoubleParabolicCylinderLens)):
@@ -505,6 +524,10 @@ class ParaboloidFlatLens(Plate):
             for ilens in range(self.nCRL):
                 lglobal, tlocal1, tlocal2 = self.double_refract(
                     beam=beamIn, needLocal=needLocal)
+                if len(self.footprint) >= 2:
+                    if firstFootprint is None:
+                        firstFootprint = self.footprint[0].copy()
+                    lastFootprint = self.footprint[-1].copy()
                 if self.zmax is not None:
                     toward = raycing.rotate_point(
                         [0, 0, 1], self.rotationSequence, self.pitch,
@@ -518,6 +541,9 @@ class ParaboloidFlatLens(Plate):
             llocal2 = tlocal2
             if needLocal:
                 llocal2.z += (self.nCRL - 1) * step
+            self.footprint = [firstFootprint, lastFootprint] if all(
+                footprint is not None for footprint in
+                (firstFootprint, lastFootprint)) else []
             self.centerShift = step * np.array(toward)
             self.center = tempCenter
 
