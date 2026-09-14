@@ -7,6 +7,7 @@ widgets. The compiler turns compact timeline recipes into explicit frame
 patches; the widgets provide a first UI surface for inspecting those recipes.
 """
 
+import ast
 import copy
 import json
 import os
@@ -16,6 +17,7 @@ from collections import OrderedDict
 
 from ...commons import qt
 from ....backends.raycing._flow_utils import normalize_string_input
+from .._constants import DISPLAY_NUMBER_FORMAT
 
 __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "7 May 2026"
@@ -27,6 +29,97 @@ SCENE_PROPERTY_NAMES = {
     'scaleVec', 'rotations', 'coordOffset', 'offsetCoord', 'tVec'}
 DEFAULT_OUTPUT = {'glowFrameName': 'frame{index:04d}.jpg'}
 FRAMES_CLEAN_KEY = 'framesClean'
+_SCAN_INT_MAX = 2147483647
+
+
+class _ScanLineEdit(qt.QLineEdit):
+    """Line edit which treats Return as editing confirmation, not dialog OK."""
+
+    def keyPressEvent(self, event):
+        if event.key() in (qt.Qt.Key_Return, qt.Qt.Key_Enter):
+            validator = self.validator()
+            if validator is None or self.hasAcceptableInput():
+                self.editingFinished.emit()
+                self.focusNextPrevChild(True)
+            event.accept()
+            return
+        super().keyPressEvent(event)
+
+
+def _set_scan_value_validators(dialog, property_name):
+    for editor in (dialog.minValueEdit, dialog.maxValueEdit):
+        validator = (qt.make_argument_validator(property_name, editor)
+                     if property_name is not None else None)
+        editor.setValidator(validator)
+
+
+def _configure_scan_editors(dialog, property_name=None):
+    """Install timing and property-value validators on a scan dialog."""
+    dialog.startFrameEdit.setValidator(
+        qt.QIntValidator(0, _SCAN_INT_MAX, dialog.startFrameEdit))
+    dialog.pointsEdit.setValidator(
+        qt.QIntValidator(1, _SCAN_INT_MAX, dialog.pointsEdit))
+    _set_scan_value_validators(dialog, property_name)
+
+
+def _scan_item_target_property(item):
+    if item.get('target') and item.get('property'):
+        return item['target'], item['property']
+    objects = item.get('objects', {})
+    if len(objects) == 1:
+        target, patch = next(iter(objects.items()))
+        if isinstance(patch, dict) and len(patch) == 1:
+            return target, next(iter(patch))
+    scene = item.get('scene', {})
+    if isinstance(scene, dict) and len(scene) == 1:
+        return 'Scene', next(iter(scene))
+    return None, None
+
+
+class _ScanTrackDelegate(qt.QStyledItemDelegate):
+    """Validated editors for the editable cells of the tracks table."""
+
+    def __init__(self, track_widget, parent=None):
+        super().__init__(parent or track_widget.trackTable)
+        self.track_widget = track_widget
+
+    def createEditor(self, parent, option, index):
+        editor = _ScanLineEdit(parent)
+        if index.column() == TimelineFrameListWidget.TRACK_COL_START_FRAME:
+            editor.setValidator(qt.QIntValidator(
+                0, _SCAN_INT_MAX, editor))
+        elif index.column() == TimelineFrameListWidget.TRACK_COL_FRAMES:
+            editor.setValidator(qt.QIntValidator(
+                1, _SCAN_INT_MAX, editor))
+        elif index.column() in TimelineFrameListWidget.TRACK_VALUE_COLUMNS:
+            row = index.row()
+            if 0 <= row < len(self.track_widget.scan.items):
+                item = self.track_widget.scan.items[row]
+                _, property_name = _scan_item_target_property(item)
+                validator = qt.make_argument_validator(
+                    property_name, editor) if property_name else None
+                editor.setValidator(validator)
+        editor.installEventFilter(self)
+        return editor
+
+    def setEditorData(self, editor, index):
+        if index.column() not in TimelineFrameListWidget.TRACK_VALUE_COLUMNS:
+            return super().setEditorData(editor, index)
+        raw_value = index.data(qt.RAW_VALUE_ROLE)
+        if raw_value is None:
+            return super().setEditorData(editor, index)
+        editor.setText(str(raw_value))
+
+    def eventFilter(self, editor, event):
+        if event.type() == qt.QEvent.KeyPress and event.key() in (
+                qt.Qt.Key_Return, qt.Qt.Key_Enter):
+            if editor.validator() is None or editor.hasAcceptableInput():
+                self.commitData.emit(editor)
+                self.closeEditor.emit(
+                    editor, qt.QAbstractItemDelegate.EditNextItem)
+            event.accept()
+            return True
+        return super().eventFilter(editor, event)
 
 
 class _SafeFormatter(string.Formatter):
@@ -62,6 +155,27 @@ def _split_numeric_unit(value):
     if match is None:
         return None, None
     return float(match.group(1)), match.group(2)
+
+
+def _format_scan_display(value):
+    """Format numeric scan values without changing their stored value."""
+    if value is None:
+        return 'None'
+    if isinstance(value, str):
+        try:
+            parsed = ast.literal_eval(value)
+        except (SyntaxError, ValueError):
+            return value
+        if isinstance(parsed, (float, list, tuple)):
+            return _format_scan_display(parsed)
+        return value
+    if isinstance(value, float):
+        return DISPLAY_NUMBER_FORMAT.format(value)
+    if isinstance(value, (list, tuple)):
+        left, right = ('[', ']') if isinstance(value, list) else ('(', ')')
+        return left + ', '.join(
+            _format_scan_display(item) for item in value) + right
+    return str(value)
 
 
 def _format_scan_value(value, unit):
@@ -471,11 +585,12 @@ class ScanRangeDialog(qt.QDialog):
         self.setWindowTitle(
             f'Create scan: {self.target}.{property_name}')
 
-        self.startFrameEdit = qt.QLineEdit('0')
+        self.startFrameEdit = _ScanLineEdit('0')
         min_value, max_value = _scan_default_bounds(current_value)
-        self.minValueEdit = qt.QLineEdit(str(min_value))
-        self.maxValueEdit = qt.QLineEdit(str(max_value))
-        self.pointsEdit = qt.QLineEdit('10')
+        self.minValueEdit = _ScanLineEdit(str(min_value))
+        self.maxValueEdit = _ScanLineEdit(str(max_value))
+        self.pointsEdit = _ScanLineEdit('10')
+        _configure_scan_editors(self, property_name)
 
         layout = qt.QVBoxLayout(self)
         form = qt.QFormLayout()
@@ -492,6 +607,10 @@ class ScanRangeDialog(qt.QDialog):
         self.buttonBox.accepted.connect(self.accept)
         self.buttonBox.rejected.connect(self.reject)
         layout.addWidget(self.buttonBox)
+        ok_button = self.buttonBox.button(qt.QDialogButtonBox.Ok)
+        ok_button.setAutoDefault(False)
+        ok_button.setDefault(False)
+        qt.QTimer.singleShot(0, self.startFrameEdit.setFocus)
 
     def scan_item(self):
         points = int(self.pointsEdit.text())
@@ -545,10 +664,11 @@ class ScanInstructionDialog(qt.QDialog):
         self.propertyTree.itemSelectionChanged.connect(
             self._selection_changed)
 
-        self.startFrameEdit = qt.QLineEdit(str(int(start_frame)))
-        self.minValueEdit = qt.QLineEdit('0')
-        self.maxValueEdit = qt.QLineEdit('0')
-        self.pointsEdit = qt.QLineEdit('1')
+        self.startFrameEdit = _ScanLineEdit(str(int(start_frame)))
+        self.minValueEdit = _ScanLineEdit('0')
+        self.maxValueEdit = _ScanLineEdit('0')
+        self.pointsEdit = _ScanLineEdit('1')
+        _configure_scan_editors(self)
 
         layout = qt.QVBoxLayout(self)
         layout.addWidget(qt.QLabel('Select scene or element property'))
@@ -572,10 +692,14 @@ class ScanInstructionDialog(qt.QDialog):
         self.buttonBox.accepted.connect(self.accept)
         self.buttonBox.rejected.connect(self.reject)
         layout.addWidget(self.buttonBox)
+        ok_button = self.buttonBox.button(qt.QDialogButtonBox.Ok)
+        ok_button.setAutoDefault(False)
+        ok_button.setDefault(False)
 
         self._populate_tree()
         if self.editItem is not None:
             self._apply_edit_item()
+        qt.QTimer.singleShot(0, self.startFrameEdit.setFocus)
 
     def _populate_tree(self):
         self.propertyTree.clear()
@@ -590,8 +714,10 @@ class ScanInstructionDialog(qt.QDialog):
             for prop in target.get('properties', []):
                 key = f"{target_name}::{prop.get('name')}"
                 value = prop.get('value', '')
-                child = qt.QTreeWidgetItem([str(prop.get('name')), str(value)])
+                child = qt.QTreeWidgetItem([
+                    str(prop.get('name')), _format_scan_display(value)])
                 child.setData(0, qt.Qt.UserRole, key)
+                child.setToolTip(1, str(value))
                 target_item.addChild(child)
                 self.propertyMap[key] = {
                     'target': target_name,
@@ -603,7 +729,7 @@ class ScanInstructionDialog(qt.QDialog):
         self.propertyTree.resizeColumnToContents(0)
 
     def _apply_edit_item(self):
-        target, property_name = self._item_target_property(self.editItem)
+        target, property_name = _scan_item_target_property(self.editItem)
         start, points, start_value, stop_value, editable = \
             self._item_dialog_values(self.editItem)
         if target is None or property_name is None:
@@ -615,6 +741,7 @@ class ScanInstructionDialog(qt.QDialog):
             'property': property_name,
             'value': start_value,
             })
+        _set_scan_value_validators(self, property_name)
         item = self.propertyItems.get(key)
         if item is not None:
             self.propertyTree.setCurrentItem(item)
@@ -626,19 +753,6 @@ class ScanInstructionDialog(qt.QDialog):
         self.minValueEdit.setReadOnly(not editable)
         self.maxValueEdit.setReadOnly(not editable)
         self._editValuesEditable = editable
-
-    def _item_target_property(self, item):
-        if item.get('target') and item.get('property'):
-            return item.get('target'), item.get('property')
-        objects = item.get('objects', {})
-        if len(objects) == 1:
-            target, patch = next(iter(objects.items()))
-            if isinstance(patch, dict) and len(patch) == 1:
-                return target, next(iter(patch.keys()))
-        scene = item.get('scene', {})
-        if isinstance(scene, dict) and len(scene) == 1:
-            return 'Scene', next(iter(scene.keys()))
-        return None, None
 
     def _item_dialog_values(self, item):
         start = int(item.get('frame', item.get('start', 0)))
@@ -688,6 +802,8 @@ class ScanInstructionDialog(qt.QDialog):
         self.selectedProperty = self._current_property()
         if self.selectedProperty is None:
             return
+        _set_scan_value_validators(
+            self, self.selectedProperty.get('property'))
         value = self.selectedProperty.get('value', '')
         self.minValueEdit.setText(str(value))
         self.maxValueEdit.setText(str(value))
@@ -859,6 +975,7 @@ class TimelineFrameListWidget(qt.QWidget):
             qt.QAbstractItemView.DoubleClicked |
             qt.QAbstractItemView.EditKeyPressed |
             qt.QAbstractItemView.SelectedClicked)
+        self.trackTable.setItemDelegate(_ScanTrackDelegate(self))
         self.trackTable.setSelectionBehavior(qt.QAbstractItemView.SelectRows)
         self.trackTable.setSelectionMode(qt.QAbstractItemView.SingleSelection)
         self.frameTable = qt.QTableWidget(0, 4)
@@ -1067,7 +1184,10 @@ class TimelineFrameListWidget(qt.QWidget):
                 values = [item.get('id', ''), start_value, end_value,
                           frames, start_frame]
                 for col, value in enumerate(values):
-                    table_item = qt.QTableWidgetItem(str(value))
+                    table_item = qt.QTableWidgetItem(
+                        _format_scan_display(value))
+                    table_item.setData(qt.RAW_VALUE_ROLE, value)
+                    table_item.setToolTip(str(value))
                     flags = table_item.flags()
                     if self._track_column_is_editable(item, col):
                         flags |= qt.Qt.ItemIsEditable
@@ -1149,9 +1269,13 @@ class TimelineFrameListWidget(qt.QWidget):
         if not self._track_column_is_editable(item, column):
             return
         if column in self.TRACK_VALUE_COLUMNS:
+            value = table_item.text()
+            self._updatingTracks = True
+            table_item.setData(qt.RAW_VALUE_ROLE, value)
+            self._updatingTracks = False
             key = 'startValue' if column == self.TRACK_COL_VALUE_START else \
                 'endValue'
-            self.trackTimingChanged.emit(row, {key: table_item.text()})
+            self.trackTimingChanged.emit(row, {key: value})
             return
         try:
             value = int(str(table_item.text()).strip())

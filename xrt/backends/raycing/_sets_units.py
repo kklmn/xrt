@@ -155,7 +155,7 @@ argumentInputGroups = {
                              'R', 'w0'},
     ('scalar', 'sequence', 'None'): {'order', 'taper'},
     'angle': {
-        'antiblaze', 'blaze', 'braggOffset', 'cryst1roll',
+        'antiblaze', 'blaze', 'braggOffset', 'cryst1roll', 'mosaicity',
         'cryst2finePitch', 'cryst2pitch', 'cryst2roll', 'extraPitch',
         'extraRoll', 'extraYaw', 'grazingAngle', 'maxxprime', 'maxzprime',
         'minxprime', 'minzprime', 'orientationAngle', 'phaseDeg',
@@ -186,7 +186,8 @@ argumentInputGroups = {
     ('sequence', 'inf', 'None'): {'f1', 'f2'},
     'scalar': {
         'amplitude', 'B0', 'B0x', 'B0y', 'betaX', 'betaZ', 'bumpHeight',
-        'b', 'bThickness', 'bThicknessLow', 'c',
+        'b', 'bThickness', 'bThicknessLow', 'c', 'cameraAngle',
+        'cameraDistance', 'coordOffset',
         'corrLength', 'cryst2longTransl', 'cryst2perpTransl', 'cX', 'cY',
         'd', 'depth', 'dxFacet', 'dxGap', 'dyFacet', 'dyGap', 'eEpsilonX',
         'eEpsilonZ', 'eEspread', 'eI', 'eN', 'ellipseA', 'ellipseB', 'f',
@@ -195,10 +196,12 @@ argumentInputGroups = {
         'nx', 'nz', 'period', 'phaseShift', 'phi0',
         'contourFactor', 'ePos', 'offset', 'phiOffset', 'ppb', 'px', 'pz',
         'r0', 'raycingParam', 'rx', 'rz',
-        'nu', 'power', 'shadeFraction', 'sigmaX', 'sigmaY', 'substRoughness',
+        'nu', 'power', 'rotations', 'scaleVec', 'shadeFraction', 'sigmaX',
+        'sigmaY', 'substRoughness',
         'tK', 'tThickness', 'tThicknessLow', 'thetaOffset', 'vortex',
         'vortexNradial', 'vorticity', 'workingDistance', 'xPos', 'yPos',
-        'xWaveLength', 'yWaveLength', 'bins', 'outline', 'beta', 'gamma'},
+        'xWaveLength', 'yWaveLength', 'tVec', 'bins', 'outline', 'beta',
+        'gamma'},
     }
 
 
