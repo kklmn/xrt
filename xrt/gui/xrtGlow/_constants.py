@@ -47,6 +47,7 @@ scr_m = qt.QMatrix4x4(1, 0, 0, 0,  0, 0, -1, 0,  0, 1, 0, 0,  0, 0, 0, 1)
 
 _DEBUG_ = True  # If False, exceptions inside the module are ignored
 MAXRAYS = 500000
+COLOR_LIMIT_FORMAT = '{:.6g}'
 
 DEFAULT_SCENE_SETTINGS = {
     'aspect': 1,
