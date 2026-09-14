@@ -719,6 +719,7 @@ class OEMesh3D():
         self.vbo_colors = {}
 
         self.vbo_contour = {}
+        self._firstPlateEdges = None
         self.trajectory = None
         self.trajectory_vao = None
         self.trajectory_vbo_vertices = None
@@ -1427,6 +1428,108 @@ class OEMesh3D():
 
             return triangles.ravel()
 
+        def get_surface_edges(surface):
+            surfaceGrid = surface.reshape(
+                localTiles[1], localTiles[0], 3)
+            if oeShape == 'round':
+                return [surfaceGrid[:, -1].copy()]
+            return [surfaceGrid[:, 0].copy(),
+                    surfaceGrid[:, -1].copy(),
+                    surfaceGrid[0, :].copy(),
+                    surfaceGrid[-1, :].copy()]
+
+        def transform_points(surface, matrix):
+            transformed = []
+            for point in surface:
+                qpoint = matrix * qt.QVector3D(
+                    float(point[0]), float(point[1]), float(point[2]))
+                transformed.append((qpoint.x(), qpoint.y(), qpoint.z()))
+            return np.asarray(transformed)
+
+        def align_open_edge(firstEdge, secondEdge):
+            if len(firstEdge) != len(secondEdge):
+                return None, np.inf
+            errorForward = np.mean(np.sum(
+                (firstEdge[:, :2] - secondEdge[:, :2])**2, axis=1))
+            errorReverse = np.mean(np.sum(
+                (firstEdge[::-1, :2] - secondEdge[:, :2])**2, axis=1))
+            if errorReverse < errorForward:
+                return firstEdge[::-1].copy(), errorReverse
+            return firstEdge, errorForward
+
+        def align_closed_edge(firstEdge, secondEdge):
+            firstClosed = np.allclose(firstEdge[0, :2], firstEdge[-1, :2])
+            secondClosed = np.allclose(
+                secondEdge[0, :2], secondEdge[-1, :2])
+            firstCore = firstEdge[:-1] if firstClosed else firstEdge
+            secondCore = secondEdge[:-1] if secondClosed else secondEdge
+            if len(firstCore) != len(secondCore):
+                return None
+
+            bestEdge = None
+            bestError = np.inf
+            for candidate in (firstCore, firstCore[::-1]):
+                for shift in range(len(candidate)):
+                    shifted = np.roll(candidate, shift, axis=0)
+                    error = np.mean(np.sum(
+                        (shifted[:, :2] - secondCore[:, :2])**2,
+                        axis=1))
+                    if error < bestError:
+                        bestEdge = shifted
+                        bestError = error
+            if secondClosed:
+                bestEdge = np.vstack((bestEdge, bestEdge[0]))
+            return bestEdge
+
+        def align_rect_edges(firstEdges, secondEdges):
+            remaining = list(firstEdges)
+            aligned = []
+            for secondEdge in secondEdges:
+                candidates = []
+                for edgeIndex, firstEdge in enumerate(remaining):
+                    candidate, error = align_open_edge(
+                        firstEdge, secondEdge)
+                    candidates.append((error, edgeIndex, candidate))
+                error, edgeIndex, candidate = min(
+                    candidates, key=lambda item: item[0])
+                if not np.isfinite(error):
+                    return None
+                aligned.append(candidate)
+                del remaining[edgeIndex]
+            return aligned
+
+        def make_side_strip(firstEdge, secondEdge, outward=None):
+            middle = 0.5 * (firstEdge + secondEdge)
+            tangent = np.empty_like(middle)
+            tangent[0] = middle[1] - middle[0]
+            tangent[-1] = middle[-1] - middle[-2]
+            tangent[1:-1] = middle[2:] - middle[:-2]
+            span = secondEdge - firstEdge
+            normals = np.cross(tangent, span)
+
+            if outward is None:
+                centerPoints = middle[:-1] if np.allclose(
+                    middle[0], middle[-1]) else middle
+                center = np.mean(centerPoints, axis=0)
+                outward = middle - center
+                outward[:, 2] = 0
+            else:
+                outward = np.tile(np.asarray(outward), (len(middle), 1))
+
+            flip = np.einsum('ij,ij->i', normals, outward) < 0
+            normals[flip] *= -1
+            normalLength = np.linalg.norm(normals, axis=1)
+            invalid = normalLength <= np.finfo(float).eps
+            if np.any(invalid):
+                normals[invalid] = outward[invalid]
+                normalLength = np.linalg.norm(normals, axis=1)
+            valid = normalLength > np.finfo(float).eps
+            normals[valid] /= normalLength[valid, np.newaxis]
+
+            stripPoints = np.vstack((firstEdge, secondEdge[::-1]))
+            stripNormals = np.vstack((normals, normals[::-1]))
+            return stripPoints, stripNormals, triangulate_strip(len(firstEdge))
+
         isPlate = is_plate(self.oe)
         isScreen = is_screen(self.oe)
         isAperture = is_aperture(self.oe)
@@ -1440,6 +1543,9 @@ class OEMesh3D():
         isOeParametric = getattr(self.oe, 'isParametric', False)
         isCRLStack = isinstance(self.oe, roes.ParaboloidFlatLens) and \
             self.oe.nCRL > 1
+        renderPlateSides = getattr(self.parent, 'renderPlateSides', True)
+        useTruePlateSides = renderPlateSides and isPlate and \
+            oeShape in ('rect', 'round')
 
         tiles = self.parent.tiles if self.parent is not None else self.tiles
         localTiles = np.array(tiles)
@@ -1539,6 +1645,14 @@ class OEMesh3D():
             # The regular Plate transform positions the second surface of the
             # first lenslet. Move it by the remaining lenslet pitches.
             points[:, 2] += (self.oe.nCRL - 1) * thickness
+
+        plateEdges = get_surface_edges(points) if useTruePlateSides else None
+        if isPlate and not is2ndXtal:
+            self._firstPlateEdges = None
+            if useTruePlateSides:
+                self._firstPlateEdges = {
+                    'shape': oeShape,
+                    'edges': plateEdges}
 
         if oeShape == 'round':
             # Reuse the evaluated outer ring. Re-evaluating it here would
@@ -1654,9 +1768,41 @@ class OEMesh3D():
             allIndices = np.hstack((allIndices, allIndices + indArrOffset))
             indArrOffset += len(points)
 
-        # Side Surface, omit the open span between CRL end surfaces.
-        if not ((isPlate and is2ndXtal) or isCRLStack or isScreen or
-                isClosedSurface):
+        if useTruePlateSides and is2ndXtal:
+            firstPlateEdges = self._firstPlateEdges
+            if firstPlateEdges is not None and \
+                    firstPlateEdges['shape'] == oeShape and \
+                    len(firstPlateEdges['edges']) == len(plateEdges):
+                toSecond, invertible = self.transMatrix[1].inverted()
+                if invertible and 0 in self.transMatrix:
+                    firstToSecond = toSecond * self.transMatrix[0]
+                    firstEdges = [transform_points(edge, firstToSecond)
+                                  for edge in firstPlateEdges['edges']]
+                    if oeShape == 'round':
+                        firstEdges = [align_closed_edge(
+                            firstEdges[0], plateEdges[0])]
+                    else:
+                        firstEdges = align_rect_edges(firstEdges, plateEdges)
+                    if firstEdges is None or any(
+                            edge is None for edge in firstEdges):
+                        firstEdges = []
+                    outwardDirections = [None] if oeShape == 'round' else [
+                        (-1, 0, 0), (1, 0, 0),
+                        (0, -1, 0), (0, 1, 0)]
+                    for firstEdge, secondEdge, outward in zip(
+                            firstEdges, plateEdges, outwardDirections):
+                        if len(firstEdge) != len(secondEdge):
+                            continue
+                        sidePoints, sideNormals, sideIndices = \
+                            make_side_strip(firstEdge, secondEdge, outward)
+                        allSurfaces = np.vstack((allSurfaces, sidePoints))
+                        allNormals = np.vstack((allNormals, sideNormals))
+                        allIndices = np.hstack((
+                            allIndices, sideIndices + indArrOffset))
+                        indArrOffset += len(sidePoints)
+
+        # Synthetic sides for meshes without paired Plate surfaces.
+        if not (isPlate or isScreen or isClosedSurface):
             if oeShape == 'round':  # Side surface
                 if useLR:
                     allSurfaces = np.vstack((allSurfaces, tB))
@@ -1901,6 +2047,7 @@ class OEMesh3D():
         self.beamTexture.clear()
         self.beamLimits.clear()
         self.transMatrix.clear()
+        self._firstPlateEdges = None
         self.arrLengths.clear()
 
         grid_vbo = getattr(self, 'grid_vbo', None)

@@ -16,7 +16,8 @@ from matplotlib.colors import hsv_to_rgb
 from .._constants import (msg_start, msg_stop, msg_exit, MAXRAYS,
                           scr_m, DEFAULT_SCENE_SETTINGS)
 from .._utils import (generate_hsv_texture, create_qt_buffer, update_qt_buffer,
-                      is_source, is_oe, is_aperture, is_screen, is_dcm, snsc)
+                      is_source, is_oe, is_plate, is_aperture, is_screen,
+                      is_dcm, snsc)
 from ..ogl import CoordinateBox, Beam3D, OEMesh3D
 
 from ...commons import qt
@@ -365,6 +366,15 @@ class xrtGlWidget(qt.QOpenGLWidget):
         if globalColors and self.parent is not None and hasattr(
                 self.parent, 'colorControls'):
             self.parent.updateColorAxis(None)
+
+    @property
+    def renderPlateSides(self):
+        return self._renderPlateSides
+
+    @renderPlateSides.setter
+    def renderPlateSides(self, renderPlateSides):
+        self._renderPlateSides = bool(renderPlateSides)
+        self.queue_mesh_update(predicate=is_plate)
 
     @property
     def oeThickness(self):
