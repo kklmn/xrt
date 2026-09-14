@@ -134,6 +134,13 @@ class xrtGlow(qt.QWidget):
                  layout=None, epicsPrefix=None, epicsMap={},
                  sceneSettings={}, scanDescription=None):
         super(xrtGlow, self).__init__()
+
+        if qt.QtName == 'PySide6':
+            maxRect = qt.QGuiApplication.primaryScreen().geometry()
+        else:
+            maxRect = qt.QApplication.desktop().screenGeometry()
+        self.maxDesktopHeight = maxRect.height()
+
         self.parentRef = parent
         self.cAxisLabelSize = 10
         mplFont = {'size': self.cAxisLabelSize}
@@ -2081,7 +2088,8 @@ class xrtGlow(qt.QWidget):
                     if self.oeTree.isExpanded(index):
                         parents.append(index)
             self.oeTree.setColumnWidth(0, colWidths[0])
-            treeHeight = self.oeTree.header().height() + 4 + sum(rowHeights)
+            treeHeight = min(self.oeTree.header().height()+4+sum(rowHeights),
+                             self.maxDesktopHeight-100)
             treeWidth = sum(colWidths) + 8
             # self.oeTree.resize(qt.QSize(treeWidth, treeHeight))
             wMargins = widget.layout().contentsMargins()
