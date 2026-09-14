@@ -163,7 +163,7 @@ SCENE_CONTROL_LABELS = {
     'invertColors': 'Invert scene color',
     'showLocalAxes': 'Show local axes',
     'showInternalBeam': 'Show internal beams in multi-surface OEs',
-    'renderPlateSides': 'Render side surfaces for plates',
+    'renderPlateSides': 'Render side surfaces for plates and lenses',
     }
 
 RENDERING_CONTROL_LABELS = {

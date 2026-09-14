@@ -230,7 +230,7 @@ class XYCAxis(object):
         self, label='', unit='mm', factor=None, data='auto', limits=None,
         offset=0, bins=defaultBins, ppb=defaultPixelPerBin,
         density='histogram', invertAxis=False, outline=0.5,
-            fwhmFormatStr=defaultFwhmFormatStrForXYAxes):
+            fwhmFormatStr=defaultFwhmFormatStrForXYAxes, grid=False):
         u"""
         *label*: str
             The label of the axis without unit. This label will appear in the
@@ -384,6 +384,10 @@ class XYCAxis(object):
             Python format string for the FWHM value, e.g. '%.2f'. if None, the
             FWHM value is not displayed.
 
+        *grid*: bool
+            Shows major grid lines for this axis on its 1D histogram and, for
+            the x and y axes, on the corresponding axis of the 2D histogram.
+
 
         """
         self.label = label
@@ -399,6 +403,7 @@ class XYCAxis(object):
         self.invertAxis = invertAxis
         self.outline = outline
         self.fwhmFormatStr = fwhmFormatStr
+        self.grid = grid
 
         self.offsetDisplayFactor = 1
         self.max1D = 0
@@ -1182,6 +1187,7 @@ class XYCPlot(object):
         self.ax2dHist.imshow(
             np.zeros((2, 2, 3)), aspect=self.aspect, interpolation='nearest',
             origin='lower', figure=self.fig)
+        self._set_grid()
         self.contours2D = None
         self.contours2DLabels = None
 
@@ -1431,6 +1437,16 @@ class XYCPlot(object):
                 ax.binEdges = np.zeros(ax.bins + 1)
                 ax.total1D = np.zeros(ax.bins)
                 ax.total1D_RGB = np.zeros((ax.bins, 3))
+
+    def _set_grid(self):
+        self.ax1dHistX.grid(self.xaxis.grid, axis='x')
+        self.ax1dHistY.grid(self.yaxis.grid, axis='y')
+        self.ax2dHist.grid(self.xaxis.grid, axis='x')
+        self.ax2dHist.grid(self.yaxis.grid, axis='y')
+        self.ax1dHistE.grid(
+            self.caxis.grid and self.ePos == 2, axis='x')
+        self.ax1dHistE.grid(
+            self.caxis.grid and self.ePos == 1, axis='y')
 
     def update_user_elements(self):
         return  # 'user message'
@@ -2002,6 +2018,7 @@ class XYCPlot(object):
             if self.caxis.fwhmFormatStr is not None:
                 self.textFWHM(self.caxis, self.textDE, self.cE, self.dE/2)
         self.plot_hist2d()
+        self._set_grid()
 
         if self.textNrays:
             self.textNrays.set_text(r'$N_{\rm all} = $%s' % self.nRaysAll)
