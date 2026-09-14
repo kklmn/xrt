@@ -407,20 +407,14 @@ class ParaboloidFlatLens(Plate):
         material.kind = 'lens'
 
     def local_z1(self, x, y):
-        """Determines the normal vector of OE at (x, y) position."""
+        """Determines the surface height of OE at (x, y) position."""
         z = (x**2 + y**2) / (4 * self.focus)
         if self.zmax is not None:
             z[z > self.zmax] = self.zmax
         return z
 
-    def local_z2(self, x, y):
-        """Determines the surface of OE at (x, y) position."""
-        return self.local_z(x, y)
-
     def local_n1(self, x, y):
-        """Determines the normal vector of OE at (x, y) position. If OE is an
-        asymmetric crystal, *local_n* must return 2 normals: the 1st one of the
-        atomic planes and the 2nd one of the surface."""
+        """Determines the normal vector of OE at (x, y) position."""
         a = -x / (2*self.focus)  # -dz/dx
         b = -y / (2*self.focus)  # -dz/dy
         if self.zmax is not None:
@@ -433,27 +427,33 @@ class ParaboloidFlatLens(Plate):
         norm = (a**2 + b**2 + 1)**0.5
         return [a/norm, b/norm, c/norm]
 
+    def local_z2(self, x, y):
+        return np.zeros_like(y)
+
     def local_n2(self, x, y):
-        return self.local_n(x, y)
-
-    def local_z(self, x, y):
-        return np.zeros_like(y)  # just flat
-
-    def local_n(self, x, y):
         a = np.zeros_like(y)
         b = np.zeros_like(y)
-        c = -np.ones_like(y)
+        c = np.ones_like(y)
         return [a, b, c]
+
+    def local_z(self, x, y):
+        return self.local_z1(x, y)  # returns the 1st surface
+
+    def local_n(self, x, y):
+        return self.local_n1(x, y)  # returns the 1st surface
 
     def get_nCRL(self, f, E):
         nCRL = 1
         if all([hasattr(self, val) for val in ['focus', 'material']]) and \
                 (self.focus is not None) and (self.material is not None):
-            if isinstance(self, (DoubleParaboloidLens,
-                                 DoubleParabolicCylinderLens)):
+            if isinstance(self, DoubleParabolicCylinderLens):
+                nFactor = 0.5  # or 1 if as staggered pairs
+            elif isinstance(self, DoubleParaboloidLens):
                 nFactor = 0.5
-            else:
-                nFactor = 1.
+            elif isinstance(self, ParabolicCylinderFlatLens):
+                nFactor = 1  # or 2 if as staggered pairs
+            elif isinstance(self, ParaboloidFlatLens):
+                nFactor = 1
             df = 1. - self.material.get_refractive_index(E).real
             nCRL = self.focus / (f*df) * (2*nFactor)
         return nCRL
@@ -462,11 +462,14 @@ class ParaboloidFlatLens(Plate):
         focus = 1.
         if all([hasattr(self, val) for val in ['nCRL', 'material']]) and \
                 (self.nCRL is not None) and (self.material is not None):
-            if isinstance(self, (DoubleParaboloidLens,
-                                 DoubleParabolicCylinderLens)):
+            if isinstance(self, DoubleParabolicCylinderLens):
+                nFactor = 0.5  # or 1 if as staggered pairs
+            elif isinstance(self, DoubleParaboloidLens):
                 nFactor = 0.5
-            else:
-                nFactor = 1.
+            elif isinstance(self, ParabolicCylinderFlatLens):
+                nFactor = 1  # or 2 if as staggered pairs
+            elif isinstance(self, ParaboloidFlatLens):
+                nFactor = 1
             df = 1. - self.material.get_refractive_index(E).real
             focus = (f*df) * self.nCRL / (2*nFactor)
         return focus

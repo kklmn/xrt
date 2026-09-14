@@ -72,7 +72,7 @@ import xrt.backends.raycing.screens as rsc
 import xrt.plotter as xrtp
 import xrt.runner as xrtr
 
-showIn3D = False
+# showIn3D = False
 showIn3D = True
 
 parabolaParam = 1.  # mm
