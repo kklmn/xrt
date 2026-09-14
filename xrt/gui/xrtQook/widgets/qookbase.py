@@ -21,6 +21,7 @@ from collections import OrderedDict  # analysis:ignore
 from .._constants import (redStr, isUnitsEnabled, useSlidersInTree,  # analysis:ignore
                           path_to_xrt, myTab, withSlidersInTree,
                           slidersInTreeScale, _DEBUG_)
+from .._constants import DISPLAY_NUMBER_FORMAT
 from .._objects_custom import (SphinxWorker, LevelRestrictedModel,  # analysis:ignore
                                BusyIconWorker)
 from .custom import (QWebView, TreeViewEx, PlotViewer,  # analysis:ignore
@@ -1636,6 +1637,24 @@ class XrtQookBase(qt.QMainWindow):
         return child0, child1
 
     def formatParamDisplay(self, paramName, value):
+        if value is None:
+            return 'None'
+        if isinstance(value, str):
+            parsed = raycing.parametrize(value)
+            if isinstance(parsed, (float, np.floating)):
+                return DISPLAY_NUMBER_FORMAT.format(float(parsed))
+            if isinstance(parsed, (list, tuple)):
+                return self.formatParamDisplay(paramName, parsed)
+            return value
+        if isinstance(value, (float, np.floating)):
+            return DISPLAY_NUMBER_FORMAT.format(float(value))
+        if isinstance(value, np.ndarray):
+            value = value.tolist()
+        if isinstance(value, (list, tuple)):
+            left, right = ('[', ']') if isinstance(value, list) else ('(', ')')
+            items = ', '.join(
+                self.formatParamDisplay(paramName, item) for item in value)
+            return left + items + right
         return str(value)
 
     def setParamItemValue(self, item, paramName, value):

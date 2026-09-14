@@ -22,3 +22,4 @@ redStr = ':red:`{0}`'
 isUnitsEnabled = False  # TODO:
 
 _DEBUG_ = False  # If False, exceptions inside the module are ignored
+DISPLAY_NUMBER_FORMAT = '{:.8g}'
