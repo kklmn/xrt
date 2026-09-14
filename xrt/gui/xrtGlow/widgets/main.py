@@ -17,7 +17,7 @@ from matplotlib.figure import Figure
 from matplotlib.widgets import RectangleSelector
 
 from .._constants import (
-        _DEBUG_, COLOR_LIMIT_FORMAT, DEFAULT_SCENE_SETTINGS,
+        _DEBUG_, DISPLAY_NUMBER_FORMAT, DEFAULT_SCENE_SETTINGS,
         COLOR_CONTROL_LABELS,
         APERTURE_RENDERING_TEXTEDITS, RENDERING_CONTROL_LABELS,
         RENDERING_TEXTEDITS, SOURCE_MAGNET_TEXTEDITS,
@@ -1650,7 +1650,7 @@ class xrtGlow(qt.QWidget):
                                   else 1.0e20, 5)
             selQLE = qt.QLineEdit()
             selQLE.setValidator(selValidator)
-            selQLE.setText(COLOR_LIMIT_FORMAT.format(
+            selQLE.setText(DISPLAY_NUMBER_FORMAT.format(
                 self.customGlWidget.colorMin if icSel == 0 else
                 self.customGlWidget.colorMax))
             selQLE.editingFinished.connect(
@@ -1673,7 +1673,7 @@ class xrtGlow(qt.QWidget):
                                   self.customGlWidget.colorMax, 5)
             selQLE = qt.QLineEdit()
             selQLE.setValidator(selValidator)
-            selQLE.setText(COLOR_LIMIT_FORMAT.format(
+            selQLE.setText(DISPLAY_NUMBER_FORMAT.format(
                 self.customGlWidget.colorMin if icSel == 0 else
                 self.customGlWidget.colorMax))
             selQLE.editingFinished.connect(
@@ -2625,10 +2625,10 @@ class xrtGlow(qt.QWidget):
         self.customGlWidget.selColorMax = selColorMax
 
         self.im.set_extent((colorMin, colorMax, 0, 1))
-        self.colorControls[1].setText(COLOR_LIMIT_FORMAT.format(colorMin))
-        self.colorControls[2].setText(COLOR_LIMIT_FORMAT.format(colorMax))
-        self.colorControls[3].setText(COLOR_LIMIT_FORMAT.format(selColorMin))
-        self.colorControls[4].setText(COLOR_LIMIT_FORMAT.format(selColorMax))
+        self.colorControls[1].setText(DISPLAY_NUMBER_FORMAT.format(colorMin))
+        self.colorControls[2].setText(DISPLAY_NUMBER_FORMAT.format(colorMax))
+        self.colorControls[3].setText(DISPLAY_NUMBER_FORMAT.format(selColorMin))
+        self.colorControls[4].setText(DISPLAY_NUMBER_FORMAT.format(selColorMax))
         self.colorControls[1].validator().setRange(-1.0e20, colorMax, 5)
         self.colorControls[2].validator().setRange(colorMin, 1.0e20, 5)
         self.colorControls[3].validator().setRange(colorMin, selColorMax, 5)
@@ -2707,17 +2707,17 @@ class xrtGlow(qt.QWidget):
 #        self.mplFig.gca().autoscale_view()
         extents = list(extents)
         self.colorControls[1].setText(
-            COLOR_LIMIT_FORMAT.format(self.customGlWidget.colorMin))
+            DISPLAY_NUMBER_FORMAT.format(self.customGlWidget.colorMin))
         self.colorControls[2].setText(
-            COLOR_LIMIT_FORMAT.format(self.customGlWidget.colorMax))
+            DISPLAY_NUMBER_FORMAT.format(self.customGlWidget.colorMax))
         self.colorControls[1].validator().setRange(
             -1.0e20, self.customGlWidget.colorMax, 5)
         self.colorControls[2].validator().setRange(
             self.customGlWidget.colorMin, 1.0e20, 5)
         self.colorControls[3].setText(
-            COLOR_LIMIT_FORMAT.format(self.customGlWidget.colorMin))
+            DISPLAY_NUMBER_FORMAT.format(self.customGlWidget.colorMin))
         self.colorControls[4].setText(
-            COLOR_LIMIT_FORMAT.format(self.customGlWidget.colorMax))
+            DISPLAY_NUMBER_FORMAT.format(self.customGlWidget.colorMax))
         self.colorControls[3].validator().setRange(
             self.customGlWidget.colorMin, self.customGlWidget.colorMax, 5)
         self.colorControls[4].validator().setRange(
@@ -2743,9 +2743,9 @@ class xrtGlow(qt.QWidget):
             self.customGlWidget.selColorMin = np.min([extents[0], extents[1]])
             self.customGlWidget.selColorMax = np.max([extents[0], extents[1]])
             self.colorControls[3].setText(
-                COLOR_LIMIT_FORMAT.format(self.customGlWidget.selColorMin))
+                DISPLAY_NUMBER_FORMAT.format(self.customGlWidget.selColorMin))
             self.colorControls[4].setText(
-                COLOR_LIMIT_FORMAT.format(self.customGlWidget.selColorMax))
+                DISPLAY_NUMBER_FORMAT.format(self.customGlWidget.selColorMax))
             self.colorControls[3].validator().setTop(
                 self.customGlWidget.selColorMax)
             self.colorControls[4].validator().setBottom(
@@ -2778,9 +2778,9 @@ class xrtGlow(qt.QWidget):
             self.customGlWidget.selColorMin = position - 0.5*width
             self.customGlWidget.selColorMax = position + 0.5*width
             self.colorControls[3].setText(
-                COLOR_LIMIT_FORMAT.format(position-0.5*width))
+                DISPLAY_NUMBER_FORMAT.format(position-0.5*width))
             self.colorControls[4].setText(
-                COLOR_LIMIT_FORMAT.format(position+0.5*width))
+                DISPLAY_NUMBER_FORMAT.format(position+0.5*width))
             self.colorControls[3].validator().setTop(position + 0.5*width)
             self.colorControls[4].validator().setBottom(position - 0.5*width)
             newExtents = (position - 0.5*width, position + 0.5*width,
@@ -2800,7 +2800,7 @@ class xrtGlow(qt.QWidget):
             value = float(txt)
             extents = list(self.paletteWidget.span.extents)
             if icSel == 0:
-                if txt == COLOR_LIMIT_FORMAT.format(
+                if txt == DISPLAY_NUMBER_FORMAT.format(
                         self.customGlWidget.selColorMin):
                     return
                 if value < self.customGlWidget.colorMin:
@@ -2811,7 +2811,7 @@ class xrtGlow(qt.QWidget):
                 newExtents = (value, extents[1], extents[2], extents[3])
 #                self.colorControls[2].validator().setBottom(value)
             else:
-                if txt == COLOR_LIMIT_FORMAT.format(
+                if txt == DISPLAY_NUMBER_FORMAT.format(
                         self.customGlWidget.selColorMax):
                     return
                 if value > self.customGlWidget.colorMax:
@@ -3323,13 +3323,13 @@ class xrtGlow(qt.QWidget):
             self.mplAx.set_xlabel(self.customGlWidget.colorAxis)
             self.im.set_extent((self.customGlWidget.colorMin,
                                 self.customGlWidget.colorMax, 0, 1))
-            self.colorControls[1].setText(COLOR_LIMIT_FORMAT.format(
+            self.colorControls[1].setText(DISPLAY_NUMBER_FORMAT.format(
                 self.customGlWidget.colorMin))
-            self.colorControls[2].setText(COLOR_LIMIT_FORMAT.format(
+            self.colorControls[2].setText(DISPLAY_NUMBER_FORMAT.format(
                 self.customGlWidget.colorMax))
-            self.colorControls[3].setText(COLOR_LIMIT_FORMAT.format(
+            self.colorControls[3].setText(DISPLAY_NUMBER_FORMAT.format(
                 self.customGlWidget.selColorMin))
-            self.colorControls[4].setText(COLOR_LIMIT_FORMAT.format(
+            self.colorControls[4].setText(DISPLAY_NUMBER_FORMAT.format(
                 self.customGlWidget.selColorMax))
             self.colorControls[1].validator().setRange(
                 -1.0e20, self.customGlWidget.colorMax, 5)

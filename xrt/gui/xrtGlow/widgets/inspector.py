@@ -14,6 +14,7 @@ from matplotlib.lines import Line2D
 from matplotlib.colors import TABLEAU_COLORS
 
 from ...commons import qt, config
+from .._constants import DISPLAY_NUMBER_FORMAT
 from .._utils import is_aperture, is_screen
 
 from ....backends import raycing
@@ -30,6 +31,28 @@ __date__ = "27 Jan 2026"
 
 oeDiagnosticArgs = ('incoming from', 'center distance (mm)',
                     'grazing angle (°)', 'incidence angle (°)')
+
+
+def _format_display_value(value):
+    """Format numeric model values compactly without changing their type."""
+    if value is None:
+        return 'None'
+    if isinstance(value, str):
+        parsed = raycing.parametrize(value)
+        if isinstance(parsed, (float, np.floating)):
+            return DISPLAY_NUMBER_FORMAT.format(float(parsed))
+        if isinstance(parsed, (list, tuple)):
+            return _format_display_value(parsed)
+        return value
+    if isinstance(value, (float, np.floating)):
+        return DISPLAY_NUMBER_FORMAT.format(float(value))
+    if isinstance(value, (list, tuple)):
+        left, right = ('[', ']') if isinstance(value, list) else ('(', ')')
+        items = ', '.join(_format_display_value(item) for item in value)
+        return left + items + right
+    if isinstance(value, np.ndarray):
+        return _format_display_value(value.tolist())
+    return str(value)
 
 
 def _getBeamName(beamModel, elementId, beamType=None):
@@ -475,7 +498,7 @@ class InstanceInspector(qt.QDialog):
         if isinstance(editorHint, dict) and editorHint.get('editor') == 'dict':
             displayValue = rawValue
         else:
-            displayValue = str(value)
+            displayValue = _format_display_value(value)
 
         model = item.model()
         signalsBlocked = model.signalsBlocked() if model is not None else None
