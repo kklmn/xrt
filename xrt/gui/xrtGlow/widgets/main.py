@@ -3442,6 +3442,8 @@ class xrtGlow(qt.QWidget):
         self.blockSignals(False)
         self._syncColorScaleControls(redraw=False)
         self.mplFig.canvas.draw()
+        if 'coordOffset' in params or 'tVec' in params:
+            self.customGlWidget.update_coord_grid()
         self.customGlWidget.glDraw()
 
 #        newExtents = list(self.paletteWidget.span.extents)
