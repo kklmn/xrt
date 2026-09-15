@@ -572,7 +572,7 @@ class CoordinateBox():
         if tickType:
             tickFactor = 1.05
             axisTextC = [axisC.copy() for axisC in axisLabelC]
-            v0, v1, v2 = self.parent.visibleAxes
+            v0, v1, v2 = self.parent.visibleAxes[:3]
             axisTextC[v1][[v2, v0], :] *= tickFactor
             axisTextC[v0][[v1, v2], :] *= tickFactor
             if self.perspectiveEnabled:
