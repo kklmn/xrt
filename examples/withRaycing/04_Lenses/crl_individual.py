@@ -25,7 +25,7 @@ zmax = 1.  # mm
 dz = 5.  # mm
 E0 = 9000.  # eV
 p = 1000.  # source to 1st lens
-q = 10000.  # 1st lens to focus
+q = 5000.  # 1st lens to focus
 xyLimits = -5, 5
 
 # Lens = roe.ParaboloidFlatLens
@@ -61,8 +61,8 @@ def build_beamline(nrays=1e4):
     beamLine.fsm1 = rsc.Screen(beamLine, 'FSM1', (0, p - 100, 0))
 
     beamLine.lens = Lens(
-        beamLine, 'Lenslet', pitch=np.pi/2, t=0.1,
-        limPhysX=[-2, 2], limPhysY=[-2, 2], shape='round',
+        beamLine, 'Lenslet', pitch=np.pi/2, t=0.3,
+        limPhysX=[-2.5, 2.5], limPhysY=[-2.5, 2.5], shape='round',
         focus=parabolaParam, zmax=zmax, alarmLevel=0.1)
 
     beamLine.fsm2 = rsc.Screen(beamLine, 'FSM2')

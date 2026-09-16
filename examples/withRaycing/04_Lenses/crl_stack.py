@@ -5,26 +5,55 @@ Compound Refractive Lenses
 
 Files in ``\examples\withRaycing\04_Lenses``
 
-This example demonstrates refraction in x-ray regime. Locus that refracts a
-collimated beam into a point focus is a paraboloid. The focal distance of such
-a vacuum-to-solid interface is, as in the usual optics, 2\ *p*/*δ* where *p*
-is the focal parameter of the lens paraboloid and *δ* = 1 - Re(*n*), *n* is the
-refractive index [snigirev]_. As for the usual lenses, the diopters of several
-consecutive lenses are summed up to give the total diopter:
+This example demonstrates refraction in the x-ray regime. The surface that
+refracts a collimated beam into a point focus is a paraboloid. The focal
+distance of such a vacuum-to-solid interface is, as in conventional optics,
+2\ *p*/*δ* where *p* is the focal parameter of the lens paraboloid and
+*δ* = 1 − Re(*n*), with *n* being the refractive index [snigirev]_. As for
+conventional lenses, the optical powers (diopters) of several consecutive lenses
+add up to give the total optical power:
 :math:`\frac{1}{f} = \frac{1}{f_1} + \frac{1}{f_2} + \ldots`.
 
-This example considers focusing of collimated x-rays of 9 keV at a distance
+The module :mod:`xrt.backends.raycing.oes.refractive` implements four classes of
+2D and 1D refractive lenses, shown in the table below. The images in the right
+column were produced with xrtGlow. Here, the coloring represents the value of
+the axial convergence. To reveal the internal ray trajectories, the footprint
+point distributions were rendered transparently through the lens material.
+
++--------------+-----------------------+
+| |crl_class1| |      |crl_glow1|      |
++--------------+-----------------------+
+| |crl_class2| |      |crl_glow2|      |
++--------------+-----------------------+
+| |crl_class3| |      |crl_glow3|      |
++--------------+-----------------------+
+| |crl_class4| |      |crl_glow4|      |
++--------------+-----------------------+
+
+.. |crl_class1| replace:: class ParaboloidFlatLens |br| 2D axial focusing, one
+   side of each lens is a paraboloid and the other is flat
+.. |crl_class2| replace:: class DoubleParaboloidLens |br| 2D axial focusing,
+   both sides of each lens are equal paraboloids
+.. |crl_class3| replace:: class ParabolicCylinderFlatLens |br| 1D focusing, one
+   side of each lens is a parabolic cylinder and the other is flat
+.. |crl_class4| replace:: class DoubleParabolicCylinderLens |br| 1D focusing,
+   both sides of each lens are equal parabolic cylinders
+.. |crl_glow1| imagezoom:: _images/Lens1.png
+.. |crl_glow2| imagezoom:: _images/Lens2.png
+.. |crl_glow3| imagezoom:: _images/Lens3.png
+.. |crl_glow4| imagezoom:: _images/Lens4.png
+   :loc: lower-left-corner
+
+The example below considers focusing of collimated x-rays of 9 keV at a distance
 *q* = 5 m from the lenses. The lenses are double-sided paraboloids (then *f* =
-*p*/*δ*) with *p* = 1 mm and zero spacing between the apices of the
-paraboloids. The thickness of each lens is 2 mm. Their number is an integer
+*p*/*δ*) with *p* = 1 mm and 0.3 mm spacing between the apices of the
+paraboloids. The diameter of each lens is 5 mm. Their number is an integer
 number *N* = round(*p*/*qδ*).
 
 The following images demonstrate the focusing along the optical axis close to
 the nominal focal position for Be and Al CRL's. The real focal position
 deviates from the nominal one, where d\ *q* = 0, due to the rounding of
 *p*/*qδ*:
-
-.. imagezoom:: _images/CRL-3D.*
 
 +------------+------------+
 |  |CRL_Be|  |  |CRL_Al|  |
@@ -43,8 +72,8 @@ number of double-sided lenses which give approximately equal focal distance of
 This graph shows the depth of focus as a function of the on-axis coordinate
 around the nominal focal position. For heavy materials the depth of focus is
 larger due to the higher absorption of the peripherical rays of the incoming
-beam. Such lenses act effectively also as apertures thus reducing the focal
-spot at the expense of flux:
+beam. Such lenses act effectively as apertures thus reducing the focal spot at
+the expense of flux:
 
 .. imagezoom:: _images/CRL-2-depthOfFocus.png
    :align: center
@@ -118,7 +147,7 @@ def build_beamline(nrays=1e4):
     beamLine.fsm1 = rsc.Screen(beamLine, 'FSM1', (0, p - 100, 0))
 
     kwargs = dict(pitch=np.pi/2, t=0, material=mBeryllium, focus=parabolaParam,
-                  zmax=zmax, nCRL=(q, E0), alarmLevel=0.1,
+                  zmax=zmax, nCRL=(q, E0), alarmLevel=0.3,
 #                  limPhysX=[-5, 5], limPhysY=[-5, 5], shape='round'
                   )
     beamLine.lens = Lens(beamLine, 'CRL', [0, p, 0], **kwargs)

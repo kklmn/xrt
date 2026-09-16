@@ -125,6 +125,10 @@ def sort_crystals(method):
 
 
 rst_epilog = """
+.. |br| raw:: html
+
+      <br>
+
 .. |elemall| replace:: {0}
 .. |compall| replace:: {1}
 .. |xtalall| replace:: {2}

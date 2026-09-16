@@ -18,16 +18,16 @@ import xrt.backends.raycing.screens as rsc
 # import xrt.runner as xrtr
 
 parabolaParam = 1.  # mm
-zmax = 1.  # mm
+zmax = 1.2  # mm
 dz = 5.  # mm
 E0 = 9000.  # eV
 p = 1000.  # source to 1st lens
-q = 10000.  # 1st lens to focus
+q = 5000.  # 1st lens to focus
 
-# Lens = roe.ParaboloidFlatLens
+Lens = roe.ParaboloidFlatLens
 # Lens = roe.DoubleParaboloidLens
 # Lens = roe.ParabolicCylinderFlatLens
-Lens = roe.DoubleParabolicCylinderLens
+# Lens = roe.DoubleParabolicCylinderLens
 
 mBeryllium = rm.Material('Be', rho=1.848, kind='lens')
 # mDiamond = rm.Material('C', rho=3.52, kind='lens')
@@ -49,8 +49,8 @@ def build_beamline(nrays=1e4):
     while True:
         lens = Lens(
             beamLine, 'Lens{0:02d}'.format(ilens), center=[0, p + dz*ilens, 0],
-            pitch=np.pi/2, t=0.1, material=material,
-            limPhysX=[-2, 2], limPhysY=[-2, 2], shape='round',
+            pitch=np.pi/2, t=0.3, material=material,
+            limPhysX=[-2.5, 2.5], limPhysY=[-2.5, 2.5], shape='round',
             focus=parabolaParam, zmax=zmax, alarmLevel=0.1)
         beamLine.lenses.append(lens)
         if ilens == 0:
@@ -86,8 +86,11 @@ rr.run_process = run_process
 
 def main():
     beamLine = build_beamline()
-    beamLine.glow(centerAt='Lens{0:02d}'.format(len(beamLine.lenses)-1),
-                  colorAxis='xzprime')
+    beamLine.glow(centerAt='Lens{0:02d}'.format(len(beamLine.lenses)-3),
+                  scale=1e3, colorAxis='xzprime',
+                  sceneSettings=dict(rotations=[-22, 0], drawGrid=False,
+                                     pointOpacity=0.25, pointSize=2,
+                                     globalNorm=False, tiles=[99, 99]))
 
 
 if __name__ == '__main__':
