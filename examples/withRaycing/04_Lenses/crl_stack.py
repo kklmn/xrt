@@ -39,10 +39,13 @@ point distributions were rendered transparently through the lens material.
 .. |crl_class4| replace:: class DoubleParabolicCylinderLens |br| 1D focusing,
    both sides of each lens are equal parabolic cylinders
 .. |crl_glow1| imagezoom:: _images/Lens1.png
+   :loc: lower-right-corner
 .. |crl_glow2| imagezoom:: _images/Lens2.png
+   :loc: lower-right-corner
 .. |crl_glow3| imagezoom:: _images/Lens3.png
+   :loc: lower-right-corner
 .. |crl_glow4| imagezoom:: _images/Lens4.png
-   :loc: lower-left-corner
+   :loc: lower-right-corner
 
 The example below considers focusing of collimated x-rays of 9 keV at a distance
 *q* = 5 m from the lenses. The lenses are double-sided paraboloids (then *f* =
