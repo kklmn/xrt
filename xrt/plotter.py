@@ -216,8 +216,8 @@ def deserialize_plots(data, beamLine=None):
         try:
             newPlot = XYCPlot(**plotKwargs)
             plotsList.append(newPlot)
-        except Exception:
-            print("Plot init failed")
+        except Exception as err:
+            print("Plot init failed:", err)
     return plotsList
 
 
@@ -614,11 +614,10 @@ class XYCAxis(object):
         Automatically assign data arrays given the axis label."""
         data = self.get_auto_data(backend)
         if data is None:
-            raycing.colorPrint(
-                'Cannot auto-assign data for axis "{0}"; '
-                'keeping previous value.'
-                .format(self.label),
-                'YELLOW')
+            raycing.colorPrint('Cannot auto-assign data for axis "{0}"; '
+                               'keeping previous value.'
+                               .format(self.label),
+                               'YELLOW')
             return False
 
         self._data = data
@@ -694,7 +693,7 @@ class XYCPlot(object):
         self, beam=None, rayFlag=(1,), xaxis=None, yaxis=None, caxis=None,
         aspect='equal', xPos=1, yPos=1, ePos=1, title='',
         invertColorMap=False, negative=False,
-        fluxKind='total', fluxUnit='auto',
+        showCornerLabels=True, fluxKind='total', fluxUnit='auto',
         fluxFormatStr='auto', contourLevels=None, contourColors=None,
         contourFmt='%.1f', contourFactor=1., saveName=None,
         persistentName=None, oe=None, raycingParam=0,
@@ -825,6 +824,9 @@ class XYCPlot(object):
 
             (such a picture would nicely look on a black journal cover, e.g.
             on that of Journal of Synchrotron Radiation ;) )
+
+        *showCornerLabels*: bool
+            s
 
         .. _fluxKind:
 
@@ -1065,9 +1067,9 @@ class XYCPlot(object):
         self.reset_xy_axes(p2, px, py)
         self.reset_e_axes(peb, pe)
 
-        mplTxtX = self.ax1dHistX.text if useQtWidget else plt.text
-        mplTxtY = self.ax1dHistY.text if useQtWidget else plt.text
-        mplTxtE = self.ax1dHistE.text if useQtWidget else plt.text
+        mplTxtX = self.ax1dHistX.text
+        mplTxtY = self.ax1dHistY.text
+        mplTxtE = self.ax1dHistE.text
         if self.ePos == 1:
             self.textDE = mplTxtE(
                 xTextPosDy, yTextPosDy, ' ', rotation='vertical',
@@ -1077,10 +1079,11 @@ class XYCPlot(object):
                 xTextPosDx, yTextPosDx, ' ',
                 transform=self.ax1dHistE.transAxes, ha='center', va='bottom')
         else:
-            self.textDE = mplTxtE(
-                xTextPosDx, yTextPosDx, ' ',
-                transform=self.ax1dHistE.transAxes, ha='center', va='bottom')
-            self.textDE.set_visible(False)
+            pass
+            # self.textDE = mplTxtE(
+            #     xTextPosDx, yTextPosDx, ' ',
+            #     transform=self.ax1dHistE.transAxes, ha='center', va='bottom')
+            # self.textDE.set_visible(False)
 
         self.nRaysAll = np.int64(0)
         self.nRaysAllRestored = np.int64(-1)
@@ -1125,39 +1128,40 @@ class XYCPlot(object):
             self.nRaysAcceptedE = 0.
             self.nRaysSeeded = np.int64(0)
             self.nRaysSeededI = 0.
-            self.textNrays = mplTxtX(
-                xTextPos, yTextPosNraysR, ' ', transform=transform, ha='left',
-                va='top')
             self.textGood = None
             self.textOut = None
             self.textOver = None
             self.textAlive = None
             self.textDead = None
-            if 1 in self.rayFlag:
-                self.textGood = mplTxtX(
-                    xTextPos, yTextPosNrays1, ' ', transform=transform,
+            if showCornerLabels:
+                self.textNrays = mplTxtX(
+                    xTextPos, yTextPosNraysR, ' ', transform=transform,
                     ha='left', va='top')
-            if 2 in self.rayFlag:
-                self.textOut = mplTxtX(
-                    xTextPos, yTextPosNrays2, ' ', transform=transform,
-                    ha='left', va='top')
-            if 3 in self.rayFlag:
-                self.textOver = mplTxtX(
-                    xTextPos, yTextPosNrays3, ' ', transform=transform,
-                    ha='left', va='top')
-            if 4 in self.rayFlag:
-                self.textAlive = mplTxtX(
-                    xTextPos, yTextPosGoodraysR, ' ', transform=transform,
-                    ha='left', va='top')
-            if not self.caxis.useCategory:
-                self.textI = mplTxtX(
-                    xTextPos, yTextPosNrays4, ' ', transform=transform,
-                    ha='left', va='top')
-            else:
-                if (np.array(self.rayFlag) < 0).sum() > 0:
-                    self.textDead = mplTxtX(
+                if 1 in self.rayFlag:
+                    self.textGood = mplTxtX(
+                        xTextPos, yTextPosNrays1, ' ', transform=transform,
+                        ha='left', va='top')
+                if 2 in self.rayFlag:
+                    self.textOut = mplTxtX(
+                        xTextPos, yTextPosNrays2, ' ', transform=transform,
+                        ha='left', va='top')
+                if 3 in self.rayFlag:
+                    self.textOver = mplTxtX(
+                        xTextPos, yTextPosNrays3, ' ', transform=transform,
+                        ha='left', va='top')
+                if 4 in self.rayFlag:
+                    self.textAlive = mplTxtX(
+                        xTextPos, yTextPosGoodraysR, ' ', transform=transform,
+                        ha='left', va='top')
+                if not self.caxis.useCategory:
+                    self.textI = mplTxtX(
                         xTextPos, yTextPosNrays4, ' ', transform=transform,
                         ha='left', va='top')
+                else:
+                    if (np.array(self.rayFlag) < 0).sum() > 0:
+                        self.textDead = mplTxtX(
+                            xTextPos, yTextPosNrays4, ' ', transform=transform,
+                            ha='left', va='top')
 
         self.textDx = mplTxtX(
             xTextPosDx, yTextPosDx, ' ', transform=self.ax1dHistX.transAxes,
@@ -1678,9 +1682,8 @@ class XYCPlot(object):
         elif what_axis_char == 'c':
             axis = self.caxis
             graph = self.ax1dHistE
-            if self.ePos == 1:
-                orientation = 'vertical'
-            elif self.ePos == 2:
+            orientation = 'vertical'
+            if self.ePos == 2:
                 orientation = 'horizontal'
             offsetText = self.ax1dHistEOffset
             histoPixelHeight = heightE1d
@@ -1965,6 +1968,8 @@ class XYCPlot(object):
     def textFWHM(self, axis, textD, average, hwhm):
         """Updates the text field that has average of the *axis* plus-minus the
         HWHM value."""
+        if axis.fwhmFormatStr is None or textD is None:
+            return
         deltaStr = axis.label + '$ = $' + axis.fwhmFormatStr +\
             r'$\pm$' + axis.fwhmFormatStr + ' %s'
         textD.set_text(deltaStr % (average, hwhm, axis.unit))
@@ -2015,7 +2020,7 @@ class XYCPlot(object):
         if self.ePos != 0:
             self.cE, self.dE = self.plot_hist1d('c')
             self.plot_colorbar()
-            if self.caxis.fwhmFormatStr is not None:
+            if self.textDE is not None:
                 self.textFWHM(self.caxis, self.textDE, self.cE, self.dE/2)
         self.plot_hist2d()
         self._set_grid()
@@ -2112,10 +2117,8 @@ class XYCPlot(object):
                     intensityStr += fluxFormatStr % self.intensity
                 self.textI.set_text(intensityStr)
 
-        if self.xaxis.fwhmFormatStr is not None:
-            self.textFWHM(self.xaxis, self.textDx, self.cx, self.dx/2)
-        if self.yaxis.fwhmFormatStr is not None:
-            self.textFWHM(self.yaxis, self.textDy, self.cy, self.dy/2)
+        self.textFWHM(self.xaxis, self.textDx, self.cx, self.dx/2)
+        self.textFWHM(self.yaxis, self.textDy, self.cy, self.dy/2)
 #        self.ax2Hist.set_aspect(self.aspect)
 #        self.ax2dHist.set_xlabel(self.xaxis.displayLabel)  # dynamic updates
 #        self.ax2dHist.set_ylabel(self.yaxis.displayLabel)  # dynamic updates
@@ -2184,9 +2187,10 @@ class XYCPlot(object):
             'button_press_event', self.on_press)
         self.fig.canvas.draw()
         if self.ePos != 0:
-            if self.caxis.fwhmFormatStr is not None:
+            if self.textDE is not None:
                 self.textDE.set_text('')
-        self.textNrays.set_text('')
+        if self.textNrays is not None:
+            self.textNrays.set_text('')
         if self.backend == 'shadow':
             self.nRaysNeeded = np.int64(0)
             if self.textGoodrays is not None:
@@ -2209,9 +2213,9 @@ class XYCPlot(object):
                 self.textDead.set_text('')
         if self.textI:
             self.textI.set_text('')
-        if self.xaxis.fwhmFormatStr is not None:
+        if self.textDx is not None:
             self.textDx.set_text('')
-        if self.yaxis.fwhmFormatStr is not None:
+        if self.textDy is not None:
             self.textDy.set_text('')
         self.clean_user_elements()
         if self.contours2D is not None:
@@ -2311,8 +2315,8 @@ class XYCPlot(object):
             if True:  # _DEBUG:
                 print('persistentName=', self.persistentName)
                 print('saved nRaysAll=', self.nRaysAll)
-        except (IOError, TypeError):
-            pass
+        except (IOError, TypeError) as err:
+            print('Error in restore_plots():', err)
 
 
 class XYCPlotWithNumerOfReflections(XYCPlot):
@@ -2352,8 +2356,8 @@ class XYCPlotWithNumerOfReflections(XYCPlot):
                     # self.ax1dHistE.texts.remove(text)
                     try:
                         text.remove()
-                    except ValueError:
-                        pass
+                    except ValueError as err:
+                        print('Error in clean_user_elements():', err)
                 del text
             del self.textUser[:]
 
