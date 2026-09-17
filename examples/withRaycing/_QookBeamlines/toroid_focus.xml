@@ -77,7 +77,7 @@
 				<parameters type="prop">
 					<toGlobal type="param">True</toGlobal>
 					<withAmplitudes type="param">False</withAmplitudes>
-					<fixedEnergy type="param">False</fixedEnergy>
+					<fixedEnergy type="param">None</fixedEnergy>
 					<accuBeam type="param">None</accuBeam>
 				</parameters>
 				<_object type="object">xrt.backends.raycing.sources.synchr.BendingMagnet.shine</_object>

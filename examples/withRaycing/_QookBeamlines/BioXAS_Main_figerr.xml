@@ -214,7 +214,7 @@
 				<parameters type="prop">
 					<toGlobal type="param">True</toGlobal>
 					<withAmplitudes type="param">True</withAmplitudes>
-					<fixedEnergy type="param">False</fixedEnergy>
+					<fixedEnergy type="param">None</fixedEnergy>
 					<accuBeam type="param">None</accuBeam>
 				</parameters>
 				<_object type="param">xrt.backends.raycing.sources.synchr.Wiggler.shine</_object>
