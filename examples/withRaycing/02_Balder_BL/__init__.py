@@ -83,7 +83,13 @@ angle.
 +---------------------+---------------------+
 
 .. |pitch-Sample-3D| animation:: _images/pitch-Sample-3D
-.. |pitch-Sample-2D| animation:: _images/pitch-Sample
+   :alt: &ensp;A 3D scene rendered by xrtGlow started from
+       02_Balder_BL/traceMirrorPitchBothBalderBL.py by setting "showIn3D = True".
+       The images were produced by running a scan sequence from xrtGlow.
+.. |pitch-Sample-2D| animation:: _images/pitch-Sample-2D
+   :alt: &ensp;A sample screen plot animated by a generator defined in
+       02_Balder_BL/traceMirrorPitchBothBalderBL.py. For this conventional
+       execution of xrt, set "showIn3D = False".
 
 .. _dmm:
 

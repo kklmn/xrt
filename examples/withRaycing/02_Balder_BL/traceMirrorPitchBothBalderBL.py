@@ -8,8 +8,8 @@ import numpy as np
 
 import xrt.plotter as xrtp
 import xrt.runner as xrtr
-#import xrt.backends.raycing.sources as rs
-#import xrt.backends.raycing.run as rr
+# import xrt.backends.raycing.sources as rs
+# import xrt.backends.raycing.run as rr
 import BalderBL
 
 showIn3D = True
@@ -35,16 +35,17 @@ def define_plots():
 
     plot = xrtp.XYCPlot(
         'beamFSMSample', (1,), aspect='auto',
-        xaxis=xrtp.XYCAxis(r'$x$', 'mm'),
-        yaxis=xrtp.XYCAxis(r'$z$', 'mm'),
-        caxis=xrtp.XYCAxis('energy', 'eV'), title='Sample', ePos=0)
+        xaxis=xrtp.XYCAxis(r'$x$', 'mm', bins=256, ppb=1),
+        yaxis=xrtp.XYCAxis(r'$z$', 'mm', bins=256, ppb=1),
+        caxis=xrtp.XYCAxis('energy', 'eV'), title='Sample',
+        ePos=0, showCornerLabels=False)
     plot.xaxis.limits = [-10, 10]
-    plot.yaxis.limits = [42.79-10, 42.79+10]
-#    plot.xaxis.fwhmFormatStr = '%.0f'
-#    plot.yaxis.fwhmFormatStr = '%.2f'
+    plot.yaxis.limits = [-1, 1]
+    plot.xaxis.fwhmFormatStr = '%.2f'
+    plot.yaxis.fwhmFormatStr = '%.2f'
     plot.fluxFormatStr = '%.1p'
     plot.textPanel = plot.ax2dHist.text(
-        0.5, 0.9, '', transform=plot.ax2dHist.transAxes, size=14, color='r',
+        0.5, 0.9, '', transform=plot.ax2dHist.transAxes, size=12, color='w',
         ha='center')
     plots.append(plot)
 
@@ -104,9 +105,8 @@ def make_glow_scan(beamLine):
     frames = {}
     state = _scan_state(beamLine)
     try:
-        for index, pitch in enumerate(np.linspace(1., 4., 31)):
-            BalderBL.align_beamline(
-                beamLine, energy=E0, pitch=pitch*1e-3)
+        for index, pitch in enumerate(np.linspace(1., 3., 21)):
+            BalderBL.align_beamline(beamLine, energy=E0, pitch=pitch*1e-3)
             frameName = 'pitch-{0:.1f}mrad.jpg'.format(pitch)
             frames['frame_{0:04d}'.format(index)] = {
                 'objects': _alignment_patch(beamLine),
@@ -114,8 +114,7 @@ def make_glow_scan(beamLine):
                 }
     finally:
         _restore_scan_state(beamLine, state)
-    return {'version': 1, 'kind': 'timeline_recipe',
-            'expandedFrames': frames}
+    return {'version': 1, 'kind': 'timeline_recipe', 'expandedFrames': frames}
 
 
 def plot_generator(plots, beamLine):
@@ -128,16 +127,15 @@ def plot_generator(plots, beamLine):
     explicit JSON-like frames. This is more verbose than ``linspace`` but it
     records the coupled geometry, not just the scanned pitch value.
     """
-    pitches = np.linspace(1., 4., 31)
+    pitches = np.linspace(1., 3., 21)
     for pitch in pitches:
         BalderBL.align_beamline(beamLine, energy=E0, pitch=pitch*1e-3)
         for plot in plots:
             baseName = 'pitch-{0}{1:.1f}mrad'.format(plot.title, pitch)
             plot.saveName = baseName + '.png'
-#            plot.persistentName = baseName + '.pickle'
+            # plot.persistentName = baseName + '.pickle'
             if hasattr(plot, 'textPanel'):
-                plot.textPanel.set_text(
-                    r'$\theta$ = {0:.1f} mrad'.format(pitch))
+                plot.textPanel.set_text(r'θ = {0:.1f} mrad'.format(pitch))
         if showIn3D:
             beamLine.glowFrameName = 'pitch-{0:.1f}mrad.jpg'.format(pitch)
         yield
@@ -149,15 +147,14 @@ def main():
     if showIn3D:
         BalderBL.align_beamline(myBalder, energy=E0, pitch=2.5e-3)
         scan = make_glow_scan(myBalder)
-        myBalder.glow(centerAt='VFM', startFrom=2,
-                      scan=scan)
+        myBalder.glow(centerAt='VFM', startFrom=2, scan=scan)
         return
     plots = define_plots()
-    xrtr.run_ray_tracing(
-        plots, repeats=12, generator=plot_generator,
-        beamLine=myBalder, globalNorm=True, processes='half')
+    xrtr.run_ray_tracing(plots, repeats=16, generator=plot_generator,
+                         beamLine=myBalder, globalNorm=True, processes=4)
 
-#this is necessary to use multiprocessing in Windows, otherwise the new Python
-#contexts cannot be initialized:
+
+# this is necessary to use multiprocessing in Windows, otherwise the new Python
+# contexts cannot be initialized:
 if __name__ == '__main__':
     main()
