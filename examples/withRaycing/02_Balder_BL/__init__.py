@@ -89,7 +89,8 @@ angle.
 .. |pitch-Sample-2D| animation:: _images/pitch-Sample-2D
    :alt: &ensp;A sample screen plot animated by a generator defined in
        02_Balder_BL/traceMirrorPitchBothBalderBL.py. For this conventional
-       execution of xrt, set "showIn3D = False".
+       execution of xrt, set "showIn3D = False". Note the unequal scales of the
+       axes.
 
 .. _dmm:
 
