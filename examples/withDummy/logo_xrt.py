@@ -2,11 +2,10 @@ __author__ = "Konstantin Klementiev"
 __date__ = "1 Mar 2012"
 
 import sys
-sys.path.append(r"c:\Ray-tracing")
-#sys.path.append(r"/media/sf_Ray-tracing")
+import os, sys; sys.path.append(os.path.join('..', '..'))  # analysis:ignore
 import numpy as np
-#import matplotlib as mpl
-#mpl.use('agg')
+# import matplotlib as mpl
+# mpl.use('agg')
 import matplotlib.pyplot as plt
 
 import xrt.plotter as xrtp
@@ -17,7 +16,7 @@ import copy
 
 def main():
     logo = plt.imread('logo-python.png')  # load 2D template
-#    logo = plt.imread('logo_test0.png')  # load 2D template
+    # logo = plt.imread('logo_test0.png')  # load 2D template
     logo_mono = logo[:, :, 0] + logo[:, :, 1] + logo[:, :, 2]*2
     logo_blue = copy.deepcopy(logo_mono)
     logo_blue[logo[:, :, 2] < 0.4] = 0
@@ -26,12 +25,13 @@ def main():
     xrtp.height1d = 64
     xrtp.heightE1d = 64
     xrtp.xspace1dtoE1d = 4
+    xrtp.heightE1dbar = 8
     xrtp.xOrigin2d = 4
     xrtp.yOrigin2d = 4
     xrtp.xSpaceExtra = 6
     xrtp.ySpaceExtra = 4
 
-#    make "ray-tracing" arrays: x, y, intensity and cData
+    # make "ray-tracing" arrays: x, y, intensity and cData
     locNrays = logo.shape[0] * logo.shape[1]
     xy = np.mgrid[0:logo.shape[1], 0:logo.shape[0]]
     x = xy[0, ...].flatten()
@@ -55,39 +55,40 @@ def main():
     plot1 = xrtp.XYCPlot(
         'dummy',
         saveName=['logo-xrt.png', 'logo_xrt.pdf'],
-#        saveName=['logo-xrt-inv.png', 'logo_xrt-inv.pdf'],
+        # saveName=['logo-xrt-inv.png', 'logo_xrt-inv.pdf'],
         xaxis=xrtp.XYCAxis('', '', fwhmFormatStr=None, bins=logo.shape[1],
                            ppb=1, limits=[0.5, logo.shape[1]+0.5]),
         yaxis=xrtp.XYCAxis('', '', fwhmFormatStr=None, bins=logo.shape[0],
                            ppb=1, limits=[0.5, logo.shape[0]+0.5]),
-        caxis=xrtp.XYCAxis(
-            '', '', fwhmFormatStr=None, bins=logo.shape[0]/2, ppb=2,
-            limits=[10, cDatamax*0.8]),
+        caxis=xrtp.XYCAxis('', '', fwhmFormatStr=None, bins=logo.shape[0]//2,
+                           ppb=2, limits=[15, cDatamax*0.8]),
         negative=True, invertColorMap=True,
         aspect='auto')
     plot1.textPanel = plot1.fig.text(
         0.75, 0.74, 'xrt', transform=plot1.fig.transFigure, size=70, color='r',
         ha='center', fontname='times new roman', weight=660)
-#     with no labels:
+    # with no labels:
     plot1.textNrays = None
     plot1.textGoodrays = None
     plot1.textI = None
-#    ... and no tick labels:
+    # ... and no tick labels:
     plt.setp(
-        plot1.ax1dHistEbar.get_yticklabels() +
-        plot1.ax2dHist.get_xticklabels() + plot1.ax2dHist.get_yticklabels(),
+        plot1.ax2dHist.get_xticklabels() + plot1.ax2dHist.get_yticklabels() +
+        plot1.ax1dHistX.get_xticklabels() + plot1.ax1dHistX.get_yticklabels() +
+        plot1.ax1dHistY.get_xticklabels() + plot1.ax1dHistY.get_yticklabels(),
         visible=False)
-#    ... and no ticks:
+    # ... and no ticks:
     allAxes = [plot1.ax1dHistX, plot1.ax1dHistY, plot1.ax2dHist,
                plot1.ax1dHistE, plot1.ax1dHistEbar]
     for ax in allAxes:
         for axXY in (ax.xaxis, ax.yaxis):
             plt.setp(axXY.get_ticklines(), visible=False)
-#     end of no ticks:
+    # end of no ticks
 
     xrtr.run_ray_tracing(plot1, repeats=2, backend='dummy')
 
-#this is necessary to use multiprocessing in Windows, otherwise the new Python
-#contexts cannot be initialized:
+
+# this is necessary to use multiprocessing in Windows, otherwise the new Python
+# contexts cannot be initialized:
 if __name__ == '__main__':
     main()

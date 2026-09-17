@@ -457,7 +457,7 @@ class XYCAxis(object):
     def data(self, data):
         dataInit = data
 
-        if isinstance(data, str):
+        if isinstance(data, str) and len(self.label) > 0:
             data = data.strip()
             if data == 'auto':
                 self._dataInit = 'auto'
@@ -1841,17 +1841,17 @@ class XYCPlot(object):
             self.ax1dHistEbar.set_xlim([0, 1])
             self.ax1dHistEbar.tick_params(
                     bottom=False, top=False,
-                    left=True, right=False,   # tick marks
+                    left=self.backend != 'dummy', right=False,   # tick marks
                     labelbottom=False, labeltop=False,
-                    labelleft=True, labelright=False)
+                    labelleft=self.backend != 'dummy', labelright=False)
         else:
             extent = [eMin, eMax, 0, 1]
             self.ax1dHistEbar.set_xlim([eMin, eMax])
             self.ax1dHistEbar.set_ylim([0, 1])
             self.ax1dHistEbar.tick_params(
-                    bottom=True, top=False,
+                    bottom=self.backend != 'dummy', top=False,
                     left=False, right=False,   # tick marks
-                    labelbottom=True, labeltop=False,
+                    labelbottom=self.backend != 'dummy', labeltop=False,
                     labelleft=False, labelright=False)
 
         a = np.dstack(
