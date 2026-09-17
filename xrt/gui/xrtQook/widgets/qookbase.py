@@ -17,6 +17,7 @@ import inspect  # analysis:ignore
 
 from functools import partial  # analysis:ignore
 from collections import OrderedDict  # analysis:ignore
+import matplotlib as mpl
 
 from .._constants import (redStr, isUnitsEnabled, useSlidersInTree,  # analysis:ignore
                           path_to_xrt, myTab, withSlidersInTree,
@@ -1429,6 +1430,7 @@ class XrtQookBase(qt.QMainWindow):
         else:
             vercl = isOpenStatus
         strOpenCL = r'pyopencl {}'.format(vercl)
+        strMpl = 'matplotlib {0}'.format(mpl.__version__)
         if ext.isSphinx:
             strSphinx = 'Sphinx {0}'.format(ext.sphinx.__version__)
         else:
@@ -1467,10 +1469,11 @@ class XrtQookBase(qt.QMainWindow):
     {6}\n
     {7}\n
     {8}\n
-    {9} """.format(
+    {9}\n
+    {10} """.format(
             'tutorial',
             locos, pythonplatform.python_version(), Qt_version, qt.QtName,
-            PyQt_version, strOpenGL, strOpenCL, strSphinx, strXrt)
+            PyQt_version, strOpenGL, strOpenCL, strMpl, strSphinx, strXrt)
         self.showTutorial(txt, "xrtQook", img_path='../_images')
         self.docks[0].raise_()
 
