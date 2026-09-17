@@ -1657,6 +1657,8 @@ class XrtQookBase(qt.QMainWindow):
             left, right = ('[', ']') if isinstance(value, list) else ('(', ')')
             items = ', '.join(
                 self.formatParamDisplay(paramName, item) for item in value)
+            if isinstance(value, tuple) and len(value) == 1:
+                items += ','
             return left + items + right
         return str(value)
 
