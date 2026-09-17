@@ -826,7 +826,9 @@ class XYCPlot(object):
             on that of Journal of Synchrotron Radiation ;) )
 
         *showCornerLabels*: bool
-            s
+            Controls the display of "corneк labels" -- flux label, number of
+            rays etc., displayed in the corner between the two 1D positional
+            histograms.
 
         .. _fluxKind:
 
