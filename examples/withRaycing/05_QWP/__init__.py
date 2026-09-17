@@ -14,7 +14,8 @@ nominal Bragg angle. The polarization plate is put at 45º to the diffraction
 plane. Notice that the phase difference between the s- and p-polarized
 components was calculated here not in the 1-field approximation as elsewhere
 [Malgrange]_ that has a pole at :math:`\Delta\theta=0` but in the general
-2-field approximation, see :mod:`~xrt.backends.raycing.materials`.
+2-field approximation (see :mod:`~xrt.backends.raycing.materials`) based upon
+Belyakov & Dmitrienko [BD]_:.
 
 .. [Malgrange] C. Giles, C. Malgrange, J. Goulon, F. de Bergevin, C. Vettier,
     E. Dartyge, A. Fontaine, C. Giorgetti and S. Pizzini, J. Appl. Cryst.

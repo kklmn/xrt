@@ -133,8 +133,9 @@ def get_polarization_degree(beam):
 def get_ratio_ellipse_axes(beam):
     """Used for retrieving data for x-, y- or c-axis of a plot."""
     dI2 = (beam.Jss - beam.Jpp)**2
-    return 2. * beam.Jsp.imag /\
-        (np.sqrt(dI2 + 4*abs(beam.Jsp)**2) + np.sqrt(dI2 + 4*beam.Jsp.real**2))
+    norm = np.sqrt(dI2 + 4*abs(beam.Jsp)**2) + np.sqrt(dI2 + 4*beam.Jsp.real**2)
+    norm[norm <= 0] = 1.
+    return 2. * beam.Jsp.imag / norm
 
 
 def get_circular_polarization_rate(beam):
