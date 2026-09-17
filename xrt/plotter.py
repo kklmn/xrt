@@ -963,17 +963,13 @@ class XYCPlot(object):
         self.runCardVals = None
 
         self.beam = beam  # binary shadow image: star, mirr or screen
-        if self.beam is None:
-            self.backend = 'raycing'
-        elif 'star.' in self.beam or 'mirr.' in self.beam or\
+        if 'star.' in self.beam or 'mirr.' in self.beam or\
                 'screen.' in self.beam:
             self.backend = 'shadow'
-        elif ('dummy' in self.beam) or (self.beam == ''):
+        elif ('dummy' in self.beam):
             self.backend = 'dummy'
-        elif isinstance(rayFlag, (tuple, list)):
-            self.backend = 'raycing'
         else:
-            self.backend = 'dummy'
+            self.backend = 'raycing'
 
         self.beamAbsorb = beamAbsorb
         self.showAbsorbed = showAbsorbed
