@@ -51,7 +51,7 @@ from datetime import datetime
 from scipy.interpolate import make_interp_spline, PPoly
 
 try:  # RTFD compatibility
-    from .commons import qt, config  # analysis:ignore
+    from xrt.gui.commons import qt, config  # analysis:ignore
 except ImportError:
     sys.path.append('commons')  # analysis:ignore
     import qt, config  # analysis:ignore
