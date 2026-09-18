@@ -865,10 +865,20 @@ if __name__ == '__main__':
         self.progressBar.setFormat("Adding optical elements.")
         outBeams = ['None']
 
+        activeFlow = set()
+        for oeid, operations in self.beamLine.flowU.items():
+            for methodName, methodArgs in operations.items():
+                if methodName == 'shine':
+                    active = True
+                else:
+                    active = methodArgs.get('beam') in activeFlow
+                if active:
+                    activeFlow.add(oeid)
+
         for tItem in self.getOrderedBeamlineItems():
             ieinit = ""
             ierun = ""
-            elementInFlow = str(tItem.data(qt.Qt.UserRole)) in self.beamLine.flowU
+            elementInFlow = str(tItem.data(qt.Qt.UserRole)) in activeFlow
             for ieph in range(tItem.rowCount()):
                 if tItem.child(ieph, 0).text() == '_object':
                     elstr = str(tItem.child(ieph, 1).text())
@@ -972,13 +982,9 @@ if __name__ == '__main__':
         codeRunProcess += r"{0}outDict = ".format(myTab) + "{"
         self.progressBar.setValue(60)
         self.progressBar.setFormat("Defining the propagation.")
-        for ibm in reversed(range(self.beamModel.rowCount())):
-            beamName = str(self.beamModel.item(ibm, 0).text())
-            if beamName not in outBeams:
-                self.beamModel.takeRow(ibm)
         for ibm in range(self.beamModel.rowCount()):
             beamName = str(self.beamModel.item(ibm, 0).text())
-            if beamName != "None":
+            if beamName != "None" and beamName in outBeams:
                 codeRunProcess += '\n{1}{1}\'{0}\': {0},'.format(
                     beamName, myTab)
         codeRunProcess = codeRunProcess.rstrip(',') + "}\n"

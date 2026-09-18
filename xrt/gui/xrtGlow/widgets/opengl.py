@@ -999,8 +999,17 @@ class xrtGlWidget(qt.QOpenGLWidget):
             msg = progress_queue.get()
             if 'beam' in msg:
                 for beamKey, beam in msg['beam'].items():
-                    self.needBeamUpdate.append((msg['sender_id'], beamKey))
-                    self.beamline.beamsDictU[msg['sender_id']][beamKey] = beam
+                    beamTag = (msg['sender_id'], beamKey)
+                    beamDict = self.beamline.beamsDictU.get(beamTag[0])
+                    if beamDict is None:
+                        continue
+                    beamDict[beamKey] = beam
+                    if beam is None:
+                        self.delete_beam_footprint(beamTag)
+                        self.beamBufferDict.pop(beamTag, None)
+                        self.newColorAxis = True
+                    else:
+                        self.needBeamUpdate.append(beamTag)
                     self.beamUpdated.emit((msg['sender_id'], beamKey))
             elif 'histogram' in msg and self.epicsPrefix is not None:
                 record = self.epicsInterface.pv_map.get(msg['sender_id'],

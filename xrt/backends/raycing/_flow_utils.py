@@ -201,26 +201,44 @@ def append_to_flow_decorator(func):
 
         toGlobal = kwargs.get('toGlobal', True)
 
-        if beamIn and kwargs[beamIn] is not None:
-            if hasattr(self, 'bl') and self.bl is not None and\
-                    not self.bl.flowSource.endswith('refract'):
-                if is_valid_uuid(kwargs[beamIn]):
-                    beamId = kwargs[beamIn]
-                    beamDict = self.bl.beamsDictU.get(beamId)
-                    beamType = 'beamGlobal' if toGlobal else 'beamLocal'
-                    kwargs[beamIn] = None if beamDict is None else\
-                        beamDict.get(beamType)
-                else:
-                    beamId = kwargs[beamIn].parentId
+        if beamIn:
+            if kwargs[beamIn] is not None:
+                if hasattr(self, 'bl') and self.bl is not None and\
+                        not self.bl.flowSource.endswith('refract'):
+                    if is_valid_uuid(kwargs[beamIn]):
+                        beamId = kwargs[beamIn]
+                        beamDict = self.bl.beamsDictU.get(beamId)
+                        beamType = 'beamGlobal' if toGlobal else 'beamLocal'
+                        kwargs[beamIn] = None if beamDict is None else\
+                            beamDict.get(beamType)
+                    else:
+                        beamId = kwargs[beamIn].parentId
 
-                if kwargs[beamIn] is None:
-                    if methStr != 'shine':
-                        if self.uuid in self.bl.beamsDictU:
-                            for beamKey in self.bl.beamsDictU[self.uuid]:
-                                self.bl.beamsDictU[self.uuid][beamKey] = None
-                        return None
-                elif methStr != 'shine':
-                    self.bl.auto_align(self, kwargs[beamIn])
+                    if kwargs[beamIn] is not None and methStr != 'shine':
+                        self.bl.auto_align(self, kwargs[beamIn])
+
+            if kwargs[beamIn] is None and methStr != 'shine':
+                beamStore = getattr(
+                    getattr(self, 'bl', None), 'beamsDictU', None)
+                beamOut = {} if beamStore is None else beamStore.get(
+                    self.uuid, {})
+                if not beamOut:
+                    if methStr in ['propagate', 'expose']:
+                        beamOut = {'beamLocal': None}
+                    elif methStr in ['double_reflect', 'double_refract',
+                                     'multiple_refract']:
+                        beamOut = {'beamGlobal': None,
+                                   'beamLocal1': None,
+                                   'beamLocal2': None}
+                    else:
+                        beamOut = {'beamGlobal': None, 'beamLocal': None}
+                    if beamStore is not None:
+                        beamStore[self.uuid] = beamOut
+                for beamKey in beamOut:
+                    beamOut[beamKey] = None
+
+                outCount = len(beamOut)
+                return (None,) * outCount if outCount > 1 else None
         if hasattr(self, 'get_orientation'):
             self.get_orientation()
 
