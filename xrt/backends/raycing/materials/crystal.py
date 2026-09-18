@@ -23,9 +23,12 @@ def parse_hkl(s):
     Separator allows: commas, spaces, commas with spaces, no separator.
     Any of hkl can have a sign.
     """
-    nums = re.findall(r'[+-]?\d', s)
+    text = str(s).strip().strip('[]()')
+    pattern = r'[+-]?\d+' if re.search(r'[,;\s]', text) else r'[+-]?\d'
+    nums = re.findall(pattern, text)
     if len(nums) != 3:
         return []
+    print(tuple(map(int, nums)))
     return tuple(map(int, nums))
 
 
