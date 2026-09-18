@@ -7,7 +7,10 @@ import os, sys; sys.path.append(os.path.join('..', '..'))  # analysis:ignore
 
 import numpy as np
 import scipy.ndimage as sndi
+from skimage import filters
+
 import matplotlib as mpl
+import matplotlib.patheffects as path_effects
 # mpl.style.use('classic')
 # mpl.use('agg')
 import matplotlib.pyplot as plt
@@ -15,7 +18,6 @@ import matplotlib.pyplot as plt
 import xrt.plotter as xrtp
 import xrt.runner as xrtr
 import xrt.backends.dummy as dummy
-import copy
 
 
 def main():
@@ -30,40 +32,43 @@ def main():
     print(logo.shape)
 
     logo_mono = logo[:, :, 0] + logo[:, :, 1] + logo[:, :, 2]*2
-    logo_inty = copy.deepcopy(logo_mono)
-    logo_blue = copy.deepcopy(logo_mono)
+    logo_inty = np.array(logo_mono, dtype=float)
+    logo_blue = np.array(logo_mono, dtype=float)
     logo_blue[logo[:, :, 2] < 0.4] = 0
-    logo_yellow = copy.deepcopy(logo_mono)
+    logo_yellow = np.array(logo_mono, dtype=float)
     logo_yellow[logo[:, :, 0] < 0.4] = 0
-    xrtp.height1d = 80
-    xrtp.heightE1d = 80
+    xrtp.height1d = 96
+    xrtp.heightE1d = 82
     xrtp.xspace1dtoE1d = 4
-    xrtp.heightE1dbar = 12
+    xrtp.heightE1dbar = 14
     xrtp.xOrigin2d = 4
     xrtp.yOrigin2d = 4
     xrtp.xSpaceExtra = 6
-    xrtp.ySpaceExtra = -80
+    xrtp.ySpaceExtra = -96
 
     # make "ray-tracing" arrays: x, y, intensity and cData
     locNrays = dy * dx
     YY, XX = np.mgrid[0:dx, 0:dy]
-    x = XX.flatten()
-    y = dy - YY.flatten()
+    x = XX
+    y = dy - YY
     ymax = y.max()
     logo_inty += np.where(ymax - YY > ymax*0.4, ymax - YY, ymax*0.4)
-    intensity = logo_inty.flatten()
     cData = x * np.log(abs(y)+1.5)
     # cData = x*y
     cDatamax = np.max(cData)
 
-    blue_area = logo_blue.T.flatten() > 0.1
+    blue_area = logo_blue.T > 0.1
     cData[blue_area] = cDatamax*0.5 + (0.5*y[blue_area]-dy*0.5)**2*0.1
-    yellow_area = logo_yellow.T.flatten() > 0.1
+    yellow_area = logo_yellow.T > 0.1
     cData[yellow_area] = cDatamax*0.14 + (2.5*y[yellow_area]-dy*0.5)**2*0.01
-    intensity[~blue_area & ~yellow_area] = 0.
+    logo_inty[~blue_area & ~yellow_area] = 0.
+
+    logo_inty = filters.gaussian(logo_inty, 0.8)
+    cData = filters.gaussian(cData, 0.5)
 
     def local_output():
-        return x, y, intensity, cData, locNrays
+        return x.flatten(), y.flatten(), logo_inty.flatten(), cData.flatten(), \
+            locNrays
     dummy.run_process = local_output  # invoked by pyXRayTrcaer to get rays
 
     plot1 = xrtp.XYCPlot(
@@ -74,28 +79,34 @@ def main():
                            ppb=1, limits=[0.5, dy+0.5]),
         caxis=xrtp.XYCAxis('', '', fwhmFormatStr=None, bins=dy//2, ppb=2,
                            limits=[10, cDatamax*0.8], outline=1),
-        # negative=True, invertColorMap=True, xPos=0,
-        # saveName=['logo-xrt.png', 'logo-xrt.pdf'],
-        negative=False, invertColorMap=False, xPos=0,
-        saveName=['logo-xrt-inv.png', 'logo-xrt-inv.pdf'],
+        negative=True, invertColorMap=True, xPos=0,
+        saveName=['logo-xrt.png', 'logo-xrt.pdf'],
+        # negative=False, invertColorMap=False, xPos=0,
+        # saveName=['logo-xrt-inv.png', 'logo-xrt-inv.pdf'],
         aspect='auto')
     fontProp = mpl.font_manager.FontProperties(
-        fname=r'C:\Windows\Fonts\timesbd.ttf', weight=960, size=100)
+        fname=r'C:\Windows\Fonts\timesbd.ttf', weight=960, size=120)
+    letterEffects = [
+        path_effects.Stroke(linewidth=3, foreground='white'),
+        path_effects.Normal()]
     # xpos, ypos = 0.28, 0.58
-    xpos, ypos = 0.26, 0.04
+    xpos, ypos = 0.26, 0.5
     plot1.textPanelX = plot1.fig.text(
         xpos, ypos, 'x', transform=plot1.fig.transFigure, color='r',
-        ha='center', fontproperties=fontProp)
+        ha='center', va='center', fontproperties=fontProp, alpha=1,
+        path_effects=letterEffects)
     # xpos, ypos = 0.58, 0.58
-    xpos, ypos = 0.58, 0.04
+    xpos, ypos = 0.57, 0.5
     plot1.textPanelR = plot1.fig.text(
         xpos, ypos, 'r', transform=plot1.fig.transFigure, color='r',
-        ha='center', fontproperties=fontProp)
+        ha='center', va='center', fontproperties=fontProp, alpha=1,
+        path_effects=letterEffects)
     # xpos, ypos = 0.82, 0.58
-    xpos, ypos = 0.84, 0.04
+    xpos, ypos = 0.85, 0.5
     plot1.textPanelT = plot1.fig.text(
         xpos, ypos, 't', transform=plot1.fig.transFigure, color='r',
-        ha='center', fontproperties=fontProp)
+        ha='center', va='center', fontproperties=fontProp, alpha=1,
+        path_effects=letterEffects)
 
     # with no labels:
     plot1.textNrays = None
