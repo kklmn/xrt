@@ -28,7 +28,6 @@ def parse_hkl(s):
     nums = re.findall(pattern, text)
     if len(nums) != 3:
         return []
-    print(tuple(map(int, nums)))
     return tuple(map(int, nums))
 
 
@@ -192,6 +191,7 @@ class Crystal(Material):
         self._hkl = parse_hkl(str(hkl))
         sqrthkl2 = (sum(i**2 for i in self._hkl))**0.5
         if not sqrthkl2:
+            print(f"cannot parse {hkl=}")
             return
         self.sqrthkl2 = sqrthkl2
 
