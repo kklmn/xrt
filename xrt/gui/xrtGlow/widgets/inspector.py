@@ -1155,7 +1155,8 @@ class ConfigurablePlotWidget(qt.QWidget):
         if incomingElementId is not None:
             if beamKey in ['beamLocal', 'beamLocal1', 'beamGlobal']:
                 incomingDict = bdu.get(incomingElementId)
-                beamAbsorb = incomingDict.get('beamGlobal')
+                if incomingDict is not None:
+                    beamAbsorb = incomingDict.get('beamGlobal')
             elif beamKey in ['beamLocal2']:
                 beamAbsorb = sourceBeamDict.get('beamLocal1')
 

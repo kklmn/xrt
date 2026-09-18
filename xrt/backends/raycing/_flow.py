@@ -355,10 +355,15 @@ class MessageHandler:
         objuuid = message.get("uuid")
         object_type = message.get("object_type")
         if object_type == "oe":
+            flowIds = list(self.bl.flowU)
+            try:
+                nextEl = flowIds[flowIds.index(objuuid) + 1]
+            except (ValueError, IndexError):
+                nextEl = None
             self.bl.delete_oe_by_id(objuuid)
-            if self.autoUpdate:
+            if self.autoUpdate and nextEl is not None:
                 self.needUpdate = True
-                self.startEl = objuuid
+                self.startEl = nextEl
         elif object_type == "mat":
             self.startEl = None
             for oeid, oeLine in self.bl.oesDict.items():

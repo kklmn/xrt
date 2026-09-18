@@ -789,6 +789,19 @@ class BeamLine(object):
             if sourceid in self.flowU:
                 rcv.sort(key=lambda oid: distance(oid, sourceid), reverse=True)
 
+        orphanRoots = []
+        for oeid, methDict in self.flowU.items():
+            for methName, kwargs in methDict.items():
+                sourceid = kwargs.get('beam')
+                if methName != 'shine' and (
+                        sourceid is None or sourceid not in self.flowU):
+                    orphanRoots.append(oeid)
+                break
+
+        for oe in reversed(orphanRoots):
+            if oe not in visited:
+                dfs(oe)
+
         for oe in self.flowU:
             if oe not in visited:
                 dfs(oe)
@@ -1533,13 +1546,6 @@ class BeamLine(object):
         if elid in self.flowU:
             del self.flowU[elid]
 
-        for eluuid, props in list(self.flowU.items()):
-            for methName, methArgs in list(props.items()):
-                if (methArgs.get('beam') == elid or
-                        methArgs.get('accuBeam') == elid):
-                    del self.flowU[eluuid]
-                    break
-
         if elid in self.beamsDictU:
             del self.beamsDictU[elid]
 
@@ -1617,13 +1623,12 @@ class BeamLine(object):
                 continue
             else:
                 fArgs = {}
-                isEmpty = False
                 for argName, argVal in methArgs['parameters'].items():
                     if argName == "beam":
                         if is_valid_uuid(argVal):
                             fArgs[argName] = argVal
                         elif argVal == 'None' or argVal is None:
-                            isEmpty = True
+                            fArgs[argName] = None
                         else:
                             beamTag = self.beamNamesDict.get(str(argVal))
                             if beamTag is not None:
@@ -1633,10 +1638,6 @@ class BeamLine(object):
                                 return
                     else:
                         fArgs[argName] = parametrize(argVal)
-
-                if isEmpty:
-                    self.flowU.pop(oeid, None)
-                    continue
 
                 self.flowU[oeid] = {methStr: fArgs}
                 if 'output' in methArgs:
