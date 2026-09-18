@@ -1,5 +1,6 @@
+# -*- coding: utf-8 -*-
 __author__ = "Konstantin Klementiev"
-__date__ = "1 Mar 2012"
+__date__ = "18 Sep 2026"
 
 import sys
 import os, sys; sys.path.append(os.path.join('..', '..'))  # analysis:ignore
@@ -43,7 +44,7 @@ def main():
 
     def local_output():
         return x, y, intensity, cData, locNrays
-    dummy.run_process = local_output  # invoked by pyXRayTrcaer to get the rays
+    dummy.run_process = local_output  # invoked by pyXRayTrcaer to get rays
 
     blue_area = logo_blue.T.flatten() > 0.1
     cData[blue_area] = cDatamax*0.5 + (y[blue_area] - logo.shape[0]*0.5)*1.2
@@ -54,15 +55,16 @@ def main():
 
     plot1 = xrtp.XYCPlot(
         'dummy',
-        saveName=['logo-xrt.png', 'logo_xrt.pdf'],
-        # saveName=['logo-xrt-inv.png', 'logo_xrt-inv.pdf'],
         xaxis=xrtp.XYCAxis('', '', fwhmFormatStr=None, bins=logo.shape[1],
                            ppb=1, limits=[0.5, logo.shape[1]+0.5]),
         yaxis=xrtp.XYCAxis('', '', fwhmFormatStr=None, bins=logo.shape[0],
                            ppb=1, limits=[0.5, logo.shape[0]+0.5]),
         caxis=xrtp.XYCAxis('', '', fwhmFormatStr=None, bins=logo.shape[0]//2,
                            ppb=2, limits=[15, cDatamax*0.8]),
-        negative=True, invertColorMap=True,
+        # negative=True, invertColorMap=True,
+        # saveName=['logo1-xrt.png', 'logo1-xrt.pdf'],
+        negative=False, invertColorMap=False,
+        saveName=['logo1-xrt-inv.png', 'logo1-xrt-inv.pdf'],
         aspect='auto')
     plot1.textPanel = plot1.fig.text(
         0.75, 0.74, 'xrt', transform=plot1.fig.transFigure, size=70, color='r',
