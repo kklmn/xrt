@@ -16,14 +16,15 @@ by lists in the upper part of the script. The outputs are the plots and a text
 file with the resulted energy resolutions."""
 __author__ = "Konstantin Klementiev"
 __date__ = "08 Mar 2016"
+
 import os, sys; sys.path.append(os.path.join('..', '..', '..'))  # analysis:ignore
 import math
 import numpy as np
-#import matplotlib as mpl
+# import matplotlib as mpl
 
 import xrt.backends.raycing as raycing
 import xrt.backends.raycing.sources as rs
-#import xrt.backends.raycing.apertures as ra
+# import xrt.backends.raycing.apertures as ra
 import xrt.backends.raycing.oes as roe
 import xrt.backends.raycing.run as rr
 import xrt.backends.raycing.materials as rm
@@ -32,7 +33,7 @@ import xrt.backends.raycing.screens as rsc
 import xrt.plotter as xrtp
 import xrt.runner as xrtr
 
-showIn3D = False
+showIn3D = True
 
 crystalMaterial = 'Si'
 if crystalMaterial == 'Si':
@@ -45,7 +46,7 @@ orders = (1, 4, 8, 12)
 crystals = [rm.CrystalDiamond((i, i, i), d111/i, elements=crystalMaterial)
             for i in orders]
 crystalsMask = (0, 1, 0, 0)
-#numiters = [40, 2560, 1280, 5120]  # @crysals
+# numiters = [40, 2560, 1280, 5120]  # @crysals
 numiters = [40, 40, 80, 120]  # @crysals
 
 R = 500.  # mm
@@ -415,14 +416,14 @@ def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
                     beamLine.detector.z = 0, -sin2Theta, cos2Theta
 
                     dELine, dzLine, dEFlat, dzFlat = 0, 0, 0, 1
+                    # for isource in [-1, ]:
+                    # for isource in [0, ]:
                     for isource in [0, 1, 2]:
-#                    for isource in [-1, ]:
-#                    for isource in [0, ]:
                         xrtr.set_repeats(numiter)
                         for plot in plotsDetector:
                             plot.yaxis.limits = [-yAxisLim, yAxisLim]
                         if isource == 0 or isource == -1:  # flat or norm
-#                            xrtr.set_repeats(0)
+                            # xrtr.set_repeats(0)
                             if isource == -1:
                                 eAxisFlat = 8e-4 * E0
                                 eAxisMin = E0 - 3*eAxisFlat/2
@@ -451,14 +452,14 @@ def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
                                 beamLine.source.energies = eAxisMin, eAxisMax
                                 sourcename = 'flat'
                         elif isource == 1:  # line
-#                            xrtr.set_repeats(0)
+                            # xrtr.set_repeats(0)
                             beamLine.source.distE = 'lines'
                             beamLine.source.energies = E0,
                             sourcename = 'line'
                             for plot in plotsDetector:
                                 plot.yaxis.limits = [-yAxisLine, yAxisLine]
                         else:
-#                            xrtr.set_repeats(0)
+                            # xrtr.set_repeats(0)
                             tt = (r'{0}{1}$\theta = {2:.0f}^\circ${1}' +
                                   r'$\delta E = ${3:.3f} eV').format(
                                 crystalLabel, '\n', thetaDegree, dELine)
@@ -540,9 +541,10 @@ def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
 def main():
     beamLine = build_beamline()
     if showIn3D:
+        plot_generator(beamLine)
+        print(f'{beamLine.analyzer.center=}')
         scan = make_glow_scan()
-        beamLine.glow(scale=4, centerAt=analyzerName,
-                      scan=scan)
+        beamLine.glow(scale=3, centerAt=analyzerName, scan=scan)
         return
     plots, plotsAnalyzer, plotsDetector, plotsE, plotAnE, plotDetE =\
         define_plots(beamLine)

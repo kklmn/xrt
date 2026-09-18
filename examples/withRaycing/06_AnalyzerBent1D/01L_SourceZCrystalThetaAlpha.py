@@ -146,14 +146,17 @@ def define_plots(beamLine):
     plotsAnalyzer.append(plotAnE)
     plotsE.append(plotAnE)
 
-    plot = xrtp.XYCPlot('beamAnalyzerLocal', (1,),
-      xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=limXCrystal, bins=400, ppb=1),
-      yaxis=xrtp.XYCAxis(r'$y$', 'mm', limits=limYCrystal, bins=400, ppb=1),
-      caxis=xrtp.XYCAxis('degree of polarization', '', bins=200, ppb=2,
-      data=raycing.get_polarization_degree, limits=[-0.01, 1.01]),
-      title='xtal_DegOfPol', oe=beamLine.analyzer)
-    plot.textPanel = plot.fig.text(0.88, 0.85, '',
-      transform=plot.fig.transFigure, size=14, color='r', ha='center')
+    plot = xrtp.XYCPlot(
+        'beamAnalyzerLocal', (1,),
+        xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=limXCrystal, bins=400, ppb=1),
+        yaxis=xrtp.XYCAxis(r'$y$', 'mm', limits=limYCrystal, bins=400, ppb=1),
+        caxis=xrtp.XYCAxis('degree of polarization', '', bins=200, ppb=2,
+                           data=raycing.get_polarization_degree,
+                           limits=[-0.01, 1.01]),
+        title='xtal_DegOfPol', oe=beamLine.analyzer)
+    plot.textPanel = plot.fig.text(
+        0.88, 0.85, '',
+        transform=plot.fig.transFigure, size=14, color='r', ha='center')
     plotsAnalyzer.append(plot)
 #
 #    plot = xrtp.XYCPlot('beamAnalyzerLocal', (1,),
@@ -394,11 +397,11 @@ def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
                     beamLine.detector.z = 0, sin2Theta, cos2Theta
 
                     dELine, dzLine, dEFlat, dzFlat = 0, 0, 0, 1
+                    # for isource in [0,]:
                     for isource in np.arange(3):
-#                    for isource in [0,]:
                         xrtr.set_repeats(numiter)
                         if isource == 0:  # flat
-#                            xrtr.set_repeats(0)
+                            # xrtr.set_repeats(0)
                             eAxisFlat = eAxesFlat[ithetaDegree][icrystal]
                             eAxisMin = E0 * (1. - eAxisFlat)
                             eAxisMax = E0 * (1. + eAxisFlat)
@@ -418,12 +421,12 @@ def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
                                 eAxisMin, eAxisMax
                             sourcename = 'flat'
                         elif isource == 1:  # line
-#                            xrtr.set_repeats(0)
+                            # xrtr.set_repeats(0)
                             beamLine.sources[0].distE = 'lines'
                             beamLine.sources[0].energies = E0,
                             sourcename = 'line'
                         else:
-#                            xrtr.set_repeats(0)
+                            # xrtr.set_repeats(0)
                             tt = (r'{0}{1}$\theta = {2:.0f}^\circ${1}' +
                                   r'$\delta E = ${3:.3f} eV').format(
                                 crystalLabel, '\n', thetaDegree, dELine)
@@ -432,8 +435,8 @@ def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
                                     plot.textPanel.set_text(tt)
                             beamLine.sources[0].distE = 'lines'
                             sourcename = '7lin'
-#                            for plot in plotsDetector:
-#                                plot.yaxis.limits = [-dzLine*4, dzLine*4]
+                            # for plot in plotsDetector:
+                            #     plot.yaxis.limits = [-dzLine*4, dzLine*4]
                             dEStep = dELine
                             beamLine.sources[0].energies = \
                                 [E0 + dEStep * i for i in range(-3, 4)]
@@ -449,7 +452,7 @@ def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
                                 bentName, crystalLabel, thetaDegree,
                                 plot.title, sourcename)
                             plot.saveName = filename + '.png'
-#                            plot.persistentName = filename + '.pickle'
+                            # plot.persistentName = filename + '.pickle'
                         if showIn3D:
                             beamLine.glowFrameName = \
                                 '{0}-{1}-{2:.0f}-{3}-{4}.jpg'.format(

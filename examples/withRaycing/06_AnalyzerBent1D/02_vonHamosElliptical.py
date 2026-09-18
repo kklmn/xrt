@@ -18,7 +18,7 @@ import numpy as np
 
 import xrt.backends.raycing as raycing
 import xrt.backends.raycing.sources as rs
-#import xrt.backends.raycing.apertures as ra
+# import xrt.backends.raycing.apertures as ra
 import xrt.backends.raycing.oes as roe
 import xrt.backends.raycing.run as rr
 import xrt.backends.raycing.materials as rm
@@ -38,11 +38,11 @@ else:
     raise
 
 crystal = rm.CrystalDiamond((4, 4, 4), d111/4, elements=crystalMaterial)
-#numiter = 16000
+# numiter = 16000
 numiter = 60
 
 Rm = 1e9  # meridional radius, mm
-#Rs = 1000  # tmp sagittal radius, mm
+# Rs = 1000  # tmp sagittal radius, mm
 Rs = 250  # tmp sagittal radius, mm
 dphi = 0
 
@@ -53,9 +53,9 @@ yAxesLim = 20
 
 dxCrystal = 100.
 dyCrystal = 100.
-#dyCrystal = 50.
-#dxCrystal = 300.
-#dyCrystal = 70.
+# dyCrystal = 50.
+# dxCrystal = 300.
+# dyCrystal = 70.
 
 yAxisLim = 32  # Mythen length = 64 mm
 yAxis1Line = -1.0, 0.2
@@ -229,6 +229,7 @@ class DicedEllipticalSagittalCylinderParam(
     def facet_center_n(self, s, phi):
         return EllipticalSagittalCylinderParam.local_n(self, s, phi)
 
+
 if isDiced:
     xAxisLim = 2  # 2 * dxFacet
     facetKWargs = {'dxFacet': 1-0.05, 'dyFacet': dyCrystal+1,
@@ -301,7 +302,7 @@ rr.run_process = run_process
 
 def align_spectrometer_Rs(beamLine, theta, Rs):
     sinTheta = np.sin(theta)
-    cosTheta = np.cos(theta)
+    # cosTheta = np.cos(theta)
     sin2Theta = np.sin(2 * theta)
     cos2Theta = np.cos(2 * theta)
     p = Rs / sinTheta
@@ -320,23 +321,23 @@ def align_spectrometer_Rs(beamLine, theta, Rs):
     print('theta={0}deg, Rs={1}mm: p={2}mm'.format(np.degrees(theta), Rs, p))
 
 
-#def align_spectrometer_p(beamLine, theta, p):
-#    sinTheta = np.sin(theta)
-#    cosTheta = np.cos(theta)
-#    sin2Theta = np.sin(2 * theta)
-#    Rs = p * sinTheta
-#    yDet = p * 2 * cosTheta**2
-#    zDet = p * sin2Theta
-#
-#    beamLine.analyzer.center = 0, p, 0
-#    beamLine.analyzer.Rs = Rs
-#    beamLine.analyzer.pitch = theta
-#    beamLine.detector.center = 0, yDet, zDet
-#    beamLine.detector.z = 0, cosTheta, sinTheta
-#
-#    beamLine.sources[0].dxprime = 1.1 * dxCrystal / p
-#    beamLine.sources[0].dzprime = dyCrystal * np.sin(theta) / p
-#    print('theta={0}deg, p={1}mm: Rs={2}mm'.format(np.degrees(theta), p, Rs))
+# def align_spectrometer_p(beamLine, theta, p):
+#     sinTheta = np.sin(theta)
+#     cosTheta = np.cos(theta)
+#     sin2Theta = np.sin(2 * theta)
+#     Rs = p * sinTheta
+#     yDet = p * 2 * cosTheta**2
+#     zDet = p * sin2Theta
+
+#     beamLine.analyzer.center = 0, p, 0
+#     beamLine.analyzer.Rs = Rs
+#     beamLine.analyzer.pitch = theta
+#     beamLine.detector.center = 0, yDet, zDet
+#     beamLine.detector.z = 0, cosTheta, sinTheta
+
+#     beamLine.sources[0].dxprime = 1.1 * dxCrystal / p
+#     beamLine.sources[0].dzprime = dyCrystal * np.sin(theta) / p
+#     print('theta={0}deg, p={1}mm: Rs={2}mm'.format(np.degrees(theta), p, Rs))
 
 
 def stripe_number(beam):
@@ -531,10 +532,10 @@ def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
     dELine = 0
     dzLine = 0
     for isource in np.arange(3):
-#    for isource in [-1, ]:
+    # for isource in [-1, ]:
         xrtr.set_repeats(numiter)
         if isource == 0 or isource == -1:  # flat or norm
-#            xrtr.set_repeats(0)
+            # xrtr.set_repeats(0)
             eAxisMin = E0 * (1 - eAxisFlat)
             eAxisMax = E0 * (1 + eAxisFlat)
             dELine = E0 * eAxisFlat/3.  # for showIn3D
@@ -559,16 +560,16 @@ def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
                 beamLine.sources[0].energies = eAxisMin, eAxisMax
                 sourcename = 'flat'
         elif isource == 1:  # line
-#            xrtr.set_repeats(0)
+            # xrtr.set_repeats(0)
             beamLine.sources[0].distE = 'lines'
             beamLine.sources[0].energies = E0,
             sourcename = 'line'
             for plot in plotsDetector:
                 plot.yaxis.limits = yAxis1Line
         else:
-#            xrtr.set_repeats(2560*16L)
+            # xrtr.set_repeats(2560*16L)
             tt = (r'{0}{1}$\theta = {2:.0f}^\circ${1}$' +
-                  '\delta E = ${3:.3f} eV').format(
+                  r'\delta E = ${3:.3f} eV').format(
                 crystalLabel, '\n', thetaDegree, dELine)
             for plot in plots:
                 try:
@@ -578,7 +579,7 @@ def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
             beamLine.sources[0].distE = 'lines'
             sourcename = '7lin'
             for plot in plotsDetector:
-#                plot.yaxis.limits = [-dzLine*7, dzLine*7]
+                # plot.yaxis.limits = [-dzLine*7, dzLine*7]
                 plot.yaxis.limits = yAxis7Lines
             dEStep = dELine
             beamLine.sources[0].energies = \
@@ -667,8 +668,8 @@ def plotCylinders():
     plt.show()
 
 
-#this is necessary to use multiprocessing in Windows, otherwise the new Python
-#contexts cannot be initialized:
+# this is necessary to use multiprocessing in Windows, otherwise the new Python
+# contexts cannot be initialized:
 if __name__ == '__main__':
     main()
-#    plotCylinders()
+    # plotCylinders()
