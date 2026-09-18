@@ -2814,11 +2814,11 @@ class XrtQookBase(qt.QMainWindow):
 #                                partial(self.addMethod, objfNm,
 #                                        selectedItem, outBeams))
 #                            tsubmenu.addAction(methAction)
-        elif level == 2 and selText != "properties":
-            deleteActionName = "Remove " + str(selText)
-            menu.addAction(deleteActionName, partial(self.deleteElement,
-                                                     self.tree,
-                                                     selectedItem))
+#        elif level == 2 and selText != "properties":
+#            deleteActionName = "Remove " + str(selText)
+#            menu.addAction(deleteActionName, partial(self.deleteElement,
+#                                                     self.tree,
+#                                                     selectedItem))
         elif level == 4:
             selParent = selectedItem.parent()
             selRow = selectedItem.row()
