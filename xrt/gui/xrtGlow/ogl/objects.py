@@ -1141,6 +1141,8 @@ class OEMesh3D():
         isAperture = is_aperture(self.oe)
 
         if isScreen:
+            autoSizedX = False
+            autoSizedY = False
             if self.oe.limPhysX is not None and np.sum(np.abs(
                     self.oe.limPhysX)) > 0:
                 xLimits = self.oe.limPhysX if isinstance(
@@ -1148,6 +1150,7 @@ class OEMesh3D():
             elif autoSize and hasattr(self.oe, 'footprint') and len(
                     self.oe.footprint) > 0:
                 xLimits = self.oe.footprint[nsIndex][:, 0]
+                autoSizedX = True
             else:
                 xLimits = [-10, 10]
 
@@ -1158,8 +1161,17 @@ class OEMesh3D():
             elif autoSize and hasattr(self.oe, 'footprint') and len(
                     self.oe.footprint) > 0:
                 yLimits = self.oe.footprint[nsIndex][:, 2]
+                autoSizedY = True
             else:
                 yLimits = [-10, 10]
+
+            if autoSizedX and autoSizedY:
+                xCenter = 0.5 * (min(xLimits) + max(xLimits))
+                yCenter = 0.5 * (min(yLimits) + max(yLimits))
+                halfSize = 0.5 * max(max(xLimits) - min(xLimits),
+                                     max(yLimits) - min(yLimits))
+                xLimits = [xCenter - halfSize, xCenter + halfSize]
+                yLimits = [yCenter - halfSize, yCenter + halfSize]
 
             if hasattr(self.oe, 'R'):
                 xLimits = [max(-self.oe.R, min(xLimits)),
