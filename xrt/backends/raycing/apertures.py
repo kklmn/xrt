@@ -69,7 +69,8 @@ allArguments = ('bl', 'name', 'center', 'blades', 'vertices', 'x', 'z',
                 'alarmLevel', 'r', 'shadeFraction',
                 'dx', 'dz', 'px', 'pz', 'nx', 'nz',
                 'nSpokes', 'rx', 'rz', 'phi0', 'vortex', 'vortexNradial',
-                'renderStyle')
+                'renderStyle', 'apertures', 'centerZs', 'dXs', 'dZs',
+                'zActuator')
 
 
 class RectangularAperture(object):
@@ -557,7 +558,8 @@ class SetOfRectangularAperturesOnZActuator(RectangularAperture):
 
     def __init__(self, bl=None, name='', center=[0, 0, 0], apertures=['',],
                  centerZs=[0,], dXs=[0,], dZs=[0,],
-                 x='auto', z='auto', alarmLevel=None, **kwargs):
+                 x='auto', z='auto', alarmLevel=None, blades=None,
+                 zActuator=None, renderStyle='mask', **kwargs):
         """
         *apertures*: sequence of str
             Names of apertures. The last one must be one of 'bottom-edge' or
@@ -608,7 +610,7 @@ class SetOfRectangularAperturesOnZActuator(RectangularAperture):
         self._z = z
         self._set_orientation()
 
-        self.zActuator = center[2]
+        self.zActuator = center[2] if zActuator is None else zActuator
         self.z0 = center[2]
         self.apertures = apertures
         self.centerZs = centerZs
@@ -628,7 +630,13 @@ class SetOfRectangularAperturesOnZActuator(RectangularAperture):
         self.limPhysY = raycing.Limits(self.limOptY)
         self.shape = 'rect'
         self.spotLimits = [0, 0, 0, 0]
+        self.renderStyle = renderStyle
         self.isBeamStop = False
+        self._blades = {}
+        self._kind = []
+        self._opening = []
+        if blades is not None:
+            self.blades = blades
 
     def select_aperture(self, apertureName, targetZ):
         """Updates self.curAperture index and finds dz offset corresponding to
