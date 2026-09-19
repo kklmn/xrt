@@ -555,8 +555,9 @@ class RectangularBeamStop(RectangularAperture):
 class SetOfRectangularAperturesOnZActuator(RectangularAperture):
     """Implements a set of coplanar apertures with a Z actuator."""
 
-    def __init__(self, bl, name, center, apertures, centerZs, dXs, dZs,
-                 x='auto', z='auto', alarmLevel=None):
+    def __init__(self, bl=None, name='', center=[0, 0, 0], apertures=['',],
+                 centerZs=[0,], dXs=[0,], dZs=[0,],
+                 x='auto', z='auto', alarmLevel=None, **kwargs):
         """
         *apertures*: sequence of str
             Names of apertures. The last one must be one of 'bottom-edge' or
@@ -593,7 +594,8 @@ class SetOfRectangularAperturesOnZActuator(RectangularAperture):
 #                                        self.ordinalNum)
 
         if not hasattr(self, 'uuid'):  # uuid must not change on re-init
-            self.uuid = str(raycing.uuid.uuid4())
+            self.uuid = kwargs['uuid'] if 'uuid' in kwargs else\
+                str(raycing.uuid.uuid4())
 
         if bl is not None:
             if self.bl.flowSource != 'Qook0':
@@ -626,6 +628,7 @@ class SetOfRectangularAperturesOnZActuator(RectangularAperture):
         self.limPhysY = raycing.Limits(self.limOptY)
         self.shape = 'rect'
         self.spotLimits = [0, 0, 0, 0]
+        self.isBeamStop = False
 
     def select_aperture(self, apertureName, targetZ):
         """Updates self.curAperture index and finds dz offset corresponding to

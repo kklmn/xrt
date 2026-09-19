@@ -8,7 +8,7 @@ import ClaessBL_N
 import xrt.plotter as xrtp
 import xrt.runner as xrtr
 
-showIn3D = False
+showIn3D = True
 ClaessBL_N.showIn3D = showIn3D
 
 stripe = 'Rh'
@@ -252,7 +252,7 @@ def main():
         nameDCMcrystal='Si111', energy=9000., fixedExit=25.,
         nameDiagnFoil=u'Cu5µm', nameVFMcylinder=stripe)
     if showIn3D:
-        myClaess.orient_along_global_Y()
+        # myClaess.orient_along_global_Y()
         myClaess.glow(scale=[500, 3, 500], centerAt='VFM')
         return
 

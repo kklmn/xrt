@@ -716,4 +716,5 @@ class DCMOnTripodWithOneXStage(DCM, rst.Tripod, rst.OneXStage):
     def get_orientation(self):
         """Finds orientation (x, z and 3 rotations) given one x stage and
         three jacks."""
+        DCM.get_orientation(self)
         rst.Tripod.get_orientation(self)

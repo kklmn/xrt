@@ -93,6 +93,8 @@ class Tripod(object):
 
     def get_orientation(self):
         """Finds orientation (pitch, roll and central Z) given the jacks."""
+        if not hasattr(self, 'jack1'):  # not yet initialized
+            return
 #        Ax + By + Cz = D in global system:
         A = (self.jack2[1]-self.jack1[1]) * (self.jack3[2]-self.jack1[2])\
             - (self.jack3[1]-self.jack1[1]) * (self.jack2[2]-self.jack1[2])

@@ -1513,8 +1513,8 @@ class BeamLine(object):
                 oeModuleStr, _ = oeModuleStr.rsplit('_', 1)
                 try:
                     oeModule = importlib.import_module(oeModuleStr)
-                except Exception as e:
-                    print(oeClass, "Init problem:", e)
+                except Exception as err:
+                    print(oeClass, "Import problem:", err)
                     return 1
 
             defArgs = dict(get_params(f'{oeModuleStr}.{oeClass}'))
@@ -1527,10 +1527,10 @@ class BeamLine(object):
             try:
                 _ = getattr(oeModule, oeClass)(**initKWArgs)
                 initStatus = 0
-            except Exception as e:  # TODO: Needs testing
-                print(oeClass, "Init problem:", e)
+            except Exception as err:  # TODO: Needs testing
+                print(oeClass, "Init problem:", err)
                 initStatus = 1
-                # raise
+                # raise err
 
         self.oenamesToUUIDs[oeParams['name']] = oeParams['uuid']
         self.update_flow_from_json(oeParams['uuid'], elProps)
