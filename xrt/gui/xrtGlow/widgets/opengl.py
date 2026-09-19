@@ -672,7 +672,14 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             if field in fList:
                                 idx = fList.index(field)
                                 break
-                        arrayValue[idx] = argValue
+                        if arg0.startswith(('limPhys', 'limOpt')) and\
+                                raycing.is_sequence(arrayValue[idx]):
+                            cs = getattr(updObj, 'curSurface', 0)
+                            surfaceValues = list(arrayValue[idx])
+                            surfaceValues[cs] = argValue
+                            arrayValue[idx] = surfaceValues
+                        else:
+                            arrayValue[idx] = argValue
                         argValue = arrayValue
 
             else:

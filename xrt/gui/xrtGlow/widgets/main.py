@@ -64,7 +64,9 @@ SCAN_ANGLE_PROPERTIES = {
 }
 HORIZONTAL_HEADERS = ['Rays', 'Footprint', 'Surface', 'Label']
 
-SCAN_LIMIT_PROPERTIES = ('limPhysX', 'limPhysY', 'limPhysX2', 'limPhysY2')
+SCAN_LIMIT_PROPERTIES = (
+    'limPhysX', 'limPhysY', 'limPhysX2', 'limPhysY2',
+    'limOptX', 'limOptY', 'limOptX2', 'limOptY2')
 SCAN_AXIS_PROPERTIES = ('x', 'z')
 
 
@@ -991,7 +993,7 @@ class xrtGlow(qt.QWidget):
             return f'{float(value) * 1e3:g} mrad'
         return value
 
-    def _scan_split_compound_property(self, name, value):
+    def _scan_split_compound_property(self, name, value, surfaceIndex=0):
         if isinstance(value, str):
             parsed = raycing.parametrize(value)
         else:
@@ -1006,6 +1008,8 @@ class xrtGlow(qt.QWidget):
                 } for field in parsed.keys()]
         if not fields or not isinstance(parsed, (list, tuple, np.ndarray)):
             return None
+        if name in SCAN_LIMIT_PROPERTIES and raycing.is_sequence(parsed[0]):
+            parsed = [parsed[0][surfaceIndex], parsed[1][surfaceIndex]]
         items = []
         for index, field in enumerate(fields):
             if index >= len(parsed):
@@ -1074,7 +1078,7 @@ class xrtGlow(qt.QWidget):
                 value = self._scan_element_property_value(
                     oeObj, name, value)
                 compound_items = self._scan_split_compound_property(
-                    name, value)
+                    name, value, getattr(oeObj, 'curSurface', 0))
                 if compound_items is not None:
                     prop_items.extend(compound_items)
                 else:

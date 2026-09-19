@@ -9,7 +9,7 @@ import inspect
 import numpy as np
 
 from .._utils import create_qt_buffer, update_qt_buffer
-from .._utils import (is_oe, is_plate, is_aperture, is_screen)
+from .._utils import (is_oe, is_dcm, is_plate, is_aperture, is_screen)
 from .._constants import (ambient, diffuse, specular, shininess)
 
 from ...commons import qt
@@ -20,6 +20,7 @@ from ....backends.raycing import oes as roes
 from ....backends.raycing import apertures as rapts
 from ....backends.raycing import materials as rmats
 from ....backends.raycing import sources as rsources
+from ....backends.raycing import stages as rst
 from ....backends.raycing.sources import Beam
 
 try:
@@ -861,6 +862,9 @@ class OEMesh3D():
             lb = Beam(nrays=4)
             lb.x[1] = lb.y[2] = lb.z[3] = 1.
 
+            if isinstance(oe, rst.OneXStage) and not is_dcm(oe):
+                lb.x += oe.dx
+
             try:
                 if is_screen(oe):
                     gb = Beam(copyFrom=lb)
@@ -1136,6 +1140,8 @@ class OEMesh3D():
 
     def get_limits(self, nsIndex, is2ndXtal=False, autoSize=False):
         yDim = 1
+        optX = getattr(self.oe, 'limOptX', None)
+        optY = getattr(self.oe, 'limOptY', None)
 
         isScreen = is_screen(self.oe)
         isAperture = is_aperture(self.oe)
@@ -1271,7 +1277,16 @@ class OEMesh3D():
                     awidth = 0.5*awidth + btX if renderStyle == 'mask' else\
                         max(awidth, defaultWidth)
                 else:
-                    awidth = defaultWidth
+                    if isinstance(
+                            self.oe,
+                            rapts.SetOfRectangularAperturesOnZActuator) and\
+                            self.oe.dXs:
+                        btX = self.get_aperture_frame_width(renderStyle)
+                        btY = self.get_aperture_frame_width(renderStyle)
+                        awidth = 0.5 * max(
+                            abs(dx) for dx in self.oe.dXs) + btX
+                    else:
+                        awidth = defaultWidth
                     acenterX = 0.
 
                 if len(set(blades) & {'top', 'bottom'}) > 1:
@@ -1299,26 +1314,34 @@ class OEMesh3D():
                     yLimits = [blades['top'], blades['top'] + btY]
                 yDim = 2
         elif is2ndXtal:
-            xLimits = list(self.oe.limPhysX2)
-            yLimits = list(self.oe.limPhysY2)
+            xLimits = list(getattr(
+                self.oe, 'surfPhysX2', self.oe.limPhysX2))
+            yLimits = list(getattr(
+                self.oe, 'surfPhysY2', self.oe.limPhysY2))
+            optX = getattr(self.oe, 'surfOptX2', self.oe.limOptX2)
+            optY = getattr(self.oe, 'surfOptY2', self.oe.limOptY2)
         else:
-            xLimits = list(self.oe.limPhysX)
-            yLimits = list(self.oe.limPhysY)
+            xLimits = list(getattr(
+                self.oe, 'surfPhysX', self.oe.limPhysX))
+            yLimits = list(getattr(
+                self.oe, 'surfPhysY', self.oe.limPhysY))
+            optX = getattr(self.oe, 'surfOptX', self.oe.limOptX)
+            optY = getattr(self.oe, 'surfOptY', self.oe.limOptY)
 
         if np.all(np.abs(xLimits) == raycing.maxHalfSizeOfOE):
             if autoSize and hasattr(self.oe, 'footprint') and len(
                     self.oe.footprint) > 0:
                 xLimits = self.oe.footprint[nsIndex][:, 0]
-            elif getattr(self.oe, 'limOptX', None) is not None and not\
-                    np.all(np.abs(self.oe.limOptX) == raycing.maxHalfSizeOfOE):
-                xLimits = list(self.oe.limOptX)
+            elif optX is not None and not np.all(
+                    np.abs(optX) == raycing.maxHalfSizeOfOE):
+                xLimits = list(optX)
         if np.all(np.abs(yLimits) == raycing.maxHalfSizeOfOE):
             if autoSize and hasattr(self.oe, 'footprint') and len(
                     self.oe.footprint) > 0:
                 yLimits = self.oe.footprint[nsIndex][:, yDim]
-            elif getattr(self.oe, 'limOptY', None) is not None and not\
-                    np.all(np.abs(self.oe.limOptY) == raycing.maxHalfSizeOfOE):
-                yLimits = list(self.oe.limOptY)
+            elif optY is not None and not np.all(
+                    np.abs(optY) == raycing.maxHalfSizeOfOE):
+                yLimits = list(optY)
 
         return xLimits, yLimits
 
@@ -1551,7 +1574,6 @@ class OEMesh3D():
             getattr(oeMaterial, 'kind', None) == 'crystal'
         useShapedBack = isPlate or isCrystalPlate
         oeShape = getattr(self.oe, 'shape', 'rect')
-        oeDx = 0 if isAperture else getattr(self.oe, 'dx', 0)
         isOeParametric = getattr(self.oe, 'isParametric', False)
         isCRLStack = isinstance(self.oe, roes.ParaboloidFlatLens) and \
             self.oe.nCRL > 1
@@ -1586,8 +1608,7 @@ class OEMesh3D():
             yLimits = [0, 2*np.pi]  # phi
             localTiles[1] *= 3
 
-        xGridOe = np.linspace(xLimits[0], xLimits[1],
-                              localTiles[0]) + oeDx
+        xGridOe = np.linspace(xLimits[0], xLimits[1], localTiles[0])
         yGridOe = np.linspace(yLimits[0], yLimits[1], localTiles[1],
                               endpoint=not isClosedSurface)
 

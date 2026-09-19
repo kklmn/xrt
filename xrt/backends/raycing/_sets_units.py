@@ -13,7 +13,8 @@ orientationArgSet = {'center', 'pitch', 'roll', 'yaw', 'bragg',
                      'braggOffset', 'rotationSequence', 'positionRoll',
                      'x', 'z'}
 
-shapeArgSet = {'limPhysX', 'limPhysY', 'limPhysX2', 'limPhysY2', 'opening',
+shapeArgSet = {'limPhysX', 'limPhysY', 'limPhysX2', 'limPhysY2',
+               'limOptX', 'limOptY', 'limOptX2', 'limOptY2', 'opening',
                'blades', 'vertices',
                'shadeFraction', 'dx', 'dz', 'px', 'pz', 'nx', 'nz',
                'R', 'r', 'Rm', 'Rs', 'p', 'q', 'f1', 'f2', 'pAxis',

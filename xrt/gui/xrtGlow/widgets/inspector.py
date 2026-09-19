@@ -203,17 +203,25 @@ class InstanceInspector(qt.QDialog):
                     self.original_data[nkey] = nvalue
                 self.add_param(parentItem, f"{key} rbk", value)
 
-            elif key in ['limPhysX', 'limPhysY', 'limPhysX2', 'limPhysY2']:
-                spVal = value.strip('([])')
-                for field, val in zip(['lmin', 'lmax'], spVal.split(",")):
-                    nkey = f"{key}.{field}"
-                    nvalue = val.strip()
-                    if epicsTree is not None:
-                        epv = epicsTree.get(nkey)
-                    else:
-                        epv = None
-                    self.add_param(parentItem, nkey, nvalue, epv=epv)
-                    self.original_data[nkey] = nvalue
+            elif key in ['limPhysX', 'limPhysY', 'limPhysX2', 'limPhysY2',
+                         'limOptX', 'limOptY', 'limOptX2', 'limOptY2']:
+                spVal = raycing.parametrize(value)
+                if spVal is None:
+                    self.add_param(parentItem, key, value)
+                    self.original_data[key] = str(value)
+                else:
+                    if raycing.is_sequence(spVal[0]):
+                        cs = getattr(self.editorObject, 'curSurface', 0)
+                        spVal = [spVal[0][cs], spVal[1][cs]]
+                    for field, val in zip(['lmin', 'lmax'], spVal):
+                        nkey = f"{key}.{field}"
+                        nvalue = str(val).strip()
+                        if epicsTree is not None:
+                            epv = epicsTree.get(nkey)
+                        else:
+                            epv = None
+                        self.add_param(parentItem, nkey, nvalue, epv=epv)
+                        self.original_data[nkey] = nvalue
 #                    self.add_row(nkey, nvalue)
 #            if hasattr(value, "_fields"):
 #                for subfield in value._fields:

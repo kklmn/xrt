@@ -6,6 +6,7 @@ import queue
 from ._sets_units import (
     derivedArgSet, renderOnlyArgSet, compoundArgs, diagnosticArgs)
 from ._flow_utils import parametrize, format_energy_input
+from .singletons import is_sequence
 
 from .beamline import BeamLine
 
@@ -199,7 +200,15 @@ class MessageHandler:
 
         for fList in compoundArgs.values():
             if field in fList:
-                arrayValue[fList.index(field)] = value
+                index = fList.index(field)
+                if arg.startswith(('limPhys', 'limOpt')) and\
+                        is_sequence(arrayValue[index]):
+                    cs = getattr(element, 'curSurface', 0)
+                    surfaceValues = list(arrayValue[index])
+                    surfaceValues[cs] = value
+                    arrayValue[index] = surfaceValues
+                else:
+                    arrayValue[index] = value
                 return arrayValue
         return value
 
