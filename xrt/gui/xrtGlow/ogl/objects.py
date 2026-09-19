@@ -1141,23 +1141,23 @@ class OEMesh3D():
         isAperture = is_aperture(self.oe)
 
         if isScreen:
-            if autoSize and hasattr(self.oe, 'footprint') and len(
-                    self.oe.footprint) > 0:
-                xLimits = self.oe.footprint[nsIndex][:, 0]
-            elif self.oe.limPhysX is not None and np.sum(np.abs(
+            if self.oe.limPhysX is not None and np.sum(np.abs(
                     self.oe.limPhysX)) > 0:
                 xLimits = self.oe.limPhysX if isinstance(
                     self.oe.limPhysX, list) else self.oe.limPhysX.tolist()
+            elif autoSize and hasattr(self.oe, 'footprint') and len(
+                    self.oe.footprint) > 0:
+                xLimits = self.oe.footprint[nsIndex][:, 0]
             else:
                 xLimits = [-10, 10]
 
-            if autoSize and hasattr(self.oe, 'footprint') and len(
-                    self.oe.footprint) > 0:
-                yLimits = self.oe.footprint[nsIndex][:, 2]
-            elif self.oe.limPhysY is not None and np.sum(np.abs(
+            if self.oe.limPhysY is not None and np.sum(np.abs(
                     self.oe.limPhysY)) > 0:
                 yLimits = self.oe.limPhysY if isinstance(
                     self.oe.limPhysY, list) else self.oe.limPhysY.tolist()
+            elif autoSize and hasattr(self.oe, 'footprint') and len(
+                    self.oe.footprint) > 0:
+                yLimits = self.oe.footprint[nsIndex][:, 2]
             else:
                 yLimits = [-10, 10]
 
