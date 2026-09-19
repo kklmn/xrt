@@ -541,10 +541,10 @@ def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
 def main():
     beamLine = build_beamline()
     if showIn3D:
-        plot_generator(beamLine)
-        print(f'{beamLine.analyzer.center=}')
+        while beamLine.analyzer.center == [0, 0, 0]:
+            next(plot_generator(beamLine))  # make initial alignment
         scan = make_glow_scan()
-        beamLine.glow(scale=3, centerAt=analyzerName, scan=scan)
+        beamLine.glow(scale=4, centerAt=analyzerName, scan=scan)
         return
     plots, plotsAnalyzer, plotsDetector, plotsE, plotAnE, plotDetE =\
         define_plots(beamLine)

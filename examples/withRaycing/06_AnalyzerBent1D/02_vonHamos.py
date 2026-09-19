@@ -14,11 +14,11 @@ __author__ = "Konstantin Klementiev"
 __date__ = "08 Mar 2016"
 import os, sys; sys.path.append(os.path.join('..', '..', '..'))  # analysis:ignore
 import numpy as np
-#import matplotlib as mpl
+# import matplotlib as mpl
 
 import xrt.backends.raycing as raycing
 import xrt.backends.raycing.sources as rs
-#import xrt.backends.raycing.apertures as ra
+# import xrt.backends.raycing.apertures as ra
 import xrt.backends.raycing.oes as roe
 import xrt.backends.raycing.run as rr
 import xrt.backends.raycing.materials as rm
@@ -27,7 +27,7 @@ import xrt.backends.raycing.screens as rsc
 import xrt.plotter as xrtp
 import xrt.runner as xrtr
 
-showIn3D = False
+showIn3D = True
 useTT = False
 if showIn3D:
     useTT = False
@@ -157,23 +157,23 @@ def align_spectrometer_Rs(beamLine, theta, Rs):
     print('theta={0}deg, Rs={1}mm: p={2}mm'.format(np.degrees(theta), Rs, p))
 
 
-#def align_spectrometer_p(beamLine, theta, p):
-#    sinTheta = np.sin(theta)
-#    cosTheta = np.cos(theta)
-#    sin2Theta = np.sin(2 * theta)
-#    Rs = p * sinTheta
-#    yDet = p * 2 * cosTheta**2
-#    zDet = p * sin2Theta
-#
-#    beamLine.analyzer.center = 0, p, 0
-#    beamLine.analyzer.Rs = Rs
-#    beamLine.analyzer.pitch = theta
-#    beamLine.detector.center = 0, yDet, zDet
-#    beamLine.detector.z = 0, cosTheta, sinTheta
-#
-#    beamLine.sources[0].dxprime = 1.1 * dxCrystal / p
-#    beamLine.sources[0].dzprime = dyCrystal * np.sin(theta) / p
-#    print('theta={0}deg, p={1}mm: Rs={2}mm'.format(np.degrees(theta), p, Rs))
+# def align_spectrometer_p(beamLine, theta, p):
+#     sinTheta = np.sin(theta)
+#     cosTheta = np.cos(theta)
+#     sin2Theta = np.sin(2 * theta)
+#     Rs = p * sinTheta
+#     yDet = p * 2 * cosTheta**2
+#     zDet = p * sin2Theta
+
+#     beamLine.analyzer.center = 0, p, 0
+#     beamLine.analyzer.Rs = Rs
+#     beamLine.analyzer.pitch = theta
+#     beamLine.detector.center = 0, yDet, zDet
+#     beamLine.detector.z = 0, cosTheta, sinTheta
+
+#     beamLine.sources[0].dxprime = 1.1 * dxCrystal / p
+#     beamLine.sources[0].dzprime = dyCrystal * np.sin(theta) / p
+#     print('theta={0}deg, p={1}mm: Rs={2}mm'.format(np.degrees(theta), p, Rs))
 
 
 def stripe_number(beam):
@@ -370,10 +370,9 @@ def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
     dELine = 0
     dzLine = 0
     for isource in np.arange(3):
-#    for isource in [-1, ]:
         xrtr.set_repeats(numiter)
         if isource == 0 or isource == -1:  # flat or norm
-#            xrtr.set_repeats(0)
+            # xrtr.set_repeats(0)
             eAxisMin = E0 * (1 - eAxisFlat)
             eAxisMax = E0 * (1 + eAxisFlat)
             dELine = E0 * eAxisFlat/3.  # for showIn3D
@@ -395,14 +394,14 @@ def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
                 beamLine.sources[0].energies = eAxisMin, eAxisMax
                 sourcename = 'flat'
         elif isource == 1:  # line
-#            xrtr.set_repeats(0)
+            # xrtr.set_repeats(0)
             beamLine.sources[0].distE = 'lines'
             beamLine.sources[0].energies = E0,
             sourcename = 'line'
             for plot in plotsDetector:
                 plot.yaxis.limits = [-yAxisLine, yAxisLine]
         else:
-#            xrtr.set_repeats(2560*16L)
+            # xrtr.set_repeats(2560*16L)
             for plot in plotsDetector:
                 plot.xaxis.limits = -6, 6
             txt = (r'{0}{1}$\theta = {2:.0f}^\circ${1}$' +
@@ -451,6 +450,8 @@ def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
 def main():
     beamLine = build_beamline()
     if showIn3D:
+        while beamLine.analyzer.center == [0, 0, 0]:
+            next(plot_generator(beamLine))  # make initial alignment
         scan = make_glow_scan()
         beamLine.glow(scale=4, centerAt=analyzerName,
                       scan=scan)
@@ -464,7 +465,7 @@ def main():
         processes=1 if useTT else nprocesses)
 
 
-#this is necessary to use multiprocessing in Windows, otherwise the new Python
-#contexts cannot be initialized:
+# this is necessary to use multiprocessing in Windows, otherwise the new Python
+# contexts cannot be initialized:
 if __name__ == '__main__':
     main()
