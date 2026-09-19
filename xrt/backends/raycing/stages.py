@@ -26,14 +26,19 @@ from .. import raycing
 class Tripod(object):
     """Implements a tripod - a positioning system on three jacks, which can set
     Z, pitch and roll."""
-    def __init__(self, jack1, jack2, jack3):
+    def __init__(self, jack1=None, jack2=None, jack3=None):
         """*jack1, jack2, jack3*: lists
         are 3D points in global coordinate system at the horizontal state of
         OE.
+
+
         """
-        self.jack1 = jack1  # [x, y, z] in global system
-        self.jack2 = jack2  # [x, y, z] in global system
-        self.jack3 = jack3  # [x, y, z] in global system
+        if jack1 is None or jack2 is None or jack3 is None:
+            raise ValueError('jack1, jack2 and jack3 must be given')
+
+        self.jack1 = list(jack1)  # [x, y, z] in global system
+        self.jack2 = list(jack2)  # [x, y, z] in global system
+        self.jack3 = list(jack3)  # [x, y, z] in global system
         centerMinusNominal = self.center[2] - self.bl.height
         self.jack1Offset = centerMinusNominal - self.jack1[2]
         self.jack2Offset = centerMinusNominal - self.jack2[2]
@@ -41,10 +46,25 @@ class Tripod(object):
         self.init_jacks_local()
         self.set_jacks()
 
+    @property
+    def _jack1Init(self):
+        return [self.jack1[0], self.jack1[1],
+                self.center[2] - self.jackToMirrorInvariant]
+
+    @property
+    def _jack2Init(self):
+        return [self.jack2[0], self.jack2[1],
+                self.center[2] - self.jackToMirrorInvariant]
+
+    @property
+    def _jack3Init(self):
+        return [self.jack3[0], self.jack3[1],
+                self.center[2] - self.jackToMirrorInvariant]
+
     def pop_kwargs(self, **kwargs):
-        jack1 = kwargs.pop('jack1')  # [x, y, z] in global system
-        jack2 = kwargs.pop('jack2')
-        jack3 = kwargs.pop('jack3')
+        jack1 = kwargs.pop('jack1', None)  # [x, y, z] in global system
+        jack2 = kwargs.pop('jack2', None)
+        jack3 = kwargs.pop('jack3', None)
         argsT = jack1, jack2, jack3
         return kwargs, argsT
 
@@ -170,20 +190,25 @@ class OneXStage(object):
 
 class TwoXStages(OneXStage):
     """Two X-stages which can change X and yaw."""
-    def __init__(self, tx1, tx2, dx=0):
+    def __init__(self, tx1=None, tx2=None, dx=0):
         """tx1, tx2 [lists!] are [x, y] points in local system.
         dx is the nominal x shift of the center in local system.
         """
-        self.tx1 = tx1  # [x, y] in local system
-        self.tx2 = tx2  # [x, y] in local system
+        if tx1 is None or tx2 is None:
+            raise ValueError('tx1 and tx2 must be given')
+
+        self._tx1Init = list(tx1)
+        self._tx2Init = list(tx2)
+        self.tx1 = list(tx1)  # [x, y] in local system
+        self.tx2 = list(tx2)  # [x, y] in local system
         if self.tx2[1] == self.tx1[1]:
             raise ValueError('tx1 and tx2 stages must be at different y''s!')
-        OneXStage.__init__(self)
+        OneXStage.__init__(self, dx)
         self.set_x_stages()
 
     def pop_kwargs(self, **kwargs):
-        tx1 = kwargs.pop('tx1')  # [x, y] in local system
-        tx2 = kwargs.pop('tx2')  # [x, y] in local system
+        tx1 = kwargs.pop('tx1', None)  # [x, y] in local system
+        tx2 = kwargs.pop('tx2', None)  # [x, y] in local system
         dx = kwargs.pop('dx', 0)
         argsX = tx1, tx2, dx
         return kwargs, argsX
@@ -203,6 +228,9 @@ class TwoXStages(OneXStage):
 
     def get_orientation(self):
         """Finds orientation (x shift and yaw) given the tx1 and tx2 stages."""
+        if not hasattr(self, 'tx1') or not hasattr(self, 'tx2'):
+            return
+
         tx10 = self.tx1[0]
         tx20 = self.tx2[0]
         if self.positionRoll != 0:

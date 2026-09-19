@@ -179,7 +179,7 @@ argumentInputGroups = {
         'afterScriptArgs', 'atomsFraction', 'cLimits', 'contourColors',
         'contourLevels', 'efficiency', 'energyRange', 'generatorArgs',
         'gratingDensity', 'limits', 'pAxis', 'parabolaAxis', 'quantities',
-        'surface', 'targetE'},
+        'surface', 'targetE', 'jack1', 'jack2', 'jack3', 'tx1', 'tx2'},
     ('string', 'sequence'): {'elements'},
     ('string', 'sequence', 'None'): {'refractiveIndex'},
     'dict': {'afterScriptKWargs', 'blades', 'generatorKWargs'},
@@ -201,7 +201,7 @@ argumentInputGroups = {
         'tK', 'tThickness', 'tThicknessLow', 'thetaOffset', 'vortex',
         'vortexNradial', 'vorticity', 'workingDistance', 'xPos', 'yPos',
         'xWaveLength', 'yWaveLength', 'tVec', 'bins', 'outline', 'beta',
-        'gamma'},
+        'gamma', 'xCylinder1', 'hCylinder1', 'xCylinder2', 'hCylinder2'},
     }
 
 

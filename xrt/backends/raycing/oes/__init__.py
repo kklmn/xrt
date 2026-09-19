@@ -212,7 +212,9 @@ def flatten(x):
 class MirrorOnTripodWithTwoXStages(OE, rst.Tripod, rst.TwoXStages):
     """Combines a simple mirror with a tripod support + two X-stages."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(
+            self, *args, jack1=None, jack2=None, jack3=None,
+            tx1=None, tx2=None, dx=0, curSurface=0, **kwargs):
         r"""
         *jack1*, *jack2*, *jack3*: 3-lists
             3d points in the global coordinate system at the horizontal state
@@ -224,11 +226,11 @@ class MirrorOnTripodWithTwoXStages(OE, rst.Tripod, rst.TwoXStages):
 
 
         """
-        kwargs, argsT = rst.Tripod.pop_kwargs(self, **kwargs)
-        kwargs, argsX = rst.TwoXStages.pop_kwargs(self, **kwargs)
         OE.__init__(self, *args, **kwargs)
-        rst.Tripod.__init__(self, *argsT)
-        rst.TwoXStages.__init__(self, *argsX)
+        rst.Tripod.__init__(self, jack1, jack2, jack3)
+        rst.TwoXStages.__init__(self, tx1, tx2, dx)
+        self.curSurface = curSurface
+        self.get_surface_limits()
 
     def get_orientation(self):
         """Finds orientation (x, z, and 3 rotations) given two x stages and
@@ -309,12 +311,14 @@ SimpleVCM = BentFlatMirror
 class VCM(SimpleVCM, MirrorOnTripodWithTwoXStages):
     """Implements Vertically Collimating Mirror on support."""
 
-    def __init__(self, *args, **kwargs):
-        kwargs, argsT = rst.Tripod.pop_kwargs(self, **kwargs)
-        kwargs, argsX = rst.TwoXStages.pop_kwargs(self, **kwargs)
+    def __init__(
+            self, *args, jack1=None, jack2=None, jack3=None,
+            tx1=None, tx2=None, dx=0, curSurface=0, **kwargs):
         SimpleVCM.__init__(self, *args, **kwargs)
-        rst.Tripod.__init__(self, *argsT)
-        rst.TwoXStages.__init__(self, *argsX)
+        rst.Tripod.__init__(self, jack1, jack2, jack3)
+        rst.TwoXStages.__init__(self, tx1, tx2, dx)
+        self.curSurface = curSurface
+        self.get_surface_limits()
 
 
 class ToroidMirror(OE):
@@ -448,15 +452,17 @@ class VFM(SimpleVFM, MirrorOnTripodWithTwoXStages):
         return normalize(res);
     }"""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(
+            self, *args, jack1=None, jack2=None, jack3=None,
+            tx1=None, tx2=None, dx=0, curSurface=0, **kwargs):
         limPhysY = kwargs.get('limPhysY', None)
         if limPhysY is None:
             raise AttributeError('limPhysY must be given')
-        kwargs, argsT = rst.Tripod.pop_kwargs(self, **kwargs)
-        kwargs, argsX = rst.TwoXStages.pop_kwargs(self, **kwargs)
         SimpleVFM.__init__(self, *args, **kwargs)
-        rst.Tripod.__init__(self, *argsT)
-        rst.TwoXStages.__init__(self, *argsX)
+        rst.Tripod.__init__(self, jack1, jack2, jack3)
+        rst.TwoXStages.__init__(self, tx1, tx2, dx)
+        self.curSurface = curSurface
+        self.get_surface_limits()
 
     def local_z(self, x, y):
         """Determines the surface of OE at (x, y) position. Here: a circular
@@ -504,7 +510,9 @@ class DualVFM(MirrorOnTripodWithTwoXStages):
       return z;
     }"""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(
+            self, *args, jack1=None, jack2=None, jack3=None,
+            tx1=None, tx2=None, dx=0, curSurface=0, **kwargs):
         """
         *r1*, *r2*: float
             Sagittal radii of the cylinders.
@@ -519,8 +527,15 @@ class DualVFM(MirrorOnTripodWithTwoXStages):
 
         """
         kwargs = self.__pop_kwargs(**kwargs)
-        MirrorOnTripodWithTwoXStages.__init__(self, *args, **kwargs)
-        self.hCylinder = 0
+        MirrorOnTripodWithTwoXStages.__init__(
+            self, *args, jack1=jack1, jack2=jack2, jack3=jack3,
+            tx1=tx1, tx2=tx2, dx=dx, curSurface=curSurface, **kwargs)
+        if self.curSurface == 0:
+            self.r = self.r1
+            self.hCylinder = self.hCylinder1
+        elif self.curSurface == 1:
+            self.r = self.r2
+            self.hCylinder = self.hCylinder2
 
     def __pop_kwargs(self, **kwargs):
         self.R = kwargs.pop('R', 5.0e6)
@@ -680,7 +695,9 @@ class DCMwithSagittalFocusing(DCM):  # composed by Roelof van Silfhout
 class DCMOnTripodWithOneXStage(DCM, rst.Tripod, rst.OneXStage):
     """Combines a DCM with a tripod support + one X-stage."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(
+            self, *args, jack1=None, jack2=None, jack3=None, dx=0,
+            curSurface=0, **kwargs):
         r"""
         *jack1*, *jack2*, *jack3*: 3-lists
             3d points in the *general* coordinate system at the horizontal
@@ -691,11 +708,11 @@ class DCMOnTripodWithOneXStage(DCM, rst.Tripod, rst.OneXStage):
 
 
         """
-        kwargs, argsT = rst.Tripod.pop_kwargs(self, **kwargs)
-        kwargs, argsX = rst.OneXStage.pop_kwargs(self, **kwargs)
         DCM.__init__(self, *args, **kwargs)
-        rst.Tripod.__init__(self, *argsT)
-        rst.OneXStage.__init__(self, *argsX)
+        rst.Tripod.__init__(self, jack1, jack2, jack3)
+        rst.OneXStage.__init__(self, dx)
+        self.curSurface = curSurface
+        self.get_surface_limits()
 
         for alim in (self.limOptX2, self.limOptY2):
             if alim is not None:

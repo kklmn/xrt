@@ -667,11 +667,7 @@ def create_paramdict_oe(paramDictStr, defArgs, beamLine=None):
                      for c in str.split(
                      paravalue, ',')]
             elif paraname.startswith('limPhys'):
-                paravalue = paravalue.strip('[]() ')
-                paravalue =\
-                    [get_init_val(c.strip())
-                     for c in str.split(
-                     paravalue, ',')]
+                paravalue = parametrize(paravalue)
             elif paraname == 'bl':
                 paravalue = beamLine
             else:
