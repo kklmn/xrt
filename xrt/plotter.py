@@ -1200,6 +1200,7 @@ class XYCPlot(object):
         self._drawOeArea = False
         self.oe = oe
         self.drawOeArea = bool(drawOeArea or self.oe is not None)
+        self.showCornerLabels = showCornerLabels
 
         if self.xaxis.limits is not None:
             if not isinstance(self.xaxis.limits, str):
@@ -1521,6 +1522,20 @@ class XYCPlot(object):
                 'limPhysX2', 'limPhysY2', 'limOptX2', 'limOptY2')
         self._oe = value if value is not None and all(
             hasattr(value, attr) for attr in requiredAttrs) else None
+
+    @property
+    def showCornerLabels(self):
+        return self._showCornerLabels
+
+    @showCornerLabels.setter
+    def showCornerLabels(self, value):
+        self._showCornerLabels = bool(value)
+        for textPanel in [
+                self.textGood, self.textOut, self.textOver, self.textI,
+                self.textAlive, self.textDead, self.textNrays]:
+            if textPanel is None:
+                continue
+            textPanel.set_visible(bool(value))
 
     @property
     def drawOeArea(self):
