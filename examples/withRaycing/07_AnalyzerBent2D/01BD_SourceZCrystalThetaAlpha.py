@@ -139,7 +139,7 @@ import xrt.backends.raycing.screens as rsc
 import xrt.plotter as xrtp
 import xrt.runner as xrtr
 
-showIn3D = False
+showIn3D = True
 useTT = False
 if showIn3D:
     useTT = False
@@ -740,9 +740,11 @@ def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
 def main():
     beamLine = build_beamline()
     if showIn3D:
+        while beamLine.analyzer.center == [0, 0, 0]:
+            next(plot_generator(beamLine))  # make initial alignment
         scan = make_glow_scan()
         beamLine.glow(scale=4, centerAt=analyzerName,
-                      scan=scan)
+                      scan=scan, sceneSettings=dict(rayFlag=[1,]))
         return
     plots, plotsAnalyzer, plotsDetector, plotsE, plotAnE, plotDetE =\
         define_plots(beamLine)
