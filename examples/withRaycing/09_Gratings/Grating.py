@@ -5,7 +5,7 @@ import os, sys; sys.path.append(os.path.join('..', '..', '..'))  # analysis:igno
 import numpy as np
 import xrt.backends.raycing as raycing
 import xrt.backends.raycing.sources as rs
-#import xrt.backends.raycing.apertures as ra
+# import xrt.backends.raycing.apertures as ra
 import xrt.backends.raycing.oes as roe
 import xrt.backends.raycing.run as rr
 import xrt.backends.raycing.materials as rm
@@ -111,7 +111,8 @@ def main():
     plots = define_plots(beamLine)
     xrtr.run_ray_tracing(plots, repeats=1, beamLine=beamLine)
 
-#this is necessary to use multiprocessing in Windows, otherwise the new Python
-#contexts cannot be initialized:
+
+# this is necessary to use multiprocessing in Windows, otherwise the new Python
+# contexts cannot be initialized:
 if __name__ == '__main__':
     main()

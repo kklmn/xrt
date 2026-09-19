@@ -21,10 +21,10 @@ p = 20000.
 
 def build_beamline(nrays=1e5):
     beamLine = raycing.BeamLine(height=0)
-#    rs.GeometricSource(beamLine, 'GeometricSource', (0, 0, 0),
-#      nrays=nrays, dx=0, dz=0, distxprime='flat', dxprime=1e-4,
-#      distzprime='flat', dzprime=1e-4,
-#      distE='flat', energies=(E0-dE, E0+dE), polarization='horizontal')
+    # rs.GeometricSource(beamLine, 'GeometricSource', (0, 0, 0),
+    #   nrays=nrays, dx=0, dz=0, distxprime='flat', dxprime=1e-4,
+    #   distzprime='flat', dzprime=1e-4,
+    #   distE='flat', energies=(E0-dE, E0+dE), polarization='horizontal')
     rs.GeometricSource(
         beamLine, 'GeometricSource', (0, 0, 0),
         nrays=nrays, distx='annulus', dx=(0, 1), dxprime=0, dzprime=0,
@@ -33,7 +33,7 @@ def build_beamline(nrays=1e5):
     siCryst = rm.CrystalSi(hkl=(1, 1, 1), geom='Bragg-Fresnel')
     pitch = \
         siCryst.get_Bragg_angle(E0) - siCryst.get_dtheta_symmetric_Bragg(E0)
-#    pitch = np.pi/2
+    # pitch = np.pi/2
     f = 0, p * np.cos(pitch), p * np.sin(pitch)
     beamLine.fzp = roe.GeneralFZPin0YZ(
         beamLine, 'FZP', [0., p, 0.], pitch=pitch,
@@ -210,7 +210,8 @@ def main():
                          processes='half', afterScript=afterScript,
                          afterScriptArgs=[plotPos])
 
-#this is necessary to use multiprocessing in Windows, otherwise the new Python
-#contexts cannot be initialized:
+
+# this is necessary to use multiprocessing in Windows, otherwise the new Python
+# contexts cannot be initialized:
 if __name__ == '__main__':
     main()

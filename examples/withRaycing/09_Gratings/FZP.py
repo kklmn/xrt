@@ -6,7 +6,7 @@ import numpy as np
 
 import xrt.backends.raycing as raycing
 import xrt.backends.raycing.sources as rs
-#import xrt.backends.raycing.apertures as ra
+# import xrt.backends.raycing.apertures as ra
 import xrt.backends.raycing.oes as roe
 import xrt.backends.raycing.run as rr
 import xrt.backends.raycing.materials as rm
@@ -14,7 +14,7 @@ import xrt.plotter as xrtp
 import xrt.runner as xrtr
 import xrt.backends.raycing.screens as rsc
 
-showIn3D = False
+showIn3D = True
 
 # transmittivity of FZP material is ignored, the only used propery is 'kind':
 mGold = rm.Material('Au', rho=19.3, kind='FZP')
@@ -147,7 +147,8 @@ def main():
     xrtr.run_ray_tracing(plots, repeats=360, generator=plot_generator,
                          beamLine=beamLine, processes='half')
 
-#this is necessary to use multiprocessing in Windows, otherwise the new Python
-#contexts cannot be initialized:
+
+# this is necessary to use multiprocessing in Windows, otherwise the new Python
+# contexts cannot be initialized:
 if __name__ == '__main__':
     main()

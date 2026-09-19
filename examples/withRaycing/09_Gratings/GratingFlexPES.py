@@ -4,7 +4,7 @@ __date__ = "08 Mar 2016"
 import os, sys; sys.path.append(os.path.join('..', '..', '..'))  # analysis:ignore
 import numpy as np
 import copy
-#import matplotlib as mpl
+# import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 import xrt.backends.raycing as raycing
@@ -29,20 +29,20 @@ mGoldenGrating = rm.Material(
 E0 = 80.
 dE = 0.01
 
-#distE = 'lines'
-#energies = np.linspace(E0-dE, E0+dE, 5)
+# distE = 'lines'
+# energies = np.linspace(E0-dE, E0+dE, 5)
 
 distE = 'flat'
 energies = E0-dE, E0+dE
 
-#=============================================================================
+# =============================================================================
 # Do not put many scanEnergies AND s1openings together or else you'll have
 # MemoryError due to the numerous plots. You should fix one of the two and scan
 # the other.
-#=============================================================================
-#scanEnergies = np.linspace(E0 - dE*0.75, E0 + dE*0.75, 7)
+# =============================================================================
+# scanEnergies = np.linspace(E0 - dE*0.75, E0 + dE*0.75, 7)
 scanEnergies = E0,
-#s1openings = np.linspace(0.01, 0.25, 25)
+# s1openings = np.linspace(0.01, 0.25, 25)
 s1openings = 0.03,
 
 cff = 2.25
@@ -223,9 +223,9 @@ def align_beamline(
     beamLine.m3.r = rM3
     beamLine.m3.R = RM3
 
-    beamLine.fsm3hf.center = -qM3mer * np.sin(2*pitchM3),\
+    beamLine.fsm3hf.center = -qM3mer * np.sin(2*pitchM3), \
         beamLine.m3.center[1] + qM3mer * np.cos(2*pitchM3), fixedExit
-    beamLine.fsm3vf.center = -qM3sag * np.sin(2*pitchM3),\
+    beamLine.fsm3vf.center = -qM3sag * np.sin(2*pitchM3), \
         beamLine.m3.center[1] + qM3sag * np.cos(2*pitchM3), fixedExit
     for s1 in beamLine.s1s:
         s1.center = beamLine.fsm3vf.center
@@ -238,16 +238,16 @@ def align_beamline(
     RM4 = 2. / sinPitchM4 * (pM4mer*qM4) / (pM4mer+qM4)
     print('M4: r = {0} mm, R = {1} m'.format(rM4, RM4*1e-3))
     dM34 = qM3mer + pM4mer  # = qM3sag + pM4sag
-    beamLine.m4.center = -dM34 * np.sin(2*pitchM3),\
+    beamLine.m4.center = -dM34 * np.sin(2*pitchM3), \
         beamLine.m3.center[1] + dM34 * np.cos(2*pitchM3), fixedExit
     beamLine.m4.pitch = 2*pitchM1 - 2*pitchM3 + pitchM4
     beamLine.m4.r = rM4
     beamLine.m4.R = RM4
 
     qFSMExp1 = 1500.  # upstream of the focus
-    beamLine.fsmExp1.center = beamLine.m4.center[0],\
+    beamLine.fsmExp1.center = beamLine.m4.center[0], \
         beamLine.m4.center[1] + qM4 - qFSMExp1, fixedExit
-    beamLine.fsmExp2.center = beamLine.m4.center[0],\
+    beamLine.fsmExp2.center = beamLine.m4.center[0], \
         beamLine.m4.center[1] + qM4, fixedExit
 
 
@@ -434,7 +434,8 @@ def main():
                          generator=plot_generator, generatorArgs=args,
                          processes='half')
 
-#this is necessary to use multiprocessing in Windows, otherwise the new Python
-#contexts cannot be initialized:
+
+# this is necessary to use multiprocessing in Windows, otherwise the new Python
+# contexts cannot be initialized:
 if __name__ == '__main__':
     main()
