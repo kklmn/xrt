@@ -1145,6 +1145,10 @@ class OEMesh3D():
 
         isScreen = is_screen(self.oe)
         isAperture = is_aperture(self.oe)
+        isFZP = isinstance(self.oe, (roes.NormalFZP,
+                                     roes.GeneralFZPin0YZ))
+        if isFZP and abs(np.sin(self.oe.pitch)) > abs(np.cos(self.oe.pitch)):
+            yDim = 2
 
         if isScreen:
             autoSizedX = False
@@ -1367,15 +1371,20 @@ class OEMesh3D():
                     return thickness
             if hasattr(self.oe, "material"):
                 if self.oe.material is not None:
+                    material = self.oe.material
+                    if raycing.is_sequence(material):
+                        material = material[self.oe.curSurface]
                     thickness = self.oeThickness
-                    if hasattr(self.oe.material, "t"):
-                        thickness = self.oe.material.t if\
-                            self.oe.material.t is not None else thickness
-                    elif isinstance(self.oe.material, rmats.Multilayer):
-                        if self.oe.material.substrate is not None:
-                            if hasattr(self.oe.material.substrate, 't'):
-                                if self.oe.material.substrate.t is not None:
-                                    thickness = self.oe.material.substrate.t
+                    if hasattr(material, "t"):
+                        if material.t is not None:
+                            thickness = material.t
+                        elif getattr(material, 'kind', None) == 'FZP':
+                            thickness = 0
+                    elif isinstance(material, rmats.Multilayer):
+                        if material.substrate is not None:
+                            if hasattr(material.substrate, 't'):
+                                if material.substrate.t is not None:
+                                    thickness = material.substrate.t
 
             return thickness
 
@@ -1674,6 +1683,7 @@ class OEMesh3D():
 #        self.bBox[:, 1] = yLimit
 
         points = np.vstack((xv, yv, zv)).T
+        flatBackZ = min(0., np.nanmin(points[:, 2])) - thickness
         if isCRLStack and is2ndXtal:
             # The regular Plate transform positions the second surface of the
             # first lenslet. Move it by the remaining lenslet pitches.
@@ -1715,7 +1725,7 @@ class OEMesh3D():
                 bottomNormals = -1 * nv.copy()
             else:
                 bottomNormals = np.zeros((len(points), 3))
-                bottomPoints[:, 2] = -thickness
+                bottomPoints[:, 2] = flatBackZ
                 bottomNormals[:, 2] = -1
 
         # side: x, y
@@ -1742,9 +1752,9 @@ class OEMesh3D():
 
         tL = np.vstack((xs[0], ys[0], np.ones_like(zL)*thickness))
         bottomLine = zL - thickness if useShapedBack else\
-            -np.ones_like(zL)*thickness
+            np.ones_like(zL)*flatBackZ
         tL = np.hstack((tL, np.vstack((np.flip(xs[0]), np.flip(ys[0]),
-                                       -np.ones_like(zL)*thickness)))).T
+                                       bottomLine)))).T
         normsL = np.zeros((len(zL)*2, 3))
         normsL[:, 0] = -1
         triLR = triangulate_strip(len(zL))
@@ -1754,7 +1764,7 @@ class OEMesh3D():
 
         tR = np.vstack((xs[1], ys[1], zR))
         bottomLine = zR - thickness if useShapedBack else\
-            -np.ones_like(zR)*thickness
+            np.ones_like(zR)*flatBackZ
         tR = np.hstack((tR, np.vstack((np.flip(xs[1]), np.flip(ys[1]),
                                        bottomLine)))).T
         normsR = np.zeros((len(zR)*2, 3))
@@ -1762,7 +1772,7 @@ class OEMesh3D():
 
         tF = np.vstack((xs[2], ys[2], np.ones_like(zF)*thickness))
         bottomLine = zF - thickness if useShapedBack else\
-            -np.ones_like(zF)*thickness
+            np.ones_like(zF)*flatBackZ
         tF = np.hstack((tF, np.vstack((np.flip(xs[2]), np.flip(ys[2]),
                                        bottomLine)))).T
         normsF = np.zeros((len(zF)*2, 3))
@@ -1774,7 +1784,7 @@ class OEMesh3D():
         if oeShape == 'round':
             tB = np.vstack((xC, yC, zC))
             bottomLine = zC - thickness if useShapedBack else\
-                -np.ones_like(zC)*thickness
+                np.ones_like(zC)*flatBackZ
             tB = np.hstack((tB, np.vstack((np.flip(xC), np.flip(yC),
                                            np.flip(bottomLine))))).T
             normsB = np.vstack((tB[:, 0], tB[:, 1], np.zeros_like(tB[:, 0]))).T
@@ -1783,7 +1793,7 @@ class OEMesh3D():
         else:
             tB = np.vstack((xs[3], ys[3], zB))
             bottomLine = zB - thickness if useShapedBack else\
-                -np.ones_like(zB)*thickness
+                np.ones_like(zB)*flatBackZ
             tB = np.hstack((tB, np.vstack((np.flip(xs[3]), np.flip(ys[3]),
                                            bottomLine)))).T
             normsB = np.zeros((len(zB)*2, 3))
