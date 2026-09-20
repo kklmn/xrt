@@ -491,7 +491,7 @@ class EpicsDevice:
                                 pv_records[pvname]
 
             for argName in oePvFields:
-                if argName in ['shape', 'renderStyle']:
+                if argName in ['shape', 'renderStyle', 'renderSize']:
                     continue
                 if hasattr(oeObj, argName):
                     if argName in ['name', 'rotationSequence']:

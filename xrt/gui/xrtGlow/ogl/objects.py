@@ -810,6 +810,16 @@ class OEMesh3D():
         self.slitThicknessFraction = self.parent.slitThicknessFraction
         self.tiles = self.parent.tiles
 
+        renderSize = getattr(self.oe, 'renderSize', None)
+        if isinstance(renderSize, dict):
+            for attrName in ('slitThicknessFraction',
+                             'apertureBladeWidth',
+                             'apertureDefaultSpan',
+                             'apertureThickness'):
+                localValue = renderSize.get(attrName)
+                if localValue is not None:
+                    setattr(self, attrName, localValue)
+
     def get_aperture_frame_width(self, renderStyle=None):
         if renderStyle != 'mask':
             return self.apertureBladeWidth

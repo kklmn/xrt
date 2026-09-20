@@ -106,7 +106,7 @@ def element_records(oe_obj: Any,
     if hasattr(oe_obj, "shine") and hasattr(oe_obj, "nrays"):
         pv_fields.add("nrays")
     for arg_name in _ordered_fields(pv_fields):
-        if arg_name in ["shape", "renderStyle"]:
+        if arg_name in ["shape", "renderStyle", "renderSize"]:
             continue
         if not hasattr(oe_obj, arg_name):
             continue

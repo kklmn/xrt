@@ -18,13 +18,13 @@ shapeArgSet = {'limPhysX', 'limPhysY', 'limPhysX2', 'limPhysY2',
                'blades', 'vertices',
                'shadeFraction', 'dx', 'dz', 'px', 'pz', 'nx', 'nz',
                'R', 'r', 'Rm', 'Rs', 'p', 'q', 'f1', 'f2', 'pAxis',
-               'parabolaAxis', 'shape', 'renderStyle',
+               'parabolaAxis', 'shape', 'renderStyle', 'renderSize',
                'n', 'period', 'fileName', 'orientation',
                'focus', 'zmax', 't', 'nCRL'}  # TODO: sources
 
 derivedArgSet = {'center', 'pitch', 'bragg', 'R', 'r', 'Rm', 'Rs'}
 
-renderOnlyArgSet = {'renderStyle', 'name'}
+renderOnlyArgSet = {'renderStyle', 'renderSize', 'name'}
 
 compoundArgs = {'center': ['x', 'y', 'z'],
                 'x': ['x', 'y', 'z'],
@@ -183,7 +183,7 @@ argumentInputGroups = {
         'surface', 'targetE', 'jack1', 'jack2', 'jack3', 'tx1', 'tx2'},
     ('string', 'sequence'): {'elements'},
     ('string', 'sequence', 'None'): {'refractiveIndex'},
-    'dict': {'afterScriptKWargs', 'blades', 'generatorKWargs'},
+    'dict': {'afterScriptKWargs', 'blades', 'generatorKWargs', 'renderSize'},
     ('sequence', 'inf', 'None'): {'f1', 'f2'},
     'scalar': {
         'amplitude', 'B0', 'B0x', 'B0y', 'betaX', 'betaZ', 'bumpHeight',

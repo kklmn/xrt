@@ -64,12 +64,29 @@ _BLADE_ORDER = ('left', 'right', 'bottom', 'top')
 _DEFAULT_RECTANGULAR_BLADES = {'left': -10, 'right': 10,
                                'bottom': -10, 'top': 10}
 _DEFAULT_POLYGON_VERTICES = [(-10, -10), (-10, 10), (10, 10), (10, -10)]
+_DEFAULT_RENDER_SIZE = {
+    'slitThicknessFraction': None,
+    'apertureBladeWidth': None,
+    'apertureDefaultSpan': None,
+    'apertureThickness': None,
+}
+_RENDER_SIZE_EDITOR_HINT = {
+    'editor': 'dict',
+    'title': 'Aperture rendering size',
+    'keyHeader': 'Setting',
+    'valueHeader': 'Local value',
+    'fixedKeys': tuple(_DEFAULT_RENDER_SIZE),
+    'valueHint': {
+        'type': 'float',
+    },
+}
 
 allArguments = ('bl', 'name', 'center', 'blades', 'vertices', 'x', 'z',
                 'alarmLevel', 'r', 'shadeFraction',
                 'dx', 'dz', 'px', 'pz', 'nx', 'nz',
                 'nSpokes', 'rx', 'rz', 'phi0', 'vortex', 'vortexNradial',
-                'renderStyle', 'apertures', 'centerZs', 'dXs', 'dZs',
+                'renderStyle', 'renderSize',
+                'apertures', 'centerZs', 'dXs', 'dZs',
                 'zActuator')
 
 
@@ -77,10 +94,17 @@ class RectangularAperture(object):
     """Implements an aperture or an obstacle as a combination of straight
     edges."""
 
+    @staticmethod
+    def get_argument_editor_hint(argName):
+        if argName == 'renderSize':
+            return _RENDER_SIZE_EDITOR_HINT
+        return None
+
     def __init__(self, bl=None, name='', center=[0, 0, 0],
                  kind=None, opening=None, x='auto', z='auto',
                  alarmLevel=None, renderStyle='mask',
                  blades=_DEFAULT_RECTANGULAR_BLADES,
+                 renderSize=_DEFAULT_RENDER_SIZE,
                  **kwargs):
         """
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
@@ -119,6 +143,9 @@ class RectangularAperture(object):
             Controls rendering style in xrtGlow. Can be either single-piece
             'mask' or a set of individual 'blades'.
 
+        *renderSize*: dict
+            Per-aperture xrtGlow size overrides. Missing keys and values set
+            to None use the corresponding global scene setting.
 
         """
         self.bl = bl
@@ -156,6 +183,8 @@ class RectangularAperture(object):
         self.shape = 'rect'
         self.spotLimits = [0, 0, 0, 0]
         self.renderStyle = renderStyle
+        self.renderSize = dict(
+            _DEFAULT_RENDER_SIZE if renderSize is None else renderSize)
 
         self._blades = {}
         self._kind = []
@@ -559,7 +588,8 @@ class SetOfRectangularAperturesOnZActuator(RectangularAperture):
     def __init__(self, bl=None, name='', center=[0, 0, 0], apertures=['',],
                  centerZs=[0,], dXs=[0,], dZs=[0,],
                  x='auto', z='auto', alarmLevel=None, blades=None,
-                 zActuator=None, renderStyle='mask', **kwargs):
+                 zActuator=None, renderStyle='mask',
+                 renderSize=_DEFAULT_RENDER_SIZE, **kwargs):
         """
         *apertures*: sequence of str
             Names of apertures. The last one must be one of 'bottom-edge' or
@@ -631,6 +661,8 @@ class SetOfRectangularAperturesOnZActuator(RectangularAperture):
         self.shape = 'rect'
         self.spotLimits = [0, 0, 0, 0]
         self.renderStyle = renderStyle
+        self.renderSize = dict(
+            _DEFAULT_RENDER_SIZE if renderSize is None else renderSize)
         self.isBeamStop = False
         self._blades = {}
         self._kind = []
@@ -679,8 +711,15 @@ class SetOfRectangularAperturesOnZActuator(RectangularAperture):
 class RoundAperture(object):
     """Implements a round aperture meant to represent a pipe or a flange."""
 
+    @staticmethod
+    def get_argument_editor_hint(argName):
+        if argName == 'renderSize':
+            return _RENDER_SIZE_EDITOR_HINT
+        return None
+
     def __init__(self, bl=None, name='',
                  center=[0, 0, 0], r=1, x='auto', z='auto', alarmLevel=None,
+                 renderSize=_DEFAULT_RENDER_SIZE,
                  **kwargs):
         """ A round aperture aperture.
 
@@ -725,6 +764,8 @@ class RoundAperture(object):
 
         self.r = r
         self.alarmLevel = alarmLevel
+        self.renderSize = dict(
+            _DEFAULT_RENDER_SIZE if renderSize is None else renderSize)
 # For plotting footprint images with the envelope aperture:
         self.surface = name,
         self.limOptX = [-r, r]
@@ -1047,9 +1088,16 @@ class PolygonalAperture(object):
     """Implements an aperture or an obstacle defined as a set of polygon
     vertices."""
 
+    @staticmethod
+    def get_argument_editor_hint(argName):
+        if argName == 'renderSize':
+            return _RENDER_SIZE_EDITOR_HINT
+        return None
+
     def __init__(self, bl=None, name='', center=[0, 0, 0],
                  opening=None, x='auto', z='auto', alarmLevel=None,
                  vertices=_DEFAULT_POLYGON_VERTICES,
+                 renderSize=_DEFAULT_RENDER_SIZE,
                  **kwargs):
         """
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
@@ -1112,6 +1160,8 @@ class PolygonalAperture(object):
         self._vertices = None
         self.vertices = opening if opening is not None else vertices
         self.alarmLevel = alarmLevel
+        self.renderSize = dict(
+            _DEFAULT_RENDER_SIZE if renderSize is None else renderSize)
         self.isBeamStop = False
 # For plotting footprint images with the envelope aperture:
         self.surface = name,

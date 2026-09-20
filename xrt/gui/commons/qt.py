@@ -128,6 +128,7 @@ class DictEditorDialog(QDialog):
         super().__init__(parent)
         self.hint = {} if hint is None else dict(hint)
         self.valueHint = dict(self.hint.get('valueHint') or {})
+        self.fixedKeys = tuple(self.hint.get('fixedKeys') or ())
         self.bl = bl
         self.excludeRefs = set(
             str(ref) for ref in (excludeRefs or []) if ref is not None)
@@ -147,12 +148,13 @@ class DictEditorDialog(QDialog):
         self.table.customContextMenuRequested.connect(self.show_context_menu)
         layout.addWidget(self.table)
 
-        buttonsLayout = QHBoxLayout()
-        addButton = QPushButton('Add row', self)
-        addButton.clicked.connect(self.add_empty_row)
-        buttonsLayout.addWidget(addButton)
-        buttonsLayout.addStretch()
-        layout.addLayout(buttonsLayout)
+        if not self.fixedKeys:
+            buttonsLayout = QHBoxLayout()
+            addButton = QPushButton('Add row', self)
+            addButton.clicked.connect(self.add_empty_row)
+            buttonsLayout.addWidget(addButton)
+            buttonsLayout.addStretch()
+            layout.addLayout(buttonsLayout)
 
         self.buttonBox = QDialogButtonBox(
             QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self)
@@ -160,10 +162,15 @@ class DictEditorDialog(QDialog):
         self.buttonBox.rejected.connect(self.reject)
         layout.addWidget(self.buttonBox)
 
-        for key, itemValue in self._parse_value(value).items():
-            self.add_row(key, itemValue)
-        if self.table.rowCount() == 0:
-            self.add_empty_row()
+        values = self._parse_value(value)
+        if self.fixedKeys:
+            for key in self.fixedKeys:
+                self.add_row(key, values.get(key))
+        else:
+            for key, itemValue in values.items():
+                self.add_row(key, itemValue)
+            if self.table.rowCount() == 0:
+                self.add_empty_row()
 
     def _parse_value(self, value):
         from ...backends import raycing
@@ -176,7 +183,10 @@ class DictEditorDialog(QDialog):
     def add_row(self, key, value):
         row = self.table.rowCount()
         self.table.insertRow(row)
-        self.table.setItem(row, 0, QTableWidgetItem(str(key)))
+        keyItem = QTableWidgetItem(str(key))
+        if self.fixedKeys:
+            keyItem.setFlags(keyItem.flags() & ~Qt.ItemIsEditable)
+        self.table.setItem(row, 0, keyItem)
         self._set_value_cell(row, value)
 
     def _set_value_cell(self, row, value):
@@ -228,6 +238,19 @@ class DictEditorDialog(QDialog):
             text = '' if item is None else str(item.text()).strip()
         if text in ['', 'None']:
             return None
+
+        if self.valueHint.get('type') == 'float':
+            keyItem = self.table.item(row, 0)
+            key = '' if keyItem is None else str(keyItem.text())
+            try:
+                value = float(text.replace(',', '.'))
+            except ValueError:
+                raise ValueError(
+                    '{0} must be a number or None'.format(key))
+            if not isfinite(value):
+                raise ValueError('{0} must be finite'.format(key))
+            return value
+
         return text
 
     def value(self):
@@ -252,6 +275,8 @@ class DictEditorDialog(QDialog):
             self.resultValue, self.hint, self.bl)
 
     def show_context_menu(self, position):
+        if self.fixedKeys:
+            return
         index = self.table.indexAt(position)
         if not index.isValid():
             return
