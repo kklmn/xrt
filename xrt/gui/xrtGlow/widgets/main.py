@@ -11,7 +11,7 @@ import json
 import numpy as np
 from functools import partial
 import matplotlib as mpl
-from collections import OrderedDict, ChainMap
+from collections import OrderedDict, ChainMap, deque
 from matplotlib.colors import hsv_to_rgb
 from matplotlib.figure import Figure
 from matplotlib.widgets import RectangleSelector
@@ -190,6 +190,7 @@ class xrtGlow(qt.QWidget):
         self.customGlWidget.histogramUpdated.connect(self.updateColorMap)
         self.customGlWidget.propagationComplete.connect(
             self.onScanPropagationComplete)
+        self.postPropagationActions = deque()
         self.customGlWidget.setContextMenuPolicy(qt.Qt.CustomContextMenu)
         self.customGlWidget.customContextMenuRequested.connect(self.glMenu)
         self.customGlWidget.openElViewer.connect(self.runElementViewer)
@@ -3555,13 +3556,28 @@ class xrtGlow(qt.QWidget):
         d.setModal(False)
         d.show()
 
+    def queuePostPropagationAction(self, methodName, *args):
+        self.postPropagationActions.append((methodName, args))
+        self.customGlWidget.glDraw()
+
+    def tryPostPropagationActions(self):
+        while self.postPropagationActions:
+            methodName, args = self.postPropagationActions[0]
+            if not getattr(self, methodName)(*args):
+                break
+            self.postPropagationActions.popleft()
+
     def centerEl(self, oeName):
         oeLine = self.customGlWidget.beamline.oesDict.get(oeName)
         if oeLine is None:
-            return
-        if any([isinstance(x, str) for x in oeLine[0].center]):  # raw 'auto'
-            return
-        off0 = np.array(oeLine[0].center) - np.array(
+            return False
+        try:
+            center = np.asarray(oeLine[0].center, dtype=float)
+        except (TypeError, ValueError):
+            return False
+        if center.shape != (3,) or not np.all(np.isfinite(center)):
+            return False
+        off0 = center - np.array(
             self.customGlWidget.tmpOffset)
         cOffset = qt.QVector4D(off0[0], off0[1], off0[2], 0)
         off1 = self.customGlWidget.mModLocal * cOffset
@@ -3571,6 +3587,7 @@ class xrtGlow(qt.QWidget):
         if hasattr(self.customGlWidget, 'cBox'):
             self.customGlWidget.update_coord_grid()
         self.customGlWidget.glDraw()
+        return True
 
     def toLocal(self, oeuuid):
         oe = self.customGlWidget.beamline.oesDict[oeuuid][0]
@@ -3592,6 +3609,14 @@ class xrtGlow(qt.QWidget):
         self.customGlWidget.glDraw()
 
     def _beamEndCenter(self, oeuuid):
+        glw = self.customGlWidget
+        startLine = glw.beamline.oesDict.get(oeuuid)
+        mesh = glw.meshDict.get(oeuuid)
+        if startLine is None or mesh is None or 0 not in mesh.transMatrix:
+            return None
+        if mesh._has_unresolved_auto(startLine[0]):
+            return None
+
         bEnd0 = None
 
         if self.customGlWidget.renderingMode == 'dynamic':
@@ -3618,21 +3643,32 @@ class xrtGlow(qt.QWidget):
         if bEnd0 is None:
             return
 
-        if any([isinstance(x, str) for x in bEnd0]):  # unresolved auto
-            return
+        try:
+            start = np.asarray(startLine[0].center, dtype=float)
+            end = np.asarray(bEnd0, dtype=float)
+        except (TypeError, ValueError):
+            return None
+        if (start.shape != (3,) or end.shape != (3,) or
+                not np.all(np.isfinite(start)) or
+                not np.all(np.isfinite(end)) or
+                np.linalg.norm(end - start) <= 1e-12 or
+                not mesh.transMatrix[0].inverted()[1]):
+            return None
 
         return bEnd0
 
     def toBeamLocal(self, oeuuid):
         bEnd0 = self._beamEndCenter(oeuuid)
         if bEnd0 is None:
-            return
+            return False
 
         oeStart = self.customGlWidget.beamline.oesDict[oeuuid][0]
         bStart0 = oeStart.center
 
         transMatrix = self.customGlWidget.meshDict[oeuuid].transMatrix[0]
         bEndLoc = transMatrix.inverted()[0] * qt.QVector3D(*bEnd0)
+        if bEndLoc.isNull():
+            return False
         bEndLoc.normalize()
 
         extraQ = qt.QQuaternion.rotationTo(qt.QVector3D(0, 1, 0), bEndLoc)
@@ -3646,16 +3682,15 @@ class xrtGlow(qt.QWidget):
         self.customGlWidget.tmpOffset = np.float32(bStart0)
         self.customGlWidget.update_coord_grid()
         self.customGlWidget.glDraw()
+        return True
 
     def alignWithYGlobal(self, oeuuid):
         bEnd0 = self._beamEndCenter(oeuuid)
         if bEnd0 is None:
-            return
+            return False
 
         oeStart = self.customGlWidget.beamline.oesDict[oeuuid][0]
         bStart0 = oeStart.center
-        if any(isinstance(x, str) for x in bStart0):  # unresolved auto
-            return
 
         virgin = qt.QMatrix4x4()
         virgin.translate(*bStart0)
@@ -3664,7 +3699,7 @@ class xrtGlow(qt.QWidget):
 
         bEndVirgin = virgin.inverted()[0] * qt.QVector3D(*bEnd0)
         if bEndVirgin.isNull():
-            return
+            return False
         bEndVirgin.normalize()
 
         extraRot = qt.QMatrix4x4()
@@ -3677,6 +3712,7 @@ class xrtGlow(qt.QWidget):
         self.customGlWidget.tmpOffset = np.float32(bStart0)
         self.customGlWidget.update_coord_grid()
         self.customGlWidget.glDraw()
+        return True
 
     def updateCutoffFromQLE(self, editor):
         try:

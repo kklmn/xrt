@@ -2795,6 +2795,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
 #            raise
 #            pass
 
+        if self.parent is not None:
+            self.parent.tryPostPropagationActions()
+
     def resizeGL(self, widthInPixels, heightInPixels):
         self.viewPortGL = [0, 0, widthInPixels, heightInPixels]
         gl.glViewport(*self.viewPortGL)

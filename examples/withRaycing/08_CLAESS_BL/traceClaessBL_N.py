@@ -253,7 +253,8 @@ def main():
         nameDiagnFoil=u'Cu5µm', nameVFMcylinder=stripe)
     if showIn3D:
         # myClaess.orient_along_global_Y()
-        myClaess.glow(scale=[500, 3, 500], centerAt='VFM')
+        myClaess.glow(scale=[500, 3, 500], centerAt='VFM',
+                      alignYglobal='MPW80')
         return
 
     plots = define_plots(myClaess, prefix, suffix, limEMono)

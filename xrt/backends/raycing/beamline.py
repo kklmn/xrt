@@ -1084,7 +1084,8 @@ class BeamLine(object):
     def glow(self, scale=[], centerAt='', startFrom=0, colorAxis=None,
              colorAxisLimits=None, generator=None, generatorArgs=[],
              mode='dynamic', v2=None, epicsPrefix=None, epicsMap={},
-             scanDescription=None, scan=None, **kwargs):
+             scanDescription=None, scan=None, alignYlocal=None,
+             alignYglobal=None, **kwargs):
         r"""
         Opens the xrtGlow 3D viewer for the current beamline.
 
@@ -1094,7 +1095,13 @@ class BeamLine(object):
             z.
 
         *centerAt*: str
-            Name of the optical element to center the initial view on.
+            Name of the optical element to center the initial view on. The
+            view waits for its center to resolve if needed.
+
+        *alignYlocal*, *alignYglobal*: str or None
+            Name of the optical element whose outgoing beam should align with
+            the view's Y axis. The former uses the element's local frame; the
+            latter uses its virgin local frame. Specify at most one.
 
         *startFrom*: int
             Starting flow index used when replaying *generator* frames in
@@ -1147,6 +1154,20 @@ class BeamLine(object):
 
 
         """
+        if alignYlocal is not None and alignYglobal is not None:
+            raise ValueError("Specify only one of alignYlocal and "
+                             "alignYglobal.")
+        alignmentName = alignYlocal if alignYlocal is not None else alignYglobal
+        initialAlignment = None
+        if alignmentName is not None:
+            alignmentUuid = self.oenamesToUUIDs.get(alignmentName)
+            if alignmentUuid is None:
+                raise ValueError("Unknown optical element {!r} for initial "
+                                 "Y alignment.".format(alignmentName))
+            alignmentMethod = ('toBeamLocal' if alignYlocal is not None else
+                               'alignWithYGlobal')
+            initialAlignment = (alignmentMethod, alignmentUuid)
+
         if scanDescription is None:
             scanDescription = scan
         if scanDescription is None:
@@ -1255,13 +1276,6 @@ class BeamLine(object):
                     self.blViewer.updateScaleFromGL(scale)
                 except Exception:
                     pass
-            if centerAt:
-                try:
-                    eluuid = self.oenamesToUUIDs.get(centerAt)
-                    if eluuid is not None:
-                        self.blViewer.centerEl(eluuid)
-                except Exception:
-                    pass
             if colorAxis:
                 try:
                     colorCB = self.blViewer.colorControls[0]
@@ -1277,12 +1291,26 @@ class BeamLine(object):
                 except Exception:
                     pass
 
+            if initialAlignment is not None:
+                self.blViewer.queuePostPropagationAction(*initialAlignment)
+            if centerAt:
+                eluuid = self.oenamesToUUIDs.get(centerAt)
+                if eluuid is not None:
+                    self.blViewer.queuePostPropagationAction('centerEl',
+                                                             eluuid)
             self.blViewer.show()
             sys.exit(app.exec_())
         else:
             if scanDescription is not None and hasattr(
                     self.blViewer, 'setScanDescription'):
                 self.blViewer.setScanDescription(scanDescription)
+            if initialAlignment is not None:
+                self.blViewer.queuePostPropagationAction(*initialAlignment)
+            if centerAt:
+                eluuid = self.oenamesToUUIDs.get(centerAt)
+                if eluuid is not None:
+                    self.blViewer.queuePostPropagationAction('centerEl',
+                                                             eluuid)
             self.blViewer.show()
 
     def explore(self, plots=None, block=None, closePlots=True):
