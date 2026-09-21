@@ -390,7 +390,8 @@ class Multilayer(object):
 
         .. _descr_ml_tran:
 
-        In transmission, the recursion is the following:
+        In transmission, the recursion is the following (we could not find any
+        relevant paper or book, this is our own simple derivation):
 
         .. math::
 
