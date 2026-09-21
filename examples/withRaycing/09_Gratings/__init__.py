@@ -80,6 +80,7 @@ density is 1221 mm\ :sup:`-1`\ .
 +-------------+
 
 .. |FlexPES3D| imagezoom:: _images/FlexPES-3D.png
+   :scale: 58 %
 .. |FlexPES2D| imagezoom:: _images/FlexPES-2D.png
 
 An energy scan at a given vertical slit (here, 30 µm) between M3 and M4. Shown
