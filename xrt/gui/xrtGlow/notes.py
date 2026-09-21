@@ -67,6 +67,44 @@ Notes on using xrtGlow
   Navigation panel. Orientation of the diffraction planes will be represented
   by the yellow arrow in case of crystals with asymmetric cut.
 
+- A powerful exploration feature is the alignment of any chosen beamline
+  propagation leg with the global Y direction. This enables (a) independent
+  zooming along the global axes, (b) disentangled side-view projections, and
+  (c) color-coding based on positional (x, z) or angular (x′, z′) coordinates.
+
++-------+-------+-------+
+| |gra| | |grb| | |grc| |
++-------+-------+-------+
+
++-------+-------+
+| |grd| | |gre| |
++-------+-------+
+
+.. |gra| imagezoom:: _images/glowRotations_a.png
+   :scale: 30%
+   :alt: &ensp;The reflected beam is originally not aligned with Y.
+
+.. |grb| imagezoom:: _images/glowRotations_b.png
+   :scale: 30%
+   :alt: &ensp;Right click on the reflecting element (crystal analyzer) and
+       select "Align with Y global".
+   :loc: upper-right-corner
+
+.. |grc| imagezoom:: _images/glowRotations_c.png
+   :scale: 30%
+   :alt: &ensp;Now the beam connecting the crystal analyzer and the next
+       beamline element is aligned with Y.
+   :loc: upper-right-corner
+
+.. |grd| imagezoom:: _images/glowRotations_d.png
+   :scale: 30%
+   :alt: &ensp;Z scaling is doubled.
+
+.. |gre| imagezoom:: _images/glowRotations_e.png
+   :scale: 30%
+   :alt: &ensp;zprime coloring is applied and "Global color span" is unchecked.
+   :loc: upper-right-corner
+
 - Depth test is disabled by default for Points. Enable it if you do not want the
   footprints to shine through solid surfaces of optical elements. Be aware that
   Points may be obscured by Lines (rays) in this case.
