@@ -194,7 +194,7 @@ APERTURE_RENDERING_TEXTEDITS = {
             'tooltip': ''},
     'apertureDefaultSpan': {
             'label': 'Aperture default span, mm',
-            'tooltip': ''},
+            'tooltip': 'Full fallback blade length, mm'},
     'apertureThickness': {
             'label': 'Aperture thickness, mm',
             'tooltip': ''},

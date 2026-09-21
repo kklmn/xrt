@@ -1203,6 +1203,8 @@ class OEMesh3D():
         elif isAperture:
             renderStyle = getattr(self.oe, 'renderStyle', 'mask')
             blades = getattr(self.oe, 'blades', {})
+            defaultSpan = self.apertureDefaultSpan
+            defaultHalfSpan = 0.5 * defaultSpan
             if isinstance(self.oe, rapts.GridAperture) and\
                     str(nsIndex).startswith('grid'):
                 gridLimits = self.get_grid_limits(nsIndex)
@@ -1226,9 +1228,9 @@ class OEMesh3D():
                 if len(set(blades) & {'left', 'right'}) > 1:
                     left, right = blades['left'], blades['right']
                 else:
-                    defaultWidth = self.apertureDefaultSpan
                     center = 0
-                    left, right = center-defaultWidth, center+defaultWidth
+                    left, right = (center-defaultHalfSpan,
+                                   center+defaultHalfSpan)
 
                 if str(nsIndex) == 'shade':
                     if len(set(blades) & {'left', 'right'}) > 1:
@@ -1236,7 +1238,7 @@ class OEMesh3D():
                         bt = self.get_aperture_frame_width(renderStyle)
                         center = 0.5 * (left + right)
                         halfWidth = 0.5*width + bt if renderStyle == 'mask'\
-                            else max(width, self.apertureDefaultSpan)
+                            else 0.5*max(width, defaultSpan)
                         xLimits = [center - halfWidth, center + halfWidth]
                     else:
                         xLimits = [left, right]
@@ -1250,25 +1252,24 @@ class OEMesh3D():
                 yDim = 2
             elif isinstance(self.oe, rapts.RectangularBeamStop) and\
                     nsIndex in (0, '0'):
-                defaultWidth = self.apertureDefaultSpan
                 if len(set(blades) & {'left', 'right'}) > 1:
                     xLimits = [blades['left'], blades['right']]
                 elif 'left' in blades:
-                    xLimits = [blades['left'] - defaultWidth, blades['left']]
+                    xLimits = [blades['left'] - defaultSpan, blades['left']]
                 elif 'right' in blades:
-                    xLimits = [blades['right'], blades['right'] + defaultWidth]
+                    xLimits = [blades['right'], blades['right'] + defaultSpan]
                 else:
-                    xLimits = [-defaultWidth, defaultWidth]
+                    xLimits = [-defaultHalfSpan, defaultHalfSpan]
 
                 if len(set(blades) & {'top', 'bottom'}) > 1:
                     yLimits = [blades['bottom'], blades['top']]
                 elif 'bottom' in blades:
-                    yLimits = [blades['bottom'] - defaultWidth,
+                    yLimits = [blades['bottom'] - defaultSpan,
                                blades['bottom']]
                 elif 'top' in blades:
-                    yLimits = [blades['top'], blades['top'] + defaultWidth]
+                    yLimits = [blades['top'], blades['top'] + defaultSpan]
                 else:
-                    yLimits = [-defaultWidth, defaultWidth]
+                    yLimits = [-defaultHalfSpan, defaultHalfSpan]
                 yDim = 2
             elif not isinstance(self.oe, rapts.RectangularAperture) and\
                     nsIndex in (0, '0'):
@@ -1281,7 +1282,6 @@ class OEMesh3D():
             else:
                 btX = self.apertureBladeWidth
                 btY = self.apertureBladeWidth
-                defaultWidth = self.apertureDefaultSpan
 
                 if len(set(blades) & {'left', 'right'}) > 1:
                     awidth = np.abs(blades['left'] - blades['right'])
@@ -1289,7 +1289,7 @@ class OEMesh3D():
                     btX = self.get_aperture_frame_width(renderStyle) if\
                         renderStyle == 'mask' else self.apertureBladeWidth
                     awidth = 0.5*awidth + btX if renderStyle == 'mask' else\
-                        max(awidth, defaultWidth)
+                        0.5*max(awidth, defaultSpan)
                 else:
                     if isinstance(
                             self.oe,
@@ -1300,7 +1300,7 @@ class OEMesh3D():
                         awidth = 0.5 * max(
                             abs(dx) for dx in self.oe.dXs) + btX
                     else:
-                        awidth = defaultWidth
+                        awidth = defaultHalfSpan
                     acenterX = 0.
 
                 if len(set(blades) & {'top', 'bottom'}) > 1:
@@ -1309,9 +1309,9 @@ class OEMesh3D():
                     btY = self.get_aperture_frame_width(renderStyle) if\
                         renderStyle == 'mask' else self.apertureBladeWidth
                     aheight = 0.5*aheight if renderStyle == 'mask' else\
-                        max(aheight, defaultWidth)
+                        0.5*max(aheight, defaultSpan)
                 else:
-                    aheight = defaultWidth
+                    aheight = defaultHalfSpan
                     acenterY = 0.
 
                 if str(nsIndex) == 'left':
@@ -1658,11 +1658,11 @@ class OEMesh3D():
             renderStyle = getattr(self.oe, 'renderStyle', 'mask')
             if str(nsIndex) in ['left', 'right'] and renderStyle != 'mask':
                 local_z = lambda x, y: 0 * np.ones_like(x)  # actual thickness
-                thickness = -apThick*0.5  # Inverted position of the back side
+                thickness = -apThick  # Inverted position of the back side
             else:
                 zsurf = apThick*0.5 if renderStyle == 'mask' else 0
                 local_z = lambda x, y: zsurf * np.ones_like(x)
-                thickness = apThick*0.5  # Inverted position of the back side
+                thickness = apThick*0.5 if renderStyle == 'mask' else apThick
         else:
             local_z = getattr(self.oe, 'local_r{}'.format(zExt)) if\
                 self.oe.isParametric else getattr(self.oe,
