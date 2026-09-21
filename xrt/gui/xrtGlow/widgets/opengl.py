@@ -26,6 +26,7 @@ from ...commons import gl
 from ....backends import raycing
 from ....backends.raycing import (propagationProcess, renderOnlyArgSet,
                                   orientationArgSet, shapeArgSet)
+from ....backends.raycing._flow_utils import limited_source_rays
 from ....backends.raycing.epics import EpicsDevice, update_epics_readback
 from ....backends.raycing import apertures as rapts
 from ....backends.raycing import sources as rsources
@@ -242,10 +243,12 @@ class xrtGlWidget(qt.QOpenGLWidget):
             self.timer.timeout.connect(self._progressTimerSlot)
             self.timer.start(10)  # Adjust the interval as needed
 
-            for oeid, meth in self.beamline.flowU.items():
-                oe = self.beamline.oesDict[oeid][0]
-                for func, fkwargs in meth.items():
-                    getattr(oe, func)(**fkwargs)
+            with limited_source_rays(self.beamline,
+                                     self.beamline.serializationRays):
+                for oeid, meth in self.beamline.flowU.items():
+                    oe = self.beamline.oesDict[oeid][0]
+                    for func, fkwargs in meth.items():
+                        getattr(oe, func)(**fkwargs)
 
         self.virtScreen = {'uuid': rscreens.Screen(
                             bl=self.beamline,

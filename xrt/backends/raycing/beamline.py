@@ -202,7 +202,8 @@ from ._flow_utils import (
     get_params, create_paramdict_oe, is_valid_uuid, parametrize,
     create_paramdict_mat, get_init_val, get_init_kwargs, get_obj_str,
     create_paramdict_fe, is_auto_align_value, get_auto_align_energy,
-    warn_deprecated_glow_v2, normalize_string_input, normalize_ref)
+    warn_deprecated_glow_v2, normalize_string_input, normalize_ref,
+    limited_source_rays)
 from ._rotate import rotate_z, rotate_beam
 from ._named_arrays import Center
 
@@ -409,8 +410,10 @@ class BeamLine(object):
     Container class for beamline components. It also defines the beam line
     direction and height."""
 
+    hiddenParams = {'serializationRays'}
+
     def __init__(self, azimuth=0., height=0., alignE='auto', fileName=None,
-                 name='beamLine', description=''):
+                 name='beamLine', description='', **kwargs):
         u"""
         *azimuth*: float
             Is counted in cw direction from the global Y axis. At
@@ -427,6 +430,8 @@ class BeamLine(object):
 
 
         """
+
+        self.serializationRays = kwargs.pop('serializationRays', 5000)
 
         self.azimuth = azimuth
 #        self.sinAzimuth = np.sin(azimuth)  # a0
@@ -1199,7 +1204,8 @@ class BeamLine(object):
             return
 
         from .run import run_process
-        run_process(self)
+        with limited_source_rays(self, self.serializationRays):
+            run_process(self)
 
         if v2 is not None:
             warn_deprecated_glow_v2()
@@ -1333,7 +1339,8 @@ class BeamLine(object):
             return
 
         from .run import run_process
-        outDict = run_process(self)
+        with limited_source_rays(self, self.serializationRays):
+            outDict = run_process(self)
 
         namedBeams = {}
         beamLineBeams = getattr(self, 'beams', None)
@@ -1896,6 +1903,7 @@ class BeamLine(object):
             feDict[field] = feRecord
 
         blArgs = get_init_kwargs(self, compact=False)
+        blArgs['serializationRays'] = str(self.serializationRays)
 
         beamlineDict['properties'] = blArgs
         beamlineDict['_object'] = get_obj_str(self)

@@ -7,6 +7,7 @@ import warnings
 import numpy as np
 # from itertools import compress
 from collections import OrderedDict
+from contextlib import contextmanager
 from functools import wraps
 import re
 import inspect
@@ -792,6 +793,36 @@ def get_init_kwargs(oeObj, compact=True, needRevG=False, blname=None,
             pass
 
     return initArgs if compact else defArgs
+
+
+@contextmanager
+def limited_source_rays(beamline, max_rays):
+    """Temporarily cap sources with a configurable ``nrays`` argument."""
+    try:
+        max_rays = int(max_rays)
+    except (TypeError, ValueError, OverflowError):
+        max_rays = 0
+    if max_rays <= 0:
+        yield
+        return
+
+    saved = []
+    try:
+        for source in beamline.sources:
+            if 'nrays' not in dict(get_params(get_obj_str(source))):
+                continue
+            try:
+                original = source.nrays
+                if int(original) <= max_rays:
+                    continue
+                source.nrays = max_rays
+            except (AttributeError, TypeError, ValueError, OverflowError):
+                continue
+            saved.append((source, original))
+        yield
+    finally:
+        for source, original in reversed(saved):
+            source.nrays = original
 
 
 def is_valid_uuid(uuid_string):
