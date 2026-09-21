@@ -453,8 +453,9 @@ def main():
         while beamLine.analyzer.center == [0, 0, 0]:
             next(plot_generator(beamLine))  # make initial alignment
         scan = make_glow_scan()
-        beamLine.glow(scale=4, centerAt=analyzerName,
-                      scan=scan, sceneSettings=dict(rayFlag=[1,]))
+        beamLine.glow(scale=4, centerAt=analyzerName, scan=scan,
+                      sceneSettings=dict(rayFlag=[1,],
+                                         geomSrcParam={'minSize': 3.}))
         return
     plots, plotsAnalyzer, plotsDetector, plotsE, plotDetE = \
         define_plots(beamLine)
