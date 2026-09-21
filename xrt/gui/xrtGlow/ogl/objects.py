@@ -3043,10 +3043,10 @@ class OEMesh3D():
         dy = getattr(self.oe, 'dy', 0)
         dz = getattr(self.oe, 'dz', 0)
 
-        maxScale = max(np.max(np.abs(np.atleast_1d(value)))
-                       for value in (dx, dy, dz)) * 2
-        if maxScale == 0:
-            maxScale = 0.1
+        maxScale = max(
+            shape.get('minSize', 1.),
+            2 * max(np.max(np.abs(np.atleast_1d(value)))
+                    for value in (dx, dy, dz)))
         compScale = 1./scale * maxScale * np.max(scale)
 
         shader.bind()

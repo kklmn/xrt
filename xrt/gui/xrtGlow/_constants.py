@@ -132,6 +132,7 @@ DEFAULT_SCENE_SETTINGS = {
     'geomSrcParam': {
 #                     'shape': 'sddh',  # or 'sphere'
                      'shape': 'sphere',
+                     'minSize': 1.,
                      'radius': 2,
                      'stacks': 8,
                      'slices': 12,
