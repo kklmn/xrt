@@ -69,11 +69,18 @@ here).
 Generic cPGM beamline
 ~~~~~~~~~~~~~~~~~~~~~
 
-.. imagezoom:: _images/FlexPES.png
-
 This example shows a generic cPGM beamline aligned for a fixed focus regime.
 The angles at the mirrors equal 2 degrees, *c*\ :sub:`ff` = 2.25, the line
 density is 1221 mm\ :sup:`-1`\ .
+
++-------------+
+| |FlexPES3D| |
++-------------+
+| |FlexPES2D| |
++-------------+
+
+.. |FlexPES3D| imagezoom:: _images/FlexPES-3D.png
+.. |FlexPES2D| imagezoom:: _images/FlexPES-2D.png
 
 An energy scan at a given vertical slit (here, 30 µm) between M3 and M4. Shown
 are images at the slit and at the final focus 'Exp2':
