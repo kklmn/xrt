@@ -8,6 +8,11 @@ Files in ``\examples\withRaycing\08_CLAESS_BL``
 This script produces images at various positions along the beamline, see image
 captions in the enlarged figures.
 
+.. imagezoom:: _images/CLAESS-3D.png
+   :alt: &ensp;A 3D view in xrtGlow.
+   :scale: 40%
+   :align: center
+
 +------------+------------+------------+
 | |Claess01| | |Claess02| | |Claess03| |
 +------------+------------+------------+

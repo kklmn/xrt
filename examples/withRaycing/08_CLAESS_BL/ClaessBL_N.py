@@ -62,10 +62,16 @@ def build_beamline(nrays=raycing.nrays, eMinRays=550, eMaxRays=30550):
         alarmLevel=0.)
     beamLine.feMovableMaskLT = ra.RectangularAperture(
         beamLine, 'FEMovableMaskLT', (-38979.62, -21218.07, height),
-        ('left', 'top'), [-10, 3.], alarmLevel=0.5)
+        ('left', 'top'), [-10, 3.], alarmLevel=0.5,
+        renderStyle='blades',
+        renderSize={'apertureBladeWidth': 8.5,
+                    'apertureDefaultSpan': 20.})
     beamLine.feMovableMaskRB = ra.RectangularAperture(
         beamLine, 'FEMovableMaskRB', (-39262.47, -20935.23, height),
-        ('right', 'bottom'), [10, -3.], alarmLevel=0.5)
+        ('right', 'bottom'), [10, -3.], alarmLevel=0.5,
+        renderStyle='blades',
+        renderSize={'apertureBladeWidth': 8.5,
+                    'apertureDefaultSpan': 20.})
 
     beamLine.filter1 = roe.Plate(
         beamLine, 'Filter1',
@@ -114,13 +120,23 @@ def build_beamline(nrays=raycing.nrays, eMinRays=550, eMaxRays=30550):
 
     beamLine.BSBlock = ra.RectangularAperture(
         beamLine, 'BSBlock',
-        (-45988.52, -14209.17, height), ('bottom',), (22,), alarmLevel=0.)
+        (-45988.52, -14209.17, height), ('bottom',), (22,), alarmLevel=0.,
+        renderStyle='blades',
+        renderSize={'apertureBladeWidth': 50.,
+                    'apertureDefaultSpan': 50.,
+                    'apertureThickness': 75.})
     beamLine.slitAfterDCM_LR = ra.RectangularAperture(
         beamLine, 'SlitAfterDCM_LR', (-46095.65, -14102.04, height),
-        ('left', 'right'), [-25.0, 25.0], alarmLevel=0.5)
+        ('left', 'right'), [-25.0, 25.0], alarmLevel=0.5,
+        renderStyle='blades',
+        renderSize={'apertureBladeWidth': 8.5,
+                    'apertureDefaultSpan': 50.})
     beamLine.slitAfterDCM_BT = ra.RectangularAperture(
         beamLine, 'SlitAfterDCM_BT', (-46107.67, -14090.02, height),
-        ('bottom', 'top'), [27.0, 77.0], alarmLevel=0.5)
+        ('bottom', 'top'), [47.0, 57.0], alarmLevel=0.5,
+        renderStyle='blades',
+        renderSize={'apertureBladeWidth': 8.5,
+                    'apertureDefaultSpan': 50.})
     foilsZActuatorOffset = 0
     beamLine.xbpm4foils = ra.SetOfRectangularAperturesOnZActuator(
         beamLine, 'XBPM4foils', (-46137.73, -14059.97, height),
@@ -342,6 +358,7 @@ def align_beamline(
 
     p = raycing.distance_xy(beamLine.vfm.center, beamLine.fsm3.center)
     fsm3height = heightVFM - p * np.tan(2 * pitch)
+    beamLine.slitAfterDCM_LR.center[2] = fsm3height
 
     p = raycing.distance_xy(
         beamLine.vfm.center, (beamLine.xbpm4foils.center[0],
