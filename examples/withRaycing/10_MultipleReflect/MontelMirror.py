@@ -13,10 +13,10 @@ import xrt.plotter as xrtp
 import xrt.runner as xrtr
 import xrt.backends.raycing.screens as rsc
 
-showIn3D = False
+showIn3D = True
 
 mGold = rm.Material('Au', rho=19.3)
-
+#mGold = None
 E0 = 9000.
 L = 1200.
 W = 10.
@@ -63,23 +63,29 @@ def build_beamline(nrays=raycing.nrays):
         pitch=pitchVFM, yaw=-pitchHFM, **kwargsVFM)
     beamLine.HFM = mirrorHFM(
         beamLine, 'HFM', [0, p, 0], material=mGold,
-        limPhysX=[-W, -gap/2], limPhysY=[-L/2, L/2], rotationSequence='RyRzRx',
-        positionRoll=np.pi/2, pitch=pitchHFM, yaw=pitchVFM, **kwargsHFM)
-    beamLine.fsmMontel = rsc.Screen(beamLine, 'FSM-Montel', (0, p+q, 0))
+        limPhysX=[-W, -gap/2], 
+        limPhysY=[-L/2, L/2], 
+        rotationSequence='RyRzRx',
+        positionRoll=np.pi/2, 
+        pitch=pitchHFM, 
+        yaw=pitchVFM, **kwargsHFM)
+    beamLine.fsm1 = rsc.Screen(beamLine, 'FSM1', (0, p-q, 0))
+    beamLine.fsmMontel = rsc.Screen(beamLine, 'FSM-Montel', ('auto', p+q, 'auto'))
     return beamLine
 
 
 def run_process(beamLine):
     beamSource = beamLine.sources[0].shine()
     beamSource.nRefl = np.ones_like(beamSource.x)
-    beamFSM1 = beamLine.fsmMontel.expose(beamSource)
+    beamFSM1 = beamLine.fsm1.expose(beamSource)
 
     beamVFMGlobal1, beamVFMLocal = beamLine.VFM.reflect(beamSource)
     beamVFMLocal.nRefl = (beamVFMLocal.state == 1).astype(int)
     beamHFMGlobal1, beamHFMLocal = beamLine.HFM.reflect(beamVFMGlobal1)
     beamHFMLocal.nRefl = (beamHFMLocal.state == 1).astype(int) * 2
     beamHFMGlobal1.nRefl = np.array(beamVFMLocal.nRefl)
-    beamHFMGlobal1.nRefl[beamHFMLocal.nRefl > 0] = 2
+    beamHFMGlobal1.nRefl[(beamVFMLocal.nRefl > 0) &
+                         (beamHFMLocal.nRefl > 0)] = 2
     beamHFMGlobal1.state[beamHFMGlobal1.nRefl > 0] = 1
 
     beamHFMGlobal2, beamHFMLocal2 = beamLine.HFM.reflect(beamSource)
@@ -87,7 +93,8 @@ def run_process(beamLine):
     beamVFMGlobal2, beamVFMLocal2 = beamLine.VFM.reflect(beamHFMGlobal2)
     beamVFMLocal2.nRefl = (beamVFMLocal2.state == 1).astype(int) * 2
     beamVFMGlobal2.nRefl = np.array(beamHFMLocal2.nRefl)
-    beamVFMGlobal2.nRefl[beamVFMLocal2.nRefl > 0] = 2
+    beamVFMGlobal2.nRefl[(beamHFMLocal2.nRefl > 0) &
+                         (beamVFMLocal2.nRefl > 0)] = 2
     beamVFMGlobal2.state[beamVFMGlobal2.nRefl > 0] = 1
 
     beamVFMLocal.replace_by_index(beamVFMLocal2.state == 1, beamVFMLocal2)
@@ -97,15 +104,49 @@ def run_process(beamLine):
     beamMontelGlobal.replace_by_index(beamVFMGlobal2.nRefl > 0, beamVFMGlobal2)
 
     beamFSM2 = beamLine.fsmMontel.expose(beamMontelGlobal)
-    outDict = {'beamSource': beamSource, 'beamFSM1': beamFSM1,
+    outDict = {'beamSource': beamSource,
+               'beamFSM1': beamFSM1,
                'beamVFMLocal': beamVFMLocal,
                'beamHFMLocal': beamHFMLocal,
                'beamMontelGlobal': beamMontelGlobal,
                'beamFSM2': beamFSM2}
-    if showIn3D:
-        beamLine.prepare_flow()
+#    if showIn3D:
+#        beamLine.prepare_flow()
     return outDict
-rr.run_process = run_process
+
+def build_beamline_compound(nrays=raycing.nrays):
+    bmc = build_beamline(nrays)
+    mirrorH = bmc.VFM
+    bmc.montelMirror = roe.MontelMirror(
+            bl=bmc, center=mirrorH.center,
+            pitch=mirrorH.pitch, roll=mirrorH.roll, yaw=mirrorH.yaw,
+            positionRoll=mirrorH.positionRoll,
+            rotationSequence=mirrorH.rotationSequence,
+            extraPitch=mirrorH.extraPitch, extraRoll=mirrorH.extraRoll,
+            extraYaw=mirrorH.extraYaw,
+            extraRotationSequence=mirrorH.extraRotationSequence,
+            mirrorH=mirrorH, mirrorV=bmc.HFM)
+    return bmc
+
+def run_process_compound(beamLine):
+    beamSource = beamLine.sources[0].shine()
+    
+    beamFSM1 = beamLine.fsm1.expose(beamSource)
+    
+    beamMontelGlobal, beamMontelLocal1, beamMontelLocal2 =\
+        beamLine.montelMirror.double_reflect(beamSource)
+        
+    beamFSM2 = beamLine.fsmMontel.expose(beamMontelGlobal)
+    outDict = {'beamSource': beamSource,
+               'beamFSM1': beamFSM1,
+               'beamMontelLocal1': beamMontelLocal1,
+               'beamMontelLocal2': beamMontelLocal2,
+               'beamMontelGlobal': beamMontelGlobal,
+               'beamFSM2': beamFSM2}
+    return outDict
+    
+#rr.run_process = run_process
+rr.run_process = run_process_compound
 
 
 def define_plots(beamLine):
@@ -121,33 +162,33 @@ def define_plots(beamLine):
     plot.saveName = ['Montel_{0}_exit_no_mirror.png'.format(pAdd), ]
     plots.append(plot)
 
-    plot = xrtp.XYCPlotWithNumerOfReflections(
-        'beamVFMLocal', (1,), aspect='auto',
-        xaxis=xrtp.XYCAxis(r'$x$', 'mm', bins=128, limits=[-2, W+2]),
-        yaxis=xrtp.XYCAxis(r'$y$', 'mm', bins=128, limits='sym'),
-        caxis=xrtp.XYCAxis('number of reflections', '', bins=32, ppb=8,
-                           data=raycing.get_reflection_number))
-    plot.caxis.limits = [-0.1, 2.1]
-    plot.saveName = ['Montel_{0}_localVFM_n.png'.format(pAdd), ]
-    plots.append(plot)
-
-    plot = xrtp.XYCPlotWithNumerOfReflections(
-        'beamHFMLocal', (1,), aspect='auto',
-        xaxis=xrtp.XYCAxis(r'$x$', 'mm', bins=128, limits=[-W-2, 2]),
-        yaxis=xrtp.XYCAxis(r'$y$', 'mm', bins=128, limits='sym'),
-        caxis=xrtp.XYCAxis('number of reflections', '', bins=32, ppb=8,
-                           data=raycing.get_reflection_number))
-    plot.caxis.limits = [-0.1, 2.1]
-    plot.saveName = ['Montel_{0}_localHFM_n.png'.format(pAdd), ]
-    plots.append(plot)
-
-    plot = xrtp.XYCPlotWithNumerOfReflections(
-        'beamFSM2', (1, 3, -1, -2),
-        xaxis=xrtp.XYCAxis(r'$x$', 'mm', bins=128, limits=[-10, 20]),
-        yaxis=xrtp.XYCAxis(r'$z$', 'mm', bins=128, limits=[-10, 20]),
-        caxis='category', title='FSM2_Es')
-    plot.saveName = ['Montel_{0}_exit_cat.png'.format(pAdd), ]
-    plots.append(plot)
+#    plot = xrtp.XYCPlotWithNumerOfReflections(
+#        'beamVFMLocal', (1,), aspect='auto',
+#        xaxis=xrtp.XYCAxis(r'$x$', 'mm', bins=128, limits=[-2, W+2]),
+#        yaxis=xrtp.XYCAxis(r'$y$', 'mm', bins=128, limits='sym'),
+#        caxis=xrtp.XYCAxis('number of reflections', '', bins=32, ppb=8,
+#                           data=raycing.get_reflection_number))
+#    plot.caxis.limits = [-0.1, 2.1]
+#    plot.saveName = ['Montel_{0}_localVFM_n.png'.format(pAdd), ]
+#    plots.append(plot)
+#
+#    plot = xrtp.XYCPlotWithNumerOfReflections(
+#        'beamHFMLocal', (1,), aspect='auto',
+#        xaxis=xrtp.XYCAxis(r'$x$', 'mm', bins=128, limits=[-W-2, 2]),
+#        yaxis=xrtp.XYCAxis(r'$y$', 'mm', bins=128, limits='sym'),
+#        caxis=xrtp.XYCAxis('number of reflections', '', bins=32, ppb=8,
+#                           data=raycing.get_reflection_number))
+#    plot.caxis.limits = [-0.1, 2.1]
+#    plot.saveName = ['Montel_{0}_localHFM_n.png'.format(pAdd), ]
+#    plots.append(plot)
+#
+#    plot = xrtp.XYCPlotWithNumerOfReflections(
+#        'beamFSM2', (1, 3, -1, -2),
+#        xaxis=xrtp.XYCAxis(r'$x$', 'mm', bins=128, limits=[-10, 20]),
+#        yaxis=xrtp.XYCAxis(r'$z$', 'mm', bins=128, limits=[-10, 20]),
+#        caxis='category', title='FSM2_Es')
+#    plot.saveName = ['Montel_{0}_exit_cat.png'.format(pAdd), ]
+#    plots.append(plot)
 
     plot = xrtp.XYCPlotWithNumerOfReflections(
         'beamFSM2', (1, 3, -1),
@@ -168,13 +209,15 @@ def define_plots(beamLine):
 
 
 def main():
-    beamLine = build_beamline()
+    beamLine = build_beamline_compound()
+#    beamLine = build_beamline()
     if showIn3D:
-        beamLine.glow(scale=[300, 3, 300], centerAt='VFM')
+#        beamLine.glow(scale=[300, 3, 300], centerAt='VFM')
+        beamLine.explore()
         return
     plots = define_plots(beamLine)
-    xrtr.run_ray_tracing(plots, repeats=40, beamLine=beamLine,
-                         processes='half')
+    xrtr.run_ray_tracing(plots, repeats=4, beamLine=beamLine,
+                         processes=4)
 
 
 if __name__ == '__main__':
