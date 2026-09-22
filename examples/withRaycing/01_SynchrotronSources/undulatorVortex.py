@@ -85,6 +85,7 @@ beam angular distributions (360 µrad vs 5.8 and 2.0 µrad rms).
 """
 __author__ = "Konstantin Klementiev"
 __date__ = "22 Jan 2023"
+
 import os, sys; sys.path.append(os.path.join('..', '..', '..'))  # analysis:ignore
 import time
 import pickle

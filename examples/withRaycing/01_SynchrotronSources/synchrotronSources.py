@@ -221,6 +221,20 @@ of the 3rd harmonic with the triple energy of the 1st harmonic.
     for xrt screens: z is along the beam direction in the tabulation and as a
     vertical axis in xrt.
 
+View the trajectory in 3D (set `showIn3D = True`):
+
++----------------+----------------+
+|  no emittance  | with emittance |
++----------------+----------------+
+|     |traj0|    |     |traj1|    |
++----------------+----------------+
+
+.. |traj0| imagezoom:: _images/traj3DnoEmittance.png
+   :scale: 50 %
+.. |traj1| imagezoom:: _images/traj3DwithEmittance.png
+   :scale: 50 %
+   :loc: upper-right-corner
+
 +--------------------+--------------------------+--------------------------+
 |                    |         periodic         |       quasi-periodic     |
 +====================+==========================+==========================+
@@ -323,7 +337,7 @@ import xrt.runner as xrtr
 showIn3D = False
 
 # one of 'u', 'w', 'bm', 'eu', 'wu':
-sourceType = 'eu'
+sourceType = 'u'
 # one of 'mono', '1harmonic', 'smaller', 'wide'
 energyRange = '1harmonic'
 # energyRange = 'mono'
@@ -394,7 +408,7 @@ elif sourceType == 'bm':
     pprefix = '4'+sourceType+whose
     Source = rs.BendingMagnet if isInternalSource else rs.BendingMagnetWS
     kwargs = dict(B0=1.7, eI=0.1, eE=3.)
-#    kwargs['uniformRayDensity'] = True
+    # kwargs['uniformRayDensity'] = True
     xlimits = [-40, 40]
     zlimits = [-20, 20]
     xlimitsZoom = [-8, 8]
@@ -432,8 +446,8 @@ elif sourceType == 'wu':  # wiggler by undulator code
     zlimits = [-20, 20]
     xlimitsZoom = [-5, 5]
     zlimitsZoom = [-5, 5]
-#    kwargs['uniformRayDensity'] = True
-#    kwargs['gIntervals'] = 99
+    # kwargs['uniformRayDensity'] = True
+    # kwargs['gIntervals'] = 99
     kwargs['zPrimeMaxAutoReduce'] = False
     xPrimelimits = [-2.3, 2.3]
     limitsFSM0X = [-1000, 1000]
@@ -516,7 +530,6 @@ def run_process(beamLine):
     if showIn3D:
         beamLine.prepare_flow()
     return outDict
-
 rr.run_process = run_process
 
 

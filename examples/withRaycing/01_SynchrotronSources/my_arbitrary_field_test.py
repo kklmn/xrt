@@ -19,29 +19,29 @@ suffix = '_average'
 # Integration grid (per period)
 nRKPoins = 30
 
-#kwargs = dict(eE=1.5, period=84., n=36)
-#eEpsilonX = 4e-9
-#eEpsilonZ = 0.04e-9
-#betaX = 5.66
-#betaZ = 2.85
-#sigmaX = (eEpsilonX * betaX)**0.5
-#sigmaXp = (eEpsilonX / betaX)**0.5
-#print(u'sigmaX={} µm'.format(sigmaX*1e6))
-#print(u'sigmaXp={} mrad'.format(sigmaXp*1e6))
-#sigmaZ = (eEpsilonZ * betaZ)**0.5
-#sigmaZp = (eEpsilonZ / betaZ)**0.5
-#print(u'sigmaZ={} µm'.format(sigmaZ*1e6))
-#print(u'sigmaZp={} mrad'.format(sigmaZp*1e6))
+# kwargs = dict(eE=1.5, period=84., n=36)
+# eEpsilonX = 4e-9
+# eEpsilonZ = 0.04e-9
+# betaX = 5.66
+# betaZ = 2.85
+# sigmaX = (eEpsilonX * betaX)**0.5
+# sigmaXp = (eEpsilonX / betaX)**0.5
+# print(u'sigmaX={} µm'.format(sigmaX*1e6))
+# print(u'sigmaXp={} mrad'.format(sigmaXp*1e6))
+# sigmaZ = (eEpsilonZ * betaZ)**0.5
+# sigmaZp = (eEpsilonZ / betaZ)**0.5
+# print(u'sigmaZ={} µm'.format(sigmaZ*1e6))
+# print(u'sigmaZp={} mrad'.format(sigmaZp*1e6))
 
-#sheet, prefix = 'EPU_HP_mode', '1'
-#sheet, prefix = 'QEPU_HP_mode', '2'
-#sheet, prefix = 'EPU_VP_mode', '3'
-#sheet, prefix = 'QEPU_VP_mode', '4'
-#customField = ['B-Hamed.xlsx', dict(sheetname=sheet, skiprows=0)]
+# sheet, prefix = 'EPU_HP_mode', '1'
+# sheet, prefix = 'QEPU_HP_mode', '2'
+# sheet, prefix = 'EPU_VP_mode', '3'
+# sheet, prefix = 'QEPU_VP_mode', '4'
+# customField = ['B-Hamed.xlsx', dict(sheetname=sheet, skiprows=0)]
 
-#kwargs = dict(eE=3, period=18.5*3, n=108/3, targetE=[9000, 7])
+# kwargs = dict(eE=3, period=18.5*3, n=108/3, targetE=[9000, 7])
 kwargs = dict(eE=2.739, period=20., n=98, K=1.7425)
-#kwargs = dict(eE=2.739, period=20., n=98, targetE=[12700, 9])
+# kwargs = dict(eE=2.739, period=20., n=98, targetE=[12700, 9])
 customField = 20.
 
 eE = kwargs['eE']  # [GeV]
@@ -536,14 +536,14 @@ def iterate_rk():
             plt.plot(z[:-1], vgrid[:-2] - beta_ref[0])
             plt.title(r"$\beta_x$ $_{integrated}$ - $\beta_x$ $_{direct}$")
             plt.xlabel(r"z, mm")
-            plt.ylabel(u"$\Delta\beta_x$, µm")
+            plt.ylabel(r"$\Delta\beta_x$, µm")
             plt.savefig("beta_x_calc - beta_x_ref"+suffix+'.png')
 
             plt.figure(12)
             plt.plot(z[:-1], ugrid[:-2] - beta_ref[1])
             plt.title(r"$\beta_y$ $_{integrated}$ - $\beta_y$ $_{direct}$")
             plt.xlabel(r"z, mm")
-            plt.ylabel(u"$\Delta\beta_y$, µ$m")
+            plt.ylabel(r"$\Delta\beta_y$, µ$m")
             plt.savefig("beta_y_calc - beta_y_ref"+suffix+'.png')
 
             plt.figure(13)
@@ -551,7 +551,7 @@ def iterate_rk():
                      (np.array(xgrid[:-2])-np.array(r_ref[0])*wu)/tgwmm * 1e3)
             plt.title(r"x$_{integrated}$ - x$_{direct}$")
             plt.xlabel(r"z, mm")
-            plt.ylabel(u"$\Delta$x, µm")
+            plt.ylabel(r"$\Delta$x, µm")
             plt.savefig("x_calc - x_ref"+suffix+'.png')
 
             plt.figure(14)
@@ -559,7 +559,7 @@ def iterate_rk():
                      (np.array(ygrid[:-2])-np.array(r_ref[1])*wu)/tgwmm * 1e3)
             plt.title(r"y$_{integrated}$ - y$_{direct}$")
             plt.xlabel(r"z, mm")
-            plt.ylabel(u"$\Delta$y, µm")
+            plt.ylabel(r"$\Delta$y, µm")
             plt.savefig("y_calc - y_ref"+suffix+'.png')
 
             plt.figure(15)

@@ -46,7 +46,7 @@ kwargs = dict(
     eE=3., eI=0.5, eEspread=0.001,
     eEpsilonX=0.263, eEpsilonZ=0.008, betaX=9.539, betaZ=1.982,
     period=18.5, n=108, K=K,
-#    targetOpenCL='CPU',
+    # targetOpenCL='CPU',
     xPrimeMax=accMax, zPrimeMax=accMax,
     xPrimeMaxAutoReduce=False, zPrimeMaxAutoReduce=False)
 if 'near' in prefix:

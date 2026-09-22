@@ -31,7 +31,7 @@ def build_beamline(nrays=2e6):
         period=31.4, K=2.1392-0.002, n=63, eE=6.08, eI=0.1, xPrimeMax=1.5e-2,
         zPrimeMax=1.5e-2, eMin=eMin, eMax=eMax, distE='BW',
         xPrimeMaxAutoReduce=False, zPrimeMaxAutoReduce=False,
-#        targetOpenCL='CPU',
+        # targetOpenCL='CPU',
         targetOpenCL='SERVER_ADDRESS:15559',
         taper=(1.09, 11.254))
     beamLine.fsm1 = rsc.Screen(beamLine, 'FSM1', (0, 90000, 0))
@@ -46,7 +46,6 @@ def run_process(beamLine):
     if showIn3D:
         beamLine.prepare_flow()
     return outDict
-
 rr.run_process = run_process
 
 
@@ -95,8 +94,8 @@ def main():
 
 
 def plot_compare():
-    fig1 = plt.figure(1, figsize=(7, 5))
-    ax = plt.subplot(111, label='1')
+    fig1 = plt.figure(figsize=(7, 5))
+    ax = fig1.add_subplot(111)
     ax.set_xlabel(u'energy (keV)')
     ax.set_ylabel(u'flux (a.u.)')
 
@@ -115,8 +114,8 @@ def plot_compare():
     except:  # analysis:ignore
         pass
 
-#    e, f = np.loadtxt('yaup-0.out', skiprows=32, usecols=[0, 1], unpack=True)
-#    ax.plot(e*1e-3, f/max(f), 'g', label='calculated by YAUP/XOP', lw=2)
+    # e, f = np.loadtxt('yaup-0.out', skiprows=32, usecols=[0, 1], unpack=True)
+    # ax.plot(e*1e-3, f/max(f), 'g', label='calculated by YAUP/XOP', lw=2)
 
     theta, fl = np.loadtxt("thetaexafssc1an_zn_hgap_00002r2.fio.gz",
                            skiprows=113, usecols=(0, 5), unpack=True)
@@ -124,8 +123,8 @@ def plot_compare():
     E = rm.ch / (2 * si_1.d * np.sin(np.radians(theta)))
     ax.plot(E*1e-3, fl/max(fl), 'k', lw=2, label='measured @ Petra3')
 
-#    ax2.set_xlim(0, None)
-#    ax2.set_ylim(1.400, 1.600)
+    # ax2.set_xlim(0, None)
+    # ax2.set_ylim(1.400, 1.600)
     ax.legend(loc='lower center')
 
     fig1.savefig('compareTaper.png')

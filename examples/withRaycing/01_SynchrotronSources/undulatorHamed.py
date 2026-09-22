@@ -2,15 +2,15 @@
 __author__ = "Konstantin Klementiev", "Roman Chernikov"
 __date__ = "08 Mar 2016"
 
-#import matplotlib
-#matplotlib.use('agg')
+# import matplotlib
+# matplotlib.use('agg')
 
 import os, sys; sys.path.append(os.path.join('..', '..', '..'))  # analysis:ignore
 import numpy as np
 import pickle
 import time
 import matplotlib as mpl
-#matplotlib.use("Agg")
+# matplotlib.use("Agg")
 import xrt.backends.raycing as raycing
 raycing._VERBOSITY_ = 80
 import xrt.backends.raycing.sources as rs
@@ -20,31 +20,31 @@ import xrt.backends.raycing.coherence as rco
 import xrt.plotter as xrtp
 import xrt.runner as xrtr
 
-showIn3D = False
+showIn3D = True
 
 suffix = ''
 R0 = 25000
 xPrimeMax = 0.6
 zPrimeMax = 0.6
 repeats = 100
-#repeats = 5
+# repeats = 5
 
-#sheet, prefix = 'EPU_HP_mode', '1'
-#sheet, prefix = 'EPU_VP_mode', '3'
+# sheet, prefix = 'EPU_HP_mode', '1'
+# sheet, prefix = 'EPU_VP_mode', '3'
 sheet, prefix = 'QEPU_HP_mode', '2'
-#sheet, prefix = 'QEPU_VP_mode', '4'
+# sheet, prefix = 'QEPU_VP_mode', '4'
 
 prefix += sheet
 
-#prefix += '-1-band'
-#prefix += '-2-1stHarmonic'
-#prefix += '-3-mono1stHarmonic'
-#prefix += '-4-2ndHarmonic'
-#prefix += '-5-mono2ndHarmonic'
-#prefix += '-6-3rdHarmonic'
+# prefix += '-1-band'
+# prefix += '-2-1stHarmonic'
+# prefix += '-3-mono1stHarmonic'
+# prefix += '-4-2ndHarmonic'
+# prefix += '-5-mono2ndHarmonic'
+# prefix += '-6-3rdHarmonic'
 prefix += '-7-mono3rdHarmonic'
-#prefix += '-8-5thHarmonic'
-#prefix += '-9-mono5thHarmonic'
+# prefix += '-8-5thHarmonic'
+# prefix += '-9-mono5thHarmonic'
 
 fixedEnergy = False
 filamentBeam = True
@@ -83,7 +83,7 @@ if 'mono' in prefix:
                 fixedEnergy = 32.0
         else:
             if 'QEPU' in prefix:
-#                fixedEnergy = 20.65
+                # fixedEnergy = 20.65
                 fixedEnergy = 20.5
             else:
                 fixedEnergy = 21.45
@@ -101,7 +101,7 @@ if 'mono' in prefix:
     else:
         raise ValueError('unknown harmonic')
     prefix += '-E={0:.2f}eV'.format(fixedEnergy)
-#    filamentBeam = True
+    # filamentBeam = True
 elif 'Harm' in prefix:
     if '1st' in prefix:
         if 'VP' in prefix:
@@ -168,7 +168,8 @@ kwargs = dict(
 xlimits = [-xPrimeMax*R0*1e-3, xPrimeMax*R0*1e-3]
 zlimits = [-zPrimeMax*R0*1e-3, zPrimeMax*R0*1e-3]
 kwargs['customField'] = ['B-Hamed.xlsx', dict(sheet_name=sheet, skiprows=0)]
-#kwargs['customField'] = 10.
+# kwargs['customField'] = 10.
+# kwargs['customField'] = 'QEPU_HP_mode.txt'
 
 if False:  # zero source size:
     kwargs['eEpsilonX'] = 0
@@ -203,7 +204,6 @@ def run_process(beamLine):
     if showIn3D:
         beamLine.prepare_flow()
     return outDict
-
 rr.run_process = run_process
 
 
@@ -432,5 +432,5 @@ def plotPCA():
 
 
 if __name__ == '__main__':
-    main()
-#    plotPCA()
+    main()  # when this one is done, comment it un uncomment plotPCA()
+    # plotPCA()

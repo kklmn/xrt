@@ -1,6 +1,6 @@
 ﻿# -*- coding: utf-8 -*-
 import os, sys; sys.path.append(os.path.join('..', '..', '..'))  # analysis:ignore
-#import matplotlib as mpl
+# import matplotlib as mpl
 import copy
 import numpy as np
 import matplotlib.pyplot as plt
@@ -13,10 +13,12 @@ import xrt.backends.raycing.sources as rs
 from xrt.backends.raycing.physconsts import SIE0
 
 withUndulator = True
-#withUndulator = False
-#withUrgentUndulator = True
+# withUndulator = False
+
+# withUrgentUndulator = True
 withUrgentUndulator = False
-#withSRWUndulator = True
+
+# withSRWUndulator = True
 withSRWUndulator = False
 
 
@@ -26,9 +28,9 @@ def run(case):
     thetaMax, psiMax = 500e-6, 500e-6
     if case == 'Balder':
         Kmax = 8.446
-#        Kmax = 3
+        # Kmax = 3
         thetaMax, psiMax = 200e-6, 50e-6
-#        thetaMax, psiMax = 1130e-6/2, 1180e-6/2  # asked by Magnus
+        # thetaMax, psiMax = 1130e-6/2, 1180e-6/2  # asked by Magnus
         eMax, eN = 400100, 401
         kwargs = dict(name='SoleilW50', eE=3.0, eI=0.5,
                       eEpsilonX=0.263, eEpsilonZ=0.008, betaX=9., betaZ=2.,
@@ -43,8 +45,8 @@ def run(case):
                       xPrimeMax=thetaMax*1e3, zPrimeMax=psiMax*1e3, distE='BW')
     elif case == 'Veritas' or case == 'Hippie':
         thetaMax, psiMax = 100e-6, 50e-6
-#        thetaMax, psiMax = 100e-6, 200e-6  # asked by Magnus
-#        thetaMax, psiMax = 500e-6, 500e-6  # asked by Magnus
+        # thetaMax, psiMax = 100e-6, 200e-6  # asked by Magnus
+        # thetaMax, psiMax = 500e-6, 500e-6  # asked by Magnus
         kwargs = dict(name='U48', eE=3.0, eI=0.5,
                       eEpsilonX=0.263, eEpsilonZ=0.008, betaX=9., betaZ=2.,
                       eMax=eMax,
@@ -62,8 +64,8 @@ def run(case):
     energy = np.linspace(100., eMax, eN)
     theta = np.linspace(-1, 1, 101) * thetaMax
     psi = np.linspace(-1, 1, 101) * psiMax
-#    theta = np.linspace(-1, 1, 15) * thetaMax
-#    psi = np.linspace(-1, 1, 15) * psiMax
+    # theta = np.linspace(-1, 1, 15) * thetaMax
+    # psi = np.linspace(-1, 1, 15) * psiMax
     dtheta, dpsi = theta[1] - theta[0], psi[1] - psi[0]
     I0W = sourceW.intensities_on_mesh(energy, theta, psi)[0]
     fluxW = I0W.sum(axis=(1, 2)) * dtheta * dpsi
@@ -79,9 +81,9 @@ def run(case):
 
     if withUrgentUndulator:
         ukwargs = copy.copy(kwargs)
-        del(ukwargs['distE'])
-        del(ukwargs['betaX'])
-        del(ukwargs['betaZ'])
+        del ukwargs['distE']
+        del ukwargs['betaX']
+        del ukwargs['betaZ']
         ukwargs['eSigmaX'] = (kwargs['eEpsilonX']*kwargs['betaX']*1e3)**0.5
         ukwargs['eSigmaZ'] = (kwargs['eEpsilonZ']*kwargs['betaZ']*1e3)**0.5
         ukwargs['eMin'] = energy[0]
@@ -105,9 +107,9 @@ def run(case):
         fluxSRWU = I0SRW.sum(axis=(1, 2)) * dtheta * dpsi
 
     if withUndulator:
-#        kwargs['targetOpenCL'] = None
-#        kwargs['taper'] = 0, 4.2
-#        kwargs['gp'] = 1e-4  # needed if does not converge
+        # kwargs['targetOpenCL'] = None
+        # kwargs['taper'] = 0, 4.2
+        # kwargs['gp'] = 1e-4  # needed if does not converge
         sourceU = rs.Undulator(**kwargs)
         I0U = sourceU.intensities_on_mesh(energy, theta, psi)[0]
         fluxU = I0U.sum(axis=(1, 2)) * dtheta * dpsi
@@ -124,9 +126,9 @@ def run(case):
     ax2.yaxis.set_ticks_position('left')
     ax2.patch.set_visible(False)
     for ax, lw in zip([ax1, ax2], [2, 2]):
-    #    plot = ax.plot
+        # plot = ax.plot
         plot = ax.semilogy
-    #    plot = ax.loglog
+        # plot = ax.loglog
         plot(energy/1000., fluxW, '-', lw=lw, alpha=0.7,
              label='xrt, as wiggler')
         if withUndulator:
@@ -139,8 +141,8 @@ def run(case):
                 plot(energySRW/1000., fluxSRWU, '-', lw=lw, alpha=0.7,
                      label='SRW (zero emittance)')
             if case == 'BioMAX & NanoMAX':  # Spectra results
-    #            fnames = ['bionano2.dc0', 'bionano3.dc0']
-    #            labels = ['Spectra, accuracy {0}'.format(i) for i in [2, 3]]
+                # fnames = ['bionano2.dc0', 'bionano3.dc0']
+                # labels = ['Spectra, accuracy {0}'.format(i) for i in [2, 3]]
                 fnames = ['bionano3.dc0']
                 labels = ['Spectra']
                 for fname, label in zip(fnames, labels):
