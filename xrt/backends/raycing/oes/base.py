@@ -52,7 +52,8 @@ allArguments = ['bl', 'name', 'center', 'bragg', 'pitch', 'roll', 'yaw',
                 'isCentralZoneBlack', 'thinnestZone', 'f1', 'f2', 'pAxis',
                 'parabolaAxis', 'phaseShift', 'vorticity', 'grazingAngle',
                 'blaze', 'antiblaze', 'rho', 'aspect', 'depth', 'coeffs',
-                'targetOpenCL', 'precisionOpenCL', 'fileName', 'recenter',
+                'targetOpenCL', 'precisionOpenCL', 'propagationMode',
+                'fileName', 'recenter',
                 'orientation', 'figureError', 'surfaceHint']
 
 
@@ -1113,6 +1114,11 @@ class OE(OEMainMethods):
             material.kind = 'grating'
         else:
             material.kind = 'mirror'
+
+    def _get_material_kind(self, material):
+        if material.kind == 'auto':
+            self.assign_auto_material_kind(material)
+        return material.kind
 
     def rays_good(self, x, y, z, is2ndXtal=False):
         """Returns *state* value for a ray with the given intersection point

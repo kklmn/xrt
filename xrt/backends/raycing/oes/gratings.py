@@ -4,6 +4,7 @@ from scipy import interpolate
 
 from ... import raycing
 from ..physconsts import CH
+from ..materials import EmptyMaterial
 from .base import OE
 
 
@@ -313,21 +314,77 @@ class GeneralFZPin0YZ(OE):
         return locState, gn
 
 
-class BlazedGrating(OE):
+class ProfiledGrating(OE):
+    """Common ray and wave propagation dispatch for profiled gratings."""
+
+    def __init__(self, *args, **kwargs):
+        self.propagationMode = kwargs.pop('propagationMode', 'wave')
+        super().__init__(*args, **kwargs)
+        if self.propagationMode == 'rays' and self.material is None:
+            self.material = EmptyMaterial()
+        if self.propagationMode == 'rays':
+            warning = (
+                "{0} uses propagationMode='rays'. Diffraction is approximated "
+                "by the grating equation on the macroscopic surface. "
+                "Diffraction efficiency is not calculated automatically; "
+                "provide it explicitly in the material if needed.".format(
+                    self.name if self.name else self.__class__.__name__))
+            warning = raycing.colorama.Style.BRIGHT + warning + \
+                raycing.colorama.Style.RESET_ALL
+            raycing.colorPrint(warning, 'RED')
+
+    @property
+    def propagationMode(self):
+        return self._propagationMode
+
+    @propagationMode.setter
+    def propagationMode(self, propagationMode):
+        if isinstance(propagationMode, raycing.basestring):
+            propagationMode = propagationMode.lower()
+        if propagationMode not in ('rays', 'wave'):
+            propagationMode = 'wave'
+            print("Unknown propagationMode, defaults to 'wave'")
+        self._propagationMode = propagationMode
+
+    def assign_auto_material_kind(self, material):
+        material.kind = 'grating' if self.propagationMode == 'rays' \
+            else 'mirror'
+
+    def _get_material_kind(self, material):
+        if self.propagationMode == 'rays':
+            return 'grating'
+        return super()._get_material_kind(material)
+
+    def local_z(self, x, y):
+        if self.propagationMode == 'rays':
+            return super().local_z(x, y)
+        return self._local_z_wave(x, y)
+
+    def local_n(self, x, y):
+        if self.propagationMode == 'rays':
+            return super().local_n(x, y)
+        return self._local_n_wave(x, y)
+
+    def find_intersection(self, local_f, t1, t2, x, y, z, a, b, c,
+                          invertNormal, derivOrder=0):
+        if self.propagationMode == 'rays':
+            return super().find_intersection(
+                local_f, t1, t2, x, y, z, a, b, c, invertNormal,
+                derivOrder)
+        return self._find_intersection_wave(
+            local_f, t1, t2, x, y, z, a, b, c, invertNormal, derivOrder)
+
+
+class BlazedGrating(ProfiledGrating):
     r"""Implements a grating of triangular shape given by two angles. The front
     side of the triangle (the one looking towards the source) is at *blaze*
     angle to the base plane. The back side is at *antiblaze* angle.
 
-    .. note::
-
-        In contrast to the geometric implementation of the grating diffraction
-        when the deflection is calculated by the grating equation, the
-        diffraction by :class:`BlazedGrating` **is meant to be used by the wave
-        propagation methods**\ , see :ref:`gallery3`. In those methods, the
-        diffraction is not given by the grating equation but by the *surface
-        itself* through the calculation of the Kirchhoff integral. Therefore
-        the surface material should not have the property ``kind='grating'``
-        but rather ``kind='mirror'``.
+    With ``propagationMode='wave'``, diffraction is produced by the developed
+    surface itself through the Kirchhoff integral, see :ref:`gallery3`. The
+    surface material is then used as a mirror. With
+    ``propagationMode='rays'``, the developed profile is replaced by its flat
+    macroscopic surface and diffraction is calculated by the grating equation.
 
     A usual optical element (of class :class:`OE`) with such a developed
     surface would have troubles in finding correct intersection points because
@@ -364,10 +421,15 @@ class BlazedGrating(OE):
             use *gratingDensity* from the parental class :class:`OE` with the
             1st argument 'y' (i.e. along y-axis).
 
+        *propagationMode*: 'wave' or 'rays'
+            Selects the physical groove profile used for wave propagation or
+            the idealized macroscopic grating used for ray propagation. The
+            backward-compatible default is 'wave'.
+
 
         """
         kwargs = self.__pop_kwargs(**kwargs)
-        OE.__init__(self, *args, **kwargs)
+        ProfiledGrating.__init__(self, *args, **kwargs)
         self.reset()
 
     @property
@@ -407,18 +469,28 @@ class BlazedGrating(OE):
         self.reset()
 
     def __pop_kwargs(self, **kwargs):
-        self.blaze = raycing.auto_units_angle(kwargs.pop('blaze'))
+        self.blaze = raycing.auto_units_angle(kwargs.pop('blaze', 0.05))
         self.antiblaze = raycing.auto_units_angle(
             kwargs.pop('antiblaze', np.pi*0.4999))
-        self.rho0 = kwargs.pop('rho', 1)
+        self.rho0 = kwargs.pop('rho', 500)
+        if kwargs.get('gratingDensity') is None:
+            kwargs['gratingDensity'] = ['y', self.rho0, 1]
         return kwargs
 
     def reset(self):
         if all([hasattr(self, field) for field in ['rho0', 'gratingDensity',
                                                    'blaze', 'antiblaze']]):
             if self.gratingDensity is not None:
-                self.rho0 = self.gratingDensity[1]
+                self._rho0 = self.gratingDensity[1]
                 self.coeffs = self.gratingDensity[2:]
+                constantCoeffs = [1.] + [0.] * (len(self.coeffs)-1)
+                self._variableDensity = not np.allclose(
+                    self.coeffs, constantCoeffs)
+            else:
+                self._variableDensity = False
+
+            self.ticks = np.array([])
+            if self.propagationMode == 'wave' and self._variableDensity:
                 self.ticks = []
                 lim = self.limOptY if self.limOptY is not None else \
                     self.limPhysY
@@ -455,11 +527,8 @@ class BlazedGrating(OE):
             poly += coeff * coord**(ic+1)
         return self.rho0 * poly
 
-    def assign_auto_material_kind(self, material):
-        material.kind = 'mirror'  # to be used with wave propagation
-
     def local_pre(self, x, y):
-        if self.gratingDensity is not None:
+        if self._variableDensity:
             y0ind = np.searchsorted(self.ticks[:-1], y) - 1
             y0 = self.ticks[y0ind]
             y1 = self.ticks[y0ind+1]
@@ -472,27 +541,27 @@ class BlazedGrating(OE):
         yC = (y1-y0) / (1 + self.tanAntiblaze/self.tanBlaze)
         return y0ind, y0, y1, yC, yL
 
-    def local_z(self, x, y):
+    def _local_z_wave(self, x, y):
         y0ind, y0, y1, yC, yL = self.local_pre(x, y)
         z = np.where(yL > yC, -(y1-y) * self.tanBlaze, -yL * self.tanAntiblaze)
-        if self.gratingDensity is not None:
+        if self._variableDensity:
             z[(y0ind < 1) | (y0ind > len(self.ticks)-2)] = 0
         return z
 
-    def local_n(self, x, y):
+    def _local_n_wave(self, x, y):
         y0ind, y0, y1, yC, yL = self.local_pre(x, y)
         n = [np.zeros_like(x),
              np.where(yL > yC, -self.sinBlaze, self.sinAntiblaze),
              np.where(yL > yC, self.cosBlaze, self.cosAntiblaze)]
-        if self.gratingDensity is not None:
+        if self._variableDensity:
             n[1][(y0ind < 1) | (y0ind > len(self.ticks)-2)] = 0.
             n[2][(y0ind < 1) | (y0ind > len(self.ticks)-2)] = 1.
         return n
 
-    def find_intersection(self, local_f, t1, t2, x, y, z, a, b, c,
-                          invertNormal, derivOrder=0):
+    def _find_intersection_wave(self, local_f, t1, t2, x, y, z, a, b, c,
+                                invertNormal, derivOrder=0):
         b_c = b / c
-        if self.gratingDensity is not None:
+        if self._variableDensity:
             y0ind = np.searchsorted(self.ticks[:-1], y - b_c*z) - 1
             y0 = self.ticks[y0ind]
             y1 = self.ticks[y0ind+1]
@@ -535,7 +604,7 @@ class BlazedGrating(OE):
         return d * self.rho0
 
 
-class LaminarGrating(OE):
+class LaminarGrating(ProfiledGrating):
     """
     Implements a grating of rectangular profile.
 
@@ -552,10 +621,15 @@ class LaminarGrating(OE):
         *depth*: float
             Depth of the groove in mm.
 
+        *propagationMode*: 'wave' or 'rays'
+            Selects the physical groove profile used for wave propagation or
+            the idealized macroscopic grating used for ray propagation. The
+            backward-compatible default is 'wave'.
+
 
         """
         kwargs = self.__pop_kwargs(**kwargs)
-        OE.__init__(self, *args, **kwargs)
+        ProfiledGrating.__init__(self, *args, **kwargs)
 #        self.rho_1 = 1. / self.rho  # Period of the grating in [mm]
         self.illuminatedGroove = 0
 
@@ -569,15 +643,14 @@ class LaminarGrating(OE):
         self.rho_1 = 1. / self.rho0
 
     def __pop_kwargs(self, **kwargs):
-        self.rho = kwargs.pop('rho')
+        self.rho0 = kwargs.pop('rho', 500)
         self.aspect = kwargs.pop('aspect', 0.5)
         self.depth = kwargs.pop('depth', 1e-3)
+        if kwargs.get('gratingDensity') is None:
+            kwargs['gratingDensity'] = ['y', self.rho0, 1]
         return kwargs
 
-    def assign_auto_material_kind(self, material):
-        material.kind = 'mirror'  # to be used with wave propagation
-
-    def local_z(self, x, y):
+    def _local_z_wave(self, x, y):
         yL = y % self.rho_1
         z = np.array(np.zeros_like(y))
         groove = self.rho_1 * (1.-self.aspect)
@@ -585,7 +658,7 @@ class LaminarGrating(OE):
         z[rindex] = -self.depth
         return z
 
-    def local_n(self, x, y):
+    def _local_n_wave(self, x, y):
         yL = y % self.rho_1
         groove = self.rho_1 * (1.-self.aspect)
         norm_x = np.zeros_like(y)
@@ -599,8 +672,8 @@ class LaminarGrating(OE):
         norm_z[rindex] = 0
         return [norm_x, norm_y, norm_z]
 
-    def find_intersection(self, local_f, t1, t2, x, y, z, a, b, c,
-                          invertNormal, derivOrder=0):
+    def _find_intersection_wave(self, local_f, t1, t2, x, y, z, a, b, c,
+                                invertNormal, derivOrder=0):
         # t0 = time.time()
         b_c = b / c
         a_c = a / c
@@ -652,7 +725,7 @@ class LaminarGrating(OE):
         return self.aspect + self.illuminatedGroove
 
 
-class VLSLaminarGrating(OE):
+class VLSLaminarGrating(ProfiledGrating):
     """
     Implements a grating of rectangular profile with variable period.
 
@@ -669,16 +742,25 @@ class VLSLaminarGrating(OE):
         For the VLS density, use *gratingDensity* of the parental class
         :class:`OE` with the 1st argument 'y' (i.e. along y-axis).
 
+        *propagationMode*: 'wave' or 'rays'
+            Selects the physical groove profile used for wave propagation or
+            the idealized macroscopic grating used for ray propagation. The
+            backward-compatible default is 'wave'.
+
 
         """
         kwargs = self.__pop_kwargs(**kwargs)
-        OE.__init__(self, *args, **kwargs)
+        ProfiledGrating.__init__(self, *args, **kwargs)
 
     def reset(self):
         if self.gratingDensity is not None:
             self.rho0 = self.gratingDensity[1]
             self.coeffs = self.gratingDensity[2:]
         self.ticks = []
+        if self.propagationMode == 'rays':
+            self.illuminatedGroove = 0
+            self.rho_1 = 1. / self.rho0
+            return
         p0 = self.limOptY[0]
         while p0 < self.limOptY[1]:
             self.ticks.append(p0)
@@ -697,16 +779,16 @@ class VLSLaminarGrating(OE):
         return abs(dy)
 
     def __pop_kwargs(self, **kwargs):
-        self.rho0 = kwargs.pop('rho', None)
+        self.rho0 = kwargs.pop('rho', 500)
         self.aspect = kwargs.pop('aspect', 0.5)
         self.coeffs = kwargs.pop('coeffs', [1, 0, 0])
         self.depth = kwargs.pop('depth', 1e-3)  # 1 micron depth
+        if kwargs.get('gratingDensity') is None and self.rho0 is not None:
+            kwargs['gratingDensity'] = \
+                ['y', self.rho0] + list(self.coeffs)
         return kwargs
 
-    def assign_auto_material_kind(self, material):
-        material.kind = 'mirror'  # to be used with wave propagation
-
-    def local_z(self, x, y):
+    def _local_z_wave(self, x, y):
         z = np.zeros_like(y)
         y0ind = np.searchsorted(self.ticks[:-1], y)
         periods = self.ticks[list(y0ind)] - self.ticks[list(y0ind - 1)]
@@ -715,7 +797,7 @@ class VLSLaminarGrating(OE):
         z[groove_index] = -self.depth
         return z
 
-    def local_n(self, x, y):
+    def _local_n_wave(self, x, y):
         y0ind = np.searchsorted(self.ticks[:-1], y)
         periods = self.ticks[list(y0ind)] - self.ticks[list(y0ind - 1)]
         yL = y - self.ticks[list(y0ind - 1)]
@@ -731,8 +813,8 @@ class VLSLaminarGrating(OE):
         norm_z[rindex] = 0
         return [norm_x, norm_y, norm_z]
 
-    def find_intersection(self, local_f, t1, t2, x, y, z, a, b, c,
-                          invertNormal, derivOrder=0):
+    def _find_intersection_wave(self, local_f, t1, t2, x, y, z, a, b, c,
+                                invertNormal, derivOrder=0):
         b_c = b / c
         a_c = a / c
         x2 = np.array(np.zeros_like(y))

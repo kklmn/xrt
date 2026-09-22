@@ -220,8 +220,8 @@ def order_2theta(order, E, pitch, rho=rho):
     return np.pi/2 + beta + pitch
 
 sourceType = 'flat'
-#sourceType = 'annulus'
-#sourceType = 'divergent'
+# sourceType = 'annulus'
+# sourceType = 'divergent'
 if sourceType == 'flat':
     kw = {'distx': 'flat', 'dx': dx, 'distz': 'flat', 'dz': dz,
           'distxprime': None, 'distzprime': None}
@@ -241,7 +241,8 @@ kw['distE'] = 'lines'
 polarization = 'horizontal'
 visualizeCrossSection = True
 
-cmap = mpl.colormaps['jet']
+# cmap = mpl.colormaps['jet']
+cmap = plt.get_cmap('jet')
 fName = os.path.join(cwd, prefix + suffix)
 pickleName = fName + '.pickle'
 

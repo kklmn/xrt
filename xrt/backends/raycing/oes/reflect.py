@@ -727,12 +727,11 @@ class OEMainMethods(object):
                 else:
                     matSur = material
 
-                if matSur.kind == 'auto':
-                    self.assign_auto_material_kind(matSur)
-                if matSur.kind in ('plate', 'lens'):
+                matKind = self._get_material_kind(matSur)
+                if matKind in ('plate', 'lens'):
                     toWhere = 1
-                elif matSur.kind in ('crystal', 'multilayer'):
-                    if matSur.kind == 'crystal':
+                elif matKind in ('crystal', 'multilayer'):
+                    if matKind == 'crystal':
                         if matSur.mosaicity:
                             needMosaicity = True
                         if hasattr(matSur, 'volumetricDiffraction'):
@@ -740,15 +739,15 @@ class OEMainMethods(object):
                                 crystalVD = True
                     if matSur.geom.endswith('transmitted'):
                         toWhere = 2
-                elif matSur.kind == 'grating':
+                elif matKind == 'grating':
                     toWhere = 3
-                elif matSur.kind == 'FZP':
+                elif matKind == 'FZP':
                     toWhere = 4
-                elif matSur.kind == 'powder':
+                elif matKind == 'powder':
                     toWhere = 5
-                elif matSur.kind == 'monocrystal':
+                elif matKind == 'monocrystal':
                     toWhere = 6
-                elif matSur.kind == 'crystal harmonics':
+                elif matKind == 'crystal harmonics':
                     toWhere = 7
 
             if toWhere == 5:
@@ -862,7 +861,7 @@ class OEMainMethods(object):
             elif toWhere in [0, 2]:  # reflect, straight
                 useAsymmetricNormal = False
                 if material is not None:
-                    if matSur.kind in ('crystal', 'multilayer') and\
+                    if matKind in ('crystal', 'multilayer') and\
                             toWhere == 0 and (not needMosaicity) and\
                             (not crystalVD):
                         useAsymmetricNormal = True
@@ -958,7 +957,7 @@ class OEMainMethods(object):
                         refl = rasP, rapP
                     else:
                         refl = 1., 1.
-                elif matSur.kind == 'crystal':
+                elif matKind == 'crystal':
                     beamOutDotSurfaceNormal = a_out*oeNormal[-3] + \
                         b_out*oeNormal[-2] + c_out*oeNormal[-1]
                     if needMosaicity:
@@ -996,7 +995,7 @@ class OEMainMethods(object):
                             lb.E[goodN], beamInDotSurfaceNormal,
                             beamOutDotSurfaceNormal, beamInDotNormal,
                             lb.x[goodN], lb.y[goodN])
-                elif matSur.kind == 'multilayer':
+                elif matKind == 'multilayer':
                     refl = matSur.get_amplitude(
                         lb.E[goodN], beamInDotSurfaceNormal,
                         lb.x[goodN], lb.y[goodN],
@@ -1004,7 +1003,7 @@ class OEMainMethods(object):
                 else:  # 'mirror', 'thin mirror', 'plate', 'lens', 'grating'
                     hasEfficiency = False
                     if hasattr(matSur, 'efficiency'):
-                        if (matSur.kind in ('grating', 'FZP')) and\
+                        if (matKind in ('grating', 'FZP')) and\
                                 (matSur.efficiency is not None):
                             hasEfficiency = True
                     if hasEfficiency:
@@ -1046,7 +1045,7 @@ class OEMainMethods(object):
                 lb.Ep[goodN] *= rap
 
             if (not fromVacuum) and material is not None and\
-                    matSur.kind not in ('crystal', 'multilayer'):
+                    matKind not in ('crystal', 'multilayer'):
                 # tMax in mm, refl[2]=mu0 in 1/cm
                 att = np.exp(-refl[2] * tMax[goodN] * 0.1)
                 lb.Jss[goodN] *= att

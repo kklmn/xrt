@@ -341,7 +341,7 @@ class Screen(object):
         nrays = len(d1s)
 
         if isinstance(self, HemisphericScreen):
-            xlo, ylo, zlo, xglo, yglo, zglo = self.local_to_global(
+            xlo, ylo, zlo, xglo, yglo, zglo = self.local_to_global_sph(
                 phi=d1s, theta=d2s)
         else:
             xglo, yglo, zglo = self.local_to_global(x=d1s, z=d2s)
