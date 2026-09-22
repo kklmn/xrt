@@ -34,6 +34,7 @@ class BeamProxy(object):
     #             'Es', 'Ep', 'Jss', 'Jpp', 'Jsp']
 
     def __init__(self, copyFrom=None):
+        self.parentId = None
         if copyFrom is None:
             return
         for attr in self.basicAttrs:
@@ -181,7 +182,7 @@ class Beam(object):
                 if withAmplitudes:
                     self.Es = np.zeros(nrays, dtype=complex)
                     self.Ep = np.zeros(nrays, dtype=complex)
-        if type(forceState) == int:
+        if isinstance(forceState, int):  # no isinstance here!!! None is int
             self.state[:] = forceState
         if not hasattr(self, 'parentId'):
             self.parentId = None
