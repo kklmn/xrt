@@ -845,6 +845,7 @@ class XrtQookBase(qt.QMainWindow):
                 self.setParamItemValue(valueItem, paramName, value)
             finally:
                 self.plotModel.blockSignals(signalsBlocked)
+            self.plotTree.viewport().update()
             return
 
     def runSurfViewer(self, surfuuid=None):

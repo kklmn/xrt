@@ -405,7 +405,7 @@ class XrtQook(XrtQookElements):
                         break
                 break
         model.blockSignals(False)
-        tree.update()
+        tree.viewport().update()
 
     def updateBeamlineMaterials(self, item=None, newElement=None):
         kwargs = {}
