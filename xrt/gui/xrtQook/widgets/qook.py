@@ -387,8 +387,8 @@ class XrtQook(XrtQookElements):
             elUUID = str(elItem.data(qt.Qt.UserRole))
             if elUUID == oeid:
                 for j in range(elItem.rowCount()):
-                    pItem = elItem.child(0, j)
-                    if str(pItem.text()) in 'properties':
+                    pItem = elItem.child(j, 0)
+                    if str(pItem.text()) == 'properties':
                         for k in range(pItem.rowCount()):
                             pNItem = pItem.child(k, 0)
                             for argName, argValue in kwargs.items():

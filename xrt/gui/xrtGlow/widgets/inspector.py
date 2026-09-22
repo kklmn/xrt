@@ -855,6 +855,7 @@ class InstanceInspector(qt.QDialog):
 
 class ConfigurablePlotWidget(qt.QWidget):
     addToPlotsRequested = qt.Signal(dict)
+    plotParamChanged = qt.Signal(tuple)
 
     def __init__(self, plotProps, parent=None, viewOnly=False,
                  beamLine=None, plotId=None, hiddenProps={},
@@ -1064,6 +1065,7 @@ class ConfigurablePlotWidget(qt.QWidget):
             return
 
         elif item.column() == 1 and item.isEnabled():
+            autoUnit = None
             paramValue = raycing.parametrize(item.text())
             objChng = str(parent.data(qt.Qt.UserRole))
 
@@ -1071,6 +1073,7 @@ class ConfigurablePlotWidget(qt.QWidget):
             paramName = str(parent.child(row, 0).text())
             if paramName == "label":
                 unit, factor = raycing.auto_unit(paramValue, "")
+                autoUnit = unit
                 # unit: +1; factor: +2; data: +3
                 parent.child(row+3, 1).setText("auto")
                 parent.child(row+2, 1).setText("None")
@@ -1083,6 +1086,10 @@ class ConfigurablePlotWidget(qt.QWidget):
             plotParamTuple = self.plotId, objChng, paramName, paramValue
             try:
                 self.update_plot_param(plotParamTuple)
+                self.plotParamChanged.emit(plotParamTuple)
+                if autoUnit is not None:
+                    self.plotParamChanged.emit(
+                        (self.plotId, objChng, 'unit', autoUnit))
             except Exception as e:
                 print(e)
             if paramName == 'aspect':

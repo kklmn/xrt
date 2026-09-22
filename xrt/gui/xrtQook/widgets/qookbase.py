@@ -805,11 +805,47 @@ class XrtQookBase(qt.QMainWindow):
         plotViewer = PlotViewer(plotsDict, self, viewOnly=False,
                                 beamLine=self.beamLine, plotId=plotId)
         self.plotParamUpdate.connect(plotViewer.update_plot_param)
+        plotViewer.dynamicPlot.plotParamChanged.connect(self.updatePlotTree)
         if hasattr(self, 'blViewer') and self.blViewer is not None:
             self.blViewer.customGlWidget.beamUpdated.connect(
                     plotViewer.update_beam)
         if (plotViewer.show()):
             pass
+
+    def updatePlotTree(self, paramTuple):
+        plotId, objName, paramName, value = paramTuple
+        for row in range(self.rootPlotItem.rowCount()):
+            plotItem = self.rootPlotItem.child(row, 0)
+            if str(plotItem.data(qt.Qt.UserRole)) == str(plotId):
+                break
+        else:
+            return
+
+        parentItem = plotItem
+        if objName in ('xaxis', 'yaxis', 'caxis'):
+            for row in range(plotItem.rowCount()):
+                axisItem = plotItem.child(row, 0)
+                if str(axisItem.text()) == objName:
+                    parentItem = axisItem
+                    break
+            else:
+                return
+
+        for row in range(parentItem.rowCount()):
+            nameItem = parentItem.child(row, 0)
+            if str(nameItem.text()) != paramName:
+                continue
+            valueItem = parentItem.child(row, 1)
+            if paramName == 'beam':
+                value = (_getBeamName(self.beamModel, *value)
+                         if raycing.is_sequence(value) and len(value) == 2
+                         else None)
+            signalsBlocked = self.plotModel.blockSignals(True)
+            try:
+                self.setParamItemValue(valueItem, paramName, value)
+            finally:
+                self.plotModel.blockSignals(signalsBlocked)
+            return
 
     def runSurfViewer(self, surfuuid=None):
         surfobj = self.beamLine.fesDict.get(surfuuid)
