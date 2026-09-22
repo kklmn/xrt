@@ -383,7 +383,7 @@ class OEMainMethods(object):
         c = lbn.z - prevCenter[2]
         norm = (a**2 + b**2 + c**2)**0.5
         areaNormalFact = \
-            abs(float((a*lbn.a[0] + b*lbn.b[0] + c*lbn.c[0]) / norm))
+            abs((a*lbn.a[0] + b*lbn.b[0] + c*lbn.c[0]).astype(float) / norm)
 
         waveGlobal, waveLocal = self.reflect(lb)
         good = (waveLocal.state == 1) | (waveLocal.state == 2)

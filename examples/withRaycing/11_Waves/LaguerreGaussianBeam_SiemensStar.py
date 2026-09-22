@@ -13,11 +13,11 @@ import xrt.backends.raycing.screens as rsc
 import xrt.backends.raycing.waves as rw
 
 import xrt.plotter as xrtp
-xrtp.colorFactor = 1.
 import xrt.runner as xrtr
+xrtp.colorFactor = 1.
 
-#prefix = 'Laguerre-Gauss-'
-#lVortex, pVortex = 1, 0
+# prefix = 'Laguerre-Gauss-'
+# lVortex, pVortex = 1, 0
 prefix = 'Gauss-'
 lVortex, pVortex = 0, 0
 
@@ -26,7 +26,7 @@ w0 = 15e-3  # mm, waist size of the amplitude (not of intensity!)
 maxFactor = 2.  # factor that determines the screen limits as ±w*maxFactor
 maxFactor *= (abs(lVortex)+pVortex+1)**0.25
 # screen positions:
-#ps = np.array([0, 0.5, 1, 2, 4, 8]) * 10000.
+# ps = np.array([0, 0.5, 1, 2, 4, 8]) * 10000.
 ps = np.array(list(range(10)) + list(range(1, 11)) +
               list(range(20, 101, 10))) * 1000.
 ps[0:10] /= 10.
@@ -34,8 +34,8 @@ print("screen positions:", ps)
 
 bins, ppb = 256, 1
 wantKirchhoff = True
-targetOpenCL='CPU'
-#targetOpenCL='auto'
+# targetOpenCL = 'CPU'
+targetOpenCL = 'auto'
 
 nSpokes = 12
 

@@ -249,7 +249,7 @@ def make_modes(basename):
 def use_modes(basename, what):
     def get_flux(beam):
         res = beam.Jss.sum() + beam.Jpp.sum()
-        print(res)
+        print('flux=', res)
         return res
 
     bl = build_beamline()
@@ -269,7 +269,7 @@ def use_modes(basename, what):
 
 
 def main():
-    step = 1  # 0 to 2
+    step = 2  # 0 to 2
 
     basename = 'atFE-5000'
     # basename = 'atFE'
@@ -277,10 +277,10 @@ def main():
         show_bl(basename)
     elif step == 1:
         make_modes(basename)
-    elif step == 2:
+    elif step == 2:  # run these propagation cases one by one
         # what = 'wave-fields'
-        what = 'wave-modes'
-        # what = 'hybr-fields'
+        # what = 'wave-modes'
+        what = 'hybr-fields'
         # what = 'hybr-modes'
         # what = 'rays-fields'
         # what = 'rays-modes'

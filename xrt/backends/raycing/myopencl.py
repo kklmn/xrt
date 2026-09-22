@@ -579,7 +579,7 @@ class XRT_CL(object):
                     for arg in nonSlicedRWArgs:
                         arg = arg[:oldSize]
                 ret += tuple(nonSlicedRWArgs)
-#        print("Total CL execution time:", time.time() - t0, "s")
+        # print("Total CL execution time:", time.time() - t0, "s")
         return ret
 
     def run_parallel_desktop(self, kernelName='', scalarArgs=None,
@@ -587,8 +587,8 @@ class XRT_CL(object):
                              slicedRWArgs=None, nonSlicedRWArgs=None,
                              dimension=0, complexity=0, signal=None):
 
-        #        print("Running in GUI-friendly GPGPU mode")
-        #        print("Complexity", int(complexity), "; Dimension", dimension)
+        # print("Running in GUI-friendly GPGPU mode")
+        # print("Complexity", int(complexity), "; Dimension", dimension)
 
         if self.useZMQ:
             outgoing_dict = {'kernelName': kernelName,
@@ -750,7 +750,7 @@ class XRT_CL(object):
                     if needResize:
                         for arg in slicedRWArgs:
                             arg = arg[:oldSize]
-#                    ret += tuple(slicedRWArgs)
+                    # ret += tuple(slicedRWArgs)
 
                 if nonSlicedRWArgs is not None:
                     for iarg, arg in enumerate(nonSlicedRWArgs):
@@ -761,7 +761,7 @@ class XRT_CL(object):
                     if needResize:
                         for arg in nonSlicedRWArgs:
                             arg = arg[:oldSize]
-#                    ret += tuple(nonSlicedRWArgs)
+                    # ret += tuple(nonSlicedRWArgs)
 
                 ndstart += chunksize
                 if complexity > 0:
@@ -783,5 +783,5 @@ class XRT_CL(object):
 
         if nonSlicedRWArgs is not None:
             ret += tuple(nonSlicedRWArgs)
-#        print("Total CL execution time:", time.time() - t0, "s")
+        # print("Total CL execution time:", time.time() - t0, "s")
         return ret
