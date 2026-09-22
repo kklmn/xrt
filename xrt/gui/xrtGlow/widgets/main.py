@@ -2455,7 +2455,16 @@ class xrtGlow(qt.QWidget):
                 tmpDict[uuid] = self.segmentsModelRoot.takeRow(iel)
 
         # Stage 2b. Return element rows according to new flow order
-        for segment in self.customGlWidget.beamline.flowU:
+        for segment, operations in \
+                self.customGlWidget.beamline.flowU.items():
+            # A method without an input beam is not part of the connected
+            # navigation sequence. Stage 2c retains its OE row.
+            if operations and all(
+                    method != 'shine' and
+                    'beam' in kwargs and
+                    kwargs['beam'] in (None, 'None')
+                    for method, kwargs in operations.items()):
+                continue
             modelRow = tmpDict.pop(segment, None)
             if modelRow is not None:
                 self.segmentsModelRoot.appendRow(modelRow)
