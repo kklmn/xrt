@@ -616,7 +616,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
             return
 
-        for argName, argValue in kwargs.items():
+        changedArgs = []
+        updatedArgs = OrderedDict()
+        updObj = None
+        for argName, argValue in list(kwargs.items()):
             if isinstance(argValue, str):
                 argValue = raycing.parametrize(argValue)
                 kwargs[argName] = argValue
@@ -694,6 +697,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
             # updating local beamline tree here
             setattr(updObj, arg0, argValue)
+            if arg0 not in changedArgs:
+                changedArgs.append(arg0)
+            updatedArgs[arg0] = getattr(updObj, arg0)
             if obj_type == "mat" and arg0 == "name":
                 for matName, matId in list(
                         self.beamline.matnamesToUUIDs.items()):
@@ -715,11 +721,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         del self.beamline.fenamesToUUIDs[feName]
                 self.beamline.fenamesToUUIDs[str(updObj.name)] = oeid
 
-            if sender == 'OEE':
-                updatedArgs = {arg0: getattr(updObj, arg0)}
-                if arg0 == 'fileName' and hasattr(updObj, 'materialsIndex'):
-                    updatedArgs['materialsIndex'] = updObj.materialsIndex
-                self.updateQookTree.emit((oeid, updatedArgs))
             if obj_type == "oe":
                 meshUpdateQueued = False
                 renderUpdateQueued = False
@@ -780,6 +781,19 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 # updating the beamline model in the runner
             if self.epicsPrefix is not None:
                 self.epicsInterface.pv_records['AcquireStatus'].set(1)
+
+        dependentValues = raycing.get_dependent_arg_values(
+            updObj, changedArgs) if updObj is not None else OrderedDict()
+        if dependentValues:
+            updatedArgs.update(dependentValues)
+            for argName, argValue in dependentValues.items():
+                self.oePropsUpdated.emit((oeid, argName, argValue))
+
+        if updatedArgs and (sender == 'OEE' or dependentValues):
+            if 'fileName' in changedArgs and hasattr(
+                    updObj, 'materialsIndex'):
+                updatedArgs['materialsIndex'] = updObj.materialsIndex
+            self.updateQookTree.emit((oeid, updatedArgs))
 
         message = {"command": "modify",
                    "object_type": obj_type,
@@ -1080,23 +1094,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
             elif 'progress' in msg and self.QookSignal is not None:
                     self.QookSignal.emit((msg['progress'],
                                           "Running propagation"))
-#            elif 'depend_attr' in msg:
-#                self.oePropsUpdated.emit((msg['sender_id'],
-#                                          msg['depend_attr'],
-#                                          msg['depend_value']))
-#                    self.meshDict[msg['sender_id']].update_transformation_matrix()
-#                    try:
-#                        self.getMinMax()
-#                        self.maxLen = np.max(np.abs(
-#                                self.minmax[0, :] - self.minmax[1, :]))
-#                        self.parent.updateMaxLenFromGL(self.maxLen)
-#                    except TypeError:
-#                        print("Cannot find limits")
-
-#                if self.epicsPrefix is not None:
-#                    self.epicsInterface.pv_records['AcquireStatus'].set(0)
-#                self.glDraw()
-
     def close_calc_process(self):
         timer = getattr(self, 'timer', None)
         if timer is not None:

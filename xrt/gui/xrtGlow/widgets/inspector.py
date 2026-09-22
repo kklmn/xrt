@@ -805,6 +805,8 @@ class InstanceInspector(qt.QDialog):
                         break
                 else:
                     parentItem = self.itemGroups.get('Other')
+            else:
+                parentItem = self.modelRoot
             if parentItem is not None:
                 if pTuple[1] == 'blades':
                     blades = pTuple[2] if isinstance(pTuple[2], dict) else\
@@ -841,9 +843,13 @@ class InstanceInspector(qt.QDialog):
                             str(child0.text()) == f'{pTuple[1]}':
                         child1 = parentItem.child(i, 1)
                         self.set_param_item_value(child1, pTuple[1], pTuple[2])
-#                    else:  # all other params? need more conditions?
-#                        child1 = parentItem.child(i, 1)
-#                        child1.setText(str(pTuple[2]))
+                    elif str(child0.text()) == f'{pTuple[1]}':
+                        child1 = parentItem.child(i, 1)
+                        self.set_param_item_value(child1, pTuple[1], pTuple[2])
+                        self.original_data[pTuple[1]] = str(pTuple[2])
+                        self.changed_data.pop(pTuple[1], None)
+                        self.set_row_highlight(child1, False)
+                self.table.viewport().update()
 
     def update_beam(self, beamTag):
         if not self.liveUpdateEnabled:

@@ -51,8 +51,8 @@ from ._beam_props import (
 
 from ._sets_units import (
     allBeamFields, orientationArgSet, shapeArgSet, derivedArgSet,
-    renderOnlyArgSet, compoundArgs, dependentArgs, diagnosticArgs, allUnitsAng,
-    allUnitsAngStr, allUnitsLen, allUnitsLenStr, allUnitsEnergy,
+    renderOnlyArgSet, compoundArgs, dependentArgGroups, diagnosticArgs,
+    allUnitsAng, allUnitsAngStr, allUnitsLen, allUnitsLenStr, allUnitsEnergy,
     allUnitsEnergyStr, allUnitsEmittance, allUnitsEmittanceStr,
     allUnitsCurrent, allUnitsCurrentStr, lengthUnitParams, auto_unit,
     argumentInputGroups)
@@ -67,7 +67,7 @@ from ._flow_utils import (
     quat_vec_rotate, get_init_val, get_params, parametrize,
     normalize_ref, ref_kind_for_arg,
     get_argument_editor_hint, parse_editor_mapping, format_editor_scalar,
-    serialize_editor_value,
+    serialize_editor_value, get_dependent_arg_values,
     create_paramdict_oe, create_paramdict_mat, get_obj_str, get_init_kwargs,
     is_valid_uuid, run_process_from_file, build_hist, parse_energy_string,
     is_auto_align_value, get_auto_align_energy, format_energy_input,

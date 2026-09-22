@@ -115,18 +115,6 @@ def propagationProcess(q_in, q_out, with_epics_histograms=False,
                                             'status': 0}
                                     q_out.put(msg_diagparam_update)
 
-#                    for dependAttrName in dependentArgs:
-#                        if hasattr(oe, dependAttrName):
-#                            dependAttrValue = getattr(oe, dependAttrName, None)
-#                            if dependAttrValue is not None:
-#                                msg_dependparam_update = {
-#                                        'depend_attr': dependAttrName,
-#                                        'depend_value': dependAttrValue,
-#                                        'sender_name': oe.name,
-#                                        'sender_id': oe.uuid,
-#                                        'status': 0}
-#                                q_out.put(msg_dependparam_update)
-
                     if handler.output_policy.get('beams'):
                         msg_beam = {'beam': handler.bl.beamsDictU[oe.uuid],
                                     'sender_name': oe.name,

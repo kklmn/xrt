@@ -24,7 +24,8 @@ else:
 from .singletons import is_sequence
 from ._sets_units import (
     allBeamFields, orientationArgSet, shapeArgSet, derivedArgSet,
-    renderOnlyArgSet, compoundArgs, dependentArgs, diagnosticArgs, allUnitsAng,
+    renderOnlyArgSet, compoundArgs, dependentArgGroups, diagnosticArgs,
+    allUnitsAng,
     allUnitsAngStr, allUnitsLen, allUnitsLenStr, allUnitsEnergy,
     allUnitsEnergyStr, allUnitsEmittance, allUnitsEmittanceStr,
     allUnitsCurrent, allUnitsCurrentStr, lengthUnitParams)
@@ -59,6 +60,26 @@ def get_argument_editor_hint(objRef, argName):
     except Exception:
         return None
     return hint if isinstance(hint, dict) else None
+
+
+def get_dependent_arg_values(obj, changedArgs):
+    """Return authoritative values coupled to the changed arguments."""
+    if isinstance(changedArgs, basestring):
+        changedArgs = (changedArgs,)
+    changedArgs = set(changedArgs)
+    dependentNames = []
+    for group in dependentArgGroups:
+        if changedArgs.intersection(group):
+            for argName in group:
+                if argName not in dependentNames:
+                    dependentNames.append(argName)
+    values = OrderedDict()
+    for argName in dependentNames:
+        try:
+            values[argName] = getattr(obj, argName)
+        except AttributeError:
+            pass
+    return values
 
 
 class NameAsString(ast.NodeTransformer):

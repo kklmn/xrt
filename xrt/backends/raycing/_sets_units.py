@@ -42,8 +42,14 @@ compoundArgs = {'center': ['x', 'y', 'z'],
                 'blades': ['left', 'right', 'bottom', 'top'],
                 'image': ['width', 'height']}
 
-dependentArgs = {'eSigmaX', 'eSigmaZ', 'betaX', 'betaZ',
-                 'K', 'B0', 'rho', 'Kx', 'Ky', 'B0x', 'B0y'}
+dependentArgGroups = (
+    ('eSigmaX', 'betaX', 'eEpsilonX'),
+    ('eSigmaZ', 'betaZ', 'eEpsilonZ'),
+    ('K', 'B0', 'rho'),
+    ('Kx', 'B0x'),
+    ('Ky', 'B0y', 'K'),
+    ('rho', 'coeffs', 'coefficientConvention'),
+)
 
 diagnosticArgs = ('gamma', 'E1', 'eSigmaXprime', 'eSigmaZprime',
                   'ellipseA', 'ellipseB', 'hyperbolaA', 'hyperbolaB')

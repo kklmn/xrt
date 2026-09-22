@@ -381,30 +381,38 @@ class XrtQook(XrtQookElements):
         else:
             return
 
+        signalsBlocked = model.signalsBlocked()
+        updatedItems = []
         model.blockSignals(True)
-        for i in range(rootItem.rowCount()):
-            elItem = rootItem.child(i, 0)
-            elUUID = str(elItem.data(qt.Qt.UserRole))
-            if elUUID == oeid:
-                for j in range(elItem.rowCount()):
-                    pItem = elItem.child(j, 0)
-                    if str(pItem.text()) == 'properties':
-                        for k in range(pItem.rowCount()):
-                            pNItem = pItem.child(k, 0)
-                            for argName, argValue in kwargs.items():
-                                if str(pNItem.text()) == argName:
-                                    refKind = raycing.ref_kind_for_arg(argName)
-                                    if refKind is not None:
-                                        argValue = raycing.normalize_ref(
-                                            argValue, self.beamLine, refKind,
-                                            target='display')
+        try:
+            for i in range(rootItem.rowCount()):
+                elItem = rootItem.child(i, 0)
+                elUUID = str(elItem.data(qt.Qt.UserRole))
+                if elUUID == oeid:
+                    for j in range(elItem.rowCount()):
+                        pItem = elItem.child(j, 0)
+                        if str(pItem.text()) == 'properties':
+                            for k in range(pItem.rowCount()):
+                                pNItem = pItem.child(k, 0)
+                                for argName, argValue in kwargs.items():
+                                    if str(pNItem.text()) == argName:
+                                        refKind = raycing.ref_kind_for_arg(
+                                            argName)
+                                        if refKind is not None:
+                                            argValue = raycing.normalize_ref(
+                                                argValue, self.beamLine,
+                                                refKind, target='display')
 
-                                    pVItem = pItem.child(k, 1)
-                                    self.setParamItemValue(
-                                        pVItem, argName, argValue)
-                        break
-                break
-        model.blockSignals(False)
+                                        pVItem = pItem.child(k, 1)
+                                        self.setParamItemValue(
+                                            pVItem, argName, argValue)
+                                        updatedItems.append(pVItem)
+                            break
+                    break
+        finally:
+            model.blockSignals(signalsBlocked)
+        for updatedItem in updatedItems:
+            self.colorizeChangedParam(updatedItem)
         tree.viewport().update()
 
     def updateBeamlineMaterials(self, item=None, newElement=None):
@@ -674,6 +682,11 @@ class XrtQook(XrtQookElements):
                                 str(oeLine[0].name)] = oeid
 
                 kwargs[argName] = argValue
+                if not outDict and oeLine is not None:
+                    dependentValues = raycing.get_dependent_arg_values(
+                        oeLine[0], (argName,))
+                    if dependentValues:
+                        self.updateBeamlineModel((oeid, dependentValues))
 
                 if outDict:  # updating flow
                     flowRec = self.beamLine.flowU.get(oeid)
