@@ -918,7 +918,13 @@ if __name__ == '__main__':
                                 paraname == 'bl':
                             if paraname == 'bl':
                                 paravalue = 'bl'
-                            if paraname.lower() not in\
+                            if paraname.lower() in ('mirrorh', 'mirrorv'):
+                                mirrorName = raycing.normalize_ref(
+                                    paravalue, self.beamLine, 'oe',
+                                    target='display')
+                                paravalue = repr(str(mirrorName)) if\
+                                    mirrorName not in (None, 'None') else 'None'
+                            elif paraname.lower() not in\
                                     ['bl', 'center', 'material',
                                      'material2', 'figureerror']:
                                 paravalue = self.quotize(paravalue)

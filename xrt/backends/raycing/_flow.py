@@ -275,6 +275,13 @@ class MessageHandler:
                     modifiedEl = kwargs['beam']
                 else:
                     modifiedEl = objuuid
+                for compoundId, compoundLine in self.bl.oesDict.items():
+                    compound = compoundLine[0]
+                    if getattr(compound, '_is_montel_compound', False) and\
+                            objuuid in (compound.mirrorH.uuid,
+                                        compound.mirrorV.uuid):
+                        modifiedEl = compoundId
+                        break
 
                 if not (len(modified_kwargs) == 1 and
                         (modified_kwargs.keys() & renderOnlyArgSet)):

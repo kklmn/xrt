@@ -115,7 +115,7 @@ __all__ = ('OE', 'DicedOE', 'JohannCylinder', 'JohanssonCylinder',
            'HyperbolicMirrorParam', 'ConicalMirror',
            'ParaboloidCapillaryMirror', 'EllipsoidCapillaryMirror',
            'HyperboloidCapillaryMirror',
-           'DCM', 'DCMwithSagittalFocusing', 'Plate',
+           'DCM', 'DCMwithSagittalFocusing', 'MontelMirror', 'Plate',
            'ParaboloidFlatLens', 'ParabolicCylinderFlatLens',
            'DoubleParaboloidLens', 'DoubleParabolicCylinderLens',
            'SurfaceOfRevolution', 'NormalFZP',
@@ -124,7 +124,9 @@ __all__ = ('OE', 'DicedOE', 'JohannCylinder', 'JohanssonCylinder',
 import collections
 __allSectioned__ = collections.OrderedDict([
     ('Generic',
-        ('OE', 'DicedOE', 'DCM', 'Plate', 'SurfaceOfRevolution', 'MeshOE')),
+        ('OE', 'DicedOE', 'DCM', 'Plate',
+         'SurfaceOfRevolution', 'MeshOE')),
+    ('Compound', ('MontelMirror',)),
     ('Curved mirrors',
         ('BentFlatMirror', 'ToroidMirror', 'EllipticalMirrorParam',
          'ParabolicalMirrorParam', 'HyperbolicMirrorParam',
@@ -158,6 +160,7 @@ from ..physconsts import CH  # keep it  # analysis:ignore
 from .base import OE, allArguments
 
 from .dcm import DCM
+from .compound import MontelMirror
 
 from .bragg import (
     DicedOE, JohannCylinder, JohanssonCylinder, JohannToroid, JohanssonToroid,

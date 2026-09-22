@@ -1968,6 +1968,9 @@ class XrtQookBase(qt.QMainWindow):
                         self.iterateRename(self.rootBLItem, oldname, pyname,
                                            ['figureError'])
                     else:
+                        self.iterateRename(
+                            self.rootBLItem, oldname, pyname,
+                            ['mirrorH', 'mirrorV'])
                         for j in range(self.beamModel.rowCount()):
                             beams = self.beamModel.findItems(buuid, column=2)
                             for bItem in beams:
@@ -2512,6 +2515,13 @@ class XrtQookBase(qt.QMainWindow):
                 if not isinstance(flowDict, dict):
                     flowDict = {}
 
+                oeNames = {
+                    str(oeid): elementDict.get(
+                        'properties', {}).get('name', str(oeid))
+                    for oeid, elementDict in beamlineDict.items()
+                    if str(oeid) not in ('properties', '_object') and
+                    isinstance(elementDict, dict)}
+
                 orderedBeamline = OrderedDict()
                 for oeid in flowDict.keys():
                     elementDict = beamlineDict.get(oeid)
@@ -2528,6 +2538,10 @@ class XrtQookBase(qt.QMainWindow):
                     if 'properties' in elementProps:
                         elementProps['properties'] = OrderedDict(
                             elementProps['properties'])
+                        for arg, value in elementProps['properties'].items():
+                            if raycing.ref_kind_for_arg(arg) == 'oe':
+                                elementProps['properties'][arg] = oeNames.get(
+                                    str(value), value)
                     methDict = flowDict.get(element)
                     if methDict is not None:
                         elementProps.update(methDict)

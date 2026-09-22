@@ -481,6 +481,15 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 return True
         return False
 
+    def is_mirror_in_oe(self, oe, mirroruuid):
+        for attrName in ('mirrorH', 'mirrorV'):
+            mirror = getattr(oe, attrName, None)
+            mirrorId = raycing.normalize_ref(
+                mirror, self.beamline, 'oe', target='uuid')
+            if mirrorId == mirroruuid:
+                return True
+        return False
+
     @property
     def invertColors(self):
         return self._invertColors
@@ -694,6 +703,14 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
             # updating local beamline tree here
             setattr(updObj, arg0, argValue)
+            dependentMeshUpdate = False
+            if obj_type == 'oe' and arg0 in shapeArgSet | {
+                    'material', 'material2', 'isParametric',
+                    'surface', 'curSurface'}:
+                for compoundId, compoundLine in self.beamline.oesDict.items():
+                    if self.is_mirror_in_oe(compoundLine[0], oeid):
+                        self.queue_mesh_update(compoundId)
+                        dependentMeshUpdate = True
             if obj_type == "mat" and arg0 == "name":
                 for matName, matId in list(
                         self.beamline.matnamesToUUIDs.items()):
@@ -721,7 +738,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     updatedArgs['materialsIndex'] = updObj.materialsIndex
                 self.updateQookTree.emit((oeid, updatedArgs))
             if obj_type == "oe":
-                meshUpdateQueued = False
+                meshUpdateQueued = dependentMeshUpdate
                 renderUpdateQueued = False
                 if arg0.lower().startswith('center'):
                     flowOrder = tuple(self.beamline.flowU)
@@ -756,7 +773,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     if oeid not in self.needMeshUpdate:
                         self.needMeshUpdate.append(oeid)
                     meshUpdateQueued = True
-                elif arg0 in {'material', 'material2'}:
+                elif arg0 in {'material', 'material2',
+                              'mirrorH', 'mirrorV'}:
                     if oeid not in self.needMeshUpdate:
                         self.needMeshUpdate.append(oeid)
                     meshUpdateQueued = True

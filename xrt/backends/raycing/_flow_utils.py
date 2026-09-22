@@ -159,6 +159,8 @@ def append_to_flow(meth, bOut, frame):
     oe = meth.__self__
     if oe.bl is None:
         return
+    if getattr(oe.bl, '_suspend_flow_recording', False):
+        return
     if oe.bl.flowSource != 'legacy':
         return
     argValues = inspect.getargvalues(frame)
@@ -480,7 +482,7 @@ REFERENCE_KINDS = {
         'dict': 'oesDict',
         'names': 'oenamesToUUIDs',
         'objectIndex': 0,
-        'fields': set(),
+        'fields': {'mirrorh', 'mirrorv'},
         'prefixes': tuple(),
     },
 }
@@ -760,6 +762,9 @@ def get_init_kwargs(oeObj, compact=True, needRevG=False, blname=None,
                     realval = rawValue
                 elif hasattr(oeObj, f'_{arg}Init') and not resolveAuto:
                     realval = getattr(oeObj, f'_{arg}Init')
+                elif ref_kind_for_arg(arg) is not None and hasattr(
+                        oeObj, f'_{arg}'):
+                    realval = rawValue
 #                    print(oeObj.name, f'_{arg}Init', realval)
                 else:
                     realval = getattr(oeObj, arg)

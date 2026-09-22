@@ -715,6 +715,38 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
             else:
                 return self._createLineEditor(parent, argName)
             return combo
+        elif argNameL in ('mirrorh', 'mirrorv'):
+            bl = self._beamLine()
+            if bl is None:
+                return self._createLineEditor(parent, argName)
+
+            ownerIndex = parentIndex.parent()
+            ownerUUID = ownerIndex.data(Qt.UserRole) if\
+                ownerIndex.isValid() else getattr(
+                    getattr(self.mainWidget, 'editorObject', None),
+                    'uuid', None)
+            otherName = 'mirrorv' if argNameL == 'mirrorh' else 'mirrorh'
+            otherRef = None
+            for i in range(model.rowCount(parentIndex)):
+                fieldName = str(model.index(i, 0, parentIndex).data())
+                if fieldName.lower() == otherName:
+                    otherRef = model.index(i, 1, parentIndex).data()
+                    break
+
+            from ...backends import raycing
+            otherUUID = raycing.normalize_ref(
+                otherRef, bl, 'oe', target='uuid')
+            combo.addItem('None')
+            for name, uuid in bl.oenamesToUUIDs.items():
+                if str(uuid) in (str(ownerUUID), str(otherUUID)):
+                    continue
+                oeLine = bl.oesDict.get(uuid)
+                oe = oeLine[0] if oeLine is not None else None
+                if oe is None or not hasattr(oe, 'reflect') or\
+                        hasattr(oe, 'double_reflect'):
+                    continue
+                combo.addItem(name)
+            return combo
         elif any(argNameL.startswith(v) for v in
                  ['figureerr', 'basefe']):  # mat and bl
             currentElement = None
