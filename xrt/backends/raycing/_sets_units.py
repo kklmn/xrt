@@ -46,12 +46,13 @@ dependentArgGroups = (
     ('eSigmaX', 'betaX', 'eEpsilonX'),
     ('eSigmaZ', 'betaZ', 'eEpsilonZ'),
     ('K', 'B0', 'rho', 'period', 'eE'),
-    ('Kx', 'B0x', 'period', 'eE'),
-    ('Ky', 'B0y', 'K', 'period', 'eE'),
+    ('Kx', 'B0x', 'period', 'eE', 'targetE'),
+    ('Ky', 'B0y', 'K', 'period', 'eE', 'targetE'),
     ('rho', 'coeffs', 'coefficientConvention'),
     ('p', 'f1'),
     ('q', 'f2'),
-    ('cryst2perpTransl', 'fixedOffset'),
+    ('p', 'q'),
+    ('cryst2perpTransl', 'fixedOffset', 't'),
     ('focus', 'nCRL', 'material'),
 )
 

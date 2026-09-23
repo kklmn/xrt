@@ -658,7 +658,7 @@ class SourceFromField(IntegratedSource):
         urd = kwargs.pop("uniformRayDensity", True)
         gpi = kwargs.pop("gp", 1e-3)
         super(SourceFromField, self).__init__(*args, uniformRayDensity=urd,
-             gp=gpi, **kwargs)
+                                              gp=gpi, **kwargs)
 
         self.spl_kw = {'kind': 'cubic',
                        'bounds_error': False,
@@ -1500,6 +1500,10 @@ class Undulator(IntegratedSource):
     @period.setter
     def period(self, period):
         self.L0 = float(period)
+
+        if getattr(self, 'targetE', None):
+            self.targetE = self.targetE
+
         if hasattr(self, 'Kbase'):
             if self.Kbase:
                 self._B0x = K2B * self.Kx / self.L0
@@ -1527,9 +1531,11 @@ class Undulator(IntegratedSource):
 
     @targetE.setter
     def targetE(self, targetE):
+        self._targetEstatus = False
         if targetE is None:
             self._targetE = None
             self.needReset = True
+            self._targetEstatus = True
             return
 
         if isinstance(targetE, raycing.basestring) or\
@@ -1574,6 +1580,7 @@ class Undulator(IntegratedSource):
 
         self._targetE = targetE
         self.Kbase = True
+        self.B0base = False
         self._Kx = Kx
         self._Ky = Ky
         self._B0x = K2B * self._Kx / self.L0
@@ -1586,6 +1593,7 @@ class Undulator(IntegratedSource):
                 print("Kx = {0}, Ky = {1}".format(Kx, Ky))
         self.report_E1()
         self.needReset = True
+        self._targetEstatus = True
         # Need to recalculate the integration parameters
 
     @property
@@ -1632,6 +1640,7 @@ class Undulator(IntegratedSource):
         self._B0x = K2B * Kx / self.L0
         self.Kbase = True
         self.B0base = False
+        self._targetE = None
         if hasattr(self, '_Ky'):
             self.report_E1()
         self.needReset = True
@@ -1647,6 +1656,7 @@ class Undulator(IntegratedSource):
         self._B0y = K2B * Ky / self.L0
         self.Kbase = True
         self.B0base = False
+        self._targetE = None
         if hasattr(self, '_Kx'):
             self.report_E1()
         self.needReset = True
@@ -1662,6 +1672,7 @@ class Undulator(IntegratedSource):
         self._B0y = K2B * K / self.L0
         self.Kbase = True
         self.B0base = False
+        self._targetE = None
         if hasattr(self, '_Kx'):
             self.report_E1()
         self.needReset = True
@@ -1677,6 +1688,7 @@ class Undulator(IntegratedSource):
         self._Kx = B0x * self.L0 / K2B
         self.Kbase = False
         self.B0base = True
+        self._targetE = None
         if hasattr(self, '_Ky'):
             self.report_E1()
         self.needReset = True
@@ -1692,6 +1704,7 @@ class Undulator(IntegratedSource):
         self._Ky = B0y * self.L0 / K2B
         self.Kbase = False
         self.B0base = True
+        self._targetE = None
         if hasattr(self, '_Kx'):
             self.report_E1()
         self.needReset = True

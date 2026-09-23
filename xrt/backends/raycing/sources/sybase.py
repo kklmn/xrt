@@ -455,6 +455,14 @@ class SourceBase:
         self._eE = float(eE)
         self.gamma = self._eE * 1e9 * EV2ERG / (M0 * C**2)
         self.gamma2 = self.gamma**2
+
+        if getattr(self, 'targetE', None):
+            self.targetE = self.targetE
+            if not getattr(self, '_targetEstatus'):
+                self.report_E1()
+                self.needReset = True
+            return
+
         if getattr(self, 'B0base', False):
             if hasattr(self, 'B0'):
                 self.B0 = self.B0
@@ -467,9 +475,6 @@ class SourceBase:
                 self.Kx = self.Kx
         elif getattr(self, 'rhobase', False):
             self.rho = self.rho
-
-        if hasattr(self, 'targetE'):
-            self.targetE = self.targetE
         self.needReset = True
         # Need to recalculate the integration parameters
 
