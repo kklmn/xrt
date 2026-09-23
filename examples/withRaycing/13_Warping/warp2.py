@@ -236,9 +236,6 @@ def see_the_bump(version='new'):
         xi = bump.x1d
         yi = bump.y1d
         zi = bump.z2d
-        oe.limPhysX = np.min(xi), np.max(xi)
-        oe.limPhysY = np.min(yi), np.max(yi)
-        oe.get_surface_limits()
     else:
         name = oe.distortedSurfaceName
         rmsx = ((oe.warpA**2).sum() / (oe.warpNX*oe.warpNY))**0.5
@@ -327,7 +324,7 @@ def build_beamline(version='new'):
         betaX=betaX, betaZ=betaZ,
         period=18.5, n=108, K=K,
         filamentBeam=(what != 'rays'),
-        targetOpenCL='CPU',
+        # targetOpenCL='CPU',
         xPrimeMax=dx/2/p*1e3, zPrimeMax=dy/2/p*np.sin(pitch)*1e3,
         xPrimeMaxAutoReduce=False,
         zPrimeMaxAutoReduce=False,
@@ -439,8 +436,8 @@ if __name__ == '__main__':
     # old: with the ad hoc ToroidMirrorDistorted class
     # new: with the raycing.figure_error module
 
-    see_the_bump('old')
+    # see_the_bump('old')
     # see_the_bump('new')
 
     # main('old')
-    # main('new')
+    main('new')
