@@ -512,7 +512,10 @@ class Multilayer(object):
                 print('ML reflection calculated with CPU in {0:.3f} s'.format(
                       t2-t0))
         else:
-            nonSlicedROArgs = [np.float64(self.dti), np.float64(self.dbi)]
+            clFloat = ucl.cl_precisionF
+            clComplex = ucl.cl_precisionC
+            nonSlicedROArgs = [np.asarray(self.dti, dtype=clFloat),
+                               np.asarray(self.dbi, dtype=clFloat)]
 
             try:
                 iterator = iter(E)  # analysis:ignore
@@ -525,14 +528,17 @@ class Multilayer(object):
                                 rtb_s, rtb_p,
                                 rvt_s, rvt_p,
                                 Qt, Qb]
-                slicedRWArgs = [ri_s, ri_p]
+                slicedROArgs = [np.asarray(arg, dtype=clComplex)
+                                for arg in slicedROArgs]
+                slicedRWArgs = [np.asarray(arg, dtype=clComplex)
+                                for arg in (ri_s, ri_p)]
                 ri_s, ri_p = ucl.run_parallel(
                     'get_amplitude_graded_multilayer',
                     scalarArgs, slicedROArgs,
                     nonSlicedROArgs, slicedRWArgs, None, len(E))
             elif 'tran' in self.geom:
                 scalarArgs = [np.int32(self.nPairs),
-                              np.float64(self.substThickness)]
+                              clFloat(self.substThickness)]
                 slicedROArgs = [
                         rvt_s, rvt_p, tvt_s, tvt_p,
                         rbs_s, rbs_p, tbs_s, tbs_p,
@@ -540,7 +546,10 @@ class Multilayer(object):
                         rbt_s, rbt_p, tbt_s, tbt_p,
                         rtb_s, rtb_p, ttb_s, ttb_p,
                         Qt, Qb, Qs]
-                slicedRWArgs = [ti_s, ti_p]
+                slicedROArgs = [np.asarray(arg, dtype=clComplex)
+                                for arg in slicedROArgs]
+                slicedRWArgs = [np.asarray(arg, dtype=clComplex)
+                                for arg in (ti_s, ti_p)]
                 ti_s, ti_p = ucl.run_parallel(
                     'get_amplitude_graded_multilayer_tran',
                     scalarArgs, slicedROArgs,
@@ -549,6 +558,18 @@ class Multilayer(object):
             if raycing._VERBOSITY_ > 10:
                 print('ML reflection calculated with OCL in {0:.3f} s'.format(
                       t2-t0))
+
+        amplitudes = (ri_s, ri_p) if 'refl' in self.geom else (ti_s, ti_p)
+        nNan = sum(np.count_nonzero(np.isnan(a)) for a in amplitudes)
+        nInf = sum(np.count_nonzero(np.isinf(a)) for a in amplitudes)
+        if nNan or nInf:
+            precision = np.dtype(ucl.cl_precisionF).name if ucl else 'CPU'
+            hint = " Try precisionOpenCL='float64'." if precision == 'float32' \
+                else ''
+            raycing.colorPrint(
+                'WARNING: Multilayer.get_amplitude produced {0} NaN and '
+                '{1} Inf amplitude values ({2}).{3}'.format(
+                    nNan, nInf, precision, hint), 'RED')
 
         if 'refl' in self.geom:
             # n.real (i.e. delta) may be > 0, which is a problem of tabulation
