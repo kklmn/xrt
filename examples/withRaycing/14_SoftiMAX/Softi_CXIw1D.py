@@ -377,7 +377,7 @@ def run_process_rays(beamLine, shineOnly1stSource=False):
         fixedEnergy = E0
     else:
         fixedEnergy = False
-    if True:  # source to wave
+    if not showIn3D:  # source to wave
         waveOnSlit = beamLine.slitFE.prepare_wave(beamLine.source, nrays)
         beamSource = beamLine.source.shine(wave=waveOnSlit,
                                            fixedEnergy=fixedEnergy)
@@ -413,9 +413,9 @@ def run_process_rays(beamLine, shineOnly1stSource=False):
         beamLine.fsmExp.center = fsmExpCenter
         beamFSMExp = beamLine.fsmExp.expose(beamM5global)
         outDict['beamFSMExp{0:02d}'.format(ic)] = beamFSMExp
+        if showIn3D:
+            break
 
-    if showIn3D:
-        beamLine.prepare_flow()
     return outDict
 
 
