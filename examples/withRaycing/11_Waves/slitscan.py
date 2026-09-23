@@ -67,8 +67,8 @@ __date__ = "08 Mar 2016"
 import os, sys; sys.path.append(os.path.join('..', '..', '..'))  # analysis:ignore
 # sys.path.append(r"/media/sf_Ray-tracing")
 # import time
-#import matplotlib as mpl
-#mpl.use('Agg')
+# import matplotlib as mpl
+# mpl.use('Agg')
 import xrt.backends.raycing as raycing
 import xrt.backends.raycing.sources as rs
 import xrt.backends.raycing.screens as rsc
@@ -89,8 +89,8 @@ SCRx = 1
 SCRz = 1
 dE = 0.5
 
-#nrep = 160
-#nrep = 1000
+# nrep = 160
+# nrep = 1000
 nrep = 1
 
 E0 = 7900
@@ -101,7 +101,7 @@ kwargs = dict(
     period=29., n=172,
     eE=6.08, eI=0.1,  # eEspread=0.001,
     eEpsilonX=0., eEpsilonZ=0.,
-    #eEpsilonX=1, eEpsilonZ=0.01,
+    # eEpsilonX=1, eEpsilonZ=0.01,
     betaX=1.20, betaZ=3.95,
     filamentBeam=True,
     uniformRayDensity=True,
@@ -164,15 +164,16 @@ def run_process(beamLine):
     beamSource = None
     repeats = 1
     for repeat in range(repeats):
-#alternative one (old):
-#        beamSource = beamLine.source.shine(
-#            accuBeam=beamSource, fixedEnergy=E0)
-#        beamFSM0 = beamLine.fsm0.expose(beamSource)
-#        slitLocal = beamLine.slit.propagate(beamSource)
-#        beamFSM1 = beamLine.fsm1.expose(beamSource)
-#        slitLocal.area = area
-#        rw.diffract(slitLocal, waveOnScreen)
-#alternative two (new):
+        # alternative one (old):
+        # beamSource = beamLine.source.shine(
+        #     accuBeam=beamSource, fixedEnergy=E0)
+        # beamFSM0 = beamLine.fsm0.expose(beamSource)
+        # slitLocal = beamLine.slit.propagate(beamSource)
+        # beamFSM1 = beamLine.fsm1.expose(beamSource)
+        # slitLocal.area = area
+        # rw.diffract(slitLocal, waveOnScreen)
+
+        # alternative two (new):
         waveOnSlit = beamLine.slit.prepare_wave(beamLine.source, mynrays)
         beamSource = beamLine.source.shine(accuBeam=beamSource,
                                            fixedEnergy=E0, wave=waveOnSlit)
@@ -260,6 +261,7 @@ def main():
     plots = define_plots(beamLine)
     xrtr.run_ray_tracing(plots, repeats=nrep, beamLine=beamLine, processes=1,
                          generator=plot_generator)
+
 
 # this is necessary to use multiprocessing in Windows, otherwise the new Python
 # contexts cannot be initialized:

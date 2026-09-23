@@ -1,4 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
+"""
+.. !!! select a calculation step in main() !!!
+"""
 __author__ = "Konstantin Klementiev"
 __date__ = "8 Dec 2021"
 # import matplotlib as mpl
@@ -62,8 +65,11 @@ kwargs = dict(
     xPrimeMaxAutoReduce=False, zPrimeMaxAutoReduce=False,
     eMin=eMinRays, eMax=eMaxRays)
 
-nElectrons = 500
-nModes = 10
+# nElectrons = 500
+# nModes = 10
+nElectrons = 5
+nModes = 5
+
 nsamples = 512*256
 
 bins = 128
@@ -269,18 +275,18 @@ def use_modes(basename, what):
 
 
 def main():
-    step = 2  # 0 to 2
+    step = 2  # 0 to 2: 3D view, making modes, using modes
 
     basename = 'atFE-5000'
     # basename = 'atFE'
-    if step == 0:
+    if step == 0:  # this is an optional visualization step
         show_bl(basename)
-    elif step == 1:
+    elif step == 1:  # run step 1 before step 2!
         make_modes(basename)
     elif step == 2:  # run these propagation cases one by one
-        # what = 'wave-fields'
+        what = 'wave-fields'
         # what = 'wave-modes'
-        what = 'hybr-fields'
+        # what = 'hybr-fields'
         # what = 'hybr-modes'
         # what = 'rays-fields'
         # what = 'rays-modes'

@@ -2,8 +2,8 @@
 r"""
 .. _slitDiffraction:
 
-Diffraction on arbitrarily shaped apertures, defined by polygon.
---------------------------------------
+Diffraction on arbitrarily shaped apertures defined by polygons
+---------------------------------------------------------------
 
 TBD
 
@@ -14,8 +14,8 @@ __date__ = "26 Jun 2018"
 import os, sys; sys.path.append(os.path.join('..', '..', '..'))  # analysis:ignore
 # sys.path.append(r"/media/sf_Ray-tracing")
 # import time
-#import matplotlib as mpl
-#mpl.use('Agg')
+# import matplotlib as mpl
+# mpl.use('Agg')
 import xrt.backends.raycing as raycing
 import xrt.backends.raycing.sources as rs
 import xrt.backends.raycing.screens as rsc
@@ -27,7 +27,7 @@ import xrt.backends.raycing.waves as rw
 import numpy as np
 
 R0 = 44000
-mynrays = 1e5
+mynrays = 1e6
 
 slitDx = 0.1
 slitDz = 0.1
@@ -36,8 +36,8 @@ SCRx = 1
 SCRz = 1
 dE = 0.5
 
-#nrep = 160
-#nrep = 1000
+# nrep = 160
+# nrep = 1000
 nrep = 1
 
 E0 = 7900
@@ -48,7 +48,7 @@ kwargs = dict(
     period=29., n=172,
     eE=6.08, eI=0.1,  # eEspread=0.001,
     eEpsilonX=0., eEpsilonZ=0.,
-    #eEpsilonX=1, eEpsilonZ=0.01,
+    # eEpsilonX=1, eEpsilonZ=0.01,
     betaX=1.20, betaZ=3.95,
     filamentBeam=True,
     uniformRayDensity=True,
@@ -72,8 +72,8 @@ zBins = imcnst
 xppb = 2
 zppb = 2
 imSize = imcnst
-eBins = 16
-eppb = 16
+eBins = 64
+eppb = 4
 xfactor = 1.
 zfactor = 1.
 screenName = '-plane'
@@ -96,18 +96,19 @@ def build_beamline(nrays=mynrays):
     beamLine = raycing.BeamLine()
     beamLine.source = rs.Undulator(beamLine, nrays=nrays, **kwargs)
     beamLine.fsm0 = rsc.Screen(beamLine, 'FSM0', (0, R0, 0))
-#    beamLine.slit = ra.RectangularAperture(
-#        beamLine, 'squareSlit', [0, R0, 0], ('left', 'right', 'bottom', 'top'),
-#        [-slitDx, slitDx, -slitDz, slitDz])
+    # beamLine.slit = ra.RectangularAperture(
+    #     beamLine, 'squareSlit', [0, R0, 0],
+    #     ('left', 'right', 'bottom', 'top'),
+    #     [-slitDx, slitDx, -slitDz, slitDz])
 
     beamLine.slit = ra.SiemensStar(
-            bl=beamLine,
-            name='SiemensStar',
-            center=[0, R0, 0],
-            nSpokes=nSpokes,
-            rx=slitDx,
-            rz=slitDz,
-            phi0 = 0.5*np.pi/nSpokes)
+        bl=beamLine,
+        name='SiemensStar',
+        center=[0, R0, 0],
+        nSpokes=nSpokes,
+        rx=slitDx,
+        rz=slitDz,
+        phi0=0.5*np.pi/nSpokes)
 
     beamLine.fsm1 = rsc.Screen(beamLine, 'FSM1', [0, R0, 0])
     return beamLine
@@ -175,11 +176,11 @@ def define_plots(beamLine):
 
 def plot_generator(plots, beamLine):
     for dS in [slitDx]:
-#        beamLine.slit.opening[0] = -dS/2
-#        beamLine.slit.opening[1] = dS/2
-#        beamLine.slit.opening[2] = -dS/2
-#        beamLine.slit.opening[3] = dS/2
-#        beamLine.slit.set_optical_limits()
+        # beamLine.slit.opening[0] = -dS/2
+        # beamLine.slit.opening[1] = dS/2
+        # beamLine.slit.opening[2] = -dS/2
+        # beamLine.slit.opening[3] = dS/2
+        # beamLine.slit.set_optical_limits()
 
         dX = 3.7
         beamLine.fsm1.center[1] = R0+dX*1000
@@ -205,6 +206,7 @@ def main():
     plots = define_plots(beamLine)
     xrtr.run_ray_tracing(plots, repeats=nrep, beamLine=beamLine, processes=1,
                          generator=plot_generator)
+
 
 # this is necessary to use multiprocessing in Windows, otherwise the new Python
 # contexts cannot be initialized:

@@ -100,8 +100,8 @@ The factors which definitely will affect the efficiency are (1) restricted
 coherence radius and (2) roughness. Both will be added into this example in a
 later release of xrt.
 """
-#Set proper setting for the grating and comment/uncomment one of the three main
-#invoked functions (at the very bottom).
+# Set proper setting for the grating and comment/uncomment one of the three main
+# invoked functions (at the very bottom).
 __author__ = "Konstantin Klementiev", "Roman Chernikov"
 __date__ = "16 Mar 2017"
 import os, sys; sys.path.append(os.path.join('..', '..', '..'))  # analysis:ignore
@@ -121,8 +121,8 @@ import xrt.backends.raycing.materials as rm
 import xrt.backends.raycing.screens as rsc
 import xrt.backends.raycing.waves as rw
 
-#coating = None
-#coatingGr = rm.EmptyMaterial(kind='grating')
+# coating = None
+# coatingGr = rm.EmptyMaterial(kind='grating')
 
 cwd = os.getcwd()
 dE = 0.1
@@ -132,7 +132,7 @@ minOrder = 0  # even -1 is wrong because |beta| becomes > pi/2
 maxOrder = 3
 maxDisplayOrder = 3
 
-#LEG:
+# LEG:
 pitch = np.radians(4.)
 blazeDeg = 1.85
 blaze = np.radians(blazeDeg)
@@ -140,44 +140,44 @@ rho = 600.  # lines/mm
 material = 'Au'
 coating = rm.Material('Au', rho=19.3, kind='mirror')
 coatingGr = rm.Material('Au', rho=19.3, kind='grating')
-#energies = np.linspace(60, 275, 44)
+# energies = np.linspace(60, 275, 44)
 energies = np.linspace(60, 280, 23)
 prefix = '1-LEG'
 
-##IMP:
-#pitch = np.radians(3.)
-#blaze = np.radians(1.11)
-#rho = 900.  # lines/mm
-#material = 'Ni'
-#coating = rm.Material('Ni', rho=8.902)
-#coatingGr = rm.Material('Ni', rho=8.902, kind='grating')
-##energies = np.linspace(75, 905, 84)
-#energies = np.linspace(75, 915, 22)
-#prefix = '2-IMP'
+# #IMP:
+# pitch = np.radians(3.)
+# blaze = np.radians(1.11)
+# rho = 900.  # lines/mm
+# material = 'Ni'
+# coating = rm.Material('Ni', rho=8.902)
+# coatingGr = rm.Material('Ni', rho=8.902, kind='grating')
+# #energies = np.linspace(75, 905, 84)
+# energies = np.linspace(75, 915, 22)
+# prefix = '2-IMP'
 
-##MEG:
-#pitch = np.radians(2.)
-#blaze = np.radians(1.48)
-#rho = 1200.  # lines/mm
-#material = 'Ni'
-#coating = rm.Material('Ni', rho=8.902)
-#coatingGr = rm.Material('Ni', rho=8.902, kind='grating')
-##energies = np.linspace(125, 925, 161)
-#energies = np.linspace(125, 925, 41)
-#prefix = '3-MEG'
+# #MEG:
+# pitch = np.radians(2.)
+# blaze = np.radians(1.48)
+# rho = 1200.  # lines/mm
+# material = 'Ni'
+# coating = rm.Material('Ni', rho=8.902)
+# coatingGr = rm.Material('Ni', rho=8.902, kind='grating')
+# #energies = np.linspace(125, 925, 161)
+# energies = np.linspace(125, 925, 41)
+# prefix = '3-MEG'
 
-##HEG:
-#pitch = np.radians(2.)
-#blaze = np.radians(1.52)
-#rho = 2000.  # lines/mm
-#material = 'Pt'
-#coating = rm.Material('Pt', rho=21.45)
-#coatingGr = rm.Material('Pt', rho=21.45, kind='grating')
-#energies = np.linspace(240, 1160, 185)
-#prefix = '4-HEG'
+# #HEG:
+# pitch = np.radians(2.)
+# blaze = np.radians(1.52)
+# rho = 2000.  # lines/mm
+# material = 'Pt'
+# coating = rm.Material('Pt', rho=21.45)
+# coatingGr = rm.Material('Pt', rho=21.45, kind='grating')
+# energies = np.linspace(240, 1160, 185)
+# prefix = '4-HEG'
 
 angles = np.linspace(0, 2e-3, 41)
-#whatToScan = 'angle'
+# whatToScan = 'angle'
 whatToScan = 'energy'
 if whatToScan == 'energy':
     suffix = '_E'
@@ -190,7 +190,7 @@ q = 5000.
 nrays = 2e5
 xBins, xppb = 128, 2
 zBins, zppb = 128, 2
-eBins, eppb = 1, 200
+eBins, eppb = 128, 2
 xName = 'yaw'
 yName = 'pitch'
 thetaOffset = pitch
@@ -219,6 +219,7 @@ def order_2theta(order, E, pitch, rho=rho):
     beta = np.arcsin(np.asarray(order)*l_d - np.cos(pitch))  # <0!
     return np.pi/2 + beta + pitch
 
+
 sourceType = 'flat'
 # sourceType = 'annulus'
 # sourceType = 'divergent'
@@ -229,13 +230,13 @@ if sourceType == 'flat':
 elif sourceType == 'annulus':
     kw = {'distx': 'annulus', 'dx': (0, dx/2),
           'distxprime': None, 'distzprime': None}
-#    prefix += '-02' + sourceType + '-'
+    # prefix += '-02' + sourceType + '-'
 elif sourceType == 'divergent':
     dPrime = 2e-5
     kw = {'distx': None, 'distz': None,
           'distxprime': None, 'distzprime': 'flat',
           'dxprime': dPrime, 'dzprime': dPrime}
-#    prefix += '-03' + sourceType + '-'
+    # prefix += '-03' + sourceType + '-'
 
 kw['distE'] = 'lines'
 polarization = 'horizontal'
@@ -262,15 +263,15 @@ def get_grating_area_fraction(rho, blaze, pitch):
 
 
 def visualize_grating():
-    from  matplotlib.patches import Arc
+    from matplotlib.patches import Arc
 
     beamLine = raycing.BeamLine()
     bg = roe.BlazedGrating(
         beamLine, 'BlazedGrating', (0, p, 0), pitch=pitch, material=coating,
         blaze=blaze,
-        #antiblaze=pitch,
+        # antiblaze=pitch,
         rho=rho,
-#        gratingDensity=['y', rho, 1, 0, 1e-7]
+        # gratingDensity=['y', rho, 1, 0, 1e-7]
         )
 
     fig1 = plt.figure(figsize=(8, 6), dpi=100)
@@ -279,8 +280,8 @@ def visualize_grating():
     ax.set_xlabel(u'y (µm)')
     ax.set_ylabel(u'z (nm)')
     ax.set_title(
-        u'Grating profile with {0:.0f} lines/mm and {1:.2f}° blaze angle\n'.format(
-            rho, np.degrees(blaze)) +
+        u'Grating profile with {0:.0f} lines/mm and {1:.2f}° blaze angle\n'
+        .format(rho, np.degrees(blaze)) +
         u'and beam footprint at {0}° pitch angle'.format(np.degrees(pitch)))
 
     maxY = 2.2 * bg.rho_1
@@ -320,10 +321,10 @@ def visualize_grating():
                      theta2=90-blazeDeg, color='b'))
     ax.add_patch(Arc([bg.rho_1*1e3, -mz*1e6], maxY*0.22e3, mz*0.2e6, theta1=90,
                      theta2=180, color='b'))
-    ax.text(bg.rho_1*0.15e3, -mz*0.9e6, 'blaze', ha='left', va='center',
-            fontsize=12, color='b')
-    ax.text(bg.rho_1*0.97e3, -mz*0.83e6, 'anti-\nblaze', ha='right', va='center',
-            fontsize=12, color='b')
+    ax.text(bg.rho_1*0.15e3, -mz*0.9e6, 'blaze',
+            ha='left', va='center', fontsize=12, color='b')
+    ax.text(bg.rho_1*0.97e3, -mz*0.83e6, 'anti-\nblaze',
+            ha='right', va='center', fontsize=12, color='b')
 
     fig1.savefig(prefix + '_profile.png')
     plt.show()
@@ -336,9 +337,9 @@ def build_beamline(nrays=nrays):
 
     beamLine.bg = roe.BlazedGrating(
         beamLine, 'BlazedGrating', (0, p, 0), pitch=pitch, material=coating,
-        blaze=blaze, 
+        blaze=blaze,
         rho=rho,
-#        gratingDensity=['y', rho, 1, 0, 1e-7]
+        # gratingDensity=['y', rho, 1, 0, 1e-7]
         )
     drho = beamLine.bg.get_grating_area_fraction()
     beamLine.bg.area = dx * dz / np.sin(pitch) * drho
@@ -434,7 +435,7 @@ def define_plots(beamLine):
         plotsR.append(plot)
 
     for plot in plots:
-#    plot.xaxis.limits = [-xmax, xmax]
+        # plot.xaxis.limits = [-xmax, xmax]
         plot.xaxis.fwhmFormatStr = None
         plot.fluxFormatStr = '%.2p'
         if hasattr(plot, 'baseName'):
@@ -609,7 +610,7 @@ def visualize_efficiency():
         eCalc2, fCalc2 = np.loadtxt('MEG_2nd_1p48.dat', unpack=True)
 
     res = read_curves()
-    minOrder, maxOrder, scanAxis, eff, xBins, zBins,\
+    minOrder, maxOrder, scanAxis, eff, xBins, zBins, \
         screenPhis, screenThetas, pickleCrossSection = res[0:9]
     maxPlotOrder = min(maxDisplayOrder, maxOrder)
 
@@ -627,14 +628,14 @@ def visualize_efficiency():
     axEff.plot(scanAxis*scanAxisFactor, eff[:, 3-minOrder], '.b', lw=2,
                label='3 xrt')
 
-#    axEff.plot(scanAxis*scanAxisFactor, eff[:, 4-minOrder], '.-', lw=2,
-#               label='4 xrt')
-#    axEff.plot(scanAxis*scanAxisFactor, eff[:, 5-minOrder], '.-', lw=2,
-#               label='5 xrt')
-#    axEff.plot(scanAxis*scanAxisFactor, eff[:, 6-minOrder], '.-', lw=2,
-#               label='6 xrt')
-#    axEff.plot(scanAxis*scanAxisFactor, eff[:, 7-minOrder], '.-', lw=2,
-#               label='7 xrt')
+    # axEff.plot(scanAxis*scanAxisFactor, eff[:, 4-minOrder], '.-', lw=2,
+    #            label='4 xrt')
+    # axEff.plot(scanAxis*scanAxisFactor, eff[:, 5-minOrder], '.-', lw=2,
+    #            label='5 xrt')
+    # axEff.plot(scanAxis*scanAxisFactor, eff[:, 6-minOrder], '.-', lw=2,
+    #            label='6 xrt')
+    # axEff.plot(scanAxis*scanAxisFactor, eff[:, 7-minOrder], '.-', lw=2,
+    #            label='7 xrt')
 
     if whatToScan == 'energy':
         if fCalc1 is not None:
@@ -656,10 +657,10 @@ def visualize_efficiency():
     lines = axEff.lines
     labels = [l.get_label() for l in lines]
     axEff.legend(lines, labels, title='orders', loc='upper right')
-#    axEff.add_artist(hvLegend)
+    # axEff.add_artist(hvLegend)
     axEff.set_xlim(scanAxis[0]*scanAxisFactor, scanAxis[-1]*scanAxisFactor)
     axEff.set_ylim(0, 1)
-#    axEff.set_xlim(50, 275)
+    # axEff.set_xlim(50, 275)
 
     figEff.savefig(fName + '-eff.png')
 
@@ -697,8 +698,8 @@ def visualize_efficiency():
         figx.savefig(fName + '-orders-x.png')
         figz.savefig(fName + '-orders-z.png')
 
+        # for iE in [0, elen-1]:
         for iE in [0, elen//2, elen-1]:
-#        for iE in [0, elen-1]:
             rect2d = [0.1, 0.1, 0.85, 0.8]
             figc, axc = create_fig(rect2d, 'polar', scanAxis, axisLabel,
                                    scanAxisFactor, maxPlotOrder,
@@ -728,6 +729,6 @@ def visualize_efficiency():
 
 
 if __name__ == '__main__':
-    # visualize_grating()
-    get_efficiency()
+    visualize_grating()
+    # get_efficiency()
     # visualize_efficiency()

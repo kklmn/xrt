@@ -25,8 +25,8 @@ __date__ = "08 Mar 2016"
 
 import os, sys; sys.path.append(os.path.join('..', '..', '..'))  # analysis:ignore
 # import time
-#import matplotlib as mpl
-#mpl.use('Agg')
+# import matplotlib as mpl
+# mpl.use('Agg')
 import xrt.backends.raycing as raycing
 import xrt.backends.raycing.sources as rs
 import xrt.backends.raycing.screens as rsc
@@ -39,9 +39,7 @@ import numpy as np
 
 R0 = 90000
 mynrays = 2e6
-divsZ = -8
-divsX = -8
-#zero divergence
+
 slitDx = 0.5
 slitDz = 0.05
 dR = 16000.
@@ -49,8 +47,8 @@ SCRx = 0.7
 SCRz = 10
 dE = 1e-5
 
-nrep = 512
-#finite divergence
+# nrep = 512
+nrep = 64
 
 E0 = 12000
 kwargs = dict(
@@ -58,14 +56,13 @@ kwargs = dict(
     period=29., n=172,
     eE=6.08, eI=0.1,  # eEspread=0.001,
     eEpsilonX=0., eEpsilonZ=0.0,
-    #eEpsilonX=1., eEpsilonZ=0.01,
+    # eEpsilonX=1., eEpsilonZ=0.01,
     filamentBeam=True,
     uniformRayDensity=True,
     xPrimeMax=np.arctan(1.5/R0)*1.e3, zPrimeMax=np.arctan(1.5/R0)*1e3,
-    #xPrimeMaxAutoReduce=False, zPrimeMaxAutoReduce=False,
+    # xPrimeMaxAutoReduce=False, zPrimeMaxAutoReduce=False,
     targetE=[E0, 3])
 
-#E0 = 1355
 eMinRays = E0 - 0.5
 eMaxRays = E0 + 0.5
 kwargs['eMin'] = eMinRays
@@ -169,7 +166,7 @@ def define_plots(beamLine):
         xaxis=xrtp.XYCAxis(xName, unit, bins=xBins, ppb=xppb),
         yaxis=xrtp.XYCAxis(zName, unit, bins=zBins, ppb=zppb),
         caxis=xrtp.XYCAxis('energy', 'eV', bins=eBins, ppb=eppb),
-        #fluxKind='wave',
+        # fluxKind='wave',
         title='3 - DS Propagation Wave')
     plots.append(plot)
 
@@ -192,9 +189,9 @@ def define_plots(beamLine):
 
 
 def plot_generator(plots, beamLine):
-    for slitZ in np.linspace(0.025, 0.2, 8):
-#    for slitZ in [0.05]:
-        #slitZ=0.06
+    # for slitZ in np.linspace(0.025, 0.2, 8):
+    for slitZ in [0.05]:
+        # slitZ=0.06
         slitwidth = 0.01
         slit_pos = 0
         R0s = 90.
@@ -204,8 +201,8 @@ def plot_generator(plots, beamLine):
         beamLine.slit.opening[3] = slitZ/2.
         beamLine.slit.shadeFraction = SP
         beamLine.slit.area = slitDx * 2 * slitwidth
-#        print("area")
-#        print(beamLine.slit.area, slitDx, slitDz, (1-SP))
+        # print("area")
+        # print(beamLine.slit.area, slitDx, slitDz, (1-SP))
         dX = 20.
         beamLine.slit.center[1] = R0s*1000.
         beamLine.fsm1.center[1] = (R0s+dX)*1000.
@@ -228,7 +225,7 @@ def plot_generator(plots, beamLine):
             plot.saveName = (str1 + str2).format(
                 plot.baseName, R0s, (slitZ-slitwidth)*1e3,
                 slitwidth*1e3, R0s+dX)
-#            plot.persistentName = plot.saveName + '.pickle'
+            # plot.persistentName = plot.saveName + '.pickle'
         yield
 
 
@@ -237,6 +234,7 @@ def main():
     plots = define_plots(beamLine)
     xrtr.run_ray_tracing(plots, repeats=nrep, beamLine=beamLine,
                          generator=plot_generator)
+
 
 if __name__ == '__main__':
     main()

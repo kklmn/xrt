@@ -40,12 +40,12 @@ import xrt.backends.raycing.sources as rs
 import xrt.backends.raycing.oes as roe
 import xrt.backends.raycing.run as rr
 import xrt.backends.raycing.apertures as ra
-#import xrt.backends.raycing.materials as rm
+# import xrt.backends.raycing.materials as rm
 import xrt.backends.raycing.screens as rsc
 import xrt.backends.raycing.waves as rw
 
-#coating = rm.Material('Au', rho=19.3)
-#coating = rm.Material('Ni', rho=8.902)
+# coating = rm.Material('Au', rho=19.3)
+# coating = rm.Material('Ni', rho=8.902)
 coating = None
 
 E0 = 150.
@@ -59,21 +59,21 @@ dPrime = 120e-6
 
 xBins, xppb = 128, 2
 yBins, yppb = 128, 2
-#xBins, xppb = 256, 1
-#yBins, yppb = 256, 1
+# xBins, xppb = 256, 1
+# yBins, yppb = 256, 1
 eBins, eppb = 32, 8
 xName = 'yaw'
 yName = 'pitch'
 unit, ufactor = u'µrad', 1e6
 
 case = 'mirror'
-#case = '2mirrors'
-#case = 'aperture'
+# case = '2mirrors'
+# case = 'aperture'
 sourceType = 'flat'
 
-#case = 'mirrorEll'
-#case = '2mirrorsEll'
-#sourceType = 'divergent'
+# case = 'mirrorEll'
+# case = '2mirrorsEll'
+# sourceType = 'divergent'
 
 prefix = case
 nrays = 1e5
@@ -90,12 +90,12 @@ elif sourceType == 'divergent':
 
 kw['distE'] = 'lines'
 kw['energies'] = [E0]
-#kw['distE'] = 'flat'
-#kw['energies'] = [E0-dE/2, E0+dE/2]
+# kw['distE'] = 'flat'
+# kw['energies'] = [E0-dE/2, E0+dE/2]
 
 kwargs = dict(
     eE=6.08, eI=0.1,  # eEspread=0.001,
-    #eEpsilonX=1., eEpsilonZ=0.01,
+    # eEpsilonX=1., eEpsilonZ=0.01,
     eEpsilonX=0., eEpsilonZ=0.,
     betaX=20., betaZ=3.95,
     period=32.0, n=12,
@@ -107,8 +107,8 @@ kwargs = dict(
 
 def build_beamline():
     beamLine = raycing.BeamLine()
-#    rs.GeometricSource(
-#        beamLine, 'source', nrays=nrays, polarization='horizontal', **kw)
+    # rs.GeometricSource(
+    #     beamLine, 'source', nrays=nrays, polarization='horizontal', **kw)
     rs.Undulator(beamLine, nrays=nrays, **kwargs)
 
     if case == 'mirror':
@@ -219,7 +219,7 @@ def define_plots(beamLine):
         ms = mf / q * ufactor
         ma = dx/2
     else:
-#        mf = dPrime/2 * (p+q) * 4
+        # mf = dPrime/2 * (p+q) * 4
         if case.endswith('Ell'):
             mf = 0.2 / (E0 / 150.)
         else:
@@ -320,6 +320,7 @@ def main():
     beamLine = build_beamline()
     plots = define_plots(beamLine)
     xrtr.run_ray_tracing(plots, repeats=1, beamLine=beamLine)
+
 
 # this is necessary to use multiprocessing in Windows, otherwise the new Python
 # contexts cannot be initialized:

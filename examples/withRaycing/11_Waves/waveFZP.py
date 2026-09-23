@@ -35,8 +35,8 @@ filter as the outer zone size approaches the wavelength, here ~10 nm.
    :loc: upper-right-corner
 
 """
-#Set proper setting for the FZP and comment/uncomment one of the two main
-#invoked functions (at the very bottom).
+# Set proper setting for the FZP and comment/uncomment one of the two main
+# invoked functions (at the very bottom).
 __author__ = "Konstantin Klementiev", "Roman Chernikov"
 __date__ = "08 Mar 2016"
 import os, sys; sys.path.append(os.path.join('..', '..', '..'))  # analysis:ignore
@@ -46,7 +46,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 
-#import xrt.plotter as xrtp
+# import xrt.plotter as xrtp
 import xrt.runner as xrtr
 import xrt.backends.raycing as raycing
 import xrt.backends.raycing.sources as rs
@@ -71,7 +71,7 @@ cmap = mpl.colormaps['jet']
 prefix = '1-LE-FZP_{0:.0f}nm'.format(thinnestZone*1e6)
 energies = np.linspace(50, 250, 101)
 angles = np.linspace(0, 2e-3, 41)
-#whatToScan = 'angle'
+# whatToScan = 'angle'
 whatToScan = 'energy'
 if whatToScan == 'energy':
     suffix = '_E'
