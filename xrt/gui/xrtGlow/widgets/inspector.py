@@ -843,7 +843,8 @@ class InstanceInspector(qt.QDialog):
                             str(child0.text()) == f'{pTuple[1]}':
                         child1 = parentItem.child(i, 1)
                         self.set_param_item_value(child1, pTuple[1], pTuple[2])
-                    elif str(child0.text()) == f'{pTuple[1]}':
+                    elif str(child0.text()) == f'{pTuple[1]}' and\
+                            pTuple[1] not in raycing.derivedArgSet:
                         child1 = parentItem.child(i, 1)
                         self.set_param_item_value(child1, pTuple[1], pTuple[2])
                         self.original_data[pTuple[1]] = str(pTuple[2])

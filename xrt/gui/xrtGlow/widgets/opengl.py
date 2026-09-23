@@ -699,7 +699,16 @@ class xrtGlWidget(qt.QOpenGLWidget):
             setattr(updObj, arg0, argValue)
             if arg0 not in changedArgs:
                 changedArgs.append(arg0)
-            updatedArgs[arg0] = getattr(updObj, arg0)
+            initAttr = f'_{arg0}Init'
+            if isinstance(argValue, (str, list, tuple)) and\
+                    hasattr(updObj, initAttr):
+                updatedArgs[arg0] = copy.deepcopy(
+                    getattr(updObj, initAttr))
+            elif sender == 'OEE' and argName == arg0 and\
+                    isinstance(argValue, str):
+                updatedArgs[arg0] = argValue
+            else:
+                updatedArgs[arg0] = getattr(updObj, arg0)
             if obj_type == "mat" and arg0 == "name":
                 for matName, matId in list(
                         self.beamline.matnamesToUUIDs.items()):
