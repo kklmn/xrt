@@ -53,14 +53,14 @@ dFocus = np.linspace(0.0005, 0.002, 16) if not showIn3D else [0]
 gratingMaterial = mGoldenGrating
 material = mGolden
 
-#E0 = 2400.
-#dE = 1.
-#targetHarmonic = 3
-#dFocus = np.linspace(0.016, 0.046, 16)
-##dFocus = np.linspace(-0.03, 0.03, 13)
-#pFZP *= 3
-#gratingMaterial = mRhodiumGrating
-#material = mRhodium
+# E0 = 2400.
+# dE = 1.
+# targetHarmonic = 3
+# dFocus = np.linspace(0.016, 0.046, 16)
+# #dFocus = np.linspace(-0.03, 0.03, 13)
+# pFZP *= 3
+# gratingMaterial = mRhodiumGrating
+# material = mRhodium
 
 pitch = np.radians(1)
 
@@ -69,7 +69,7 @@ fixedExit = 30.  # mm
 rho = 300.       # lines/mm
 blaze = np.radians(0.5)
 
-#ESradius = 0.06  # in mm EXIT SLIT RADIUS
+# ESradius = 0.06  # in mm EXIT SLIT RADIUS
 ESdX = 0.08  # in mm EXIT SLIT width
 ESdZ = 0.12  # in mm EXIT SLIT height
 
@@ -87,8 +87,8 @@ repeats = 10
 nrays = 1e5
 
 what = 'rays'
-#what = 'hybrid'
-#what = 'wave'
+# what = 'hybrid'
+# what = 'wave'
 
 if what == 'rays':
     prefix = 'stxm-1D-1-rays-'
@@ -99,9 +99,9 @@ elif what == 'wave':
 if E0 > 280.1:
     prefix += '{0:.0f}eV-'.format(E0)
 
-#==============================================================================
+# =============================================================================
 # horizontal cut
-#==============================================================================
+# =============================================================================
 vShrink = 1e-3
 hShrink = 1.
 cut = 'hor-'
@@ -109,15 +109,15 @@ prefix += cut
 xbins, xppb = 128, 2
 zbins, zppb = 1, 8
 
-#==============================================================================
+# =============================================================================
 # vertical cut
-#==============================================================================
-#vShrink = 1.
-#hShrink = 1e-3
-#cut = 'ver-'
-#prefix += cut
-#xbins, xppb = 1, 8
-#zbins, zppb = 128, 2
+# =============================================================================
+# vShrink = 1.
+# hShrink = 1e-3
+# cut = 'ver-'
+# prefix += cut
+# xbins, xppb = 1, 8
+# zbins, zppb = 128, 2
 
 is0emittance = True
 if is0emittance:
@@ -144,16 +144,16 @@ else:
     prefix += 'wideE-'
 
 vFactor = 1.
-#prefix += '050%V-'
+# prefix += '050%V-'
 hFactor = 1
-#prefix += '050%H-'
-#prefix += 'x4dist-'
-#pFZP *= 4
-#dFocus = np.linspace(0.000, 0.0015, 16)
-#dFocus = np.linspace(-0.0005, 0.001, 16)
+# prefix += '050%H-'
+# prefix += 'x4dist-'
+# pFZP *= 4
+# dFocus = np.linspace(0.000, 0.0015, 16)
+# dFocus = np.linspace(-0.0005, 0.001, 16)
 
 hExtraFactor = 1
-#prefix += '001%Hm3-'
+# prefix += '001%Hm3-'
 
 
 class Grating(roe.OE):
@@ -192,7 +192,7 @@ def build_beamline(azimuth=0):
         limPhysX=(-5*xShrink, 5*xShrink), limPhysY=(-150*yShrink, 150*yShrink),
         positionRoll=np.pi/2, R=1e22,
         alarmLevel=0.1)
-#    beamLine.fsm1 = rsc.Screen(beamLine, 'FSM-M1')
+    # beamLine.fsm1 = rsc.Screen(beamLine, 'FSM-M1')
 
     xShrink = hShrink if what == 'wave' else 1
     yShrink = vShrink if what == 'wave' else 1
@@ -213,13 +213,13 @@ def build_beamline(azimuth=0):
             beamLine, 'BlazedGrating', material=material, blaze=blaze,
             rho=rho, **gratingKW)
     beamLine.pg.order = 1
-#    beamLine.fsmPG = rsc.Screen(beamLine, 'FSM-PG')
+    # beamLine.fsmPG = rsc.Screen(beamLine, 'FSM-PG')
 
     beamLine.m3 = roe.ToroidMirror(
         beamLine, 'M3', surface=('Au',), material=(material,),
         positionRoll=-np.pi/2, limPhysX=(-2*vShrink, 2*vShrink),
         limPhysY=(-80*hShrink*hExtraFactor, 80*hShrink*hExtraFactor),
-        #limPhysY=(-80*hShrink, 80*hShrink),
+        # limPhysY=(-80*hShrink, 80*hShrink),
         alarmLevel=0.1)
     beamLine.fsm3 = rsc.Screen(beamLine, 'FSM-M3')
 
@@ -275,8 +275,8 @@ def align_beamline(beamLine, E0=E0):
     beamLine.m1.center = 0, 0, 0   # THIS IS THE ORIGIN!, y-direction = M1-> PG
     beamLine.m1.pitch = pitch
     beamLine.m1.r = rM1
-#    beamLine.fsm1.center = beamLine.m1.center
-#    beamLine.fsm1.x = -np.sin(beamLine.m1.pitch), np.cos(beamLine.m1.pitch), 0
+    # beamLine.fsm1.center = beamLine.m1.center
+    # beamLine.fsm1.x = -np.sin(beamLine.m1.pitch), np.cos(beamLine.m1.pitch), 0
 
     if isinstance(beamLine.pg.order, int):
         m = beamLine.pg.order
@@ -303,7 +303,7 @@ def align_beamline(beamLine, E0=E0):
     print('PG pitch = {0} deg'.format(np.degrees(beamLine.pg.pitch)))
     beamLine.pg.center = 0, pPG, fixedExit
     beamLine.pg.yaw = -2 * beamLine.m1.pitch
-#    beamLine.fsmPG.center = beamLine.pg.center
+    # beamLine.fsmPG.center = beamLine.pg.center
     print('rho = {0}'.format(rho))
     if what != 'rays':  # this is here because it needs pitch value
         drho = beamLine.pg.get_grating_area_fraction()
@@ -312,9 +312,9 @@ def align_beamline(beamLine, E0=E0):
 
     pM3mer = pM1 + pPG + pM3  # pM3sag = infinity
     sinPitchM3 = np.sin(pitch)
-    #rM3 = 2e22     # collimating
+    # rM3 = 2e22     # collimating
     rM3 = 2. * sinPitchM3 * qM3sag   # focusing
-    #RM3 = 2*pM3mer/sinPitchM3   # collimating
+    # RM3 = 2*pM3mer/sinPitchM3   # collimating
     RM3 = 2. / sinPitchM3 * (pM3mer*qM3mer) / (pM3mer+qM3mer)  # focusing
     print('M3: r = {0} mm, R = {1} m'.format(rM3, RM3*1e-3))
     beamLine.m3.center = [0, pPG + pM3, fixedExit]
@@ -323,10 +323,10 @@ def align_beamline(beamLine, E0=E0):
     beamLine.m3.R = RM3
     beamLine.fsm3.center = beamLine.m3.center
 
-    beamLine.exitSlit.center = -qM3sag * np.sin(2*pitch),\
+    beamLine.exitSlit.center = -qM3sag * np.sin(2*pitch), \
         beamLine.m3.center[1] + qM3sag * np.cos(2*pitch), fixedExit
 
-    beamLine.fzp.center = -(qM3sag+pFZP) * np.sin(2*pitch),\
+    beamLine.fzp.center = -(qM3sag+pFZP) * np.sin(2*pitch), \
         beamLine.m3.center[1] + (qM3sag+pFZP) * np.cos(2*pitch), fixedExit
     beamLine.fsmFZP.center = beamLine.fzp.center
 
@@ -412,13 +412,13 @@ def run_process_hybr(beamLine, shineOnly1stSource=False):
         if repeats > 1:
             print('wave repeats: {0} of {1} ...'.format(repeat+1, repeats))
 
-#        waveOnFSM3 = beamLine.fsm3.prepare_wave(
-#            beamLine.pg, beamLine.fsm3X, beamLine.fsm3Z)
-#        rw.diffract(beamPGlocal, waveOnFSM3)
+        # waveOnFSM3 = beamLine.fsm3.prepare_wave(
+        #     beamLine.pg, beamLine.fsm3X, beamLine.fsm3Z)
+        # rw.diffract(beamPGlocal, waveOnFSM3)
 
         waveOnm3 = beamLine.m3.prepare_wave(beamLine.pg, nrays)
         beamTom3 = rw.diffract(beamPGlocal, waveOnm3)
-#        beamM3local = waveOnm3
+        # beamM3local = waveOnm3
         beamM3global, beamM3local = beamLine.m3.reflect(
             beamTom3, noIntersectionSearch=True)
 
@@ -439,7 +439,7 @@ def run_process_hybr(beamLine, shineOnly1stSource=False):
                'beamM1local': beamM1local,
                'beamM2local': beamM2local,
                'beamPGlocal': beamPGlocal,
-               #'waveOnFSM3': waveOnFSM3
+               # 'waveOnFSM3': waveOnFSM3
                'beamM3local': beamM3local,
                'beamExitSlit': beamExitSlit,
                'beamFZPlocal': beamFZPlocal,
@@ -492,13 +492,13 @@ def run_process_wave(beamLine, shineOnly1stSource=False):
         beamPGlocal.area = 0
         beamPGlocal.areaFraction = beamLine.pg.areaFraction
 
-#        waveOnFSM3 = beamLine.fsm3.prepare_wave(
-#            beamLine.pg, beamLine.fsm3X, beamLine.fsm3Z)
-#        rw.diffract(beamPGlocal, waveOnFSM3)
+        # waveOnFSM3 = beamLine.fsm3.prepare_wave(
+        #     beamLine.pg, beamLine.fsm3X, beamLine.fsm3Z)
+        # rw.diffract(beamPGlocal, waveOnFSM3)
 
         waveOnm3 = beamLine.m3.prepare_wave(beamLine.pg, nrays)
         beamTom3 = rw.diffract(beamPGlocal, waveOnm3)
-#        beamM3local = waveOnm3
+        # beamM3local = waveOnm3
         beamM3global, beamM3local = beamLine.m3.reflect(
             beamTom3, noIntersectionSearch=True)
 
@@ -520,7 +520,7 @@ def run_process_wave(beamLine, shineOnly1stSource=False):
                'beamM1local': beamM1local,
                'beamM2local': beamM2local,
                'beamPGlocal': beamPGlocal,
-               #'waveOnFSM3': waveOnFSM3
+               # 'waveOnFSM3': waveOnFSM3
                'beamM3local': beamM3local,
                'beamExitSlit': beamExitSlit,
                'beamFZPlocal': beamFZPlocal,
@@ -738,7 +738,7 @@ def main():
     beamLine = build_beamline(azimuth=-2*pitch)
     align_beamline(beamLine)
     if showIn3D:
-#        beamLine.orient_along_global_Y()
+        # beamLine.orient_along_global_Y()
         beamLine.glow(scale=[100, 10, 1000], centerAt='M2')
         return
     plots, complexPlotsIs, complexPlotsDs = define_plots(beamLine)
@@ -752,7 +752,7 @@ def plotFocus():
     pickleName = '{0}-res.pickle'.format(prefix)
     with open(pickleName, 'rb') as f:
         dump = pickle.load(f)
-    #  normalize over all images:
+    # normalize over all images:
     norm = 0.
     for ic, d in enumerate(dFocus):
         Es = dump[ic][3]

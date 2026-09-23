@@ -55,7 +55,7 @@ qM3sag = 12000.
 dM4ES = 2200.
 dM45 = 3200.
 pExp = 1800.
-#pFZP = 5000.
+# pFZP = 5000.
 
 pitch = np.radians(1)
 
@@ -64,29 +64,29 @@ fixedExit = 20.  # mm
 rho = 300.       # lines/mm
 blaze = np.radians(0.6)
 
-#ESradius = 0.06  # in mm EXIT SLIT RADIUS
+# ESradius = 0.06  # in mm EXIT SLIT RADIUS
 ESdX = 2.  # in mm EXIT SLIT RADIUS
 ESdZ = 0.1  # in mm EXIT SLIT RADIUS
 
-#ZPdiam = 300.                 # diameter of ZP, microns
-#outerzone = 30.               # diameter of outermost zone of a ZP, nm
-#wavelength = 1239.84187 / E0  # nanometers
-#
-#focus = ZPdiam*(1e-3)*outerzone/wavelength  # focal distance, mm
-#
-#dFocus = np.linspace(-0., 0., 1)
-#
-#Nzone = ZPdiam/(4*outerzone*1e-3)
+# ZPdiam = 300.                 # diameter of ZP, microns
+# outerzone = 30.               # diameter of outermost zone of a ZP, nm
+# wavelength = 1239.84187 / E0  # nanometers
 
-#print('f_ZP: = {0} mm'.format(focus))
-#print('N_ZP: = {0}'.format(Nzone))
+# focus = ZPdiam*(1e-3)*outerzone/wavelength  # focal distance, mm
+
+# dFocus = np.linspace(-0., 0., 1)
+
+# Nzone = ZPdiam/(4*outerzone*1e-3)
+
+# print('f_ZP: = {0} mm'.format(focus))
+# print('N_ZP: = {0}'.format(Nzone))
 
 repeats = 10
 nrays = 1e5
 
-#what = 'rays'
+# what = 'rays'
 what = 'hybrid'
-#what = 'wave'
+# what = 'wave'
 
 if what == 'rays':
     prefix = 'cxi_2D-1-rays-'
@@ -123,9 +123,9 @@ else:
     prefix += 'wideE-'
 
 vFactor = 1.
-#prefix += '050%V-'
+# prefix += '050%V-'
 hFactor = 1.
-#prefix += '025%H-'
+# prefix += '025%H-'
 
 
 class Grating(roe.OE):
@@ -146,7 +146,7 @@ def build_beamline(azimuth=0):
         xPrimeMax=acceptanceHor/2*1e3,
         zPrimeMax=acceptanceVer/2*1e3,
         xPrimeMaxAutoReduce=False, zPrimeMaxAutoReduce=False,
-#        targetOpenCL='CPU',
+        # targetOpenCL='CPU',
         uniformRayDensity=True,
         filamentBeam=(what != 'rays'))
 
@@ -161,7 +161,7 @@ def build_beamline(azimuth=0):
         beamLine, 'M1', surface=('Au',), material=(mAu,),
         limPhysX=(-5, 5), limPhysY=(-150, 150),
         positionRoll=np.pi/2, R=1e22, alarmLevel=0.1)
-#    beamLine.fsm1 = rsc.Screen(beamLine, 'FSM-M1')
+    # beamLine.fsm1 = rsc.Screen(beamLine, 'FSM-M1')
 
     beamLine.m2 = roe.OE(
         beamLine, 'M2', surface=('Au',), material=(mAu,),
@@ -179,7 +179,7 @@ def build_beamline(azimuth=0):
             beamLine, 'BlazedGrating', material=mGolden, blaze=blaze,
             rho=rho, **gratingKW)
     beamLine.pg.order = 1
-#    beamLine.fsmPG = rsc.Screen(beamLine, 'FSM-PG')
+    # beamLine.fsmPG = rsc.Screen(beamLine, 'FSM-PG')
 
     beamLine.m3 = roe.ToroidMirror(
         beamLine, 'M3', surface=('Au',), material=(mAu,),
@@ -187,8 +187,8 @@ def build_beamline(azimuth=0):
         alarmLevel=0.1)
     beamLine.fsm3 = rsc.Screen(beamLine, 'FSM-M3')
 
-#    beamLine.exitSlit = ra.RoundAperture(
-#         beamLine, 'ExitSlit', r=ESradius, alarmLevel=None)
+    # beamLine.exitSlit = ra.RoundAperture(
+    #      beamLine, 'ExitSlit', r=ESradius, alarmLevel=None)
     beamLine.exitSlit = ra.RectangularAperture(
          beamLine, 'ExitSlit',
          opening=[-ESdX*hFactor/2, ESdX*hFactor/2,
@@ -240,8 +240,8 @@ def align_beamline(beamLine, E0=E0, pitchM1=pitch, pitchM3=pitch,
     beamLine.m1.center = 0, 0, 0   # THIS IS THE ORIGIN!, y-direction = M1-> PG
     beamLine.m1.pitch = pitch
     beamLine.m1.r = rM1
-#    beamLine.fsm1.center = beamLine.m1.center
-#    beamLine.fsm1.x = -np.sin(beamLine.m1.pitch), np.cos(beamLine.m1.pitch), 0
+    # beamLine.fsm1.center = beamLine.m1.center
+    # beamLine.fsm1.x = -np.sin(beamLine.m1.pitch), np.cos(beamLine.m1.pitch), 0
 
     if isinstance(beamLine.pg.order, int):
         m = beamLine.pg.order
@@ -256,7 +256,7 @@ def align_beamline(beamLine, E0=E0, pitchM1=pitch, pitchM3=pitch,
     print('cos(beta)/cos(alpha) = {0}'.format(np.cos(beta)/np.cos(alpha)))
     t = -fixedExit / np.tan(includedAngle)
     print('t = {0} mm'.format(t))
-#    print('N = {0}'.format(Nzone))
+    # print('N = {0}'.format(Nzone))
 
     beamLine.m2.pitch = (np.pi - includedAngle) / 2.
     print('M2 pitch = {0} deg'.format(np.degrees(beamLine.m2.pitch)))
@@ -268,14 +268,14 @@ def align_beamline(beamLine, E0=E0, pitchM1=pitch, pitchM3=pitch,
     print('PG pitch = {0} deg'.format(np.degrees(beamLine.pg.pitch)))
     beamLine.pg.center = 0, pPG, fixedExit
     beamLine.pg.yaw = -2 * beamLine.m1.pitch
-#    beamLine.fsmPG.center = beamLine.pg.center
+    # beamLine.fsmPG.center = beamLine.pg.center
     print('rho = {0}'.format(rho))
     if what != 'rays':  # this is here because it needs pitch value
         drho = beamLine.pg.get_grating_area_fraction()
         beamLine.pg.areaFraction = drho
         print(u'PG areaFraction = {0}'.format(beamLine.pg.areaFraction))
 
-#    pM3mer = pM1 + pPG + pM3  # pM3sag = infinity
+    # pM3mer = pM1 + pPG + pM3  # pM3sag = infinity
     sinPitchM3 = np.sin(pitch)
     rM3 = 2. * sinPitchM3 * qM3sag   # focusing
     print('M3: r = {0} mm'.format(rM3))
@@ -285,22 +285,22 @@ def align_beamline(beamLine, E0=E0, pitchM1=pitch, pitchM3=pitch,
     beamLine.m3.R = 1e22  # no hor focusing: M3 cylindrical
     beamLine.fsm3.center = beamLine.m3.center
 
-    beamLine.exitSlit.center = -qM3sag * np.sin(2*pitch),\
+    beamLine.exitSlit.center = -qM3sag * np.sin(2*pitch), \
         beamLine.m3.center[1] + qM3sag * np.cos(2*pitch), fixedExit
 
-    beamLine.m4.center = -(qM3sag+dM4ES) * np.sin(2*pitchM3),\
+    beamLine.m4.center = -(qM3sag+dM4ES) * np.sin(2*pitchM3), \
         beamLine.m3.center[1] + (qM3sag+dM4ES) * np.cos(2*pitchM3), fixedExit
     print('M4: p={0}, q={1}'.format(beamLine.m4.p, beamLine.m4.q))
 
-    beamLine.m5.center = beamLine.m4.center[0],\
+    beamLine.m5.center = beamLine.m4.center[0], \
         beamLine.m4.center[1] + dM45, fixedExit
     print('M5: p={0}, q={1}'.format(beamLine.m5.p, beamLine.m5.q))
 
-#    beamLine.fsmExp.center = \
-#        beamLine.m4.center[0] + (dM45+pExp) * np.sin(pitchM3-pitchM4),\
-#        beamLine.m4.center[1] + (pExp+dM45) * np.cos(pitchM3-pitchM4),\
-#        fixedExit + pExp*np.tan(2*pitchM5)
-#    beamLine.fsmExp.z = 0, -np.sin(2*pitchM5), np.cos(2*pitchM5)
+    # beamLine.fsmExp.center = \
+    #     beamLine.m4.center[0] + (dM45+pExp) * np.sin(pitchM3-pitchM4),\
+    #     beamLine.m4.center[1] + (pExp+dM45) * np.cos(pitchM3-pitchM4),\
+    #     fixedExit + pExp*np.tan(2*pitchM5)
+    # beamLine.fsmExp.z = 0, -np.sin(2*pitchM5), np.cos(2*pitchM5)
 
     beamLine.fsmExpCenters = []
     for d in dFocus:
@@ -470,7 +470,7 @@ def run_process_wave(beamLine, shineOnly1stSource=False):
 
         waveOnm3 = beamLine.m3.prepare_wave(beamLine.pg, nrays)
         beamTom3 = rw.diffract(beamPGlocal, waveOnm3)
-#        beamM3local = waveOnm3
+        # beamM3local = waveOnm3
         beamM3global, beamM3local = beamLine.m3.reflect(
             beamTom3, noIntersectionSearch=True)
 
@@ -620,18 +620,18 @@ def define_plots(beamLine):
         plots.append(plot)
         complexPlotsIs.append(plot)
 
-#        plot = xrtp.XYCPlot(
-#            'beamFSMExp{0:02d}'.format(ic), (1,), aspect='auto',
-#            xaxis=xrtp.XYCAxis(r'$x$', u'µm', bins=xbins, ppb=xppb),
-#            yaxis=xrtp.XYCAxis(r'$z$', u'µm', bins=zbins, ppb=zppb),
-#            fluxKind='Es4D', title='08e-ExpFocus-Es{0:02d}'.format(ic))
-#        plot.xaxis.limits = [imageExtent[0], imageExtent[1]]
-#        plot.yaxis.limits = [imageExtent[2], imageExtent[3]]
-#        plot.textPanel = plot.fig.text(
-#            0.88, 0.8, u'f{0:+.0f} mm'.format(d),
-#            transform=plot.fig.transFigure, size=12, color='r', ha='center')
-#        plots.append(plot)
-#        complexPlotsEs.append(plot)
+        # plot = xrtp.XYCPlot(
+        #     'beamFSMExp{0:02d}'.format(ic), (1,), aspect='auto',
+        #     xaxis=xrtp.XYCAxis(r'$x$', u'µm', bins=xbins, ppb=xppb),
+        #     yaxis=xrtp.XYCAxis(r'$z$', u'µm', bins=zbins, ppb=zppb),
+        #     fluxKind='Es4D', title='08e-ExpFocus-Es{0:02d}'.format(ic))
+        # plot.xaxis.limits = [imageExtent[0], imageExtent[1]]
+        # plot.yaxis.limits = [imageExtent[2], imageExtent[3]]
+        # plot.textPanel = plot.fig.text(
+        #     0.88, 0.8, u'f{0:+.0f} mm'.format(d),
+        #     transform=plot.fig.transFigure, size=12, color='r', ha='center')
+        # plots.append(plot)
+        # complexPlotsEs.append(plot)
         complexPlotsEs.append(None)  # the above consumes too much
 
         plot = xrtp.XYCPlot(
@@ -706,7 +706,7 @@ def main():
     beamLine = build_beamline(azimuth=-2*pitch)
     align_beamline(beamLine)
     if showIn3D:
-#        beamLine.orient_along_global_Y()
+        # beamLine.orient_along_global_Y()
         beamLine.glow(scale=[100, 10, 1000], centerAt='M2')
         return
     plots, complexPlotsIs, complexPlotsEs, complexPlotsPCAs = \
