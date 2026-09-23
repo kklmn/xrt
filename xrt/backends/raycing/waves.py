@@ -776,7 +776,13 @@ def diffract(oeLocal, wave, targetOpenCL=raycing.targetOpenCL,
             rollAngle = oe.roll + oe.positionRoll
             cosY, sinY = np.cos(rollAngle), np.sin(rollAngle)
             Es[:], Ep[:] = raycing.rotate_y(Es, Ep, cosY, sinY)
-        toOE = wave.toOE
+        bl = getattr(oe, 'bl', None)
+        if bl is not None and raycing.is_valid_uuid(wave.toOE):
+            toOeLine = bl.oesDict.get(wave.toOE, None)
+            if toOeLine is not None:
+                toOE = toOeLine[0]
+        else:
+            toOE = wave.toOE
         wave.a[:], wave.b[:], wave.c[:] = glo.a, glo.b, glo.c
         wave.Jss[:], wave.Jpp[:], wave.Jsp[:] = glo.Jss, glo.Jpp, glo.Jsp
         wave.Es[:], wave.Ep[:] = glo.Es, glo.Ep

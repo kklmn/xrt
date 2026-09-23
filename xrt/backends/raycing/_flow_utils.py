@@ -218,6 +218,8 @@ def append_to_flow_decorator(func):
         beamIn = None
         if 'beam' in kwargs:
             beamIn = 'beam'
+#        elif 'wave' in kwargs:
+#            beamIn = 'wave'
         elif 'accuBeam' in kwargs:
             beamIn = 'accuBeam'
 
@@ -239,7 +241,8 @@ def append_to_flow_decorator(func):
                     if kwargs[beamIn] is not None and methStr != 'shine':
                         self.bl.auto_align(self, kwargs[beamIn])
 
-            if kwargs[beamIn] is None and methStr != 'shine':
+            if kwargs[beamIn] is None and methStr not in ['shine',
+                                                          'prepare_wave']:
                 beamStore = getattr(
                     getattr(self, 'bl', None), 'beamsDictU', None)
                 beamOut = {} if beamStore is None else beamStore.get(
@@ -285,6 +288,8 @@ def append_to_flow_decorator(func):
                 result.parentId = self.uuid
                 if methStr in ['propagate', 'expose']:
                     ret_dict = {'beamLocal': result}
+                elif methStr in ['prepare_wave']:
+                    ret_dict = {'wave': result}
                 else:
                     ret_dict = {'beamGlobal' if toGlobal else
                                 'beamLocal': result}
