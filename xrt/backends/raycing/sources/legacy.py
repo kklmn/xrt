@@ -275,7 +275,7 @@ class UndulatorUrgent(object):
         self.mode = mode
         self.icalc = icalc
         self.useZip = useZip
-        if isinstance(processes, int):
+        if isinstance(processes, int) and not isinstance(processes, bool):
             self.processes = processes
             pp = processes
         else:

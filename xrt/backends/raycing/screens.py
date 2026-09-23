@@ -366,10 +366,8 @@ class Screen(object):
 
     def expose_wave(self, wave=None, beam=None, dim1=0, dim2=0):
         """
-        Propagates the incoming *wave* through an aperture using the
-        Kirchhoff diffraction theorem. Returned global and local beams can be
-        used correspondingly for the consequent ray and wave propagation
-        calculations.
+        Propagates the incoming *wave* to the screen using the Kirchhoff
+        diffraction theorem. Returns a local wave.
 
         *wave*: Beam object
             Local beam on the surface of the previous optical element.
@@ -377,12 +375,9 @@ class Screen(object):
         *beam*: Beam object
             Incident global beam, only used for alignment purpose.
 
-        *nrays*: 'auto' or int
-            Dimension of the created wave. If 'auto' - the same as the incoming
-            wave.
+        *dim1* and *dim2* are *x* and *z* 1D arrays or their sizes as ints.
 
-
-        .. Returned values: beamLocal
+        .. Returned values: local wave
         """
         from . import waves as rw
         prevOE = self.bl.oesDict[wave.parentId][0]
