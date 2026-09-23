@@ -142,9 +142,9 @@ elif what == 'wave':
         prefix = 'wave-non0e-'
         repeats = 100
 
-#prefix += 'perfect-'
-#prefix += 'gaussian-'
-#prefix += 'waviness-'
+# prefix += 'perfect-'
+# prefix += 'gaussian-'
+# prefix += 'waviness-'
 prefix += 'NOM-'
 
 
@@ -154,7 +154,7 @@ def gaussian_bump():
     x = np.linspace(-xmax, xmax, nX)
     y = np.linspace(-ymax, ymax, nY)
     z = 2.32e-4 * np.exp(-x[:, np.newaxis]**2/20**2 - y**2/150**2)
-#    z += ((y > 10) & (x[:, np.newaxis] > 5))*0.002
+    # z += ((y > 10) & (x[:, np.newaxis] > 5))*0.002
     return x, y, z, 'gaussian bump'
 
 
@@ -175,15 +175,16 @@ def read_NOM():
     nY = (xL == xL[0]).sum()
     x = xL[:nX]
     y = yL[::nX]
-#    print(nX, nY)
+    # print(nX, nY)
     z = zL.reshape((nY, nX))
-# adapt to our particular geometry:
+    # adapt to our particular geometry:
     z *= 1e-6 / 1.12
     x -= (np.min(x) + np.max(x)) / 2
     y -= (np.min(y) + np.max(y)) / 2
-#    z[(y[:, np.newaxis] > 0) & (x > 0)] = 0
-# x and y are swapped to match the measurements' axes:
+    # z[(y[:, np.newaxis] > 0) & (x > 0)] = 0
+    # x and y are swapped to match the measurements' axes:
     return y, x, z, 'mock NOM surface'
+
 
 if 'perfect' in prefix:
     get_distorted_surface = None
@@ -200,7 +201,7 @@ else:
 class ToroidMirrorDistorted(roe.ToroidMirror):
     def __init__(self, *args, **kwargs):
         roe.ToroidMirror.__init__(self, *args, **kwargs)
-### here you specify the bump and its mesh ###
+# here you specify the bump and its mesh ###
         if get_distorted_surface is None:
             self.limPhysX = [-5, 5]
             self.limPhysY = [-125, 125]
@@ -208,10 +209,10 @@ class ToroidMirrorDistorted(roe.ToroidMirror):
             return
         self.warpX, self.warpY, self.warpZ, self.distortedSurfaceName =\
             get_distorted_surface()
-#        print('xyz sizes:')
-#        print(self.warpX.min(), self.warpX.max())
-#        print(self.warpY.min(), self.warpY.max())
-#        print(self.warpZ.min(), self.warpZ.max())
+        # print('xyz sizes:')
+        # print(self.warpX.min(), self.warpX.max())
+        # print(self.warpY.min(), self.warpY.max())
+        # print(self.warpZ.min(), self.warpZ.max())
         self.warpNX, self.warpNY = len(self.warpX), len(self.warpY)
         self.limPhysX = np.min(self.warpX), np.max(self.warpX)
         self.limPhysY = np.min(self.warpY), np.max(self.warpY)
@@ -221,8 +222,8 @@ class ToroidMirrorDistorted(roe.ToroidMirror):
         dy = self.warpY[1] - self.warpY[0]
         self.warpA = np.arctan(self.warpA/dx)
         self.warpB = np.arctan(self.warpB/dy)
-#        print(self.warpZ.shape)
-#end# here you specify the bump and its mesh ###
+        # print(self.warpZ.shape)
+# end# here you specify the bump and its mesh ###
         # self.warpSplineZ = ndimage.spline_filter(self.warpZ)
         # self.warpSplineA = ndimage.spline_filter(self.warpA)
         # self.warpSplineB = ndimage.spline_filter(self.warpB)
@@ -235,7 +236,7 @@ class ToroidMirrorDistorted(roe.ToroidMirror):
              (self.limPhysX[1]-self.limPhysX[0]) * (self.warpNX-1),
              (y-self.limPhysY[0]) /
              (self.limPhysY[1]-self.limPhysY[0]) * (self.warpNY-1)])
-# coords.shape = (2, self.nrays)
+        # coords.shape = (2, self.nrays)
         # z = ndimage.map_coordinates(self.warpSplineZ, coords, prefilter=True)
         z = ndimage.map_coordinates(self.warpZ, coords, order=1)
         return z
@@ -243,8 +244,8 @@ class ToroidMirrorDistorted(roe.ToroidMirror):
     def local_n_distorted(self, x, y):
         if get_distorted_surface is None:
             return
-#        a = np.zeros_like(x)
-#        b = np.ones_like(x)
+        # a = np.zeros_like(x)
+        # b = np.ones_like(x)
         coords = np.array(
             [(x-self.limPhysX[0]) /
              (self.limPhysX[1]-self.limPhysX[0]) * (self.warpNX-1),
@@ -352,9 +353,9 @@ def build_beamline():
         beamLine, 'warped', center=[0, p, 0], pitch=pitch, R=Rnom, r=rdefocus)
     dx = beamLine.oe.limPhysX[1] - beamLine.oe.limPhysX[0]
     dy = beamLine.oe.limPhysY[1] - beamLine.oe.limPhysY[0]
-#    beamLine.source = rs.GeometricSource(
-#        beamLine, 'CollimatedSource', nrays=nrays, dx=source_dX, dz=source_dZ,
-#        dxprime=dx/p/2, dzprime=dy/p*np.sin(pitch)/2)
+    # beamLine.source = rs.GeometricSource(
+    #     beamLine, 'CollimatedSource', nrays=nrays, dx=source_dX, dz=source_dZ,
+    #     dxprime=dx/p/2, dzprime=dy/p*np.sin(pitch)/2)
     kwargs = dict(
         eE=3., eI=0.5, eEspread=0,
         eEpsilonX=eEpsilonX*1e9*emittanceFactor,
@@ -389,8 +390,8 @@ def run_process_rays(beamLine):
 
 
 def run_process_wave(beamLine):
-#    waveOnOE = beamLine.oe.prepare_wave(beamLine.source, nrays)
-#    beamSource = beamLine.source.shine(wave=waveOnOE, fixedEnergy=E0)
+    # waveOnOE = beamLine.oe.prepare_wave(beamLine.source, nrays)
+    # beamSource = beamLine.source.shine(wave=waveOnOE, fixedEnergy=E0)
     beamLine.source.uniformRayDensity = True
     beamSource = beamLine.source.shine(fixedEnergy=E0)
     beamFSMsource = beamLine.fsm0.expose(beamSource)
@@ -404,6 +405,7 @@ def run_process_wave(beamLine):
         outDict['beamFSMrefl{0:02d}'.format(iR)] = waveOnSample
     outDict['oeLocal'] = oeLocal
     return outDict
+
 
 if what == 'rays':
     rr.run_process = run_process_rays
@@ -450,11 +452,11 @@ def define_plots(beamLine):
     ax = plotRefl.xaxis
     edges = np.linspace(ax.limits[0], ax.limits[1], ax.bins+1)
     beamLine.fsmExpX = (edges[:-1] + edges[1:]) * 0.5 / ax.factor
-#    print(beamLine.fsmExpX)
+    # print(beamLine.fsmExpX)
     ax = plotRefl.yaxis
     edges = np.linspace(ax.limits[0], ax.limits[1], ax.bins+1)
     beamLine.fsmExpZ = (edges[:-1] + edges[1:]) * 0.5 / ax.factor
-#    print(beamLine.fsmExpZ)
+    # print(beamLine.fsmExpZ)
 
     for plot in plots:
         plot.fluxFormatStr = '%.1p'
