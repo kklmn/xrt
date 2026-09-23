@@ -765,6 +765,9 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
         elif argNameL == 'propagationmode':
             combo.addItems(['wave', 'rays'])
             return combo
+        elif argNameL == 'coefficientconvention':
+            combo.addItems(['normalized', 'direct'])
+            return combo
         elif argNameL == 'surfacehint':
             combo.addItems(['flat', 'quad', 'spline'])
             return combo

@@ -315,11 +315,14 @@ class GeneralFZPin0YZ(OE):
 
 
 class ProfiledGrating(OE):
-    """Common ray and wave propagation dispatch for profiled gratings."""
+    """Common propagation and target-energy diagnostics for profiled gratings."""
 
     def __init__(self, *args, **kwargs):
         self.propagationMode = kwargs.pop('propagationMode', 'wave')
+        targetE = kwargs.pop('targetE', None)
         super().__init__(*args, **kwargs)
+        self._targetE = None
+        self.targetE = targetE
         if self.propagationMode == 'rays' and self.material is None:
             self.material = EmptyMaterial()
         if self.propagationMode == 'rays':
@@ -354,6 +357,59 @@ class ProfiledGrating(OE):
         if self.propagationMode == 'rays':
             return 'grating'
         return super()._get_material_kind(material)
+
+    @property
+    def targetE(self):
+        return self._targetE
+
+    @targetE.setter
+    def targetE(self, value):
+        try:
+            target = tuple(value) if value is not None else None
+        except TypeError:
+            target = ()
+        if target is not None and len(target) not in (2, 3):
+            print('targetE must be (energy, order[, cff]); using None')
+            target = None
+        self._targetE = target
+        self.get_diagnostics()
+
+    def get_diagnostics(self, incidenceAngle=None):
+        """Update angles in degrees; incoming incidenceAngle is in radians."""
+        self.diffractionAngle = self.cff = self.includedAngle = None
+        if self.targetE is None:
+            return
+        try:
+            energy, order = map(float, self.targetE[:2])
+            if energy <= 0:
+                return
+            k = -order * CH * 1e-7 * self.local_g(0., 0.)[1] / energy
+            if len(self.targetE) == 3:
+                targetCff = float(self.targetE[2])
+                d = targetCff**2 - 1
+                if targetCff <= 0 or d == 0 or k == 0:
+                    return
+                sinAlpha = (np.sqrt(d*d + targetCff**2*k*k) -
+                            np.sign(d)*k) / abs(d)
+                if abs(sinAlpha) > 1:
+                    return
+                alpha = np.arcsin(sinAlpha)
+            elif incidenceAngle is not None:
+                alpha = float(incidenceAngle)
+            else:
+                return
+            sinBeta = k - np.sin(alpha)
+            if abs(sinBeta) > 1:
+                return
+            beta = np.arcsin(sinBeta)
+            cff = np.cos(beta) / np.cos(alpha)
+            if not np.isfinite(cff):
+                return
+        except (TypeError, ValueError, ZeroDivisionError):
+            return
+        self.diffractionAngle = np.degrees(beta)
+        self.cff = cff
+        self.includedAngle = np.degrees(alpha - beta)
 
     def local_z(self, x, y):
         if self.propagationMode == 'rays':
@@ -411,15 +467,19 @@ class BlazedGrating(ProfiledGrating):
            :scale: 50 %
     """
 
+    hiddenParams = ['gratingDensity']
+
     def __init__(self, *args, **kwargs):
         r"""
         *blaze*, *antiblaze*: float
             Angles in radians
 
         *rho*: float
-            Constant line density in inverse mm. If the density is variable,
-            use *gratingDensity* from the parental class :class:`OE` with the
-            1st argument 'y' (i.e. along y-axis).
+            Nominal line density in inverse mm.
+
+        *targetE*: None or (energy, order[, cff])
+            Reference energy in eV and diffraction order. The optional cff
+            fixes nominal angles and aligns the pitch when ``pitch='auto'``.
 
         *propagationMode*: 'wave' or 'rays'
             Selects the physical groove profile used for wave propagation or
@@ -439,7 +499,17 @@ class BlazedGrating(ProfiledGrating):
     @rho0.setter
     def rho0(self, rho0):
         self._rho0 = rho0
+        if hasattr(self, '_gratingDensity'):
+            self._sync_grating_density()
         self.reset()
+
+    @property
+    def rho(self):
+        return self.rho0
+
+    @rho.setter
+    def rho(self, value):
+        self.rho0 = value
 
     @property
     def blaze(self):
@@ -465,8 +535,15 @@ class BlazedGrating(ProfiledGrating):
 
     @gratingDensity.setter
     def gratingDensity(self, gratingDensity):
-        self._gratingDensity = gratingDensity
+        if gratingDensity is not None:
+            self._rho0 = gratingDensity[1]
+        self._sync_grating_density()
         self.reset()
+
+    def _sync_grating_density(self):
+        self._gratingDensity = ['y', self.rho0, 1]
+        if hasattr(self, '_targetE'):
+            self.get_diagnostics()
 
     def __pop_kwargs(self, **kwargs):
         self.blaze = raycing.auto_units_angle(kwargs.pop('blaze', 0.05))
@@ -480,30 +557,7 @@ class BlazedGrating(ProfiledGrating):
     def reset(self):
         if all([hasattr(self, field) for field in ['rho0', 'gratingDensity',
                                                    'blaze', 'antiblaze']]):
-            if self.gratingDensity is not None:
-                self._rho0 = self.gratingDensity[1]
-                self.coeffs = self.gratingDensity[2:]
-                constantCoeffs = [1.] + [0.] * (len(self.coeffs)-1)
-                self._variableDensity = not np.allclose(
-                    self.coeffs, constantCoeffs)
-            else:
-                self._variableDensity = False
-
             self.ticks = np.array([])
-            if self.propagationMode == 'wave' and self._variableDensity:
-                self.ticks = []
-                lim = self.limOptY if self.limOptY is not None else \
-                    self.limPhysY
-                self.ticksN = int(round(
-                    self._get_groove(lim[1]) - self._get_groove(lim[0])))
-                y = lim[0]
-                while y < lim[1]:
-                    self.ticks.append(y)
-                    y += self._get_period(y)
-                self.ticks = np.array(self.ticks)
-                print("tick len {0}, integrated as {1}".format(
-                    len(self.ticks), self.ticksN))
-
             self.rho_1 = 1. / self.rho0
 
             self.sinBlaze, self.cosBlaze, self.tanBlaze =\
@@ -512,63 +566,31 @@ class BlazedGrating(ProfiledGrating):
                 np.sin(self.antiblaze), np.cos(self.antiblaze), \
                 np.tan(self.antiblaze)
 
-    def _get_period(self, coord):
-        poly = 0.
-        for ic, coeff in enumerate(self.coeffs):
-            poly += (ic+1) * coeff * coord**ic
-        dy = 1. / self.rho0 / poly
-        # if type(dy) == float:
-        #     assert dy > 0, "wrong coefficients: negative groove density"
-        return abs(dy)
-
-    def _get_groove(self, coord):
-        poly = 0.
-        for ic, coeff in enumerate(self.coeffs):
-            poly += coeff * coord**(ic+1)
-        return self.rho0 * poly
-
     def local_pre(self, x, y):
-        if self._variableDensity:
-            y0ind = np.searchsorted(self.ticks[:-1], y) - 1
-            y0 = self.ticks[y0ind]
-            y1 = self.ticks[y0ind+1]
-            yL = y - y0
-        else:
-            y0 = (y // self.rho_1) * self.rho_1
-            y1 = y0 + self.rho_1
-            yL = y % self.rho_1
-            y0ind = 0
+        y0 = (y // self.rho_1) * self.rho_1
+        y1 = y0 + self.rho_1
+        yL = y % self.rho_1
         yC = (y1-y0) / (1 + self.tanAntiblaze/self.tanBlaze)
-        return y0ind, y0, y1, yC, yL
+        return y0, y1, yC, yL
 
     def _local_z_wave(self, x, y):
-        y0ind, y0, y1, yC, yL = self.local_pre(x, y)
+        y0, y1, yC, yL = self.local_pre(x, y)
         z = np.where(yL > yC, -(y1-y) * self.tanBlaze, -yL * self.tanAntiblaze)
-        if self._variableDensity:
-            z[(y0ind < 1) | (y0ind > len(self.ticks)-2)] = 0
         return z
 
     def _local_n_wave(self, x, y):
-        y0ind, y0, y1, yC, yL = self.local_pre(x, y)
+        y0, y1, yC, yL = self.local_pre(x, y)
         n = [np.zeros_like(x),
              np.where(yL > yC, -self.sinBlaze, self.sinAntiblaze),
              np.where(yL > yC, self.cosBlaze, self.cosAntiblaze)]
-        if self._variableDensity:
-            n[1][(y0ind < 1) | (y0ind > len(self.ticks)-2)] = 0.
-            n[2][(y0ind < 1) | (y0ind > len(self.ticks)-2)] = 1.
         return n
 
     def _find_intersection_wave(self, local_f, t1, t2, x, y, z, a, b, c,
                                 invertNormal, derivOrder=0):
         b_c = b / c
-        if self._variableDensity:
-            y0ind = np.searchsorted(self.ticks[:-1], y - b_c*z) - 1
-            y0 = self.ticks[y0ind]
-            y1 = self.ticks[y0ind+1]
-        else:
-            n = np.floor((y - b_c*z) / self.rho_1)
-            y0 = self.rho_1 * n
-            y1 = y0 + self.rho_1
+        n = np.floor((y - b_c*z) / self.rho_1)
+        y0 = self.rho_1 * n
+        y1 = y0 + self.rho_1
 
         if self.antiblaze == np.pi/2:
             zabl = (y0-y) / b_c + z
@@ -610,6 +632,8 @@ class LaminarGrating(ProfiledGrating):
 
     """
 
+    hiddenParams = ['gratingDensity']
+
     def __init__(self, *args, **kwargs):
         """
         *rho*: float
@@ -626,6 +650,10 @@ class LaminarGrating(ProfiledGrating):
             the idealized macroscopic grating used for ray propagation. The
             backward-compatible default is 'wave'.
 
+        *targetE*: None or (energy, order[, cff])
+            Reference energy in eV and diffraction order. The optional cff
+            fixes nominal angles and aligns the pitch when ``pitch='auto'``.
+
 
         """
         kwargs = self.__pop_kwargs(**kwargs)
@@ -641,6 +669,32 @@ class LaminarGrating(ProfiledGrating):
     def rho0(self, rho0):
         self._rho0 = rho0
         self.rho_1 = 1. / self.rho0
+        if hasattr(self, '_gratingDensity'):
+            self._sync_grating_density()
+
+    @property
+    def rho(self):
+        return self.rho0
+
+    @rho.setter
+    def rho(self, value):
+        self.rho0 = value
+
+    @property
+    def gratingDensity(self):
+        return self._gratingDensity
+
+    @gratingDensity.setter
+    def gratingDensity(self, value):
+        if value is not None:
+            self._rho0 = value[1]
+            self.rho_1 = 1. / self.rho0
+        self._sync_grating_density()
+
+    def _sync_grating_density(self):
+        self._gratingDensity = ['y', self.rho0, 1]
+        if hasattr(self, '_targetE'):
+            self.get_diagnostics()
 
     def __pop_kwargs(self, **kwargs):
         self.rho0 = kwargs.pop('rho', 500)
@@ -731,16 +785,40 @@ class VLSLaminarGrating(ProfiledGrating):
 
     """
 
+    hiddenParams = ['gratingDensity']
+
     def __init__(self, *args, **kwargs):
         r"""
+        *rho*: float
+            Nominal groove density in inverse mm. In the direct convention it
+            is the same value as ``coeffs[0]``.
+
+        *coeffs*: sequence
+            In the normalized convention, ``[P0, P1, ...]`` defines
+            ``rho(y) = rho * (P0 + 2*P1*y + 3*P2*y**2 + ...)``. In the direct
+            convention, ``[a0, a1, ...]`` defines
+            ``rho(y) = a0 + a1*y + a2*y**2 + ...``.
+
+        *coefficientConvention*: 'normalized' or 'direct'
+            Selects the meaning of *coeffs*. The default is 'normalized' for
+            compatibility. Switching conventions keeps *rho* unchanged; if
+            normalized *P0* is not 1, switching to 'direct' sets *a0* to
+            *rho* and changes the constant term of the density polynomial.
+
+        *targetE*: None or (energy, order[, cff])
+            Reference energy in eV and diffraction order. The optional cff
+            fixes nominal incidence and diffraction angles, and aligns the
+            pitch when ``pitch='auto'``.
+
         *aspect*: float
             Top-to-period ratio of the groove.
 
         *depth*: float
             Depth of the groove in mm.
 
-        For the VLS density, use *gratingDensity* of the parental class
-        :class:`OE` with the 1st argument 'y' (i.e. along y-axis).
+        An explicit *gratingDensity* is also accepted in the normalized :class:`OE`
+        format ``['y', rho, P0, ...]``. It takes precedence over *rho* and
+        *coeffs* at initialization.
 
         *propagationMode*: 'wave' or 'rays'
             Selects the physical groove profile used for wave propagation or
@@ -752,26 +830,143 @@ class VLSLaminarGrating(ProfiledGrating):
         kwargs = self.__pop_kwargs(**kwargs)
         ProfiledGrating.__init__(self, *args, **kwargs)
 
+    @staticmethod
+    def _nonzero_rho(value):
+        if value is None or value == 0:
+            print('VLS rho must be nonzero, using default 500')
+            return 500
+        return value
+
+    def _fallback_coeffs(self, value):
+        coeffs = list(value) if value is not None else []
+        if not coeffs:
+            coeffs = [self.rho if self.coefficientConvention == 'direct'
+                      else 1, 0, 0]
+            print('Using default coeffs {0}'.format(coeffs))
+        elif self.coefficientConvention == 'direct' and coeffs[0] == 0:
+            coeffs[0] = self.rho
+            print('direct VLS a0 must be nonzero, using rho={0}'.format(
+                self.rho))
+        return coeffs
+
+    def _normalized_coeffs(self):
+        if self.coefficientConvention == 'normalized':
+            return list(self._coeffs)
+        return [coeff / (self.rho * (order + 1))
+                for order, coeff in enumerate(self._coeffs)]
+
+    def _sync_grating_density(self):
+        self._gratingDensity = ['y', self.rho] + self._normalized_coeffs()
+        if hasattr(self, '_targetE'):
+            self.get_diagnostics()
+
+    @property
+    def rho(self):
+        return self._rho0
+
+    @rho.setter
+    def rho(self, value):
+        self._rho0 = self._nonzero_rho(value)
+        if self.coefficientConvention == 'direct':
+            self._coeffs[0] = self._rho0
+        self._sync_grating_density()
+        self.reset()
+
+    @property
+    def rho0(self):
+        return self.rho
+
+    @rho0.setter
+    def rho0(self, value):
+        self.rho = value
+
+    @property
+    def coeffs(self):
+        return list(self._coeffs)
+
+    @coeffs.setter
+    def coeffs(self, value):
+        self._coeffs = self._fallback_coeffs(value)
+        if self.coefficientConvention == 'direct':
+            self._rho0 = self._coeffs[0]
+        self._sync_grating_density()
+        self.reset()
+
+    @property
+    def coefficientConvention(self):
+        return self._coefficientConvention
+
+    @coefficientConvention.setter
+    def coefficientConvention(self, value):
+        value = 'direct' if value == 'direct' else 'normalized'
+        if value == self._coefficientConvention:
+            return
+        if value == 'direct':
+            self._coeffs = [
+                self.rho * (order + 1) * coeff
+                for order, coeff in enumerate(self._coeffs)]
+            self._coeffs[0] = self.rho
+        else:
+            self._coeffs = self._normalized_coeffs()
+        self._coefficientConvention = value
+        self._sync_grating_density()
+        self.reset()
+
+    @property
+    def gratingDensity(self):
+        return self._gratingDensity
+
+    @gratingDensity.setter
+    def gratingDensity(self, value):
+        if value is None:
+            self._sync_grating_density()
+        else:
+            try:
+                valid = len(value) >= 3 and value[0] == 'y'
+            except TypeError:
+                valid = False
+            if not valid:
+                print("VLS gratingDensity must be ['y', rho, P0, ...]."
+                      " Using default ['y', 500, 1]")
+                value = ['y', 500, 1]
+            density = self._nonzero_rho(value[1])
+            normalized = list(value[2:])
+            if self.coefficientConvention == 'direct' and normalized[0] == 0:
+                print('direct VLS a0 must be nonzero, using P0=1')
+                normalized[0] = 1.
+            if self.coefficientConvention == 'direct':
+                self._coeffs = [
+                    density * (order + 1) * coeff
+                    for order, coeff in enumerate(normalized)]
+                self._rho0 = self._coeffs[0]
+            else:
+                self._rho0 = density
+                self._coeffs = normalized
+            self._sync_grating_density()
+        self.reset()
+
     def reset(self):
-        if self.gratingDensity is not None:
-            self.rho0 = self.gratingDensity[1]
-            self.coeffs = self.gratingDensity[2:]
-        self.ticks = []
+        self.ticks = np.array([])
         if self.propagationMode == 'rays':
             self.illuminatedGroove = 0
             self.rho_1 = 1. / self.rho0
             return
-        p0 = self.limOptY[0]
-        while p0 < self.limOptY[1]:
-            self.ticks.append(p0)
-            p0 += self._get_period(p0)
-        self.ticks = np.array(self.ticks)
+        lim = self.limOptY if self.limOptY is not None else self.limPhysY
+        if not any(self._normalized_coeffs()[1:]):
+            self.ticks = np.arange(lim[0], lim[1], self._get_period(lim[0]))
+        else:
+            ticks = []
+            p0 = lim[0]
+            while p0 < lim[1]:
+                ticks.append(p0)
+                p0 += self._get_period(p0)
+            self.ticks = np.array(ticks)
         self.illuminatedGroove = 0
         self.rho_1 = 1. / self.rho0
 
     def _get_period(self, coord):
         poly = 0.
-        for ic, coeff in enumerate(self.coeffs):
+        for ic, coeff in enumerate(self._normalized_coeffs()):
             poly += (ic+1) * coeff * coord**ic
         dy = 1. / self.rho0 / poly
         # if type(dy) == float:
@@ -779,13 +974,22 @@ class VLSLaminarGrating(ProfiledGrating):
         return abs(dy)
 
     def __pop_kwargs(self, **kwargs):
-        self.rho0 = kwargs.pop('rho', 500)
+        self._rho0 = self._nonzero_rho(kwargs.pop('rho', 500))
+        convention = kwargs.pop('coefficientConvention', 'normalized')
+        self._coefficientConvention = ('direct' if convention == 'direct'
+                                       else 'normalized')
         self.aspect = kwargs.pop('aspect', 0.5)
-        self.coeffs = kwargs.pop('coeffs', [1, 0, 0])
+        hasCoeffs = 'coeffs' in kwargs
+        self._coeffs = kwargs.pop('coeffs', [1, 0, 0])
+        if self.coefficientConvention == 'direct' and not hasCoeffs:
+            self._coeffs = [self.rho, 0, 0]
+        self._coeffs = self._fallback_coeffs(self._coeffs)
+        if self.coefficientConvention == 'direct':
+            self._rho0 = self._coeffs[0]
         self.depth = kwargs.pop('depth', 1e-3)  # 1 micron depth
-        if kwargs.get('gratingDensity') is None and self.rho0 is not None:
+        if kwargs.get('gratingDensity') is None:
             kwargs['gratingDensity'] = \
-                ['y', self.rho0] + list(self.coeffs)
+                ['y', self.rho] + self._normalized_coeffs()
         return kwargs
 
     def _local_z_wave(self, x, y):

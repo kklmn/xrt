@@ -320,6 +320,10 @@ def xyz_from_xz(obj, x=None, z=None):
 
 
 def is_auto_align_required(oe):
+    if (getattr(oe, '_pitch', None) == 'auto' and
+            len(getattr(oe, 'targetE', ()) or ()) == 3 and
+            hasattr(oe, 'get_diagnostics')):
+        return True
     needAutoAlign = False
     for autoParam in ["_center", "_pitch", "_bragg"]:
         naParam = autoParam.strip("_")
@@ -637,6 +641,33 @@ class BeamLine(object):
             oe._centerVal = Center(centerList)
             if _VERBOSITY_ > 0:
                 print(oe.name, "center:", oe.center)
+
+        if (autoPitch and getattr(oe, '_pitch', None) == 'auto' and
+                len(getattr(oe, 'targetE', ()) or ()) == 3 and
+                hasattr(oe, 'get_diagnostics')):
+            oe.get_diagnostics()
+            if oe.includedAngle is not None:
+                loBeam = copy.deepcopy(inBeam)
+                global_to_virgin_local(self, inBeam, loBeam, center=oe.center)
+                rotate_beam(loBeam, roll=-(oe.positionRoll + oe.roll),
+                            yaw=-oe.yaw, pitch=0)
+                alpha = np.radians(oe.includedAngle + oe.diffractionAngle)
+                q = np.hypot(loBeam.b[0], loBeam.c[0])
+                s = np.cos(alpha) / q if q else np.inf
+                if np.isfinite(s) and abs(s) <= 1:
+                    theta0 = np.arctan2(-loBeam.c[0], loBeam.b[0])
+                    oe._pitchVal = np.arcsin(s) - theta0
+                    if _VERBOSITY_ > 0:
+                        print(oe.name, 'pitch:', oe.pitch)
+                    if hasattr(oe, '_reset_pq'):
+                        oe._reset_pq()
+                    return
+            oe._pitchVal = 0.
+            print('{}: no grating pitch solution for targetE {}; using 0'.format(
+                oe.name, oe.targetE))
+            if hasattr(oe, '_reset_pq'):
+                oe._reset_pq()
+            return
 
         if autoBragg or autoPitch:
             if self.flowSource == 'Qook':

@@ -52,6 +52,7 @@ allArguments = ['bl', 'name', 'center', 'bragg', 'pitch', 'roll', 'yaw',
                 'isCentralZoneBlack', 'thinnestZone', 'f1', 'f2', 'pAxis',
                 'parabolaAxis', 'phaseShift', 'vorticity', 'grazingAngle',
                 'blaze', 'antiblaze', 'rho', 'aspect', 'depth', 'coeffs',
+                'coefficientConvention', 'targetE',
                 'targetOpenCL', 'precisionOpenCL', 'propagationMode',
                 'fileName', 'recenter',
                 'orientation', 'figureError', 'surfaceHint']

@@ -52,7 +52,8 @@ dependentArgGroups = (
 )
 
 diagnosticArgs = ('gamma', 'E1', 'eSigmaXprime', 'eSigmaZprime',
-                  'ellipseA', 'ellipseB', 'hyperbolaA', 'hyperbolaB')
+                  'ellipseA', 'ellipseB', 'hyperbolaA', 'hyperbolaB', 'cff',
+                  'diffractionAngle', 'includedAngle')
 
 allUnitsAng = {'rad': 1.,
                'mrad': 1e-3,
