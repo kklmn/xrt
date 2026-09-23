@@ -182,7 +182,7 @@ class Beam(object):
                 if withAmplitudes:
                     self.Es = np.zeros(nrays, dtype=complex)
                     self.Ep = np.zeros(nrays, dtype=complex)
-        if type(forceState) == int:  # no isinstance() here!!! None is int
+        if isinstance(forceState, int) and not isinstance(forceState, bool):
             self.state[:] = forceState
         if not hasattr(self, 'parentId'):
             self.parentId = None
