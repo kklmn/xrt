@@ -410,7 +410,7 @@ class ToroidMirror(OE):
     def local_n(self, x, y):
         """Determines the normal vector of OE at (x, y) position."""
         rx = 1 - (np.asarray(x)/self.r)**2
-        rx[rx < 0] = np.inf
+        rx[rx <= 0] = np.inf
         a = -x / self.r * rx**(-0.5)  # -dz/dx
         b = -y / self.R  # -dz/dy
         c = 1.
