@@ -1730,7 +1730,10 @@ class XYCPlot(object):
         if orientation[0] == 'h':
             map2d = np.zeros((histoPixelHeight, len(xx), 3))
             for ix, cx in enumerate(xx):
-                maxPixel = int(round((histoPixelHeight-1) * cx))
+                try:
+                    maxPixel = int(round((histoPixelHeight-1) * cx))
+                except ValueError:
+                    maxPixel = 0
                 if 0 <= maxPixel <= (histoPixelHeight-1):
                     map2d[0:maxPixel, ix, :] = xxRGB[ix, :]
                     if axis.outline:
@@ -1747,7 +1750,10 @@ class XYCPlot(object):
         elif orientation[0] == 'v':
             map2d = np.zeros((len(xx), histoPixelHeight, 3))
             for ix, cx in enumerate(xx):
-                maxPixel = int(round((histoPixelHeight-1) * cx))
+                try:
+                    maxPixel = int(round((histoPixelHeight-1) * cx))
+                except ValueError:
+                    maxPixel = 0
                 if 0 <= maxPixel <= (histoPixelHeight-1):
                     map2d[ix, 0:maxPixel, :] = xxRGB[ix, :]
                     if axis.outline:
@@ -1793,11 +1799,14 @@ class XYCPlot(object):
                     wantDiscrete = True
             if wantDiscrete:
                 args = np.argwhere(xx >= xxMaxHalf)
-                iHistFWHMlow = np.min(args)
-                iHistFWHMhigh = np.max(args) + 1
-                histFWHMlow = axis.binEdges[iHistFWHMlow] - axis.offset
-                histFWHMhigh = axis.binEdges[iHistFWHMhigh] - axis.offset
-
+                try:
+                    iHistFWHMlow = np.min(args)
+                    iHistFWHMhigh = np.max(args) + 1
+                    histFWHMlow = axis.binEdges[iHistFWHMlow] - axis.offset
+                    histFWHMhigh = axis.binEdges[iHistFWHMhigh] - axis.offset
+                except ValueError:
+                    histFWHMlow = 0
+                    histFWHMhigh = 0
             if axis.fwhmFormatStr is not None:
                 xFWHM = [histFWHMlow, histFWHMhigh]
                 yFWHM = [xxMaxHalf, xxMaxHalf]
@@ -1996,7 +2005,10 @@ class XYCPlot(object):
         x = float(x)
         if (x <= 0) or np.isnan(x).any():
             return '0'
-        exponent = int(np.floor(np.log10(abs(x))))
+        try:
+            exponent = int(np.floor(np.log10(abs(x))))
+        except OverflowError:
+            return '0'
         coeff = np.round(x / float(10**exponent), digits)
         return r"{0:.{2}f}$\cdot$10$^{{{1:d}}}$".format(
             coeff, exponent, digits)
