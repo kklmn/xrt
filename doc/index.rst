@@ -14,7 +14,7 @@ xrt (XRayTracer)
 
 -----
 
-.. |DOI| image:: https://zenodo.org/badge/54989724.svg
+.. |DOI| image:: https://zenodo.org/badge/DOI/10.5281/zenodo.1252468.svg
    :target: https://zenodo.org/badge/latestdoi/54989724
 
 .. |GHver| image:: https://img.shields.io/github/v/release/kklmn/xrt
