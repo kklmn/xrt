@@ -793,6 +793,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
         dependentValues = raycing.get_dependent_arg_values(
             updObj, changedArgs) if updObj is not None else OrderedDict()
+        for depField in ['material', 'material2', 'figureError']:
+            dependentValues.pop(depField, None)
         if dependentValues:
             updatedArgs.update(dependentValues)
             for argName, argValue in dependentValues.items():

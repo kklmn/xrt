@@ -151,9 +151,7 @@ class SourceBase:
         self.uniformRayDensity = uniformRayDensity
         self.filamentBeam = filamentBeam
 
-        self._eE = float(eE)
-        self.gamma = self._eE * 1e9 * EV2ERG / (M0 * C**2)
-        self.gamma2 = self.gamma**2
+        self.eE = eE
         self.eEspread = eEspread
         self.eI = float(eI)
 
@@ -457,6 +455,21 @@ class SourceBase:
         self._eE = float(eE)
         self.gamma = self._eE * 1e9 * EV2ERG / (M0 * C**2)
         self.gamma2 = self.gamma**2
+        if getattr(self, 'B0base', False):
+            if hasattr(self, 'B0'):
+                self.B0 = self.B0
+            else:
+                self.B0x = self.B0x
+                self.B0y = self.B0y
+        elif getattr(self, 'Kbase', False):
+            self.K = self.K
+            if hasattr(self, 'Kx'):
+                self.Kx = self.Kx
+        elif getattr(self, 'rhobase', False):
+            self.rho = self.rho
+
+        if hasattr(self, 'targetE'):
+            self.targetE = self.targetE
         self.needReset = True
         # Need to recalculate the integration parameters
 

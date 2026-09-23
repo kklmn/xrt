@@ -45,10 +45,14 @@ compoundArgs = {'center': ['x', 'y', 'z'],
 dependentArgGroups = (
     ('eSigmaX', 'betaX', 'eEpsilonX'),
     ('eSigmaZ', 'betaZ', 'eEpsilonZ'),
-    ('K', 'B0', 'rho'),
-    ('Kx', 'B0x'),
-    ('Ky', 'B0y', 'K'),
+    ('K', 'B0', 'rho', 'period', 'eE'),
+    ('Kx', 'B0x', 'period', 'eE'),
+    ('Ky', 'B0y', 'K', 'period', 'eE'),
     ('rho', 'coeffs', 'coefficientConvention'),
+    ('p', 'f1'),
+    ('q', 'f2'),
+    ('cryst2perpTransl', 'fixedOffset'),
+    ('focus', 'nCRL', 'material'),
 )
 
 diagnosticArgs = ('gamma', 'E1', 'eSigmaXprime', 'eSigmaZprime',

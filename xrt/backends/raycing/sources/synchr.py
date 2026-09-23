@@ -85,25 +85,27 @@ class BendingMagnet(SourceBase):
             Curvature radius (m). Alternatively, specify *B0*.
 
         """
-        B0 = kwargs.pop('B0', 1.)
+        B0 = kwargs.pop('B0', 0.)
         rho = kwargs.pop('rho', None)
         super(BendingMagnet, self).__init__(*args, **kwargs)
 
         if isinstance(self, Wiggler):
-            self.B = K2B * self.K / self.L0
-            self.ro = M0 * C**2 * self.gamma / self.B / E0 / 1e6
-            self.X0 = 0.5 * self.K * self.L0 / self.gamma / PI
+            if B0:  # skipped the K setter
+                self.B0 = B0
+#            self.B = K2B * self.K / self.L0
+#            self._rho = M0 * C**2 * self.gamma / self.B / E0 / 1e6
+#            self.X0 = 0.5 * self.K * self.L0 / self.gamma / PI
             self.isMPW = True
             self._xPrimeMaxAutoReduce = True
         else:
             self.Np = 0.5
-            self.B = B0
-            self.ro = rho
-            if self.ro:
-                if not self.B:
-                    self.B = M0 * C**2 * self.gamma / self.ro / E0 / 1e6
-            elif self.B:
-                self.ro = M0 * C**2 * self.gamma / self.B / E0 / 1e6
+            if B0:
+                self.B0 = B0
+            elif rho:
+                self.rho = rho
+            else:
+                print("Please define either B0 or rho! Using default B0=1.")
+                self.B0 = 1.
             self.isMPW = False
 
     @property
@@ -113,22 +115,29 @@ class BendingMagnet(SourceBase):
     @B0.setter
     def B0(self, B):
         self.B = float(B)
-        self.ro = M0 * C**2 * self.gamma / B / E0 / 1e6
+        self._rho = M0 * C**2 * self.gamma / B / E0 / 1e6
+        self.B0base = True
+        self.rhobase = False
         if hasattr(self, 'L0'):
             self._K = B * self.L0 / K2B  # Only for the Wiggler
+            self._Ky = B * self.L0 / K2B
+            self.X0 = 0.5 * self._K * self.L0 / self.gamma / PI
+            self.Kbase = False
         self.needReset = True
         # Need to recalculate the integration parameters
 
     @property
     def rho(self):
-        return self.ro
+        return self._rho
 
     @rho.setter
     def rho(self, rho):
-        self.ro = rho
+        self._rho = rho
         self.B = M0 * C**2 * self.gamma / rho / E0 / 1e6
-        if hasattr(self, 'L0'):
-            self._K = self.B * self.L0 / K2B
+        self.B0base = False
+        self.rhobase = True
+#        if hasattr(self, 'L0'):
+#            self._K = self.B * self.L0 / K2B
         self.needReset = True
         # Need to recalculate the integration parameters
 
@@ -173,11 +182,11 @@ class BendingMagnet(SourceBase):
             trajx = -trajx
             return [trajx, trajy, trajz]
 
-        if self.ro is None or self.ro == 0:
+        if self.rho is None or self.rho == 0:
             return None
 
         thetaMin, thetaMax = self._xprime_range()
-        rho = self.ro * 1e3
+        rho = self.rho * 1e3
         arcLength = abs(rho * (thetaMax - thetaMin))
         nSteps = max(int(np.ceil(arcLength / step)), 1)
         theta = np.linspace(thetaMin, thetaMax, nSteps+1)
@@ -297,8 +306,8 @@ class BendingMagnet(SourceBase):
                     rTheta0 = np.random.random_sample() *\
                         (self.Theta_max - self.Theta_min) + self.Theta_min
                     R1 = self.dx * np.random.standard_normal() +\
-                        self.ro * 1000.
-                    rX = -R1 * np.cos(rTheta0) + self.ro*1000.
+                        self.rho * 1000.
+                    rX = -R1 * np.cos(rTheta0) + self.rho*1000.
                     rY = R1 * np.sin(rTheta0)
                 dtheta = self.dxprime * np.random.standard_normal()
                 dpsi = self.dzprime * np.random.standard_normal()
@@ -427,10 +436,10 @@ class BendingMagnet(SourceBase):
                     if self.dz > 0:
                         bot.z[:] = np.random.normal(0., self.dz, npassed)
                     if self.dx > 0:
-                        R1 = np.random.normal(self.ro*1e3, self.dx, npassed)
+                        R1 = np.random.normal(self.rho*1e3, self.dx, npassed)
                     else:
-                        R1 = self.ro * 1e3
-                    bot.x[:] = -R1 * np.cos(Theta0) + self.ro*1000.
+                        R1 = self.rho * 1e3
+                    bot.x[:] = -R1 * np.cos(Theta0) + self.rho*1000.
                     bot.y[:] = R1 * np.sin(Theta0)
 
                 bot.Jsp[:] = np.array(
@@ -511,7 +520,7 @@ class Wiggler(BendingMagnet):
     """
 
     hiddenParams = getattr(BendingMagnet,
-                           'hiddenParams', set()) | {'B0', 'rho'}
+                           'hiddenParams', set()) | {'rho', }
 
     def __init__(self, *args, **kwargs):
         u"""Parameters are the same as in BendingMagnet except *B0* and *rho*
@@ -528,10 +537,19 @@ class Wiggler(BendingMagnet):
 
 
         """
-        self._K = kwargs.pop('K', 8.446)
-        self._Ky = self._K
-        self.L0 = kwargs.pop('period', 50)
+
         self.Np = kwargs.pop('n', 40)
+        self.L0 = kwargs.pop('period', 50)
+
+        K = kwargs.pop('K', 0)
+
+        if abs(K) > 0:
+            self.K = K
+            kwargs['B0'] = 0
+        elif not kwargs.get('B0', None):
+            self.K = 1.
+            print("Please define either K or B0! Using default K=1.")
+
         name = kwargs.pop('name', 'wiggler')
         kwargs['name'] = name
         super(Wiggler, self).__init__(*args, **kwargs)
@@ -544,6 +562,14 @@ class Wiggler(BendingMagnet):
     @period.setter
     def period(self, period):
         self.L0 = float(period)
+        if hasattr(self, 'Kbase'):
+            if self.Kbase:
+                self.B = K2B * self.K / self.L0
+            else:
+                self._K = self.B0 * self.L0 / K2B
+                self._Ky = self.B0 * self.L0 / K2B
+            if hasattr(self, 'gamma'):
+                self.X0 = 0.5 * self._K * self.L0 / self.gamma / PI
         self.needReset = True
         # Need to recalculate the integration parameters
 
@@ -565,9 +591,12 @@ class Wiggler(BendingMagnet):
     def K(self, K):
         self._K = float(K)
         self._Ky = float(K)
-        self._B = K2B * K / self.L0
-        self.ro = M0 * C**2 * self.gamma / self.B / E0 / 1e6
-        self.X0 = 0.5 * K * self.L0 / self.gamma / PI
+        self.B = K2B * K / self.L0
+        self.Kbase = True
+        self.B0base = False
+        if hasattr(self, 'gamma'):
+                self._rho = M0 * C**2 * self.gamma / self.B / E0 / 1e6
+                self.X0 = 0.5 * K * self.L0 / self.gamma / PI
         self.needReset = True
         # Need to recalculate the integration parameters
 
@@ -1422,7 +1451,6 @@ class Undulator(IntegratedSource):
                     self.K = 1
                     raise ValueError("Please define either K or B0!")
                 else:
-                    self.Kbase = False
                     self.B0y = B0y
                     self.B0x = B0x
             else:
@@ -1602,6 +1630,8 @@ class Undulator(IntegratedSource):
     def Kx(self, Kx):
         self._Kx = float(Kx)
         self._B0x = K2B * Kx / self.L0
+        self.Kbase = True
+        self.B0base = False
         if hasattr(self, '_Ky'):
             self.report_E1()
         self.needReset = True
@@ -1615,6 +1645,8 @@ class Undulator(IntegratedSource):
     def Ky(self, Ky):
         self._Ky = float(Ky)
         self._B0y = K2B * Ky / self.L0
+        self.Kbase = True
+        self.B0base = False
         if hasattr(self, '_Kx'):
             self.report_E1()
         self.needReset = True
@@ -1628,6 +1660,8 @@ class Undulator(IntegratedSource):
     def K(self, K):
         self._Ky = float(K)
         self._B0y = K2B * K / self.L0
+        self.Kbase = True
+        self.B0base = False
         if hasattr(self, '_Kx'):
             self.report_E1()
         self.needReset = True
@@ -1641,6 +1675,8 @@ class Undulator(IntegratedSource):
     def B0x(self, B0x):
         self._B0x = float(B0x)
         self._Kx = B0x * self.L0 / K2B
+        self.Kbase = False
+        self.B0base = True
         if hasattr(self, '_Ky'):
             self.report_E1()
         self.needReset = True
@@ -1654,6 +1690,8 @@ class Undulator(IntegratedSource):
     def B0y(self, B0y):
         self._B0y = float(B0y)
         self._Ky = B0y * self.L0 / K2B
+        self.Kbase = False
+        self.B0base = True
         if hasattr(self, '_Kx'):
             self.report_E1()
         self.needReset = True
