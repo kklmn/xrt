@@ -7,10 +7,10 @@ import matplotlib as mpl
 
 import xrt.backends.raycing as raycing
 import xrt.backends.raycing.sources as rs
-#import xrt.backends.raycing.apertures as ra
+# import xrt.backends.raycing.apertures as ra
 import xrt.backends.raycing.oes as roe
 import xrt.backends.raycing.run as rr
-#import xrt.backends.raycing.materials as rm
+# import xrt.backends.raycing.materials as rm
 import xrt.plotter as xrtp
 import xrt.runner as xrtr
 import xrt.backends.raycing.screens as rsc
@@ -51,6 +51,7 @@ class CylinderP(Cylinder):
 
     def param_to_xyz(self, s, phi, r):  # for flat mirror as example
         return s, r * np.sin(phi), Rm - r * np.cos(phi)  # x, y, z
+
 
 E0 = 2000.
 L = 190.
@@ -105,7 +106,7 @@ rr.run_process = run_process
 
 
 def define_plots(beamLine, fName):
-#    fwhmFormatStrE = '%.2f'
+    # fwhmFormatStrE = '%.2f'
     plots = []
     pAdd = 'P' if isParametric else ''
 
@@ -113,7 +114,7 @@ def define_plots(beamLine, fName):
         'beamFSM1', (1,), xaxis=xrtp.XYCAxis(r'$x$', r'$\mu$m'),
         yaxis=xrtp.XYCAxis(r'$z$', r'$\mu$m'), title='FSM1_E')
     plot.caxis.fwhmFormatStr = None
-#    plot.caxis.limits = [70, 140]
+    # plot.caxis.limits = [70, 140]
     plots.append(plot)
 
     plot = xrtp.XYCPlotWithNumerOfReflections(
@@ -135,7 +136,7 @@ def define_plots(beamLine, fName):
             caxis=xrtp.XYCAxis('number of reflections', '', bins=32, ppb=8,
                                data=raycing.get_reflection_number),
             title='local (s, phi)')
-#        plot.yaxis.fwhmFormatStr = '%.2f' + r'$ \pi$'
+        # plot.yaxis.fwhmFormatStr = '%.2f' + r'$ \pi$'
         plot.caxis.fwhmFormatStr = None
         formatter = mpl.ticker.FormatStrFormatter('%g' + r'$ \pi$')
         plot.ax2dHist.xaxis.set_major_formatter(formatter)
@@ -163,7 +164,8 @@ def main():
     xrtr.run_ray_tracing(plots, repeats=40, updateEvery=1, beamLine=beamLine,
                          processes='half')
 
-#this is necessary to use multiprocessing in Windows, otherwise the new Python
-#contexts cannot be initialized:
+
+# this is necessary to use multiprocessing in Windows, otherwise the new Python
+# contexts cannot be initialized:
 if __name__ == '__main__':
     main()

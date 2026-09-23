@@ -5,7 +5,7 @@ import os, sys; sys.path.append(os.path.join('..', '..', '..'))  # analysis:igno
 import numpy as np
 import xrt.backends.raycing as raycing
 import xrt.backends.raycing.sources as rs
-#import xrt.backends.raycing.apertures as ra
+# import xrt.backends.raycing.apertures as ra
 import xrt.backends.raycing.oes as roe
 import xrt.backends.raycing.run as rr
 import xrt.backends.raycing.materials as rm
@@ -30,8 +30,8 @@ qHFM = 400000000.
 p = pVFM
 q = 2000
 
-#Select a case:
-#case = 'parabolic'
+# Select a case:
+# case = 'parabolic'
 case = 'elliptical'
 
 
@@ -109,7 +109,7 @@ rr.run_process = run_process
 
 
 def define_plots(beamLine):
-#    fwhmFormatStrE = '%.2f'
+    # fwhmFormatStrE = '%.2f'
     plots = []
     pAdd = case[:3]
 

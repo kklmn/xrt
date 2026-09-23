@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 
 import xrt.backends.raycing as raycing
 import xrt.backends.raycing.sources as rs
-#import xrt.backends.raycing.apertures as ra
+# import xrt.backends.raycing.apertures as ra
 import xrt.backends.raycing.oes as roe
 import xrt.backends.raycing.run as rr
 import xrt.backends.raycing.materials as rm
@@ -19,7 +19,7 @@ import xrt.plotter as xrtp
 import xrt.runner as xrtr
 import xrt.backends.raycing.screens as rsc
 
-#mGold = rm.Material('Au', rho=19.3)
+# mGold = rm.Material('Au', rho=19.3)
 mGlass = rm.Material(('Si', 'O'), quantities=(1, 2), rho=2.2)
 
 
@@ -127,17 +127,17 @@ def build_beamline(nrays=1000):
     print('{0} capillaries built'.format(len(beamLine.capillaries)))
     print('indices of first capillaries in each layer:', beamLine.firstInLayer)
     beamLine.sources[0].dxprime = 0, np.arcsin((2*n+1) * (r0+wall) / rSample)
-#    beamLine.sources[0].dxprime = (np.arcsin((2*n-3) * (r0+wall) / rSample),
-#        np.arcsin((2*n+1) * (r0+wall) / rSample))
-#    beamLine.sources[0].dxprime = 0, np.arcsin(r0 / rSample)
+    # beamLine.sources[0].dxprime = (np.arcsin((2*n-3) * (r0+wall) / rSample),
+    #     np.arcsin((2*n+1) * (r0+wall) / rSample))
+    # beamLine.sources[0].dxprime = 0, np.arcsin(r0 / rSample)
     beamLine.fsm2 = rsc.Screen(beamLine, 'DiamondFSM2', (0, f, 0))
     return beamLine
 
 
 def run_process(beamLine):
     beamSource = beamLine.sources[0].shine()
-#    raycing.rotate_beam(
-#        beamSource, yaw=-beamLine.capillaries[0].entranceAlpha)
+    # raycing.rotate_beam(
+    #     beamSource, yaw=-beamLine.capillaries[0].entranceAlpha)
     beamFSM1 = beamLine.fsm1.expose(beamSource)
     outDict = {'beamSource': beamSource, 'beamFSM1': beamFSM1}
     beamCapillaryGlobalTotal = None
@@ -163,7 +163,7 @@ rr.run_process = run_process
 def plot2D():
     beamLine = build_beamline()
     fig1 = plt.figure(1, figsize=(8, 6))
-#    ax1 = plt.subplot(111, aspect='equal', label='1')
+    # ax1 = plt.subplot(111, aspect='equal', label='1')
     ax1 = plt.subplot(111, aspect=50, label='1')
     ax1.set_title('Cross-section of polycapillary at $z$=0')
     ax1.set_xlabel(r'$y$ (mm)', fontsize=14)
@@ -188,7 +188,7 @@ def plot2D():
 def define_plots(beamLine):
     fwhmFormatStr3 = '%.3f'
     plots = []
-#    PlotClass = xrtp.XYCPlotWithNumerOfReflections
+    # PlotClass = xrtp.XYCPlotWithNumerOfReflections
     PlotClass = xrtp.XYCPlot
 
     for ibins, bins in enumerate([128, 256]):
@@ -249,7 +249,7 @@ def define_plots(beamLine):
         plot.yaxis.fwhmFormatStr = fwhmFormatStr3
         plot.xaxis.limits = [-beamLine.xzMax, beamLine.xzMax]
         plot.yaxis.limits = [-beamLine.xzMax, beamLine.xzMax]
-    #    plot.fluxFormatStr = '%.2e'
+        # plot.fluxFormatStr = '%.2e'
         plot.baseName = 'NCapillaries-d-FSM2-xzCat{0}'.format(ibins)
         plots.append(plot)
 
@@ -266,7 +266,7 @@ def define_plots(beamLine):
         plot.yaxis.limits = [-beamLine.xzMax, beamLine.xzMax]
         plot.caxis.fwhmFormatStr = None
         plot.caxis.limits = [-0.5, nReflDisp+0.5]
-    #    plot.fluxFormatStr = '%.2e'
+        # plot.fluxFormatStr = '%.2e'
         plot.baseName = 'NCapillaries-e-FSM2-xzN{0}'.format(ibins)
         plots.append(plot)
 
@@ -283,7 +283,7 @@ def define_plots(beamLine):
         plot.yaxis.limits = [-xzPrimeMax, xzPrimeMax]
         plot.caxis.fwhmFormatStr = None
         plot.caxis.limits = [-0.5, nReflDisp+0.5]
-    #    plot.fluxFormatStr = '%.2e'
+        # plot.fluxFormatStr = '%.2e'
         plot.baseName = 'NCapillaries-f-FSM2-xPhaseSpaceN{0}'.format(ibins)
         plots.append(plot)
 
@@ -298,7 +298,7 @@ def define_plots(beamLine):
         plot.yaxis.limits = 'symmetric'
         plot.caxis.fwhmFormatStr = None
         plot.caxis.limits = [-xzPrimeMax, xzPrimeMax]
-    #    plot.fluxFormatStr = '%.2e'
+        # plot.fluxFormatStr = '%.2e'
         plot.baseName = 'NCapillaries-g-CapillaryOut-depthX{0}'.format(ibins)
         plots.append(plot)
 
@@ -313,7 +313,7 @@ def define_plots(beamLine):
         plot.yaxis.limits = 'symmetric'
         plot.caxis.fwhmFormatStr = None
         plot.caxis.limits = [-xzPrimeMax, xzPrimeMax]
-    #    plot.fluxFormatStr = '%.2e'
+        # plot.fluxFormatStr = '%.2e'
         plot.baseName = 'NCapillaries-h-CapillaryOut-depthZ{0}'.format(ibins)
         plots.append(plot)
 
@@ -321,19 +321,19 @@ def define_plots(beamLine):
         plot.invertColorMap = True
         plot.negative = True
         plot.saveName = plot.baseName + '.png'
-#        plot.persistentName = plot.baseName + '.pickle'
+        # plot.persistentName = plot.baseName + '.pickle'
     return plots
 
 
 def main():
     beamLine = build_beamline()
     plots = define_plots(beamLine)
-    xrtr.run_ray_tracing(plots, repeats=1000*16, beamLine=beamLine,
+    xrtr.run_ray_tracing(plots, repeats=160, beamLine=beamLine,
                          processes='half')
 
 
 # this is necessary to use multiprocessing in Windows, otherwise the new Python
 # contexts cannot be initialized:
 if __name__ == '__main__':
+    # plot2D()
     main()
-#    plot2D()
