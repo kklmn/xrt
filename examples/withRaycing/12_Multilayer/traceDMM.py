@@ -9,7 +9,7 @@ import numpy as np
 import BalderDMM
 import xrt.plotter as xrtp
 import xrt.runner as xrtr
-#import xrt.backends.raycing.materials as rm
+# import xrt.backends.raycing.materials as rm
 
 stripe = 'Si'
 E0 = 8000
@@ -30,30 +30,62 @@ def define_plots(beamLine):
     plots = []
 
     plot = xrtp.XYCPlot(
-        'beamFSMDCM', (1,),
+        'beamFSM0', (1,),
         xaxis=xrtp.XYCAxis(r'$x$', 'mm'), yaxis=xrtp.XYCAxis(r'$z$', 'mm'),
-        caxis=xrtp.XYCAxis('energy', 'keV', fwhmFormatStr='%.2f'), title='DCM')
-    plot.xaxis.limits = [-7., 7.]
-    plot.yaxis.limits = [20.3-7., 20.3+7.]
+        caxis=xrtp.XYCAxis('energy', 'keV', fwhmFormatStr='%.2f'))
     plot.fluxFormatStr = '%.1p'
     plot.textPanel = plot.fig.text(0.88, 0.8, '',
                                    transform=plot.fig.transFigure, size=14,
                                    color='r', ha='center')
-    plot.baseName = 'afterDMM'
+    plot.baseName = 'fsm0'
+    plots.append(plot)
+
+    plot = xrtp.XYCPlot(
+        'beamFSMVCM', (1,),
+        xaxis=xrtp.XYCAxis(r'$x$', 'mm'), yaxis=xrtp.XYCAxis(r'$z$', 'mm'),
+        caxis=xrtp.XYCAxis('energy', 'keV', fwhmFormatStr='%.2f'))
+    plot.fluxFormatStr = '%.1p'
+    plot.textPanel = plot.fig.text(0.88, 0.8, '',
+                                   transform=plot.fig.transFigure, size=14,
+                                   color='r', ha='center')
+    plot.baseName = 'fsmVVM'
     plots.append(plot)
 
     plot = xrtp.XYCPlot(
         'beamDCMlocal1', (1,),
         xaxis=xrtp.XYCAxis(r'$x$', 'mm'), yaxis=xrtp.XYCAxis(r'$y$', 'mm'),
         caxis=xrtp.XYCAxis('energy', 'keV', fwhmFormatStr='%.2f'),
-        title='Xtal1 local')
-    plot.xaxis.limits = [-86., 86.]
-    plot.yaxis.limits = [-86., 86.]
+        title='ML1 local')
     plot.fluxFormatStr = '%.1p'
     plot.textPanel = plot.fig.text(0.88, 0.8, '',
                                    transform=plot.fig.transFigure, size=14,
                                    color='r', ha='center')
     plot.baseName = '1stML'
+    plots.append(plot)
+
+    plot = xrtp.XYCPlot(
+        'beamDCMlocal2', (1,),
+        xaxis=xrtp.XYCAxis(r'$x$', 'mm'), yaxis=xrtp.XYCAxis(r'$y$', 'mm'),
+        caxis=xrtp.XYCAxis('energy', 'keV', fwhmFormatStr='%.2f'),
+        title='ML2 local')
+    plot.fluxFormatStr = '%.1p'
+    plot.textPanel = plot.fig.text(0.88, 0.8, '',
+                                   transform=plot.fig.transFigure, size=14,
+                                   color='r', ha='center')
+    plot.baseName = '2ndML'
+    plots.append(plot)
+
+    plot = xrtp.XYCPlot(
+        'beamFSMDCM', (1,),
+        xaxis=xrtp.XYCAxis(r'$x$', 'mm'), yaxis=xrtp.XYCAxis(r'$z$', 'mm'),
+        caxis=xrtp.XYCAxis('energy', 'keV', fwhmFormatStr='%.2f'), title='DCM')
+    # plot.xaxis.limits = [-7., 7.]
+    # plot.yaxis.limits = [20.3-7., 20.3+7.]
+    plot.fluxFormatStr = '%.1p'
+    plot.textPanel = plot.fig.text(0.88, 0.8, '',
+                                   transform=plot.fig.transFigure, size=14,
+                                   color='r', ha='center')
+    plot.baseName = 'afterDMM'
     plots.append(plot)
 
     for plot in plots:
@@ -135,8 +167,8 @@ def plot_generator(plots, beamLine):
     loops here because each energy frame contains alignment side effects, not
     just the energy value itself.
     """
-    energies = np.linspace(E0 - 500, E0 + 500, 7)
-#    energies = E0,
+    # energies = np.linspace(E0 - 500, E0 + 500, 7)
+    energies = E0,
     for energy in energies:
         BalderDMM.align_beamline(beamLine, energy=energy)
         thetaDeg = np.degrees(
@@ -144,7 +176,7 @@ def plot_generator(plots, beamLine):
         for plot in plots:
             baseName = '{0}_{1:05.0f}'.format(plot.baseName, thetaDeg*1e4)
             plot.saveName = baseName + '.png'
-#            plot.persistentName = baseName + '.pickle'
+            # plot.persistentName = baseName + '.pickle'
             if hasattr(plot, 'textPanel'):
                 plot.textPanel.set_text(
                     '$\\theta$ = {0:.3f}$^o$'.format(thetaDeg))
@@ -157,17 +189,19 @@ def main():
     myBalder = BalderDMM.build_beamline(
         stripe=stripe, eMinRays=E0-dE, eMaxRays=E0+dE)
     if BalderDMM.showIn3D:
+        BalderDMM.align_beamline(myBalder, energy=E0)
         scan = make_glow_scan(myBalder)
         myBalder.glow(scale=[500, 10, 500], centerAt='VCM', startFrom=1,
                       scan=scan)
         return
     plots = define_plots(myBalder)
-    xrtr.run_ray_tracing(plots, repeats=120, generator=plot_generator,
+    xrtr.run_ray_tracing(plots, repeats=16, generator=plot_generator,
                          beamLine=myBalder,
                          globalNorm=True,
                          processes=1)
 
-#this is necessary to use multiprocessing in Windows, otherwise the new Python
-#contexts cannot be initialized:
+
+# this is necessary to use multiprocessing in Windows, otherwise the new Python
+# contexts cannot be initialized:
 if __name__ == '__main__':
     main()

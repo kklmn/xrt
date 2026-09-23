@@ -15,7 +15,7 @@ import xrt.backends.raycing.run as rr
 import xrt.backends.raycing.materials as rm
 import xrt.backends.raycing.screens as rsc
 
-showIn3D = False
+showIn3D = True
 
 stripeSi = rm.Material('Si', rho=2.33)
 stripeSiO2 = rm.Material(('Si', 'O'), quantities=(1, 2), rho=2.2)
@@ -42,12 +42,12 @@ def build_beamline(nrays=1e4, hkl=(1, 1, 1), stripe='Si',
     wigglerToStraightSection = 0
     xWiggler = wigglerToStraightSection * beamLine.sinAzimuth
     yWiggler = wigglerToStraightSection * beamLine.cosAzimuth
-#    rs.WigglerWS(
-#        beamLine, name='SoleilW50', center=(xWiggler, yWiggler, height),
-#        nrays=nrays, period=50., K=8.446, n=39, eE=3., eI=0.5,
-#        eSigmaX=48.66, eSigmaZ=6.197, eEpsilonX=0.263, eEpsilonZ=0.008,
-#        eMin=50, eMax=60050, eMinRays=eMinRays, eMaxRays=eMaxRays, eN=2000,
-#        xPrimeMax=0.22, zPrimeMax=0.06, nx=40, nz=10)
+    # rs.WigglerWS(
+    #     beamLine, name='SoleilW50', center=(xWiggler, yWiggler, height),
+    #     nrays=nrays, period=50., K=8.446, n=39, eE=3., eI=0.5,
+    #     eSigmaX=48.66, eSigmaZ=6.197, eEpsilonX=0.263, eEpsilonZ=0.008,
+    #     eMin=50, eMax=60050, eMinRays=eMinRays, eMaxRays=eMaxRays, eN=2000,
+    #     xPrimeMax=0.22, zPrimeMax=0.06, nx=40, nz=10)
     rs.Wiggler(
         beamLine, name='SoleilW50', center=(xWiggler, yWiggler, height),
         nrays=nrays, period=50., K=8.446, n=39, eE=3., eI=0.5,
@@ -141,28 +141,26 @@ def run_process(beamLine, shineOnly1stSource=False):
         beamFurtherDown = beamFilter2global
     else:
         beamFurtherDown = beamFilter1global
-#        beamFurtherDown = beamSource
+        # beamFurtherDown = beamSource
     beamVCMglobal, beamVCMlocal = beamLine.vcm.reflect(beamFurtherDown)
     beamFSMVCM = beamLine.fsmVCM.expose(beamVCMglobal)
 
     beamDCMglobal, beamDCMlocal1, beamDCMlocal2 = \
         beamLine.dmm.double_reflect(beamVCMglobal)
 
-#    beamBSBlocklocal = beamLine.BSBlock.propagate(beamDCMglobal)
-#    beamSlitAfterDCMlocal = beamLine.slitAfterDCM.propagate(beamDCMglobal)
-    beamFSMDCM = beamLine.fsmDCM.expose(beamDCMglobal)
-#
-#    beamVFMglobal, beamVFMlocal = beamLine.vfm.reflect(beamDCMglobal)
-#    beamSlitAfterVFMlocal = beamLine.slitAfterVFM.propagate(beamVFMglobal)
-#    beamFSMVFM = beamLine.fsmVFM.expose(beamVFMglobal)
-#    beamPSLocal = beamLine.ohPS.propagate(beamVFMglobal)
-#
-#    beamSlitEHLocal = beamLine.slitEH.propagate(beamVFMglobal)
-#    beamFSMSample = beamLine.fsmSample.expose(beamVFMglobal)
+    # beamBSBlocklocal = beamLine.BSBlock.propagate(beamDCMglobal)
+    # beamSlitAfterDCMlocal = beamLine.slitAfterDCM.propagate(beamDCMglobal)
 
-#               'beamFilter2global': beamFilter2global,
-#               'beamFilter2local1': beamFilter2local1,
-#               'beamFilter2local2': beamFilter2local2,
+    beamFSMDCM = beamLine.fsmDCM.expose(beamDCMglobal)
+
+    # beamVFMglobal, beamVFMlocal = beamLine.vfm.reflect(beamDCMglobal)
+    # beamSlitAfterVFMlocal = beamLine.slitAfterVFM.propagate(beamVFMglobal)
+    # beamFSMVFM = beamLine.fsmVFM.expose(beamVFMglobal)
+    # beamPSLocal = beamLine.ohPS.propagate(beamVFMglobal)
+
+    # beamSlitEHLocal = beamLine.slitEH.propagate(beamVFMglobal)
+    # beamFSMSample = beamLine.fsmSample.expose(beamVFMglobal)
+
     outDict = {'beamSource': beamSource,
                'beamFSM0': beamFSM0,
                'beamFSMFE': beamFSMFE,
@@ -173,21 +171,21 @@ def run_process(beamLine, shineOnly1stSource=False):
                'beamFSMVCM': beamFSMVCM,
                'beamDCMglobal': beamDCMglobal,
                'beamDCMlocal1': beamDCMlocal1, 'beamDCMlocal2': beamDCMlocal2,
-               'beamFSMDCM': beamFSMDCM}
-#               'beamBSBlocklocal': beamBSBlocklocal,
-#               'beamSlitAfterDCMlocal': beamSlitAfterDCMlocal,
-#               'beamFSMDCM': beamFSMDCM,
-#               'beamVFMglobal': beamVFMglobal, 'beamVFMlocal': beamVFMlocal,
-#               'beamSlitAfterVFMlocal': beamSlitAfterVFMlocal,
-#               'beamFSMVFM': beamFSMVFM,
-#               'beamPSLocal': beamPSLocal,
-#               'beamSlitEHLocal': beamSlitEHLocal,
-#               'beamFSMSample': beamFSMSample
-#               }
-    if hasattr(beamLine, 'filter2'):
-        outDict['beamFilter2global'] = beamFilter2global
-        outDict['beamFilter2local1'] = beamFilter2local1
-        outDict['beamFilter2local2'] = beamFilter2local2
+               'beamFSMDCM': beamFSMDCM,
+               # 'beamBSBlocklocal': beamBSBlocklocal,
+               # 'beamSlitAfterDCMlocal': beamSlitAfterDCMlocal,
+               # 'beamFSMDCM': beamFSMDCM,
+               # 'beamVFMglobal': beamVFMglobal, 'beamVFMlocal': beamVFMlocal,
+               # 'beamSlitAfterVFMlocal': beamSlitAfterVFMlocal,
+               # 'beamFSMVFM': beamFSMVFM,
+               # 'beamPSLocal': beamPSLocal,
+               # 'beamSlitEHLocal': beamSlitEHLocal,
+               # 'beamFSMSample': beamFSMSample
+               }
+    # if hasattr(beamLine, 'filter2'):
+    #     outDict['beamFilter2global'] = beamFilter2global
+    #     outDict['beamFilter2local1'] = beamFilter2local1
+    #     outDict['beamFilter2local2'] = beamFilter2local2
     beamLine.beams = outDict
     if showIn3D:
         beamLine.prepare_flow()
