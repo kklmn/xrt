@@ -404,13 +404,19 @@ class ToroidMirror(OE):
 
     def local_z(self, x, y):
         rx = 1 - (np.asarray(x)/self.r)**2
-        rx[rx < 0] = 0.  # becomes flat at the equator
+        try:
+            rx[rx < 0] = 0.  # becomes flat at the equator
+        except TypeError:  # float64 object does not support item assignment
+            rx = max(rx, 0)
         return y**2/2.0/self.R + self.r*(1 - rx**0.5)
 
     def local_n(self, x, y):
         """Determines the normal vector of OE at (x, y) position."""
         rx = 1 - (np.asarray(x)/self.r)**2
-        rx[rx <= 0] = np.inf
+        try:
+            rx[rx <= 0] = np.inf
+        except TypeError:  # float64 object does not support item assignment
+            rx = max(rx, 0)
         a = -x / self.r * rx**(-0.5)  # -dz/dx
         b = -y / self.R  # -dz/dy
         c = 1.
