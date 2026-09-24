@@ -368,7 +368,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.change_beam_colorax()
         if globalColors and self.parent is not None and hasattr(
                 self.parent, 'colorControls'):
-            self.parent.updateColorAxis(None)
+#            self.parent.updateColorAxis(None)
+            self.parent._syncColorLimitControls()
 
     @property
     def renderPlateSides(self):
