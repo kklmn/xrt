@@ -1623,8 +1623,16 @@ class OEMesh3D():
             localTiles[1] *= 3
 
         if isClosedSurface:
-            # the limits are in parametric coordinates
-            xLimits = yLimits  # s
+            # Physical y limits must be mapped to the axial parameter s.
+            # For example, EllipticalMirrorParam offsets and tilts its axis.
+            xLimits = yLimits
+            if isOeParametric:
+                axisY0 = self.oe.param_to_xyz(0., 0., 0.)[1]
+                axisY1 = self.oe.param_to_xyz(1., 0., 0.)[1]
+                axisYStep = axisY1 - axisY0
+                if np.isfinite(axisYStep) and\
+                        abs(axisYStep) > np.finfo(float).eps:
+                    xLimits = (np.asarray(yLimits) - axisY0) / axisYStep
             yLimits = [0, 2*np.pi]  # phi
             localTiles[1] *= 3
 
