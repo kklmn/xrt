@@ -100,6 +100,10 @@ def is_oe(oe):
     return isinstance(oe, roes.OE)
 
 
+def is_parametric_oe(oe):
+    return isinstance(oe, roes.OE) and oe.isParametric
+
+
 def is_dcm(oe):
     return isinstance(oe, roes.DCM)
 

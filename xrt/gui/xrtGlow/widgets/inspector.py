@@ -15,7 +15,7 @@ from matplotlib.colors import TABLEAU_COLORS
 
 from ...commons import qt, config
 from .._constants import DISPLAY_NUMBER_FORMAT
-from .._utils import is_aperture, is_screen
+from .._utils import is_aperture, is_screen, is_parametric_oe
 
 from ....backends import raycing
 from ....backends.raycing import materials as rmats
@@ -332,6 +332,9 @@ class InstanceInspector(qt.QDialog):
 
             if is_screen(oeObj) or is_aperture(oeObj):
                 axHints['yaxis']['label'] = r"z"
+            elif is_parametric_oe(oeObj):
+                axHints['xaxis'] = {'label': 'phi', 'unit': 'mrad'}
+                axHints['yaxis']['label'] = r"s"
             elif defBeam.endswith('lobal'):
                 axHints['yaxis']['label'] = r"z"
             elif len(realBeamKeys) > 1:
