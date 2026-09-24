@@ -950,6 +950,8 @@ class XrtQookBase(qt.QMainWindow):
         self.plotTree.setSelectionBehavior(qt.QAbstractItemView.SelectItems)
         self.plotTree.model().setHorizontalHeaderLabels(['Parameter', 'Value'])
         self.plotTree.setItemDelegateForColumn(1, comboDelegate)
+        self.plotTree.expanded.connect(
+            lambda _index: self.plotTree.resizeColumnToContents(0))
 
         # materialsTree view
         self.matTree.setModel(self.materialsModel)
@@ -959,6 +961,8 @@ class XrtQookBase(qt.QMainWindow):
         self.matTree.setSelectionBehavior(qt.QAbstractItemView.SelectItems)
         self.matTree.model().setHorizontalHeaderLabels(['Parameter', 'Value'])
         self.matTree.setItemDelegateForColumn(1, comboDelegate)
+        self.matTree.expanded.connect(
+            lambda _index: self.matTree.resizeColumnToContents(0))
 
         # figureErrorsTree view
         self.feTree.setModel(self.fesModel)
@@ -968,6 +972,8 @@ class XrtQookBase(qt.QMainWindow):
         self.feTree.setSelectionBehavior(qt.QAbstractItemView.SelectItems)
         self.feTree.model().setHorizontalHeaderLabels(['Parameter', 'Value'])
         self.feTree.setItemDelegateForColumn(1, comboDelegate)
+        self.feTree.expanded.connect(
+            lambda _index: self.feTree.resizeColumnToContents(0))
 
         # BLTree view
         self.tree.setModel(self.beamLineModel)
@@ -980,7 +986,6 @@ class XrtQookBase(qt.QMainWindow):
         self.tree.setDropIndicatorShown(True)
         self.tree.setDragDropMode(qt.QTreeView.InternalMove)
         self.tree.setDefaultDropAction(qt.Qt.MoveAction)
-        # self.tree.setUniformRowHeights(False)
 
         self.tree.setSelectionBehavior(qt.QAbstractItemView.SelectItems)
         headers = ['Parameter', 'Value']
@@ -995,9 +1000,9 @@ class XrtQookBase(qt.QMainWindow):
         self.addElement(copyFrom=blProps,
                         isRoot=True)
 
-        # self.tree.expand(self.rootBLItem.index())
-        self.tree.setColumnWidth(0, int(self.tree.width()/3))
         self.tree.setItemDelegateForColumn(1, comboDelegate)
+        self.tree.expanded.connect(
+            lambda _index: self.tree.resizeColumnToContents(0))
 
         # runTree view
         self.runTree.setModel(self.runModel)
@@ -1006,21 +1011,9 @@ class XrtQookBase(qt.QMainWindow):
         self.runTree.setHeaderHidden(False)
         self.runTree.setAnimated(True)
         self.runTree.setSelectionBehavior(qt.QAbstractItemView.SelectItems)
-#        self.runTree.model().setHorizontalHeaderLabels(['Parameter', 'Value'])
         self.runTree.model().setHorizontalHeaderLabels(headers)
         self.runTree.setItemDelegateForColumn(1, comboDelegate)
 
-#        for name, obj in inspect.getmembers(xrtrun):
-#            if inspect.isfunction(obj) and name == "run_ray_tracing":
-#                if getargspec(obj)[3] is not None:
-#                    runStr = '{0}.{1}'.format(xrtrun.__name__, name)
-#                    self.addObject(self.runTree, self.rootRunItem, runStr)
-#                    for arg, argVal in self.getParams(runStr):
-#                        if arg.lower() == "plots":
-#                            argVal = self.rootPlotItem.text()
-#                        if arg.lower() == "beamline":
-#                            argVal = self.rootBLItem.text()
-#                        self.addParam(self.rootRunItem, arg, argVal)
         if runProps is None:
             runProps = dict(raycing.get_params('xrt.runner.run_ray_tracing'))
             runProps['plots'] = self.rootPlotItem.text()
@@ -1035,10 +1028,10 @@ class XrtQookBase(qt.QMainWindow):
             else:
                 self.addParam(self.rootRunItem, arg, argVal)
 
-#        self.addCombo(self.runTree, self.rootRunItem)
-        self.runTree.setColumnWidth(0, int(self.runTree.width()/3))
         index = self.runModel.indexFromItem(self.rootRunItem)
         self.runTree.setExpanded(index, True)
+        self.runTree.expanded.connect(
+            lambda _index: self.runTree.resizeColumnToContents(0))
 
         for itab in range(self.tabs.count()):
             self.tabs.tabBar().setTabTextColor(itab, qt.Qt.black)
@@ -1085,65 +1078,6 @@ class XrtQookBase(qt.QMainWindow):
         self.boolModel.appendRow(qt.QStandardItem('False'))
         self.boolModel.appendRow(qt.QStandardItem('True'))
 
-#        self.OCLModel = qt.QStandardItemModel()
-#        oclNoneItem, oclNoneItemName = self.addParam(self.OCLModel,
-#                                                     "None",
-#                                                     "None")
-#        oclNoneItem, oclNoneItemName = self.addParam(self.OCLModel,
-#                                                     "auto",
-#                                                     "auto")
-#        if isOpenCL:
-#            iDeviceCPU = []
-#            iDeviceGPU = []
-#            CPUdevices = []
-#            GPUdevices = []
-#            for platform in cl_platforms:
-#                try:  # at old pyopencl versions:
-#                    CPUdevices =\
-#                        platform.get_devices(
-#                            device_type=cl.device_type.CPU)
-#                    GPUdevices =\
-#                        platform.get_devices(
-#                            device_type=cl.device_type.GPU)
-#                except cl.RuntimeError:
-#                    pass
-#                if len(CPUdevices) > 0:
-#                    if len(iDeviceCPU) > 0:
-#                        if CPUdevices[0].vendor == \
-#                                CPUdevices[0].platform.vendor:
-#                            iDeviceCPU = CPUdevices
-#                    else:
-#                        iDeviceCPU.extend(CPUdevices)
-#                iDeviceGPU.extend(GPUdevices)
-#
-#            if len(iDeviceCPU) > 0:
-#                oclNoneItem, oclNoneItemName = self.addParam(self.OCLModel,
-#                                                             "CPU",
-#                                                             "CPU")
-#            if len(iDeviceGPU) > 0:
-#                oclNoneItem, oclNoneItemName = self.addParam(self.OCLModel,
-#                                                             "GPU",
-#                                                             "GPU")
-#            iDeviceCPU.extend(iDeviceGPU)
-#
-#            for iplatform, platform in enumerate(cl_platforms):
-#                for idevice, device in enumerate(platform.get_devices()):
-#                    if device in iDeviceCPU:
-#                        oclDev = '({0}, {1})'.format(iplatform, idevice)
-#                        try:
-#                            oclDevStr = cl.device_type.to_string(device.type)
-#                        except ValueError:
-#                            oclDevStr = str(cl.device_type)
-#                        oclToolTip = 'Platform: {0}\nDevice: {1}\nType: \
-#{2}\nCompute Units: {3}\nFP64 Support: {4}'.format(
-#                            platform.name, device.name,
-#                            oclDevStr,
-#                            device.max_compute_units,
-#                            bool(device.double_fp_config))
-#                        oclItem, oclItemStr = self.addParam(
-#                            self.OCLModel, device.name, oclDev)
-#                        oclItem.setToolTip(oclToolTip)
-
         self.materialsModel = qt.QStandardItemModel()
         self.rootMatItem = self.materialsModel.invisibleRootItem()
         self.rootMatItem.setText("Materials")
@@ -1163,23 +1097,6 @@ class XrtQookBase(qt.QMainWindow):
                                   qt.QStandardItem('000')])  # Ordinal number
         self.rootBeamItem = self.beamModel.invisibleRootItem()
         self.rootBeamItem.setText("Beams")
-#        self.beamModel.itemChanged.connect(self.updateBeamlineBeams)
-
-#        self.matKindModel = qt.QStandardItemModel()
-#        for mtKind in ['mirror', 'thin mirror',
-#                       'plate', 'lens', 'grating', 'FZP', 'auto']:
-#            mtItem = qt.QStandardItem(mtKind)
-#            self.matKindModel.appendRow(mtItem)
-
-#        self.matTableModel = qt.QStandardItemModel()
-#        for mtTable in ['Chantler', 'Chantler total', 'Henke', 'BrCo']:
-#            mtTItem = qt.QStandardItem(mtTable)
-#            self.matTableModel.appendRow(mtTItem)
-
-#        self.shapeModel = qt.QStandardItemModel()
-#        for shpEl in ['rect', 'round']:
-#            shpItem = qt.QStandardItem(shpEl)
-#            self.shapeModel.appendRow(shpItem)
 
         self.matGeomModel = qt.QStandardItemModel()
         for mtGeom in ['Bragg reflected', 'Bragg transmitted',

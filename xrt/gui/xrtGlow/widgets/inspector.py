@@ -222,13 +222,6 @@ class InstanceInspector(qt.QDialog):
                             epv = None
                         self.add_param(parentItem, nkey, nvalue, epv=epv)
                         self.original_data[nkey] = nvalue
-#                    self.add_row(nkey, nvalue)
-#            if hasattr(value, "_fields"):
-#                for subfield in value._fields:
-#                    subkey = f"{key}.{subfield}"
-#                    subval = getattr(value, subfield)
-#                    self.add_row(subkey, subval)
-#                    self.original_data[subkey] = subval
             else:
                 if epicsTree is not None:
                     epv = epicsTree.get(key)
@@ -272,6 +265,10 @@ class InstanceInspector(qt.QDialog):
         comboDelegate = qt.DynamicArgumentDelegate(bl=beamLine,
                                                    mainWidget=self)
         self.table.setItemDelegateForColumn(1, comboDelegate)
+#        self.table.expanded.connect(
+#            lambda _index: self.table.resizeColumnToContents(0))
+#        self.table.expandToDepth(2)  # or restore expansion state
+#        qt.QTimer.singleShot(0, lambda: self.table.resizeColumnToContents(0))
 
         if all(arg in dataDict for arg in oeDiagnosticArgs):
             self.update_param((elementId, None, None))
