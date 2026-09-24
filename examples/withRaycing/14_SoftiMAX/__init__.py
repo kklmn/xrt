@@ -24,6 +24,10 @@ see the scheme provided by Karina Thånell.
 STXM branch
 ~~~~~~~~~~~
 
+.. imagezoom:: _images/SoftiMAX-3D-STXM.png
+   :scale: 50 %
+   :align: center
+
 .. rubric:: Rays vs. hybrid
 
 The propagation through the first optical elements – from undulator to front
@@ -162,6 +166,10 @@ values on the pictures of Principal Components.
 
 CXI branch
 ~~~~~~~~~~
+
+.. imagezoom:: _images/SoftiMAX-3D-CXI.png
+   :scale: 50 %
+   :align: center
 
 .. rubric:: 2D vs 1D
 

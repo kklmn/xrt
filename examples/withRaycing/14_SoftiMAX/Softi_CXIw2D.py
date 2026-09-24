@@ -26,7 +26,7 @@ import xrt.backends.raycing.screens as rsc
 import xrt.backends.raycing.waves as rw
 import xrt.backends.raycing.coherence as rco
 
-showIn3D = False
+showIn3D = True
 
 mAu = rm.Material('Au', rho=19.32)
 mRh = rm.Material('Rh', rho=12.41)
@@ -37,7 +37,7 @@ mAuFZP = rm.Material('Au', rho=19.3, kind='FZP')
 mRhFZP = rm.Material('Rh', rho=12.41, kind='FZP')
 
 E0 = 280.
-dE = 0.5
+dE = 0.11
 targetHarmonic = 1
 acceptanceHor = 2.2e-4  # FE acceptance, full angle, rad
 acceptanceVer = 4.2e-4  # FE acceptance
@@ -84,8 +84,8 @@ ESdZ = 0.1  # in mm EXIT SLIT RADIUS
 repeats = 10
 nrays = 1e5
 
-# what = 'rays'
-what = 'hybrid'
+what = 'rays'
+# what = 'hybrid'
 # what = 'wave'
 
 if what == 'rays':
@@ -155,7 +155,6 @@ def build_beamline(azimuth=0):
     beamLine.slitFE = ra.RectangularAperture(
         beamLine, 'FE slit', kind=['left', 'right', 'bottom', 'top'],
         opening=opening)
-    beamLine.fsm0 = rsc.Screen(beamLine, 'FSM-M1')
 
     beamLine.m1 = roe.ToroidMirror(
         beamLine, 'M1', surface=('Au',), material=(mAu,),
@@ -170,7 +169,7 @@ def build_beamline(azimuth=0):
     gratingKW = dict(
         positionRoll=np.pi, limPhysX=(-2, 2),
         limPhysY=(-40, 40), alarmLevel=0.1)
-    if what == 'rays':
+    if what == 'rays' or showIn3D:
         beamLine.pg = Grating(beamLine, 'PlaneGrating',
                               material=mGoldenGrating, **gratingKW)
         beamLine.pg.material.efficiency = [(1, 0.4)]
@@ -185,7 +184,7 @@ def build_beamline(azimuth=0):
         beamLine, 'M3', surface=('Au',), material=(mAu,),
         positionRoll=-np.pi/2, limPhysX=(-10., 10.), limPhysY=(-100., 100.),
         alarmLevel=0.1)
-    beamLine.fsm3 = rsc.Screen(beamLine, 'FSM-M3')
+    # beamLine.fsm3 = rsc.Screen(beamLine, 'FSM-M3')
 
     # beamLine.exitSlit = ra.RoundAperture(
     #      beamLine, 'ExitSlit', r=ESradius, alarmLevel=None)
@@ -196,17 +195,17 @@ def build_beamline(azimuth=0):
 
     beamLine.m4 = roe.EllipticalMirrorParam(
         beamLine, 'M4', surface=('Au',), material=(mAu,),
-        positionRoll=np.pi/2, pitch=pitch, isCylindrical=True,
-        p=43000., q=dM45+pExp, limPhysX=(-0.5, 0.5),
-        limPhysY=(-70., 70.), alarmLevel=0.2)
+        positionRoll=-np.pi/2, pitch=pitch, isCylindrical=True,
+        p=43000., q=dM45+pExp, pAxis=(-np.sin(2*pitch), np.cos(2*pitch), 0),
+        limPhysX=(-0.5, 0.5), limPhysY=(-70., 70.), alarmLevel=0.2)
 
     beamLine.m5 = roe.EllipticalMirrorParam(
         beamLine, 'M5', surface=('Au',), material=(mAu,),
-        yaw=-2*pitch, pitch=pitch, isCylindrical=True,
+        yaw=2*pitch, pitch=pitch, isCylindrical=True,
         p=dM4ES+dM45, q=pExp,
         limPhysX=(-0.5, 0.5), limPhysY=(-40., 40.), alarmLevel=0.2)
 
-    beamLine.fsmExp = rsc.Screen(beamLine, 'FSM-Exp')
+    beamLine.fsmExp = rsc.Screen(beamLine, 'Sample')
 
     return beamLine
 
@@ -233,12 +232,11 @@ def align_beamline(beamLine, E0=E0, pitchM1=pitch, pitchM3=pitch,
         -pM1 * np.cos(2*pitch), 0     # centre of undu when M1 is (0,0,0)
     beamLine.slitFE.center = (pM1-pFE) * np.sin(2*pitch), \
         -(pM1-pFE) * np.cos(2*pitch), 0
-    beamLine.fsm0.center = beamLine.slitFE.center
 
     rM1 = 2. * pM1 * np.sin(pitch)
     print('M1: r = {0} mm'.format(rM1))
     beamLine.m1.center = 0, 0, 0   # THIS IS THE ORIGIN!, y-direction = M1-> PG
-    beamLine.m1.pitch = pitch
+    beamLine.m1.pitch = pitchM1
     beamLine.m1.r = rM1
     # beamLine.fsm1.center = beamLine.m1.center
     # beamLine.fsm1.x = -np.sin(beamLine.m1.pitch), np.cos(beamLine.m1.pitch), 0
@@ -270,44 +268,54 @@ def align_beamline(beamLine, E0=E0, pitchM1=pitch, pitchM3=pitch,
     beamLine.pg.yaw = -2 * beamLine.m1.pitch
     # beamLine.fsmPG.center = beamLine.pg.center
     print('rho = {0}'.format(rho))
-    if what != 'rays':  # this is here because it needs pitch value
+    if what != 'rays' and not showIn3D:
         drho = beamLine.pg.get_grating_area_fraction()
         beamLine.pg.areaFraction = drho
         print(u'PG areaFraction = {0}'.format(beamLine.pg.areaFraction))
 
     # pM3mer = pM1 + pPG + pM3  # pM3sag = infinity
-    sinPitchM3 = np.sin(pitch)
+    sinPitchM3 = np.sin(pitchM3)
     rM3 = 2. * sinPitchM3 * qM3sag   # focusing
     print('M3: r = {0} mm'.format(rM3))
     beamLine.m3.center = [0, pPG + pM3, fixedExit]
-    beamLine.m3.pitch = -pitch  # opposite angles to M1
+    beamLine.m3.pitch = -pitchM3  # opposite angles to M1
     beamLine.m3.r = rM3
     beamLine.m3.R = 1e22  # no hor focusing: M3 cylindrical
-    beamLine.fsm3.center = beamLine.m3.center
+    # beamLine.fsm3.center = beamLine.m3.center
 
-    beamLine.exitSlit.center = -qM3sag * np.sin(2*pitch), \
-        beamLine.m3.center[1] + qM3sag * np.cos(2*pitch), fixedExit
+    beamLine.exitSlit.center = [
+        -qM3sag * np.sin(2*pitchM3),
+        beamLine.m3.center[1] + qM3sag * np.cos(2*pitchM3),
+        fixedExit]
 
-    beamLine.m4.center = -(qM3sag+dM4ES) * np.sin(2*pitchM3), \
-        beamLine.m3.center[1] + (qM3sag+dM4ES) * np.cos(2*pitchM3), fixedExit
+    beamLine.m4.center = [
+        -(qM3sag+dM4ES) * np.sin(2*pitchM3),
+        beamLine.m3.center[1] + (qM3sag+dM4ES) * np.cos(2*pitchM3),
+        fixedExit]
     print('M4: p={0}, q={1}'.format(beamLine.m4.p, beamLine.m4.q))
 
-    beamLine.m5.center = beamLine.m4.center[0], \
-        beamLine.m4.center[1] + dM45, fixedExit
+    beamLine.m5.center = [
+        beamLine.m4.center[0] - dM45 * np.sin(2*pitchM3 + 2*pitchM4),
+        beamLine.m4.center[1] + dM45 * np.cos(2*pitchM3 + 2*pitchM4),
+        beamLine.m4.center[2]]
     print('M5: p={0}, q={1}'.format(beamLine.m5.p, beamLine.m5.q))
 
-    # beamLine.fsmExp.center = \
-    #     beamLine.m4.center[0] + (dM45+pExp) * np.sin(pitchM3-pitchM4),\
-    #     beamLine.m4.center[1] + (pExp+dM45) * np.cos(pitchM3-pitchM4),\
-    #     fixedExit + pExp*np.tan(2*pitchM5)
-    # beamLine.fsmExp.z = 0, -np.sin(2*pitchM5), np.cos(2*pitchM5)
+    beamLine.fsmExp.center = [
+        beamLine.m4.center[0] - (dM45+pExp) * np.sin(2*pitchM3 + 2*pitchM4),
+        beamLine.m4.center[1] + (dM45+pExp) * np.cos(2*pitchM3 + 2*pitchM4),
+        beamLine.m4.center[2] + pExp*np.tan(2*pitchM5)]
+    beamLine.fsmExp.x = [np.cos(2*pitchM3 + 2*pitchM4),
+                         np.sin(2*pitchM3 + 2*pitchM4), 0]
+    beamLine.fsmExp.z = [np.sin(2*pitchM3 + 2*pitchM4)*np.sin(2*pitchM5),
+                         -np.cos(2*pitchM3 + 2*pitchM4)*np.sin(2*pitchM5),
+                         np.cos(2*pitchM5)]
 
     beamLine.fsmExpCenters = []
     for d in dFocus:
         p = pExp + d
         beamLine.fsmExpCenters.append(
-            [beamLine.m4.center[0] + (dM45+p) * np.sin(pitchM3-pitchM4),
-             beamLine.m4.center[1] + (dM45+p) * np.cos(pitchM3-pitchM4),
+            [beamLine.m4.center[0] - (dM45+p) * np.sin(2*pitchM3 + 2*pitchM4),
+             beamLine.m4.center[1] + (dM45+p) * np.cos(2*pitchM3 + 2*pitchM4),
              beamLine.m4.center[2] + p * np.tan(2*pitchM5)])
 
 
@@ -316,14 +324,14 @@ def run_process_rays(beamLine, shineOnly1stSource=False):
         fixedEnergy = E0
     else:
         fixedEnergy = False
-    if True:  # to wave
+    if not showIn3D:  # source to wave
         waveOnSlit = beamLine.slitFE.prepare_wave(beamLine.source, nrays)
         beamSource = beamLine.source.shine(wave=waveOnSlit,
                                            fixedEnergy=fixedEnergy)
-        beamFSM0 = waveOnSlit
+        beamFE = waveOnSlit
     else:
         beamSource = beamLine.source.shine(fixedEnergy=fixedEnergy)
-        beamFSM0 = beamLine.fsm0.expose(beamSource)
+        beamFE = beamLine.slitFE.propagate(beamSource)
 
     beamM1global, beamM1local = beamLine.m1.reflect(beamSource)
     beamM2global, beamM2local = beamLine.m2.reflect(beamM1global)
@@ -335,7 +343,7 @@ def run_process_rays(beamLine, shineOnly1stSource=False):
     beamFSMExp = beamLine.fsmExp.expose(beamM5global)
 
     outDict = {'beamSource': beamSource,
-               'beamFSM0': beamFSM0,
+               'beamFE': beamFE,
                'beamM1local': beamM1local,
                'beamM2local': beamM2local,
                'beamPGlocal': beamPGlocal,
@@ -347,7 +355,8 @@ def run_process_rays(beamLine, shineOnly1stSource=False):
                }
 
     for ic, fsmExpCenter in enumerate(beamLine.fsmExpCenters):
-        beamLine.fsmExp.center = fsmExpCenter
+        if not showIn3D:
+            beamLine.fsmExp.center = fsmExpCenter
         beamFSMExp = beamLine.fsmExp.expose(beamM5global)
         outDict['beamFSMExp{0:02d}'.format(ic)] = beamFSMExp
 
@@ -365,10 +374,10 @@ def run_process_hybr(beamLine, shineOnly1stSource=False):
         waveOnSlit = beamLine.slitFE.prepare_wave(beamLine.source, nrays)
         beamSource = beamLine.source.shine(wave=waveOnSlit,
                                            fixedEnergy=fixedEnergy)
-        beamFSM0 = waveOnSlit
+        beamFE = waveOnSlit
     else:
         beamSource = beamLine.source.shine(fixedEnergy=fixedEnergy)
-        beamFSM0 = beamLine.fsm0.expose(beamSource)
+        beamFE = beamLine.slitFE.propagate(beamSource)
 
     beamM1global, beamM1local = beamLine.m1.reflect(beamSource)
     beamM2global, beamM2local = beamLine.m2.reflect(beamM1global)
@@ -411,7 +420,7 @@ def run_process_hybr(beamLine, shineOnly1stSource=False):
             rw.diffract(beamM5local, waveOnSample)
 
     outDict = {'beamSource': beamSource,
-               'beamFSM0': beamFSM0,
+               'beamFE': beamFE,
                'beamM1local': beamM1local,
                'beamM2local': beamM2local,
                'beamPGlocal': beamPGlocal,
@@ -448,7 +457,7 @@ def run_process_wave(beamLine, shineOnly1stSource=False):
         waveOnSlit = beamLine.slitFE.prepare_wave(beamLine.source, nrays)
         beamSource = beamLine.source.shine(wave=waveOnSlit,
                                            fixedEnergy=fixedEnergy)
-        beamFSM0 = waveOnSlit
+        beamFE = waveOnSlit
 
         waveOnm1 = beamLine.m1.prepare_wave(beamLine.slitFE, nrays)
         beamTom1 = rw.diffract(waveOnSlit, waveOnm1)
@@ -492,7 +501,7 @@ def run_process_wave(beamLine, shineOnly1stSource=False):
             rw.diffract(beamM5local, waveOnSample)
 
     outDict = {'beamSource': beamSource,
-               'beamFSM0': beamFSM0,
+               'beamFE': beamFE,
                'beamM1local': beamM1local,
                'beamM2local': beamM2local,
                'beamPGlocal': beamPGlocal,
@@ -508,7 +517,7 @@ def run_process_wave(beamLine, shineOnly1stSource=False):
     return outDict
 
 
-if what == 'rays':
+if (what == 'rays') or showIn3D:
     rr.run_process = run_process_rays
 elif what.startswith('hybr'):
     rr.run_process = run_process_hybr
@@ -520,7 +529,7 @@ def define_plots(beamLine):
     plots = []
 
     plot = xrtp.XYCPlot(
-        'beamFSM0', (1,),
+        'beamFE', (1,),
         xaxis=xrtp.XYCAxis(r'$x$', 'mm'),
         yaxis=xrtp.XYCAxis(r'$z$', 'mm'),
         title='00-FE')
@@ -706,6 +715,7 @@ def main():
     beamLine = build_beamline(azimuth=-2*pitch)
     align_beamline(beamLine)
     if showIn3D:
+        # optional:
         # beamLine.orient_along_global_Y()
         beamLine.glow(scale=[100, 10, 1000], centerAt='M2')
         return
