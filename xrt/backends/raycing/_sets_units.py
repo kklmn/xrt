@@ -133,7 +133,7 @@ def auto_unit(lbl, unit):
                         allUnitsLenStr.values()):
             uRet = 'mm'
             fRet = 1
-    elif lbl in ["x'", "y'", "z'"]:
+    elif lbl in ["x'", "y'", "z'", "theta", "phi", "r", "s"]:
         if unit not in (allUnitsAngStr.keys() |
                         allUnitsAngStr.values()):
             uRet = 'mrad'

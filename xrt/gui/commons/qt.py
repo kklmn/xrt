@@ -837,7 +837,7 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
         elif argNameL.endswith('label'):  # plot only
             if parentIndexName.lower() in ['xaxis', 'yaxis']:
                 combo.addItems(['x', 'y', 'z', 'x\'', 'z\'', 'energy', 'theta',
-                                'phi'])
+                                'phi', 'r', 's'])
             elif hasattr(self.mainWidget, 'fluxLabelList'):  # caxis
                 combo.addItems(self.mainWidget.fluxLabelList)
             else:
