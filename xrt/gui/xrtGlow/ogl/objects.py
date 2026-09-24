@@ -1603,7 +1603,8 @@ class OEMesh3D():
         tiles = self.parent.tiles if self.parent is not None else self.tiles
         localTiles = np.array(tiles)
 
-        isClosedSurface = isinstance(self.oe, roes.SurfaceOfRevolution)
+        isClosedSurface = isinstance(self.oe, roes.SurfaceOfRevolution) or\
+            getattr(self.oe, 'isClosed', False)
 
         thickness = get_thickness()
         try:
@@ -1686,6 +1687,9 @@ class OEMesh3D():
             nv = np.ones_like(zv)[:, np.newaxis] * np.array(nv)
 
         if isOeParametric:
+            if isClosedSurface:
+                outerXYZ = self.oe.param_to_xyz(xv, yv, 1.1 * zv)
+                closedOuterPoints = np.column_stack(outerXYZ)
             xv, yv, zv = self.oe.param_to_xyz(xv, yv, zv)
 
 #        zmax = np.max(zv)
@@ -1726,7 +1730,10 @@ class OEMesh3D():
                 bottomNormals = -1 * nv.copy()
 
             if isClosedSurface:
-                bottomPoints[:, [0, 2]] *= 1.1
+                if isOeParametric:
+                    bottomPoints = closedOuterPoints
+                else:
+                    bottomPoints[:, [0, 2]] *= 1.1
 
             if isScreen or isClosedSurface:
                 bottomNormals = -1 * nv.copy()
@@ -1820,6 +1827,33 @@ class OEMesh3D():
             allNormals = np.vstack((nv, bottomNormals))
             allIndices = np.hstack((allIndices, allIndices + indArrOffset))
             indArrOffset += len(points)
+
+        # Join the inner and outer surfaces at both ends of a closed tube.
+        if isClosedSurface and not isPlate:
+            inner = points.reshape(localTiles[1], localTiles[0], 3)
+            outer = bottomPoints.reshape(localTiles[1], localTiles[0], 3)
+            axis = np.mean(inner[:, -1] - inner[:, 0], axis=0)
+            axis /= np.linalg.norm(axis)
+            nphi = localTiles[1]
+            ring = np.arange(nphi, dtype=np.uint32)
+            nextRing = (ring + 1) % nphi
+
+            for column, direction in ((0, -1), (-1, 1)):
+                capPoints = np.vstack((inner[:, column],
+                                       outer[:, column]))
+                capNormals = np.tile(direction * axis, (2 * nphi, 1))
+                capTriangles = np.stack((
+                    np.stack((ring, ring + nphi, nextRing), axis=-1),
+                    np.stack((nextRing, ring + nphi,
+                              nextRing + nphi), axis=-1)), axis=1)
+                if direction < 0:
+                    capTriangles = capTriangles[..., ::-1]
+
+                allSurfaces = np.vstack((allSurfaces, capPoints))
+                allNormals = np.vstack((allNormals, capNormals))
+                allIndices = np.hstack((
+                    allIndices, capTriangles.ravel() + indArrOffset))
+                indArrOffset += len(capPoints)
 
         if useTruePlateSides and is2ndXtal:
             firstPlateEdges = self._firstPlateEdges
