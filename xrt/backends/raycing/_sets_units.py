@@ -128,12 +128,12 @@ lengthUnitParams = {'center': 'mm',
 def auto_unit(lbl, unit):
     uRet = unit
     fRet = None
-    if lbl in ['x', 'y', 'z']:
+    if lbl in ['x', 'y', 'z', 'r', 's']:
         if unit not in (allUnitsLenStr.keys() |
                         allUnitsLenStr.values()):
             uRet = 'mm'
             fRet = 1
-    elif lbl in ["x'", "y'", "z'", "theta", "phi", "r", "s"]:
+    elif lbl in ["x'", "y'", "z'", "theta", "phi"]:
         if unit not in (allUnitsAngStr.keys() |
                         allUnitsAngStr.values()):
             uRet = 'mrad'
