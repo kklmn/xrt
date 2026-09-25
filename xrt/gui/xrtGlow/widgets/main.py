@@ -3544,6 +3544,7 @@ class xrtGlow(qt.QWidget):
         helpText += """
 - **LeftMouse**: Rotate the Scene
 - **Shift+LeftMouse**: Translate the view
+- **Alt+LeftMouse**: Move the view closer or farther
 - **Ctrl+LeftMouse**: Drag Virtual Screen
 - **Alt+WheelMouse**: Scale Virtual Screen
 - **Ctrl+T**: Toggle Virtual Screen orientation (vertical/normal to the beam)

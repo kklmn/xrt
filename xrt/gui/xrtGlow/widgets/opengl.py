@@ -3153,7 +3153,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.makeCurrent()
         try:
             ctrlOn = bool(int(mEvent.modifiers()) & int(qt.Qt.ControlModifier))
-#        altOn = bool(int(mEvent.modifiers()) & int(qt.Qt.AltModifier))
+            altOn = bool(int(mEvent.modifiers()) & int(qt.Qt.AltModifier))
             shiftOn = bool(int(mEvent.modifiers()) & int(qt.Qt.ShiftModifier))
 #        polarAx = qt.QVector3D(0, 0, 1)
             dx = mouseX - self.prevMPos[0]
@@ -3203,13 +3203,18 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
                     self.rotationUpdated.emit(self.rotations)
 
-                elif shiftOn:
+                elif shiftOn or (altOn and not ctrlOn):
                     az, el = self.rotations
                     mouse_h = np.array([-snsc(az, 45), snsc(az, -45), 0])
                     psgn = -snsc(el, 45)
                     mouse_v = np.array([psgn*snsc(az, -45), psgn*snsc(az, 45),
                                         snsc(el, -45)])
-                    shifts = xm * mouse_h + ym * mouse_v
+                    if altOn and not shiftOn:
+                        depth = np.cross(mouse_h, mouse_v)
+                        length = np.linalg.norm(depth)
+                        shifts = (xm + ym) * depth / length if length else np.zeros(3)
+                    else:
+                        shifts = xm * mouse_h + ym * mouse_v
 
                     self.tVec += shifts*self.maxLen/self.scaleVec
                     self.update_coord_grid()

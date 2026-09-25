@@ -17,8 +17,11 @@ Notes on using xrtGlow
 - From xrtGlow, press F1 to see the available keyboard shortcuts. Also observe
   the available pop-up menu by right mouse click.
 
-- Movements of the model are possible with Shift-MouseLeft. Centering the scene
-  can be done by (a) right click on the element name in Selection and then
+- Move the model across the view with Shift-MouseLeft, or along view depth with
+  Alt-MouseLeft. Dragging right or up moves the model toward the camera;
+  dragging left or down moves it away. Horizontal and vertical drag amounts
+  add, so diagonal drags can reinforce or cancel. Centering the scene can be
+  done by (a) right click on the element name in Selection and then
   "Center here" or (b) right click on the element itself in the scene and then
   "Center view".
 
