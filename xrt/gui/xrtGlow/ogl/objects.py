@@ -975,7 +975,7 @@ class OEMesh3D():
 
         dphi = phimax - phimin
         if dphi <= 0:
-            raise ValueError("phimax must be > phimin")
+            print("phimax must be > phimin")
 
         full_circle = np.isclose(dphi, 2*np.pi)
 
@@ -2522,18 +2522,18 @@ class OEMesh3D():
         if rho is None:
             rho = getattr(self.oe, 'ro', None)
         if rho is None or rho == 0:
-            raise ValueError("Bending magnet radius is not defined")
+            print("Bending magnet radius is not defined")
 
         radius = abs(float(rho)) * 1e3  # rho is in meters, scene is in mm.
         if radius <= 0:
-            raise ValueError("Bending magnet radius must be positive")
+            print("Bending magnet radius must be positive")
 
         half_width = abs(mag_dx) * 0.5
         rmin = max(radius - half_width, radius * 1e-9)
         rmax = radius + half_width
         arc_angle = abs(mag_dy) / radius
         if arc_angle <= 0:
-            raise ValueError("Bending magnet arc length must be positive")
+            print("Bending magnet arc length must be positive")
 
         angular_steps = max(8, min(96, int(abs(mag_dy) / 2.) + 1))
         vertices, normals, indices = self.generate_disk_ring_segment(

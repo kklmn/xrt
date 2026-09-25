@@ -13,8 +13,8 @@ from multiprocessing import Process, Queue
 from collections import OrderedDict, deque
 from matplotlib.colors import hsv_to_rgb
 
-from .._constants import (msg_start, msg_stop, msg_exit, MAXRAYS,
-                          scr_m, DEFAULT_SCENE_SETTINGS)
+from .._constants import (_DEBUG_, msg_start, msg_stop, msg_exit, MAXRAYS,
+                          DEFAULT_SCENE_SETTINGS)
 from .._utils import (generate_hsv_texture, create_qt_buffer, update_qt_buffer,
                       is_source, is_oe, is_plate, is_aperture, is_screen,
                       is_dcm, snsc)
@@ -344,8 +344,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.colorsUpdated.connect(self.getColorLimits)
         self.oePropsUpdated.connect(self.update_oe_transform)
 
-#        self.getColorLimits()
-
     @property
     def colorAxis(self):
         return self._colorAxis
@@ -368,7 +366,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.change_beam_colorax()
         if globalColors and self.parent is not None and hasattr(
                 self.parent, 'colorControls'):
-#            self.parent.updateColorAxis(None)
             self.parent._syncColorLimitControls()
 
     @property
@@ -1106,6 +1103,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             elif 'progress' in msg and self.QookSignal is not None:
                     self.QookSignal.emit((msg['progress'],
                                           "Running propagation"))
+
     def close_calc_process(self):
         timer = getattr(self, 'timer', None)
         if timer is not None:
@@ -1380,8 +1378,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
                 if hasattr(self, 'input_queue'):
                     self.input_queue.put(message)
-        except:
-            raise
+        except Exception as e:
+            print(e)
 
     def update_beam_footprint(self, beam=None, beamTag=None):
         if beam is None:
@@ -2834,11 +2832,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     bl=self.beamline).uuid
             self.positionVScreen()
         except:  # analysis:ignore
-            raise
-#            if _DEBUG_:
-#                raise
-#            else:
-#                self.clearVScreen()
+            if _DEBUG_:
+                raise
+            else:
+                self.clearVScreen()
 
     def positionVScreen(self, cntr=None):
         def as_point(point):
@@ -3155,7 +3152,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             ctrlOn = bool(int(mEvent.modifiers()) & int(qt.Qt.ControlModifier))
             altOn = bool(int(mEvent.modifiers()) & int(qt.Qt.AltModifier))
             shiftOn = bool(int(mEvent.modifiers()) & int(qt.Qt.ShiftModifier))
-#        polarAx = qt.QVector3D(0, 0, 1)
+
             dx = mouseX - self.prevMPos[0]
             dy = mouseY - self.prevMPos[1]
 
@@ -3212,7 +3209,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     if altOn and not shiftOn:
                         depth = np.cross(mouse_h, mouse_v)
                         length = np.linalg.norm(depth)
-                        shifts = (xm + ym) * depth / length if length else np.zeros(3)
+                        shifts = (xm + ym) * depth / length if length else\
+                            np.zeros(3)
                     else:
                         shifts = xm * mouse_h + ym * mouse_v
 

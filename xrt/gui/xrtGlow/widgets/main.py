@@ -64,6 +64,24 @@ SCAN_ANGLE_PROPERTIES = {
 }
 HORIZONTAL_HEADERS = ['Rays', 'Footprint', 'Surface', 'Label']
 
+_OPACITY_SLIDER_STEPS = 10000
+_OPACITY_CURVE = 99.
+
+
+def _opacity_to_slider(opacity):
+    opacity = max(0.0, min(1.0, float(opacity)))
+    return round(
+        _OPACITY_SLIDER_STEPS
+        * np.log1p(_OPACITY_CURVE * opacity)
+        / np.log1p(_OPACITY_CURVE))
+
+
+def _opacity_from_slider(position):
+    return np.expm1(
+        np.log1p(_OPACITY_CURVE)
+        * position / _OPACITY_SLIDER_STEPS) / _OPACITY_CURVE
+
+
 SCAN_LIMIT_PROPERTIES = (
     'limPhysX', 'limPhysY', 'limPhysX2', 'limPhysY2',
     'limOptX', 'limOptY', 'limOptX2', 'limOptY2')
@@ -524,9 +542,8 @@ class xrtGlow(qt.QWidget):
             else:
                 description = json.loads(source)
         else:
-            raise TypeError(
-                'scanDescription must be a dict, list, JSON string, '
-                'JSON file path, BaseScan or None')
+            print('scanDescription must be a dict, list, JSON string, '
+                  'JSON file path, BaseScan or None')
 
         description = copy.deepcopy(description)
         if 'items' not in description and 'tracks' in description:
@@ -1423,7 +1440,7 @@ class xrtGlow(qt.QWidget):
             needsPropagation = self._scan_restore_initial_state()
         except Exception:
             self.completeScan()
-            raise
+
         calc_process = getattr(self.customGlWidget, 'calc_process', None)
         if needsPropagation and calc_process is not None and \
                 calc_process.is_alive():
@@ -1468,14 +1485,14 @@ class xrtGlow(qt.QWidget):
         zoomLayout = qt.QVBoxLayout()
         fitLayout = qt.QHBoxLayout()
         scaleValidator = qt.QDoubleValidator()
-        scaleValidator.setRange(0, 7, 7)
+        scaleValidator.setRange(-3, 10, 7)
         self.zoomSliders = []
         self.zoomEditors = []
         for iaxis, axis in enumerate(['x', 'y', 'z']):
             axLabel = qt.QLabel(axis)
             axEdit = qt.QLineEdit()
             axSlider = qt.glowSlider(self, qt.Qt.Horizontal, qt.glowTopScale)
-            axSlider.setRange(0, 7, 0.01)
+            axSlider.setRange(-3, 10, 0.01)
             value = 1 if iaxis == 1 else 3
             axSlider.setValue(value)
             axEdit.setText("{0:.2f}".format(value))
@@ -1582,15 +1599,19 @@ class xrtGlow(qt.QWidget):
             opacityValidator = qt.QDoubleValidator()
             axSlider = qt.glowSlider(self, qt.Qt.Horizontal, qt.glowTopScale)
 
-            axSlider.setRange(rstart, rend, rstep)
-            axSlider.setValue(val)
+            if iaxis in (0, 2):  # Line and point opacity
+                axSlider.setRange(0, _OPACITY_SLIDER_STEPS, 1)
+                axSlider.setValue(_opacity_to_slider(val))
+            else:
+                axSlider.setRange(rstart, rend, rstep)
+                axSlider.setValue(val)
             axEdit = qt.QLineEdit()
             opacityValidator.setRange(rstart, rend, 5)
             self.updateOpacity(None, iaxis, axEdit, val)
 
             axEdit.setValidator(opacityValidator)
             axEdit.editingFinished.connect(
-                partial(self.updateOpacityFromQLE, axEdit, axSlider))
+                partial(self.updateOpacityFromQLE, axEdit, axSlider, iaxis))
             axSlider.valueChanged.connect(
                 partial(self.updateOpacity, axSlider, iaxis, axEdit))
             if iaxis == 1:  # Line width is unsupported by the shaders
@@ -1833,9 +1854,9 @@ class xrtGlow(qt.QWidget):
             projectionValidator = qt.QDoubleValidator()
             axSlider = qt.glowSlider(self, qt.Qt.Horizontal, qt.glowTopScale)
 
-            if iaxis in [0, 2]:
-                axSlider.setRange(0, 1., 0.001)
-                axSlider.setValue(0.1)
+            if iaxis in (0, 2):
+                axSlider.setRange(0, _OPACITY_SLIDER_STEPS, 1)
+                axSlider.setValue(_opacity_to_slider(0.1))
                 axEdit = qt.QLineEdit("0.1")
                 projectionValidator.setRange(0, 1., 5)
 
@@ -1847,9 +1868,14 @@ class xrtGlow(qt.QWidget):
 
             axEdit.setValidator(projectionValidator)
             axEdit.editingFinished.connect(
-                partial(self.updateProjectionOpacityFromQLE, axEdit, axSlider))
+                partial(self.updateProjectionOpacityFromQLE,
+                        axEdit, axSlider, iaxis))
             axSlider.valueChanged.connect(
                 partial(self.updateProjectionOpacity, axSlider, iaxis, axEdit))
+            if iaxis == 1:  # Line width is unsupported by the shaders
+                axLabel.setEnabled(False)
+                axEdit.setEnabled(False)
+                axSlider.setEnabled(False)
             self.projectionOpacitySliders.append(axSlider)
             self.projectionOpacityEditors.append(axEdit)
 
@@ -2104,6 +2130,9 @@ class xrtGlow(qt.QWidget):
             wHint = widget.sizeHint()
             wWidth = wHint.width()
             wHeight = wHint.height()
+            if widget is self.projectionPanel:
+                wWidth = max(
+                    wWidth, self.colorOpacityPanel.sizeHint().width())
 
         # widget.resize(qt.QSize(wWidth, wHeight))
         pLayout = self.controlPopup.layout()
@@ -2504,7 +2533,7 @@ class xrtGlow(qt.QWidget):
         if mode == 'gray':
             return np.ones((size, size, 3)) * 0.85
         if mode != 'color':
-            raise ValueError("Unknown color map mode: {}".format(mode))
+            print("Unknown color map mode: {}".format(mode))
         xv, yv = np.meshgrid(np.linspace(0, colorFactor, size),
                              np.linspace(0, 1, size))
         xv = xv.ravel()
@@ -3739,14 +3768,18 @@ class xrtGlow(qt.QWidget):
     def updateOpacity(self, slider, iax, editor, position):
         # slider = self.sender()
         if isinstance(position, int):
-            try:
-                position /= slider.scale
-            except:  # analysis:ignore
-                if _DEBUG_:
-                    raise
-                else:
-                    pass
-        editor.setText("{0:.2f}".format(position))
+            if iax in (0, 2):
+                position = _opacity_from_slider(position)
+            else:
+                try:
+                    position /= slider.scale
+                except:  # analysis:ignore
+                    if _DEBUG_:
+                        raise
+                    else:
+                        pass
+        editor.setText(("{0:.3f}" if iax in (0, 2) else
+                        "{0:.2f}").format(position))
         if iax == 0:
             self.customGlWidget.lineOpacity = np.float32(position)
         elif iax == 1:
@@ -3757,17 +3790,31 @@ class xrtGlow(qt.QWidget):
             self.customGlWidget.pointSize = np.float32(position)
         self.customGlWidget.glDraw()
 
-    def updateOpacityFromQLE(self, editor, slider):
+    def updateOpacityFromQLE(self, editor, slider, iax):
         # editor = self.sender()
         value = float(str(editor.text()))
-        slider.setValue(value)
-        self.customGlWidget.glDraw()
+        if iax in (0, 2):
+            oldState = slider.blockSignals(True)
+            try:
+                slider.setValue(_opacity_to_slider(value))
+            finally:
+                slider.blockSignals(oldState)
+            self.updateOpacity(None, iax, editor, value)
+        else:
+            slider.setValue(value)
+            self.customGlWidget.glDraw()
 
     def updateOpacityFromGL(self, ops):
         for iaxis, (slider, editor, op) in\
                 enumerate(zip(self.opacitySliders, self.opacityEditors, ops)):
-            slider.setValue(op)
-            editor.setText("{0:.2f}".format(op))
+            oldState = slider.blockSignals(True)
+            try:
+                slider.setValue(
+                    _opacity_to_slider(op) if iaxis in (0, 2) else op)
+            finally:
+                slider.blockSignals(oldState)
+            editor.setText(("{0:.3f}" if iaxis in (0, 2) else
+                            "{0:.2f}").format(op))
 
     def updateTileFromQLE(self, editor, ia):
         # editor = self.sender()
@@ -3784,14 +3831,18 @@ class xrtGlow(qt.QWidget):
     def updateProjectionOpacity(self, slider, iax, editor, position):
         # slider = self.sender()
         if isinstance(position, int):
-            try:
-                position /= slider.scale
-            except:  # analysis:ignore
-                if _DEBUG_:
-                    raise
-                else:
-                    pass
-        editor.setText("{0:.2f}".format(position))
+            if iax in (0, 2):
+                position = _opacity_from_slider(position)
+            else:
+                try:
+                    position /= slider.scale
+                except:  # analysis:ignore
+                    if _DEBUG_:
+                        raise
+                    else:
+                        pass
+        editor.setText(("{0:.3f}" if iax in (0, 2) else
+                        "{0:.2f}").format(position))
         if iax == 0:
             self.customGlWidget.lineProjectionOpacity = np.float32(position)
         elif iax == 1:
@@ -3802,15 +3853,29 @@ class xrtGlow(qt.QWidget):
             self.customGlWidget.pointProjectionSize = np.float32(position)
         self.customGlWidget.glDraw()
 
-    def updateProjectionOpacityFromQLE(self, editor, slider):
+    def updateProjectionOpacityFromQLE(self, editor, slider, iax):
         # editor = self.sender()
         value = float(re.sub(',', '.', str(editor.text())))
-        slider.setValue(value)
-        self.customGlWidget.glDraw()
+        if iax in (0, 2):
+            oldState = slider.blockSignals(True)
+            try:
+                slider.setValue(_opacity_to_slider(value))
+            finally:
+                slider.blockSignals(oldState)
+            self.updateProjectionOpacity(None, iax, editor, value)
+        else:
+            slider.setValue(value)
+            self.customGlWidget.glDraw()
 
     def updateProjectionOpacityFromGL(self, ops):
         for iaxis, (slider, editor, op) in\
                 enumerate(zip(self.projectionOpacitySliders,
                               self.projectionOpacityEditors, ops)):
-            slider.setValue(op)
-            editor.setText("{0:.2f}".format(op))
+            oldState = slider.blockSignals(True)
+            try:
+                slider.setValue(
+                    _opacity_to_slider(op) if iaxis in (0, 2) else op)
+            finally:
+                slider.blockSignals(oldState)
+            editor.setText(("{0:.3f}" if iaxis in (0, 2) else
+                            "{0:.2f}").format(op))
