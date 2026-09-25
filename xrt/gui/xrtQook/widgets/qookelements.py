@@ -62,14 +62,11 @@ class XrtQookElements(XrtQookBase):
             for field, val in copyFrom.items():
                 if field in ['properties', '_object']:
                     continue
-#                methodProps['_object'] = val.get('_object')
                 methodProps = {'parameters': val}
                 break
         elif isRoot:
             elementName = 'BeamLine'
             obj = 'xrt.backends.raycing.BeamLine'
-
-#        print(elementName, obj, name)
 
         if isRoot:
             tree = self.tree
@@ -173,8 +170,6 @@ class XrtQookElements(XrtQookBase):
             self.updateBeamlineFEs(elementItem, newElement=obj)
         else:
             self.updateBeamlineMaterials(elementItem, newElement=obj)
-
-#        if not self.experimentalMode:
 
         if tree is self.tree and not isRoot:
             if isinstance(copyFrom, dict) and methodProps is not None:
@@ -319,12 +314,6 @@ class XrtQookElements(XrtQookBase):
                     pass
 
         self.showDoc(methodItem.index())
-#        self.addCombo(self.tree, methodItem)
-#        self.tree.expand(methodItem.index())
-#        self.tree.expand(methodOut.index())
-#        self.tree.expand(methodProps.index())
-#        self.tree.setCurrentIndex(methodProps.index())
-#        self.tree.setColumnWidth(0, int(self.tree.width()/2))
         self.blUpdateLatchOpen = True
         self.updateBeamline(methodItem, newElement=True)  # TODO: support user-selected methods
         self.isEmpty = False
@@ -391,13 +380,6 @@ class XrtQookElements(XrtQookBase):
 
             plotProps[pname]['_object'] = "xrt.plotter.XYCAxis"
 
-#        if isinstance(copyFrom, dict):
-#            plotProps.update(copyFrom)
-#            plotItem = self.addValue(self.rootPlotItem, plotName)
-#        else:
-#            plotItem = self.addValue(
-#                    self.rootPlotItem, plotName, source=copyFrom)
-
         if isinstance(copyFrom, dict):
             plotProps.update(copyFrom)
             plotItem, plotViewItem = self.addParam(
@@ -438,11 +420,8 @@ class XrtQookElements(XrtQookBase):
                     self.addParam(plotItem, pname, arg_value)
 
         self.showDoc(plotItem.index())
-#        self.addCombo(self.plotTree, plotItem)
         self.capitalize(self.plotTree, plotItem)
-#        self.plotTree.expand(self.rootPlotItem.index())
-        self.plotTree.resizeColumnToContents(0)
-#        self.plotTree.setColumnWidth(0, int(self.plotTree.width()/3))
+#        self.plotTree.resizeColumnToContents(0)
         self.isEmpty = False
         self.tabs.setCurrentWidget(self.plotTree)
 

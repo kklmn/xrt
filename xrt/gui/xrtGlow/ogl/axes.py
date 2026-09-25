@@ -580,14 +580,12 @@ class CoordinateBox():
 
             if tickType == "leads":
                 axisTickC = axisTextC
-            elif tickType == "ticks":
+            else:  # tickType == "ticks":
                 tickScale = 0.5 * (tickFactor - 1.)
                 axisTickC = [
                     axisLabelC[0] + tickScale * (axisLabelC[0] - xAxisB),
                     axisLabelC[1] + tickScale * (axisLabelC[1] - yAxisB),
                     axisLabelC[2] + tickScale * (axisLabelC[2] - zAxisB)]
-            else:
-                raise ValueError("unknown tickType: {0}".format(tickType))
 
             tickLines = [
                 np.vstack((axisLabelC[v1], axisTickC[v1])).T.flatten(

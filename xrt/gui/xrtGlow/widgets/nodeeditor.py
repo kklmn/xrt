@@ -342,8 +342,9 @@ if FlowScene is not None:
             try:
                 super()._setup_connection_signals(conn)
             except TypeError as exc:
-                if 'not unique' not in str(exc).lower():
-                    raise
+                print(exc)
+#                if 'not unique' not in str(exc).lower():
+#                    pass
 else:
     _ReadOnlyFlowScene = None
 

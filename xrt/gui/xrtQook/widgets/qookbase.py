@@ -78,7 +78,7 @@ try:
     pdfMats = True
 except ImportError:
     pdfMats = False
-    raise ImportError("no predef mats")
+    print("no predef mats")
 
 if sys.version_info < (3, 1):
     from inspect import getargspec
@@ -3021,8 +3021,8 @@ class XrtQookBase(qt.QMainWindow):
             except AttributeError:
                 pass
             except Exception as e:
-                print('Cannot create xrtGlow')
-                raise e
+                print('Cannot create xrtGlow', e)
+#                raise e
 
     def updateGlowScanOutputDirectory(self):
         if self.blViewer is None:

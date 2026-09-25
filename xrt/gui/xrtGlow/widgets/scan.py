@@ -244,10 +244,10 @@ def _value_sequence(spec, fallback_steps=None):
             start_value, start_unit = _split_numeric_unit(start)
             stop_value, stop_unit = _split_numeric_unit(stop)
             if start_value is None or stop_value is None:
-                raise ValueError(
+                print(
                     f'Cannot create linspace from {start!r} to {stop!r}')
             if start_unit != stop_unit:
-                raise ValueError(
+                print(
                     f'Cannot interpolate different units: '
                     f'{start_unit!r} and {stop_unit!r}')
             return [_format_scan_value(value, start_unit)
@@ -830,11 +830,11 @@ class ScanInstructionDialog(qt.QDialog):
     def scan_item(self):
         self.selectedProperty = self._current_property()
         if self.selectedProperty is None:
-            raise ValueError('Select a property first')
+            print('Select a property first')
         start = int(self.startFrameEdit.text())
         points = int(self.pointsEdit.text())
         if points < 1:
-            raise ValueError('Number of frames must be at least 1')
+            print('Number of frames must be at least 1')
         start_value = self.minValueEdit.text()
         stop_value = self.maxValueEdit.text()
         prop = self.selectedProperty

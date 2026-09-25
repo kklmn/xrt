@@ -38,7 +38,7 @@ try:
     pdfMats = True
 except ImportError:
     pdfMats = False
-    raise ImportError("no predef mats")
+    print("no predef mats")
 
 if sys.version_info < (3, 1):
     from inspect import getargspec
@@ -496,8 +496,8 @@ class XrtQook(XrtQookElements):
             try:
                 initStatus = self.beamLine.init_material_from_json(
                         matId, outDict)
-            except Exception:
-                raise
+            except Exception as e:
+                print(e)
 
             self.paintStatus(paintItem, initStatus)
 
@@ -574,8 +574,8 @@ class XrtQook(XrtQookElements):
             initStatus = 0
             try:
                 initStatus = self.beamLine.init_fe_from_json(feId, outDict)
-            except Exception:
-                raise
+            except Exception as e:
+                print(e)
 
             self.paintStatus(paintItem, initStatus)
 
