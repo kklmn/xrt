@@ -254,6 +254,8 @@ class XrtQookElements(XrtQookBase):
 
         if methProps is not None:
             methodInputDict = methProps.get('parameters')
+            if not isinstance(methodInputDict, dict):
+                methodInputDict = OrderedDict()
             if 'beam' in methodInputDict:
                 fModel0 = qt.MultiColumnFilterProxy(
                         {1: 'Global', 2: methodInputDict['beam']})
