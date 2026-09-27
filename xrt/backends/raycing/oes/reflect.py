@@ -76,6 +76,14 @@ class OEMainMethods(object):
            Rev. Sci. Instrum. **63** (1992) 936.
 
 
+        *needLocal*: bool
+            Script-only option. If False, avoids separate local-beam
+            copies when only the global output is needed. The return
+            tuple keeps the same length, but its local outputs must
+            not be used as local-coordinate beams. xrtQook does not
+            expose this option and ignores its value when importing
+            layouts, using the default True.
+
         *returnLocalAbsorbed*: None or int
             --DEPRECATED--
 
@@ -161,6 +169,8 @@ class OEMainMethods(object):
 #                                    'kwArgsIn': kwArgsIn}
 #        self.bl.beamsDictU[self.uuid] = {'beamGlobal': gb, 'beamLocal': lb}
         return gb, lb  # in global(gb) and local(lb) coordinates
+
+    reflect.hiddenParams = {'needLocal', 'returnLocalAbsorbed'}
 
     def multiple_reflect(
             self, beam=None, maxReflections=1000, needElevationMap=False,
@@ -262,6 +272,8 @@ class OEMainMethods(object):
 #                                    'kwArgsIn': kwArgsIn}
 #        self.bl.beamsDictU[self.uuid] = {'beamGlobal': gb, 'beamLocal': lbN}
         return gb, lbN
+
+    multiple_reflect.hiddenParams = {'returnLocalAbsorbed'}
 
     def prepare_wave(self, prevOE, nrays, shape='auto', area='auto', rw=None):
         """Creates the beam arrays used in wave diffraction calculations.

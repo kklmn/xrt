@@ -947,16 +947,20 @@ if __name__ == '__main__':
                         if (inspect.ismethod(objf) or
                                 inspect.isfunction(objf)) and\
                                 namef == str(pItem.text()).strip('()'):
-                            methodObj = inspect.unwrap(objf)
+                            methodObj = objf
+                    methodParams = inspect.signature(methodObj).parameters
+                    hiddenParams = set(getattr(
+                        methodObj, 'hiddenParams', ()))
                     for imet in range(pItem.rowCount()):
                         if str(pItem.child(imet, 0).text()) ==\
                                 'parameters':
                             mItem = pItem.child(imet, 0)
-                            for iep, arg_def in\
-                                zip(range(mItem.rowCount()),
-                                    getargspec(methodObj)[3]):
+                            for iep in range(mItem.rowCount()):
                                 paraname = str(
                                     mItem.child(iep, 0).text())
+                                if paraname in hiddenParams:
+                                    continue
+                                arg_def = methodParams[paraname].default
                                 paravalue = self.getParamItemValue(
                                     mItem.child(iep, 1))
                                 if paravalue != str(arg_def):

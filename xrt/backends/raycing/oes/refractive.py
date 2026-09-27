@@ -177,6 +177,14 @@ class Plate(DCM):
         Returns the refracted beam in global and two local (if *needLocal*
         is true) systems.
 
+        *needLocal*: bool
+            Script-only option. If False, avoids separate local-beam
+            copies when only the global output is needed. The return
+            tuple keeps the same length, but its local outputs must
+            not be used as local-coordinate beams. xrtQook does not
+            expose this option and ignores its value when importing
+            layouts, using the default True.
+
         *returnLocalAbsorbed*: None, int
             --DEPRECATED--
 
@@ -243,6 +251,8 @@ class Plate(DCM):
 #                                             'beamLocal2': lb2}
 
         return gb, lb1, lb2
+
+    double_refract.hiddenParams = {'needLocal', 'returnLocalAbsorbed'}
 
 
 class ParaboloidFlatLens(Plate):
@@ -485,6 +495,14 @@ class ParaboloidFlatLens(Plate):
         returned local beams correspond to the entrance surface of the first
         lens and the exit surface of the last lens.
 
+        *needLocal*: bool
+            Script-only option. If False, avoids separate local-beam
+            copies when only the global output is needed. The return
+            tuple keeps the same length, but its local outputs must
+            not be used as local-coordinate beams. xrtQook does not
+            expose this option and ignores its value when importing
+            layouts, using the default True.
+
         *returnLocalAbsorbed*: None, 0 or 1
             --DEPRECATED--
 
@@ -580,6 +598,8 @@ class ParaboloidFlatLens(Plate):
 #        llocal1.parentId = self.uuid
 #        llocal2.parentId = self.uuid
         return lglobal, llocal1, llocal2
+
+    multiple_refract.hiddenParams = {'needLocal', 'returnLocalAbsorbed'}
 
 
 class ParabolicCylinderFlatLens(ParaboloidFlatLens):

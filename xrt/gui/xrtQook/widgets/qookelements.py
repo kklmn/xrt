@@ -241,6 +241,8 @@ class XrtQookElements(XrtQookBase):
 
     def addMethod(self, name, parentItem, outBeams, methProps=None):
         self.beamModel.sort(3)
+        hiddenParams = set(getattr(
+            self.getVal(name), 'hiddenParams', ()))
 
         elstr = str(parentItem.text())
         eluuid = parentItem.data(qt.Qt.UserRole)
@@ -251,6 +253,10 @@ class XrtQookElements(XrtQookBase):
             methodInputDict = methProps.get('parameters')
             if not isinstance(methodInputDict, dict):
                 methodInputDict = OrderedDict()
+            else:
+                methodInputDict = OrderedDict(
+                    (arg, value) for arg, value in methodInputDict.items()
+                    if arg not in hiddenParams)
             if 'beam' in methodInputDict:
                 fModel0 = qt.MultiColumnFilterProxy(
                         {1: 'Global', 2: methodInputDict['beam']})

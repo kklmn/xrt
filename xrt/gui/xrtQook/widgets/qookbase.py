@@ -1768,6 +1768,9 @@ class XrtQookBase(qt.QMainWindow):
                 else:
                     isMethod = True
                     uArgs = OrderedDict(zip(argList[0][1:], argList[3]))
+                uArgs = OrderedDict(
+                    (name, value) for name, value in uArgs.items()
+                    if name not in hpList)
         try:
             moduleObj = eval(objRef.__module__)
         except NameError:

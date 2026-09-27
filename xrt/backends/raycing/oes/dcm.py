@@ -270,6 +270,14 @@ class DCM(OE):
         Returns the reflected beam in global and two local (if *needLocal*
         is true) systems.
 
+        *needLocal*: bool
+            Script-only option. If False, avoids separate local-beam
+            copies when only the global output is needed. The return
+            tuple keeps the same length, but its local outputs must
+            not be used as local-coordinate beams. xrtQook does not
+            expose this option and ignores its value when importing
+            layouts, using the default True.
+
         *returnLocalAbsorbed*: None or int
             --DEPRECATED--
 
@@ -370,3 +378,5 @@ class DCM(OE):
 #                                             'beamLocal2': lo2}
 
         return gb2, lo1, lo2  # in global and local(lo1 and lo2) coordinates
+
+    double_reflect.hiddenParams = {'needLocal', 'returnLocalAbsorbed'}

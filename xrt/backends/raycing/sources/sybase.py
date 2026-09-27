@@ -1515,6 +1515,12 @@ class IntegratedSource(SourceBase):
         the filament beam must be preserved for all the repeats.
 
 
+        *toGlobal*: bool
+            Script-only option. If False, skips the final transformation
+            to global coordinates. xrtQook does not expose this option
+            and ignores its value when importing layouts, using the
+            default True.
+
         .. Returned values: beamGlobal
         """
         if self.needReset:
@@ -1820,3 +1826,5 @@ class IntegratedSource(SourceBase):
                                inspect.currentframe())
 
         return bor
+
+    shine.hiddenParams = {'toGlobal'}

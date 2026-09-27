@@ -427,12 +427,20 @@ class GeometricSource(object):
         to the source implementation.
 
 
+        *toGlobal*: bool
+            Script-only option. If False, skips the final transformation
+            to global coordinates. xrtQook does not expose this option
+            and ignores its value when importing layouts, using the
+            default True.
+
         .. Returned values: beamGlobal
         """
         if wave is None:
             return self._shine_rays(toGlobal, withAmplitudes, accuBeam)
         else:
             return self._shine_wave(toGlobal, wave, accuBeam)
+
+    shine.hiddenParams = {'toGlobal'}
 
     def _shine_wave(self, toGlobal=True, wave=None, accuBeam=None):
         raise NotImplementedError(
@@ -989,6 +997,12 @@ class MeshSource(object):
         system.
 
 
+        *toGlobal*: bool
+            Script-only option. If False, skips the final transformation
+            to global coordinates. xrtQook does not expose this option
+            and ignores its value when importing layouts, using the
+            default True.
+
         .. Returned values: beamGlobal
         """
         if self.bl is not None:
@@ -1033,6 +1047,8 @@ class MeshSource(object):
                                inspect.currentframe())
         return bo
 
+    shine.hiddenParams = {'toGlobal'}
+
 
 class NESWSource(MeshSource):
     """Implements a point source with 4 rays: N(ord), E(ast), S(outh), W(est).
@@ -1046,6 +1062,12 @@ class NESWSource(MeshSource):
         Returns the source. If *toGlobal* is True, the output is in the global
         system.
 
+
+        *toGlobal*: bool
+            Script-only option. If False, skips the final transformation
+            to global coordinates. xrtQook does not expose this option
+            and ignores its value when importing layouts, using the
+            default True.
 
         .. Returned values: beamGlobal
         """
@@ -1072,6 +1094,8 @@ class NESWSource(MeshSource):
         raycing.append_to_flow(self.shine, [bo],
                                inspect.currentframe())
         return bo
+
+    shine.hiddenParams = {'toGlobal'}
 
 
 class CollimatedMeshSource(object):
@@ -1162,6 +1186,12 @@ class CollimatedMeshSource(object):
         global system.
 
 
+        *toGlobal*: bool
+            Script-only option. If False, skips the final transformation
+            to global coordinates. xrtQook does not expose this option
+            and ignores its value when importing layouts, using the
+            default True.
+
         .. Returned values: beamGlobal
         """
         if self.bl is not None:
@@ -1197,6 +1227,8 @@ class CollimatedMeshSource(object):
         raycing.append_to_flow(self.shine, [bo],
                                inspect.currentframe())
         return bo
+
+    shine.hiddenParams = {'toGlobal'}
 
 
 class BeamFromFile():

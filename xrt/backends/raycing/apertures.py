@@ -366,6 +366,12 @@ class RectangularAperture(object):
         intercepted by the aperture. The "lost" value is
         ``-self.ordinalNum - 1000.``
 
+        *needNewGlobal*: bool
+            Script-only option. If True, returns
+            ``(beamGlobal, beamLocal)`` instead of ``beamLocal``.
+            The global beam is positioned at the aperture plane.
+            xrtQook does not expose this option and ignores its value
+            when importing layouts, using the default False.
 
         .. Returned values: beamLocal
         """
@@ -441,6 +447,8 @@ class RectangularAperture(object):
 #            self.bl.beamsDictU[self.uuid] = {'beamLocal': lo}
 
             return lo
+
+    propagate.hiddenParams = {'needNewGlobal'}
 
     def touch_beam(self, beam):
         """Adjusts the aperture (i.e. sets self.blades) so that it touches the
@@ -824,17 +832,16 @@ class RoundAperture(object):
         intercepted by the aperture. The "lost" value is
         ``-self.ordinalNum - 1000.``
 
+        *needNewGlobal*: bool
+            Script-only option. If True, returns
+            ``(beamGlobal, beamLocal)`` instead of ``beamLocal``.
+            The global beam is positioned at the aperture plane.
+            xrtQook does not expose this option and ignores its value
+            when importing layouts, using the default False.
 
         .. Returned values: beamLocal
         """
-#        kwArgsIn = {'needNewGlobal': needNewGlobal}
-#        if self.bl is not None:
-#            if raycing.is_valid_uuid(beam):
-#                kwArgsIn['beam'] = beam
-#                beam = self.bl.beamsDictU[beam]['beamGlobal']
-#            else:
-#                kwArgsIn['beam'] = beam.parentId
-#            self.bl.auto_align(self, beam)
+
         good = beam.state > 0
 # beam in local coordinates
         lo = rs.Beam(copyFrom=beam)
@@ -862,24 +869,18 @@ class RoundAperture(object):
         if self.alarmLevel is not None:
             raycing.check_alarm(self, good, beam)
 
-#        self.bl.flowU[self.uuid] = {'method': self.propagate,
-#                                    'kwArgsIn': kwArgsIn}
-
         if needNewGlobal:
             glo = rs.Beam(copyFrom=lo)
             raycing.virgin_local_to_global(self.bl, glo, self.center, good)
-
-#            self.bl.beamsDictU[self.uuid] = {'beamGlobal': glo,
-#                                             'beamLocal': lo}
 
             return glo, lo
         else:
             raycing.append_to_flow(self.propagate, [lo],
                                    inspect.currentframe())
 
-#            self.bl.beamsDictU[self.uuid] = {'beamLocal': lo}
-
             return lo
+
+    propagate.hiddenParams = {'needNewGlobal'}
 
     def local_to_global(self, glo, returnBeam=False, **kwargs):
         x, y, z = glo.x, glo.y, glo.z
@@ -997,6 +998,12 @@ class DoubleSlit(RectangularAperture):
         intercepted by the aperture. The "lost" value is
         ``-self.ordinalNum - 1000.``
 
+        *needNewGlobal*: bool
+            Script-only option. If True, returns
+            ``(beamGlobal, beamLocal)`` instead of ``beamLocal``.
+            The global beam is positioned at the aperture plane.
+            xrtQook does not expose this option and ignores its value
+            when importing layouts, using the default False.
 
         .. Returned values: beamLocal
         """
@@ -1070,6 +1077,8 @@ class DoubleSlit(RectangularAperture):
 #            self.bl.beamsDictU[self.uuid] = {'beamLocal': lo}
 
             return lo
+
+    propagate.hiddenParams = {'needNewGlobal'}
 
 
 class DoubleBeamStop(DoubleSlit):
@@ -1246,6 +1255,12 @@ class PolygonalAperture(object):
         intercepted by the aperture. The "lost" value is
         ``-self.ordinalNum - 1000.``
 
+        *needNewGlobal*: bool
+            Script-only option. If True, returns
+            ``(beamGlobal, beamLocal)`` instead of ``beamLocal``.
+            The global beam is positioned at the aperture plane.
+            xrtQook does not expose this option and ignores its value
+            when importing layouts, using the default False.
 
         .. Returned values: beamLocal
         """
@@ -1303,6 +1318,8 @@ class PolygonalAperture(object):
 #            self.bl.beamsDictU[self.uuid] = {'beamLocal': lo}
 
             return lo
+
+    propagate.hiddenParams = {'needNewGlobal'}
 
     # def local_to_global(self, glo, **kwargs):  # TODO: support orientation
     #     raycing.virgin_local_to_global(self.bl, glo, self.center, **kwargs)
