@@ -2939,9 +2939,6 @@ class OEMesh3D():
                 print(e)
 
     def prepare_geometric_source(self, shape={}, updateMesh=False):
-        if updateMesh:
-            return
-
         nsIndex = 0  # to unify syntax
         self.transMatrix[nsIndex] = self.get_loc2glo_transformation_matrix(
             self.oe, is2ndXtal=False)
@@ -3046,6 +3043,17 @@ class OEMesh3D():
 
             vertices = np.array(vertices, dtype=np.float32)
             indices = np.array(triangles, dtype=np.uint32).reshape(-1)
+
+        if updateMesh:
+            oldVertices = self.vbo_vertices.get(nsIndex)
+            oldIndices = self.ibo.get(nsIndex)
+            oldVAO = self.vao.get(nsIndex)
+            if oldVertices is not None:
+                oldVertices.destroy()
+            if oldIndices is not None:
+                oldIndices.destroy()
+            if oldVAO is not None:
+                oldVAO.destroy()
 
         self.vbo_vertices[nsIndex] = create_qt_buffer(vertices.copy())
 #        self.vbo_normals[nsIndex] = create_qt_buffer(normals.copy())

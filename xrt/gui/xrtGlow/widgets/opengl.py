@@ -1850,7 +1850,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             try:
                 if isinstance(oeToPlot, raycing.sources.GeometricSource):
                     self.meshDict[oeuuid].prepare_geometric_source(
-                            updateMesh=True)
+                            shape=self.geomSrcParam, updateMesh=True)
                 else:
                     self.meshDict[oeuuid].prepare_magnets(updateMesh=True)
             except Exception as e:

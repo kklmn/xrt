@@ -2118,6 +2118,18 @@ class xrtGlow(qt.QWidget):
 
         sourcePanel = qt.QGroupBox('Source', self)
         sourceLayout = qt.QVBoxLayout()
+        shapeLayout = qt.QHBoxLayout()
+        shapeLayout.addWidget(qt.QLabel('Geometric source shape'))
+        self.geometricSourceShape = qt.QComboBox()
+        self.geometricSourceShape.addItem('Sphere', 'sphere')
+        self.geometricSourceShape.addItem('Dodecahedron', 'sddh')
+        shape = self.customGlWidget.geomSrcParam.get('shape', 'sphere')
+        self.geometricSourceShape.setCurrentIndex(
+            self.geometricSourceShape.findData(shape))
+        self.geometricSourceShape.currentIndexChanged.connect(
+            self.setGeometricSourceShape)
+        shapeLayout.addWidget(self.geometricSourceShape)
+        sourceLayout.addLayout(shapeLayout)
         for rdControl, cbText in SOURCE_RENDERING_CONTROL_LABELS.items():
             aaCheckBox = self._makeCheckBox(cbText, rdControl,
                                             self.renderingControls)
@@ -2138,6 +2150,20 @@ class xrtGlow(qt.QWidget):
         self.renderingPanel = qt.QWidget(self)
         renderingLayout.addStretch()
         self.renderingPanel.setLayout(renderingLayout)
+
+    def setGeometricSourceShape(self, index):
+        if index < 0:
+            return
+        shape = str(self.geometricSourceShape.itemData(index))
+        glWidget = self.customGlWidget
+        if shape == glWidget.geomSrcParam.get('shape'):
+            return
+        params = copy.deepcopy(glWidget.geomSrcParam)
+        params['shape'] = shape
+        glWidget.geomSrcParam = params
+        glWidget.queue_mesh_update(
+            predicate=lambda oe: isinstance(oe, rsources.GeometricSource))
+        glWidget.glDraw()
 
     def initControlPanels(self):
         self.controlPanels = {
@@ -3581,6 +3607,8 @@ class xrtGlow(qt.QWidget):
         if not params:
             return
 
+        previousGeomSrcParam = copy.deepcopy(
+            self.customGlWidget.geomSrcParam)
         sceneKeys = set(DEFAULT_SCENE_SETTINGS.keys())
         offsetParams = {}
         for pName, pValue in params.items():
@@ -3594,7 +3622,7 @@ class xrtGlow(qt.QWidget):
                 pValue = np.array(pValue)
             elif pName == 'rayFlag':
                 pValue = set(pValue)
-            elif pName == 'sceneColors':
+            elif pName in ('sceneColors', 'geomSrcParam'):
                 pValue = copy.deepcopy(pValue)
             setattr(self.customGlWidget, pName, pValue)
 
@@ -3602,6 +3630,18 @@ class xrtGlow(qt.QWidget):
             self.customGlWidget.set_scene_colors()
             self._updateSceneColorSwatches(
                 self.customGlWidget.sceneColors)
+
+        if 'geomSrcParam' in params:
+            shape = self.customGlWidget.geomSrcParam.get('shape', 'sphere')
+            index = self.geometricSourceShape.findData(shape)
+            if index >= 0:
+                wasBlocked = self.geometricSourceShape.blockSignals(True)
+                self.geometricSourceShape.setCurrentIndex(index)
+                self.geometricSourceShape.blockSignals(wasBlocked)
+            if self.customGlWidget.geomSrcParam != previousGeomSrcParam:
+                self.customGlWidget.queue_mesh_update(
+                    predicate=lambda oe: isinstance(
+                        oe, rsources.GeometricSource))
 
         if offsetParams:
             self.customGlWidget.set_view_offsets(**offsetParams, redraw=False)
