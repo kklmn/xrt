@@ -115,6 +115,7 @@ def _clear_surface_mesh(mesh3D):
 class xrtGlWidget(qt.QOpenGLWidget):
     rotationUpdated = qt.Signal(np.ndarray)
     scaleUpdated = qt.Signal(np.ndarray)
+    offsetsUpdated = qt.Signal()
     beamUpdated = qt.Signal(tuple)
     colorsUpdated = qt.Signal()
     oePropsUpdated = qt.Signal(tuple)
@@ -3221,8 +3222,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     else:
                         shifts = xm * mouse_h + ym * mouse_v
 
-                    self.tVec += shifts*self.maxLen/self.scaleVec
-                    self.update_coord_grid()
+                    self.set_view_offsets(
+                        tVec=self.tVec + shifts*self.maxLen/self.scaleVec,
+                        redraw=False)
 
                 elif ctrlOn and self.showVirtualScreen:
                     tPlane = self.virtScreen['beamStart']
@@ -3337,6 +3339,36 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
         self.update_coord_grid()
         self.glDraw()
+
+    def set_view_offsets(self, *, tVec=None, coordOffset=None, redraw=True):
+        """Set offsets in the current view coordinate frame, in mm."""
+        updates = {}
+        for name, value in (('tVec', tVec),
+                            ('coordOffset', coordOffset)):
+            if value is None:
+                continue
+            try:
+                value = np.asarray(value, dtype=float)
+            except (TypeError, ValueError, OverflowError):
+                return False
+            if value.shape != (3,) or not np.all(np.isfinite(value)):
+                return False
+            with np.errstate(over='ignore', invalid='ignore'):
+                value = value.astype(np.float32)
+            if not np.all(np.isfinite(value)):
+                return False
+            updates[name] = value.copy()
+
+        if not updates:
+            return True
+        for name, value in updates.items():
+            setattr(self, name, value)
+
+        self.update_coord_grid()
+        self.offsetsUpdated.emit()
+        if redraw:
+            self.glDraw()
+        return True
 
     def glDraw(self):
         self.update()

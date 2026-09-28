@@ -205,6 +205,7 @@ class xrtGlow(qt.QWidget):
 
         self.customGlWidget.rotationUpdated.connect(self.updateRotationFromGL)
         self.customGlWidget.scaleUpdated.connect(self.updateScaleFromGL)
+        self.customGlWidget.offsetsUpdated.connect(self._syncOffsetEditors)
         self.customGlWidget.histogramUpdated.connect(self.updateColorMap)
         self.customGlWidget.propagationComplete.connect(
             self.onScanPropagationComplete)
@@ -1563,24 +1564,85 @@ class xrtGlow(qt.QWidget):
 
         self.rotationPanel.setLayout(rotationLayout)
 
+        self.offsetsPanel = qt.QGroupBox("Offsets", self)
+        offsetsLayout = qt.QHBoxLayout()
+        self.offsetEditors = {}
+        groups = (
+            ('tVec', 'Pan adjustment',
+             'Adjustment applied after centering, in the current view '
+             'coordinate frame (mm). Dragging the scene changes this value.'),
+            ('coordOffset', 'Center target',
+             'Point centered in the current view coordinate frame (mm). '
+             'Center view actions set this value and clear the pan adjustment.'),
+        )
+        for name, title, tooltip in groups:
+            group = qt.QGroupBox(title, self.offsetsPanel)
+            group.setToolTip(tooltip)
+            fields = qt.QFormLayout()
+            self.offsetEditors[name] = []
+            for axis, label in enumerate(('x', 'y', 'z')):
+                editor = qt.QLineEdit()
+                editor.setMaximumWidth(96)
+                editor.setToolTip(tooltip)
+                validator = qt.QDoubleValidator()
+                validator.setRange(-1e30, 1e30, 9)
+                validator.setNotation(qt.QDoubleValidator.ScientificNotation)
+                editor.setValidator(validator)
+                editor.editingFinished.connect(
+                    partial(self._commitOffsetEdit, name, axis, editor))
+                fields.addRow(label, editor)
+                self.offsetEditors[name].append(editor)
+            group.setLayout(fields)
+            offsetsLayout.addWidget(group)
+        self.offsetsPanel.setLayout(offsetsLayout)
+
         self.transformationPanel = qt.QWidget(self)
         transformationLayout = qt.QVBoxLayout()
         transformationLayout.addWidget(self.zoomPanel)
         transformationLayout.addWidget(self.rotationPanel)
+        transformationLayout.addWidget(self.offsetsPanel)
         transformationLayout.addStretch()
         self.transformationPanel.setLayout(transformationLayout)
+        self._syncOffsetEditors()
+
+    def _syncOffsetEditors(self):
+        for name, editors in self.offsetEditors.items():
+            values = getattr(self.customGlWidget, name)
+            for editor, value in zip(editors, values):
+                blocked = editor.blockSignals(True)
+                try:
+                    editor.setText(DISPLAY_NUMBER_FORMAT.format(value))
+                finally:
+                    editor.blockSignals(blocked)
+
+    def _commitOffsetEdit(self, name, axis, editor):
+        try:
+            value = float(re.sub(',', '.', str(editor.text())))
+        except (TypeError, ValueError, OverflowError):
+            self._syncOffsetEditors()
+            return
+        if not np.isfinite(value):
+            self._syncOffsetEditors()
+            return
+        vector = np.asarray(getattr(self.customGlWidget, name),
+                            dtype=float).copy()
+        vector[axis] = value
+        if not self.customGlWidget.set_view_offsets(**{name: vector}):
+            self._syncOffsetEditors()
 
     def fitScales(self, dims):
         minmax = self.customGlWidget.minmax
 
+        tVec = self.customGlWidget.tVec.copy()
         for dim in dims:
             dimMin = minmax[0, dim]
             dimMax = minmax[1, dim]
             newScale = 1.5 * self.customGlWidget.aPos[dim] /\
                 (dimMax - dimMin) * self.customGlWidget.maxLen
-            self.customGlWidget.coordOffset = np.zeros(3)
-            self.customGlWidget.tVec[dim] = -0.5 * (dimMin + dimMax)
+            tVec[dim] = -0.5 * (dimMin + dimMax)
             self.customGlWidget.scaleVec[dim] = newScale
+        self.customGlWidget.set_view_offsets(
+            tVec=tVec, coordOffset=np.zeros(3), redraw=False)
         self.updateScaleFromGL(self.customGlWidget.scaleVec)
 
     def makeColorsPanel(self):
@@ -3350,15 +3412,22 @@ class xrtGlow(qt.QWidget):
             return
 
         sceneKeys = set(DEFAULT_SCENE_SETTINGS.keys())
+        offsetParams = {}
         for pName, pValue in params.items():
             if pName not in sceneKeys:
                 continue
+            if pName in ('tVec', 'coordOffset'):
+                offsetParams[pName] = pValue
+                continue
             if pName in ['scaleVec', 'rotations',
-                         'tmpOffset', 'tVec', 'coordOffset']:
+                         'tmpOffset']:
                 pValue = np.array(pValue)
             elif pName == 'rayFlag':
                 pValue = set(pValue)
             setattr(self.customGlWidget, pName, pValue)
+
+        if offsetParams:
+            self.customGlWidget.set_view_offsets(**offsetParams, redraw=False)
 
         if 'size' in params:
             self.setGeometry(params['size'])
@@ -3490,8 +3559,6 @@ class xrtGlow(qt.QWidget):
         self.blockSignals(False)
         self._syncColorScaleControls(redraw=False)
         self.mplFig.canvas.draw()
-        if 'coordOffset' in params or 'tVec' in params:
-            self.customGlWidget.update_coord_grid()
         self.customGlWidget.glDraw()
 
 #        newExtents = list(self.paletteWidget.span.extents)
@@ -3620,32 +3687,25 @@ class xrtGlow(qt.QWidget):
             self.customGlWidget.tmpOffset)
         cOffset = qt.QVector4D(off0[0], off0[1], off0[2], 0)
         off1 = self.customGlWidget.mModLocal * cOffset
-        self.customGlWidget.coordOffset = np.array(
-            [off1.x(), off1.y(), off1.z()])
-        self.customGlWidget.tVec = np.float32([0, 0, 0])
-        if hasattr(self.customGlWidget, 'cBox'):
-            self.customGlWidget.update_coord_grid()
-        self.customGlWidget.glDraw()
+        self.customGlWidget.set_view_offsets(
+            coordOffset=[off1.x(), off1.y(), off1.z()],
+            tVec=[0, 0, 0])
         return True
 
     def toLocal(self, oeuuid):
         oe = self.customGlWidget.beamline.oesDict[oeuuid][0]
         self.customGlWidget.mModLocal =\
             self.customGlWidget.meshDict[oeuuid].transMatrix[0].inverted()[0]
-        self.customGlWidget.coordOffset = np.float32([0, 0, 0])
-        self.customGlWidget.tVec = np.float32([0, 0, 0])
         self.customGlWidget.tmpOffset = oe.center
-        self.customGlWidget.update_coord_grid()
-        self.customGlWidget.glDraw()
+        self.customGlWidget.set_view_offsets(
+            coordOffset=[0, 0, 0], tVec=[0, 0, 0])
 
     def toGlobal(self, oeuuid):
         self.customGlWidget.mModLocal = qt.QMatrix4x4()
         self.customGlWidget.tmpOffset = np.float32([0, 0, 0])
-        self.customGlWidget.coordOffset = list(
-                self.customGlWidget.beamline.oesDict[oeuuid][0].center)
-        self.customGlWidget.tVec = np.float32([0, 0, 0])
-        self.customGlWidget.update_coord_grid()
-        self.customGlWidget.glDraw()
+        self.customGlWidget.set_view_offsets(
+            coordOffset=self.customGlWidget.beamline.oesDict[oeuuid][0].center,
+            tVec=[0, 0, 0])
 
     def _beamEndCenter(self, oeuuid):
         glw = self.customGlWidget
@@ -3716,11 +3776,9 @@ class xrtGlow(qt.QWidget):
 
         orientation = transMatrix * extraRot
         self.customGlWidget.mModLocal = orientation.inverted()[0]
-        self.customGlWidget.coordOffset = np.float32([0, 0, 0])
-        self.customGlWidget.tVec = np.float32([0, 0, 0])
         self.customGlWidget.tmpOffset = np.float32(bStart0)
-        self.customGlWidget.update_coord_grid()
-        self.customGlWidget.glDraw()
+        self.customGlWidget.set_view_offsets(
+            coordOffset=[0, 0, 0], tVec=[0, 0, 0])
         return True
 
     def alignWithYGlobal(self, oeuuid):
@@ -3746,11 +3804,9 @@ class xrtGlow(qt.QWidget):
             qt.QVector3D(0, 1, 0), bEndVirgin))
 
         self.customGlWidget.mModLocal = (virgin * extraRot).inverted()[0]
-        self.customGlWidget.coordOffset = np.float32([0, 0, 0])
-        self.customGlWidget.tVec = np.float32([0, 0, 0])
         self.customGlWidget.tmpOffset = np.float32(bStart0)
-        self.customGlWidget.update_coord_grid()
-        self.customGlWidget.glDraw()
+        self.customGlWidget.set_view_offsets(
+            coordOffset=[0, 0, 0], tVec=[0, 0, 0])
         return True
 
     def updateCutoffFromQLE(self, editor):
