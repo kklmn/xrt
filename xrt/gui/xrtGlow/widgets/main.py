@@ -3248,11 +3248,13 @@ class xrtGlow(qt.QWidget):
         for actText, actFunc in zip(['Export to image',
                                      'Copy image to clipboard',
                                      'Save scene geometry',
-                                     'Load scene geometry'],
+                                     'Load scene geometry',
+                                     'Restore default scene properties'],
                                     [self.exportToImage,
                                      self.copyImageToClipboard,
                                      self.saveSceneDialog,
-                                     self.loadSceneDialog]):
+                                     self.loadSceneDialog,
+                                     self.restoreDefaultSceneProperties]):
             mAction = qt.QAction(self)
             mAction.setText(actText)
             mAction.triggered.connect(actFunc)
@@ -3470,6 +3472,15 @@ class xrtGlow(qt.QWidget):
         print('Loaded scene from {}'.format(filename))
 
         self.applySceneProperties(params)
+
+    def restoreDefaultSceneProperties(self):
+        defaults = {
+            key: (qt.QMatrix4x4() if key == 'mModLocal'
+                  else copy.deepcopy(value))
+            for key, value in DEFAULT_SCENE_SETTINGS.items()
+            if key not in ('aspect', 'viewPortGL', 'maxLen')
+        }
+        self.applySceneProperties(defaults)
 
     def applySceneProperties(self, params):
         if not params:
