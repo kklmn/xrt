@@ -3247,8 +3247,8 @@ class xrtGlow(qt.QWidget):
         subMenuF = menu.addMenu('File')
         for actText, actFunc in zip(['Export to image',
                                      'Copy image to clipboard',
-                                     'Save scene geometry',
-                                     'Load scene geometry',
+                                     'Save scene properties',
+                                     'Load scene properties',
                                      'Restore default scene properties'],
                                     [self.exportToImage,
                                      self.copyImageToClipboard,
@@ -3416,35 +3416,94 @@ class xrtGlow(qt.QWidget):
         saveDialog = qt.QFileDialog()
         saveDialog.setFileMode(qt.QFileDialog.AnyFile)
         saveDialog.setAcceptMode(qt.QFileDialog.AcceptSave)
-        saveDialog.setNameFilter("Numpy files (*.npy)")
+        saveDialog.setNameFilter(
+            "JSON files (*.json);;Numpy files (*.npy)")
+        saveDialog.selectNameFilter("JSON files (*.json)")
         section, what = 'Glow', 'scene'
         if config.configPaths.has_option(section, what):
             saveDialog.setDirectory(config.path(section, what))
         if (saveDialog.exec_()):
             filename = saveDialog.selectedFiles()[0]
-            extension = 'npy'
-            if not filename.endswith(extension):
-                filename = "{0}.{1}".format(filename, extension)
-            self.saveScene(filename)
-            config.put(config.configPaths, section, what, filename)
-            config.write_configs()
+            if not os.path.splitext(filename)[1]:
+                extension = ('.npy' if '*.npy' in
+                             str(saveDialog.selectedNameFilter())
+                             else '.json')
+                filename += extension
+            if self.saveScene(filename):
+                config.put(config.configPaths, section, what, filename)
+                config.write_configs()
 
     def loadSceneDialog(self):
         loadDialog = qt.QFileDialog()
         loadDialog.setFileMode(qt.QFileDialog.AnyFile)
         loadDialog.setAcceptMode(qt.QFileDialog.AcceptOpen)
-        loadDialog.setNameFilter("Numpy files (*.npy)")  # analysis:ignore
+        loadDialog.setNameFilter(
+            "JSON files (*.json);;Numpy files (*.npy)")
+        loadDialog.selectNameFilter("JSON files (*.json)")
         section, what = 'Glow', 'scene'
         if config.configPaths.has_option(section, what):
             loadDialog.setDirectory(config.path(section, what))
         if (loadDialog.exec_()):
             filename = loadDialog.selectedFiles()[0]
-            extension = 'npy'
-            if not filename.endswith(extension):
-                filename = "{0}.{1}".format(filename, extension)
-            self.loadScene(filename)
-            config.put(config.configPaths, section, what, filename)
-            config.write_configs()
+            if self.loadScene(filename) is not None:
+                config.put(config.configPaths, section, what, filename)
+                config.write_configs()
+
+    @staticmethod
+    def scenePropertiesFilename(templateFile):
+        stem, _ = os.path.splitext(str(templateFile))
+        return stem + '.scene_properties.json'
+
+    @classmethod
+    def _sceneJSONValue(cls, value):
+        if isinstance(value, qt.QMatrix4x4):
+            rows = []
+            for index in range(4):
+                row = value.row(index)
+                rows.append([row.x(), row.y(), row.z(), row.w()])
+            return rows
+        if isinstance(value, qt.QRect):
+            return [value.x(), value.y(), value.width(), value.height()]
+        if isinstance(value, np.ndarray):
+            return cls._sceneJSONValue(value.tolist())
+        if isinstance(value, np.generic):
+            return value.item()
+        if isinstance(value, set):
+            return [cls._sceneJSONValue(item) for item in sorted(value)]
+        if isinstance(value, dict):
+            return {key: cls._sceneJSONValue(item)
+                    for key, item in value.items()}
+        if isinstance(value, (list, tuple)):
+            return [cls._sceneJSONValue(item) for item in value]
+        return value
+
+    @staticmethod
+    def _sceneFromJSON(params):
+        allowedKeys = set(DEFAULT_SCENE_SETTINGS) | {'size', 'sizeGL'}
+        params = {key: value for key, value in params.items()
+                  if key in allowedKeys}
+        if 'mModLocal' in params:
+            rows = params['mModLocal']
+            if (not isinstance(rows, list) or len(rows) != 4 or
+                    any(not isinstance(row, list) or len(row) != 4
+                        for row in rows)):
+                raise ValueError('Invalid mModLocal matrix')
+            values = [float(value) for row in rows for value in row]
+            if not np.all(np.isfinite(values)):
+                raise ValueError('Invalid mModLocal matrix values')
+            params['mModLocal'] = qt.QMatrix4x4(*values)
+        if 'size' in params:
+            bounds = params['size']
+            if (not isinstance(bounds, list) or len(bounds) != 4 or
+                    any(type(value) is not int for value in bounds)):
+                raise ValueError('Invalid window geometry')
+            params['size'] = qt.QRect(*bounds)
+        if 'sizeGL' in params:
+            sizes = params['sizeGL']
+            if (not isinstance(sizes, list) or
+                    any(type(value) is not int for value in sizes)):
+                raise ValueError('Invalid splitter sizes')
+        return params
 
     def saveScene(self, filename):
         params = dict()
@@ -3454,24 +3513,60 @@ class xrtGlow(qt.QWidget):
         params['sizeGL'] = self.canvasSplitter.sizes()
 
         try:
-            np.save(filename, params)
-#            with open(filename+'.json', 'w') as json_file:
-#                json.dump(params, json_file, indent=4)
+            extension = os.path.splitext(filename)[1].lower()
+            if extension == '.json':
+                content = json.dumps(self._sceneJSONValue(params),
+                                     indent=2, allow_nan=False)
+                with open(filename, 'w', encoding='utf-8') as sceneFile:
+                    sceneFile.write(content)
+            elif extension == '.npy':
+                np.save(filename, params)
+            else:
+                raise ValueError('Unsupported scene file extension')
         except Exception as e:  # analysis:ignore
             print('Error saving file', e)
-            return
+            return False
         print('Saved scene to {}'.format(filename))
+        return True
 
     def loadScene(self, filename):
         try:
-            params = np.load(filename, allow_pickle=True).item()
+            extension = os.path.splitext(filename)[1].lower()
+            if extension == '.json':
+                with open(filename, 'r', encoding='utf-8') as sceneFile:
+                    stored = json.load(sceneFile)
+                if not isinstance(stored, dict):
+                    raise ValueError('Scene properties must be a JSON object')
+                params = self._sceneFromJSON(stored)
+            elif extension == '.npy':
+                params = np.load(filename, allow_pickle=True).item()
+            else:
+                raise ValueError('Unsupported scene file extension')
+            self.applySceneProperties(params)
         except Exception as e:  # analysis:ignore
             print('Error loading file', e)
-            return
+            return None
 
         print('Loaded scene from {}'.format(filename))
+        return set(params)
 
-        self.applySceneProperties(params)
+    def saveTemplateScene(self, templateFile):
+        if not templateFile:
+            return False
+        return self.saveScene(self.scenePropertiesFilename(templateFile))
+
+    def loadTemplateScene(self, templateFile):
+        self.restoreDefaultSceneProperties()
+        if not templateFile:
+            return set()
+        filename = self.scenePropertiesFilename(templateFile)
+        if not os.path.isfile(filename):
+            return set()
+        loadedKeys = self.loadScene(filename)
+        if loadedKeys is None:
+            self.restoreDefaultSceneProperties()
+            return set()
+        return loadedKeys
 
     def restoreDefaultSceneProperties(self):
         defaults = {

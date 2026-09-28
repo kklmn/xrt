@@ -2210,6 +2210,7 @@ class XrtQookBase(qt.QMainWindow):
                           encoding="utf-8") as json_file:
                     raycing.json.dump(
                         self.beamLine.layoutStr, json_file, indent=4)
+                saveStatus = True
             elif self.layoutFileName.lower().endswith("xml"):
                 self.confText = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
                 self.confText += "<Project>\n"
@@ -2250,7 +2251,7 @@ class XrtQookBase(qt.QMainWindow):
                     fileObject = open(self.layoutFileName, 'w',
                                       encoding="utf-8")
                     fileObject.write(self.confText)
-                    fileObject.close
+                    fileObject.close()
                     saveStatus = True
                     self.setWindowTitle(self.layoutFileName + " - xrtQook")
                     messageStr = 'Layout saved to {}'.format(
@@ -2261,6 +2262,8 @@ class XrtQookBase(qt.QMainWindow):
                     self.progressBar.setValue(0)
                     self.progressBar.setFormat(messageStr)
 #            self.statusBar.showMessage(messageStr, 3000)
+        if saveStatus and self.blViewer is not None:
+            self.blViewer.saveTemplateScene(self.layoutFileName)
         self.updateGlowScanOutputDirectory()
         return saveStatus
 
@@ -2553,10 +2556,13 @@ class XrtQookBase(qt.QMainWindow):
                 self.docks[1].raise_()
 
             if self.blViewer is not None:
+                loadedSceneKeys = self.blViewer.loadTemplateScene(
+                    self.layoutFileName)
                 glWidget = self.blViewer.customGlWidget
                 firstElId = next(iter(glWidget.beamline.flowU), None)
                 firstElLine = glWidget.beamline.oesDict.get(firstElId)
-                if firstElLine is not None:
+                if (firstElLine is not None and
+                        'coordOffset' not in loadedSceneKeys):
                     try:
                         center = np.asarray(firstElLine[0].center, dtype=float)
                     except (TypeError, ValueError):
@@ -3029,6 +3035,8 @@ class XrtQookBase(qt.QMainWindow):
 #                self.blViewer.parentSignal = self.statusUpdate
                 self.beamLine = self.blViewer.customGlWidget.beamline
                 self.updateGlowScanOutputDirectory()
+                if self.layoutFileName:
+                    self.blViewer.loadTemplateScene(self.layoutFileName)
                 self.blViewer.customGlWidget.updateQookTree.connect(
                     self.updateBeamlineModel)
             except AttributeError:
