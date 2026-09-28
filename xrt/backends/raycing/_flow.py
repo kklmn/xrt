@@ -61,6 +61,15 @@ def propagationProcess(q_in, q_out, with_epics_histograms=False,
                 for func, fkwargs in meth.items():
                     method = getattr(oe, func)
                     call_kwargs = handler.prepare_method_kwargs(fkwargs)
+                    if handler.output_policy.get('progress'):
+                        q_out.put({
+                            "status": 0,
+                            "progress": flowCounter / flowLen,
+                            "element_code": oeLine[-1],
+                            "sender_name": oe.name,
+                            "method": func,
+                            "finished": False,
+                        })
                     try:
                         method(**call_kwargs)
                     except Exception as e:
@@ -68,6 +77,15 @@ def propagationProcess(q_in, q_out, with_epics_histograms=False,
                         print("Error in PropagationProcess\n", e)
                         continue
                     flowCounter += 1
+                    if handler.output_policy.get('progress'):
+                        q_out.put({
+                            "status": 0,
+                            "progress": flowCounter / flowLen,
+                            "element_code": oeLine[-1],
+                            "sender_name": oe.name,
+                            "method": func,
+                            "finished": True,
+                        })
                     if handler.output_policy.get('auto_properties'):
                         autoAttrs = derivedArgSet
                     else:
@@ -129,9 +147,6 @@ def propagationProcess(q_in, q_out, with_epics_histograms=False,
                                     'sender_id': oeid,
                                     'status': 0}
                         q_out.put(msg_hist)
-                    if handler.output_policy.get('progress'):
-                        q_out.put({"status": 0,
-                                   "progress": flowCounter/flowLen})
             handler.bl.forceAlign = False
             q_out.put({"status": 0, "repeat": repeats})
             handler.needUpdate = False

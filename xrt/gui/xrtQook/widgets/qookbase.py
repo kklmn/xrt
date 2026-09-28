@@ -448,6 +448,16 @@ class XrtQookBase(qt.QMainWindow):
         self.progressBar.setTextVisible(True)
         self.progressBar.setRange(0, 100)
         self.progressBar.setAlignment(qt.Qt.AlignCenter)
+        self._normalProgressBarStyle = self.progressBar.styleSheet()
+        self._sourceProgressBarStyle = (
+            "QProgressBar {"
+            "border: 1px solid #2563eb;"
+            "background: #eff6ff;"
+            "color: #1d4ed8;"
+            "text-align: center;"
+            "}"
+            "QProgressBar::chunk { background: #3b82f6; }"
+        )
         self.toolBar.addAction(newBLAction)
         self.toolBar.addAction(loadBLAction)
         self.toolBar.addAction(saveBLAction)
@@ -3040,6 +3050,15 @@ class XrtQookBase(qt.QMainWindow):
 
     def updateProgressBar(self, dataTuple):
         progress = dataTuple[0]
+        elementCode = dataTuple[2] if len(dataTuple) > 2 else 1
+        try:
+            elementCode = int(elementCode)
+        except (TypeError, ValueError, OverflowError):
+            elementCode = 1
+        style = (self._normalProgressBarStyle if elementCode > 0
+                 else self._sourceProgressBarStyle)
+        if self.progressBar.styleSheet() != style:
+            self.progressBar.setStyleSheet(style)
         self.progressBar.setValue(self.prbStart +
                                   int(progress * self.prbRange))
         self.progressBar.setFormat(dataTuple[1])

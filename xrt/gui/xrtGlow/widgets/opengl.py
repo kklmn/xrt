@@ -1101,8 +1101,15 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                           msg['diag_attr'],
                                           msg['diag_value']))
             elif 'progress' in msg and self.QookSignal is not None:
-                    self.QookSignal.emit((msg['progress'],
-                                          "Running propagation"))
+                if 'element_code' in msg:
+                    state = "finished" if msg['finished'] else "running…"
+                    label = "{}.{}() {}".format(
+                        msg['sender_name'], msg['method'], state)
+                    self.QookSignal.emit((
+                        msg['progress'], label, msg['element_code']))
+                else:
+                    self.QookSignal.emit((
+                        msg['progress'], "Running propagation"))
 
     def close_calc_process(self):
         timer = getattr(self, 'timer', None)
