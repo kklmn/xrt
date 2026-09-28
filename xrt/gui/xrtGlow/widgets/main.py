@@ -63,6 +63,15 @@ SCAN_ANGLE_PROPERTIES = {
     'wedgeAngle',
 }
 HORIZONTAL_HEADERS = ['Rays', 'Footprint', 'Surface', 'Label']
+SCENE_COLOR_COLUMNS = (
+    ('Normal', 'normalColors'),
+    ('Inverted', 'invertedColors'),
+)
+SCENE_COLOR_ROWS = (
+    ('Background', 'bgColor'),
+    ('Line', 'lineColor'),
+    ('Text', 'textColor'),
+)
 
 _OPACITY_SLIDER_STEPS = 10000
 _OPACITY_CURVE = 99.
@@ -1969,6 +1978,8 @@ class xrtGlow(qt.QWidget):
                                             self.sceneControls)
             sceneLayout.addWidget(aaCheckBox)
 
+        sceneLayout.addWidget(self._makeSceneColorsPanel())
+
         for teControl, teProps in SCENE_TEXTEDITS.items():
             teLayout = self._makeLabeledLineEdit(
                     teProps['label'], teProps['tooltip'], teControl,
@@ -2005,6 +2016,59 @@ class xrtGlow(qt.QWidget):
         sceneLayout.addWidget(self._makeRayVisibilityPanel())
         sceneLayout.addStretch()
         self.scenePanel.setLayout(sceneLayout)
+
+    def _makeSceneColorsPanel(self):
+        panel = qt.QGroupBox('Scene Colors', self)
+        grid = qt.QGridLayout(panel)
+        self.sceneColorButtons = {}
+
+        for column, (title, scheme) in enumerate(
+                SCENE_COLOR_COLUMNS, start=1):
+            grid.addWidget(qt.QLabel(title), 0, column)
+
+        for row, (title, colorKey) in enumerate(SCENE_COLOR_ROWS, start=1):
+            grid.addWidget(qt.QLabel(title), row, 0)
+            for column, (_, scheme) in enumerate(
+                    SCENE_COLOR_COLUMNS, start=1):
+                button = qt.QPushButton()
+                button.setFixedSize(28, 28)
+                button.setAccessibleName('{} {} color'.format(
+                    scheme, title.lower()))
+                button.clicked.connect(partial(
+                    self._chooseSceneColor, scheme, colorKey))
+                grid.addWidget(button, row, column)
+                self.sceneColorButtons[(scheme, colorKey)] = button
+
+        self._updateSceneColorSwatches(
+            DEFAULT_SCENE_SETTINGS['sceneColors'])
+        return panel
+
+    def _updateSceneColorSwatches(self, colors):
+        for (scheme, colorKey), button in self.sceneColorButtons.items():
+            color = qt.QColor.fromRgbF(*colors[scheme][colorKey])
+            hexColor = color.name().upper()
+            button.setStyleSheet(
+                'background-color: {}; border: 1px solid #777;'.format(
+                    hexColor))
+            button.setToolTip(hexColor)
+
+    def _chooseSceneColor(self, scheme, colorKey, checked=False):
+        colors = self.customGlWidget.sceneColors
+        current = qt.QColor.fromRgbF(*colors[scheme][colorKey])
+        colorTitle = next(title for title, key in SCENE_COLOR_ROWS
+                          if key == colorKey)
+        chosen = qt.QColorDialog.getColor(
+            current, self, 'Choose {} Color'.format(colorTitle))
+        if not chosen.isValid():
+            return
+
+        # Keep caller-provided scene settings and the defaults independent.
+        colors = copy.deepcopy(colors)
+        colors[scheme][colorKey] = list(chosen.getRgbF()[:3])
+        self.customGlWidget.sceneColors = colors
+        self.customGlWidget.set_scene_colors()
+        self._updateSceneColorSwatches(colors)
+        self.customGlWidget.glDraw()
 
     def makeRenderingPanel(self):
         renderingLayout = qt.QVBoxLayout()
@@ -3424,7 +3488,14 @@ class xrtGlow(qt.QWidget):
                 pValue = np.array(pValue)
             elif pName == 'rayFlag':
                 pValue = set(pValue)
+            elif pName == 'sceneColors':
+                pValue = copy.deepcopy(pValue)
             setattr(self.customGlWidget, pName, pValue)
+
+        if 'sceneColors' in params:
+            self.customGlWidget.set_scene_colors()
+            self._updateSceneColorSwatches(
+                self.customGlWidget.sceneColors)
 
         if offsetParams:
             self.customGlWidget.set_view_offsets(**offsetParams, redraw=False)
