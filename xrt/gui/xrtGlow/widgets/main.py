@@ -2125,8 +2125,8 @@ class xrtGlow(qt.QWidget):
         shapeLayout = qt.QHBoxLayout()
         shapeLayout.addWidget(qt.QLabel('Geometric source shape'))
         self.geometricSourceShape = qt.QComboBox()
-        self.geometricSourceShape.addItem('Sphere', 'sphere')
-        self.geometricSourceShape.addItem('Dodecahedron', 'sddh')
+        self.geometricSourceShape.addItem('Spherical', 'sphere')
+        self.geometricSourceShape.addItem('Stellar', 'sddh')
         shape = self.customGlWidget.geomSrcParam.get('shape', 'sphere')
         self.geometricSourceShape.setCurrentIndex(
             self.geometricSourceShape.findData(shape))
