@@ -2501,7 +2501,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
             labelGap = 0.1
             labelPadding = 0.5 * sclY
             labelBounds = []
-            lineCounter = 0
             labelLines = []
             gl.glDisable(gl.GL_DEPTH_TEST)
 
@@ -2546,17 +2545,15 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     continue
 
                 anchor = qt.QVector3D(oePos.x(), oePos.y(), 0.0)
-                baseSide = 1 if lineCounter % 2 == 0 else -1
                 labelPos = None
                 labelMetrics = None
                 labelBox = None
                 labelAlignment = None
-                side = baseSide
                 maxLane = 3*(len(labelBounds)+1)
                 for lane in range(maxLane):
                     laneSign = 0 if lane == 0 else 1 if lane % 2 else -1
                     laneOffset = ((lane + 1) // 2) * laneSign * 2*sclY
-                    for side in [baseSide, -baseSide]:
+                    for side in (1, -1):
                         labelAlignment = (
                                 'right' if side > 0 else 'left', 'middle')
                         candidate = anchor + qt.QVector3D(
@@ -2593,7 +2590,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         [xmin, underlineY, 0.0],
                         [xmax, underlineY, 0.0]))
                     labelBounds.append(labelBox)
-                    lineCounter += 1
                 except Exception as e:
                     print(e)
             self.cBox.textShader.release()
