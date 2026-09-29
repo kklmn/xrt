@@ -523,6 +523,10 @@ class xrtGlow(qt.QWidget):
                 categoriesDict=catDict,
                 transformDict=self.customGlWidget.meshDict)
 
+            addInspectorPlot = getattr(self.parentRef, 'addInspectorPlot', None)
+            if callable(addInspectorPlot):
+                elViewer.plotConfigCreated.connect(addInspectorPlot)
+
             self.customGlWidget.beamUpdated.connect(elViewer.update_beam)
             self.customGlWidget.oePropsUpdated.connect(elViewer.update_param)
             elViewer.propertiesChanged.connect(
