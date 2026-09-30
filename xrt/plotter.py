@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 u"""
 Module :mod:`plotter` provides classes describing axes and plots, as well as
 containers for the accumulated arrays (histograms) for subsequent
@@ -172,16 +172,23 @@ if hasQt:
 
 def serialize_plots(data):
     plotsDict = raycing.OrderedDict()
+    used_names = set()
     for iplot, plot in enumerate(data):
-        plotname = 'plot{:02d}'.format(iplot+1)
+        plotname = raycing.to_valid_var_name(
+            plot.name or 'plot{:02d}'.format(iplot+1),
+            used_names=used_names)
+        used_names.add(plotname)
         kwargs = raycing.get_init_kwargs(plot)
+        kwargs['name'] = plotname
         kwargs['_object'] = "xrt.plotter.XYCPlot"
 
         for ax in ['xaxis', 'yaxis', 'caxis']:
             axkwargs = raycing.get_init_kwargs(getattr(plot, ax))
             axkwargs['_object'] = "xrt.plotter.XYCAxis"
             kwargs[ax] = axkwargs
-        plotsDict[plotname] = kwargs
+        while plot.uuid in plotsDict:
+            plot.uuid = str(raycing.uuid.uuid4())
+        plotsDict[plot.uuid] = kwargs
     return plotsDict
 
 
@@ -194,7 +201,8 @@ def deserialize_plots(data, beamLine=None):
         print("Plots are not defined")
         return []
 
-    for plotName, plotProps in data['Project']['plots'].items():
+    for iplot, (plotKey, plotProps) in enumerate(
+            data['Project']['plots'].items()):
         plotKwargs = {}
 
         for pname, pval in plotProps.items():
@@ -211,6 +219,11 @@ def deserialize_plots(data, beamLine=None):
             else:
                 if pname in plotDefArgs and pval != str(plotDefArgs[pname]):
                     plotKwargs[pname] = raycing.parametrize(pval)
+        plotKwargs['name'] = plotProps.get('name') or (
+            'plot{:02d}'.format(iplot+1)
+            if raycing.is_valid_uuid(plotKey) else plotKey)
+        if raycing.is_valid_uuid(plotKey):
+            plotKwargs['uuid'] = plotKey
         if beamLine is not None:
             plotKwargs['bl'] = beamLine
         try:
@@ -687,7 +700,7 @@ class XYCPlot(object):
 
     """
 
-    hiddenParams = {'oe', 'bl'}
+    hiddenParams = {'oe', 'bl', 'uuid'}
 
     def __init__(
         self, beam=None, rayFlag=(1,), xaxis=None, yaxis=None, caxis=None,
@@ -698,7 +711,7 @@ class XYCPlot(object):
         contourFmt='%.1f', contourFactor=1., saveName=None,
         persistentName=None, oe=None, raycingParam=0,
         beamState=None, beamC=None, beamAbsorb=None,
-            showAbsorbed=False, **kwargs):
+            showAbsorbed=False, name='', **kwargs):
         u"""
         *beam*: str
             The beam to be visualized.
@@ -775,6 +788,10 @@ class XYCPlot(object):
         *title*: str
             If non-empty, this string will appear in the window caption,
             otherwise the *beam* will be used for this.
+
+        *name*: str
+            Tracking name used by xrtQook for the plot tree and generated code.
+            It is independent of the presentation *title*.
 
         *invertColorMap*: bool
             Inverts colors in the HSV color map; seen differently, this is a
@@ -953,6 +970,10 @@ class XYCPlot(object):
         """
         useQtWidget = kwargs.pop('useQtWidget', False)
         self.bl = kwargs.pop('bl', None)
+        self.name = name
+        supplied_uuid = kwargs.pop('uuid', None)
+        if not hasattr(self, 'uuid'):
+            self.uuid = supplied_uuid or str(raycing.uuid.uuid4())
         drawOeArea = kwargs.pop('drawOeArea', False)
         if not hasQt:
             useQtWidget = False

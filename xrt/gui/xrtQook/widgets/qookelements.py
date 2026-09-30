@@ -21,24 +21,6 @@ class XrtQookElements(XrtQookBase):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-    def _validImportedName(self, name, rootItem):
-        baseName = raycing.to_valid_var_name(str(name or 'element'))
-        existingNames = set()
-        for i in range(rootItem.rowCount()):
-            child = rootItem.child(i, 0)
-            if child is not None:
-                existingNames.add(str(child.text()))
-
-        if baseName not in existingNames:
-            return baseName
-
-        for i in range(2, 1000):
-            candidate = '{0}_{1}'.format(baseName, i)
-            if candidate not in existingNames:
-                return candidate
-
-        return '{0}_{1}'.format(baseName, raycing.uuid.uuid4().hex[:8])
-
     def addElement(self, name=None, obj=None, copyFrom=None, isRoot=False):
         """
         name: class name
@@ -81,24 +63,20 @@ class XrtQookElements(XrtQookBase):
             tree = self.tree
             rootItem = self.rootBLItem
 
+        nameScope = ('global' if isRoot or tree in (self.matTree,
+                                                  self.feTree) else 'oe')
         if isinstance(copyFrom, dict):
-            elementName = self._validImportedName(elementName, rootItem)
+            elementName = self.validObjectName(elementName, nameScope)
             copyFrom['properties']['name'] = elementName
             if isRoot:
                 self.beamLine.name = elementName
 
         if not isinstance(copyFrom, dict):  # None or another item
             if not isRoot:
-                for i in range(99):
-                    elementName = self.classNameToStr(name) + '{:02d}'.format(
-                            i+1)
-                    dupl = False
-                    for ibm in range(rootItem.rowCount()):
-                        if str(rootItem.child(ibm, 0).text()) ==\
-                                str(elementName):
-                            dupl = True
-                    if not dupl:
-                        break
+                elementName = self.validObjectName(
+                    self.classNameToStr(name) + '01', nameScope)
+            else:
+                elementName = self.validObjectName(elementName, nameScope)
 
         self.blUpdateLatchOpen = False
         elementItem, elementClassItem = self.addParam(rootItem,
@@ -324,7 +302,8 @@ class XrtQookElements(XrtQookBase):
         self.updateBeamline(methodItem, newElement=True)  # TODO: support user-selected methods
         self.isEmpty = False
 
-    def addPlot(self, copyFrom=None, plotName=None, beamName=None):
+    def addPlot(self, copyFrom=None, plotName=None, beamName=None,
+                plotId=None):
         plotDefArgs = dict(raycing.get_params("xrt.plotter.XYCPlot"))
         axDefArgs = dict(raycing.get_params("xrt.plotter.XYCAxis"))
         plotProps = plotDefArgs
@@ -334,16 +313,10 @@ class XrtQookElements(XrtQookBase):
             if oe is not None:
                 copyFrom['drawOeArea'] = True
 
-        if plotName is None:
-            for i in range(99):
-                plotName = 'plot{:02d}'.format(i+1)
-                dupl = False
-                for ibm in range(self.rootPlotItem.rowCount()):
-                    if str(self.rootPlotItem.child(ibm, 0).text()) ==\
-                            str(plotName):
-                        dupl = True
-                if not dupl:
-                    break
+        if plotName is None and isinstance(copyFrom, dict):
+            plotName = copyFrom.get('name')
+        plotName = self.validObjectName(
+            plotName or 'plot01', 'plot', default='plot')
 
         plotProps['title'] = plotName
         axHints = {'xaxis': {'label': 'x', 'unit': 'mm'},
@@ -394,7 +367,9 @@ class XrtQookElements(XrtQookBase):
             plotItem, plotViewItem = self.addParam(
                     self.rootPlotItem, plotName, "Preview plot",
                     source=copyFrom)
-        plotItem.setData(str(raycing.uuid.uuid4()), qt.Qt.UserRole)
+        plotItem.setEditable(True)
+        plotProps['name'] = plotName
+        plotItem.setData(plotId or str(raycing.uuid.uuid4()), qt.Qt.UserRole)
         self.paintStatus(plotViewItem, 0)
         plotViewItem.setToolTip("Double click to preview")
         plotProps['_object'] = "xrt.plotter.XYCPlot"
@@ -402,10 +377,6 @@ class XrtQookElements(XrtQookBase):
         if isinstance(copyFrom, qt.QStandardItem):
             self.cpChLevel = 0
             self.copyChildren(plotItem, copyFrom)
-            for ie in range(plotItem.rowCount()):
-                chItem = plotItem.child(ie, 0)
-                if str(chItem.text()) == 'title':
-                    plotItem.child(ie, 1).setText(str(plotName))
         else:
             for pname, pval in plotProps.items():
                 if pname in ['_object']:
@@ -424,6 +395,8 @@ class XrtQookElements(XrtQookBase):
                 else:
                     arg_value = pval
                     self.addParam(plotItem, pname, arg_value)
+
+        self.setPlotItemName(plotItem, plotName)
 
         self.showDoc(plotItem.index())
         self.capitalize(self.plotTree, plotItem)

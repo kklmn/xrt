@@ -353,7 +353,7 @@ class InstanceInspector(qt.QDialog):
                            'raycingParam',
                            'beamState', 'beamC', 'useQtWidget', 'title',
                            'rayFlag', 'density', 'outline', 'fluxUnit',
-                           'beamAbsorb'}
+                           'beamAbsorb', 'name'}
 
             self.dynamicPlotWidget = ConfigurablePlotWidget(
                     plotProps, parent=self, viewOnly=viewOnly,
@@ -1054,7 +1054,8 @@ class ConfigurablePlotWidget(qt.QWidget):
         child0.setFlags(self.paramFlag)
         child1 = qt.QStandardItem(str(value))
 
-        ch1flag = self.valueFlag
+        ch1flag = (self.paramFlag if paramName == 'name'
+                   else self.valueFlag)
         child1.setFlags(ch1flag)
 
         child0.setDropEnabled(False)
@@ -1115,6 +1116,23 @@ class ConfigurablePlotWidget(qt.QWidget):
     def update_plot_param(self, paramTuple):
         """(PlotUUID, obj: XYCPlot or XYCAxis, pName, pValue)"""
         if paramTuple[0] != self.plotId:
+            return
+
+        if paramTuple[2] == 'name':
+            name = str(paramTuple[3])
+            self.dynamicPlot.name = name
+            self.plotProps['name'] = name
+            model = self.models.get('top')
+            if model is not None:
+                signalsBlocked = model.blockSignals(True)
+                try:
+                    root = model.invisibleRootItem()
+                    for row in range(root.rowCount()):
+                        if str(root.child(row, 0).text()) == 'name':
+                            root.child(row, 1).setText(name)
+                            break
+                finally:
+                    model.blockSignals(signalsBlocked)
             return
 
         if paramTuple[1] == 'yaxis' and paramTuple[2] in ['label', 'data']:

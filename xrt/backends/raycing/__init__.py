@@ -57,13 +57,14 @@ from ._sets_units import (
     allUnitsCurrent, allUnitsCurrentStr, lengthUnitParams, auto_unit,
     argumentInputGroups)
 
-from .epics import to_valid_var_name, EpicsDevice, DynamicBeamline
+from .epics import EpicsDevice, DynamicBeamline
 
 from ._named_arrays import NamedArrayFactory, Center, Limits, Opening, Image2D
 
 from ._flow_utils import (
     auto_units_angle, auto_units_angle_with_energy, append_to_flow,
-    append_to_flow_decorator, set_name, vec_to_quat, multiply_quats,
+    append_to_flow_decorator, set_name, to_valid_var_name,
+    vec_to_quat, multiply_quats,
     quat_vec_rotate, get_init_val, get_params, parametrize,
     normalize_ref, ref_kind_for_arg,
     get_argument_editor_hint, parse_editor_mapping, format_editor_scalar,

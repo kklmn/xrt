@@ -8,8 +8,8 @@ from typing import Any, Dict, Iterable, List, Optional
 
 import numpy as np
 
-from .device import (
-    resolve_epics_readback, resolve_epics_record, to_valid_var_name)
+from .device import resolve_epics_readback, resolve_epics_record
+from .._flow_utils import to_valid_var_name
 from .._named_arrays import Center, Limits
 from .._sets_units import (
     derivedArgSet, diagnosticArgs, orientationArgSet, shapeArgSet)

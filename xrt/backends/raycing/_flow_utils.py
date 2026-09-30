@@ -313,6 +313,40 @@ def set_name(elementClass, name):
             else '')
 
 
+def to_valid_var_name(name, default='unnamed', used_names=()):
+    # Replace invalid characters with underscores
+    var_name = re.sub(r'\W|^(?=\d)', '_', name.strip())
+
+    # Ensure the name is not empty or a Python keyword
+    if not var_name or not re.match(r'[A-Za-z_]', var_name[0]):
+        var_name = f"{default}_{var_name}"
+
+    # Avoid Python reserved keywords
+    import keyword
+    if keyword.iskeyword(var_name):
+        var_name += '_var'
+
+    used_names = set(used_names)
+    if var_name not in used_names:
+        return var_name
+
+    match = re.fullmatch(r'(.*?)(\d+)', var_name)
+    if match:
+        stem, digits = match.groups()
+        number, width = int(digits) + 1, len(digits)
+        candidate = f'{stem}{number:0{width}d}'
+        while candidate in used_names:
+            number += 1
+            candidate = f'{stem}{number:0{width}d}'
+    else:
+        number = 2
+        candidate = f'{var_name}_{number}'
+        while candidate in used_names:
+            number += 1
+            candidate = f'{var_name}_{number}'
+    return candidate
+
+
 def vec_to_quat(vec, alpha):
     """ Quaternion from vector and angle"""
 

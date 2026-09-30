@@ -7,12 +7,12 @@ import threading
 # from itertools import compress
 from functools import partial
 from multiprocessing import Process, Queue
-import re
 
 from ..physconsts import SIE0, CH  # analysis:ignore
 from .._sets_units import (
     derivedArgSet, diagnosticArgs, orientationArgSet, shapeArgSet)
 from .._named_arrays import NamedArrayFactory, Center, Limits, Opening, Image2D
+from .._flow_utils import to_valid_var_name
 
 DEFAULT_IMAGE_WAVEFORM_LENGTH = 1024 * 1024
 
@@ -151,22 +151,6 @@ def resolve_epics_readback(default_record, epics_map):
         return None, None
 
     return f'{base_record}_RBV', base_record
-
-
-def to_valid_var_name(name, default='unnamed'):
-    # Replace invalid characters with underscores
-    var_name = re.sub(r'\W|^(?=\d)', '_', name.strip())
-
-    # Ensure the name is not empty or a Python keyword
-    if not var_name or not re.match(r'[A-Za-z_]', var_name[0]):
-        var_name = f"{default}_{var_name}"
-
-    # Avoid Python reserved keywords
-    import keyword
-    if keyword.iskeyword(var_name):
-        var_name += '_var'
-
-    return var_name
 
 
 #class DynamicBeamline:

@@ -1806,10 +1806,67 @@ class XrtQookBase(qt.QMainWindow):
             elif item.model() is self.fesModel:
                 self.updateBeamlineFEs(item)
 
+    def validObjectName(self, proposed, scope, current=None,
+                        default='element'):
+        used = set(self.xrtModules) | {
+            'np', 'sys', 'xrt', 'bl', 'properties', '_object'}
+        if scope == 'global':
+            beamLineRoot = self.beamLineModel.item(0, 0)
+            roots = (self.materialsModel.invisibleRootItem(),
+                     self.fesModel.invisibleRootItem())
+            if beamLineRoot is not None and beamLineRoot is not current:
+                used.add(str(beamLineRoot.text()))
+        elif scope == 'oe':
+            roots = (self.beamLineModel.item(0, 0),)
+        elif scope == 'plot':
+            plotRoot = self.plotModel.item(0, 0)
+            roots = (plotRoot,)
+            if plotRoot is not None and plotRoot is not current:
+                used.add(str(plotRoot.text()))
+        else:
+            raise ValueError('Unknown object name scope: {}'.format(scope))
+
+        for root in roots:
+            if root is None:
+                continue
+            for row in range(root.rowCount()):
+                child = root.child(row, 0)
+                if (child is not None and child is not current and
+                        str(child.text()) not in ('properties', '_object')):
+                    used.add(str(child.text()))
+        return raycing.to_valid_var_name(
+            str(proposed or default), default=default, used_names=used)
+
+    def setPlotItemName(self, plotItem, name):
+        signalsBlocked = self.plotModel.blockSignals(True)
+        try:
+            plotItem.setText(name)
+            for row in range(plotItem.rowCount()):
+                if str(plotItem.child(row, 0).text()) == 'name':
+                    self.setParamItemValue(
+                        plotItem.child(row, 1), 'name', name)
+                    nameRow = row
+                    break
+            else:
+                nameItem, _ = self.addParam(plotItem, 'name', name)
+                nameRow = nameItem.row()
+        finally:
+            self.plotModel.blockSignals(signalsBlocked)
+        self.plotTree.setRowHidden(nameRow, plotItem.index(), True)
+
     def plotItemChanged(self, item):
         parent = item.parent()
         if item is self.rootPlotItem:
             self.colorizeChangedParam(item)
+        elif parent is self.rootPlotItem and item.column() == 0:
+            if item.rowCount() == 0:
+                return
+            name = self.validObjectName(
+                item.text(), 'plot', current=item, default='plot')
+            self.setPlotItemName(item, name)
+            self.plotParamUpdate.emit(
+                (str(item.data(qt.Qt.UserRole)), 'XYCPlot', 'name', name))
+            return
         elif item.column() == 0:
             return
         elif str(parent.text()) == 'plots' and\
@@ -1880,7 +1937,8 @@ class XrtQookBase(qt.QMainWindow):
             item.model().blockSignals(False)
         elif item.column() == 0 and item.isEnabled():  # TODO: extract rename/back-reference update
             if item is self.rootPlotItem:
-                pyname = raycing.to_valid_var_name(item.text())
+                pyname = self.validObjectName(
+                    item.text(), 'plot', current=item, default='plots')
                 item.model().blockSignals(True)
                 item.setText(pyname)
                 item.model().blockSignals(False)
@@ -1892,7 +1950,11 @@ class XrtQookBase(qt.QMainWindow):
             for i in range(item.rowCount()):
                 child0 = item.child(i, 0)
                 if str(child0.text()) == 'properties':
-                    pyname = raycing.to_valid_var_name(item.text())
+                    scope = ('global' if item is self.rootBLItem or
+                             item.model() in (self.materialsModel,
+                                              self.fesModel) else 'oe')
+                    pyname = self.validObjectName(
+                        item.text(), scope, current=item)
                     oldname = None
                     for j in range(child0.rowCount()):
                         if str(child0.child(j, 0).text()) == 'name':
@@ -2298,7 +2360,10 @@ class XrtQookBase(qt.QMainWindow):
                 else:
                     itemDict[str(pltPropItem.text())] = \
                         self.getParamItemValue(pnItem.child(pnp, 1))
-            outDict[str(pnItem.text())] = itemDict
+            key = (str(pnItem.data(qt.Qt.UserRole))
+                   if rootItem is self.rootPlotItem
+                   else str(pnItem.text()))
+            outDict[key] = itemDict
         return outDict
 
     def getOrderedBeamlineItems(self, includeMeta=False):
@@ -2504,7 +2569,12 @@ class XrtQookBase(qt.QMainWindow):
                     elementProps['properties']['uuid'] = element
                     self.addElement(copyFrom=elementProps)
 
-            for plotName, plotDict in project.get('plots').items():
+            for iplot, (plotKey, plotDict) in enumerate(
+                    project.get('plots', {}).items()):
+                plotId = (plotKey if raycing.is_valid_uuid(plotKey)
+                          else None)
+                plotName = plotDict.get('name') or (
+                    'plot{:02d}'.format(iplot+1) if plotId else plotKey)
                 bName = plotDict.get('beam')
                 if isinstance(bName, tuple):  # Replace name in plots
                     beams = self.beamModel.findItems(bName[0],
@@ -2521,7 +2591,8 @@ class XrtQookBase(qt.QMainWindow):
                     if len(beams) < 1:
                         plotDict['beam'] = 'None'
 
-                self.addPlot(copyFrom=plotDict, plotName=plotName)
+                self.addPlot(copyFrom=plotDict, plotName=plotName,
+                             plotId=plotId)
 
             self.layoutFileName = openFileName
             self.updateGlowScanOutputDirectory()
