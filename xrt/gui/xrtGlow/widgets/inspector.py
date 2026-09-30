@@ -24,7 +24,7 @@ from ....backends.raycing.myopencl import ALL_CL_DEVICES
 from ....multipro import GenericProcessOrThread as GP
 from ....runner import RunCardVals
 from ....plotter import deserialize_plots
-from .scan import ScanRangeDialog, find_catalog_property
+from .scan import ScanInstructionDialog, find_catalog_property
 
 __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "27 Jan 2026"
@@ -621,11 +621,15 @@ class InstanceInspector(qt.QDialog):
             qt.QApplication.clipboard().setText(value)
 
         def create_scan():
-            currentValue = scanProperty.get('value', valueItem.text())
-            dialog = ScanRangeDialog(self.elementId, propName,
-                                     currentValue,
-                                     target_name=self.elementName,
-                                     parent=self)
+            parent = self.parent()
+            glowObj = getattr(parent, 'blViewer', None) or parent
+            dialog = ScanInstructionDialog(
+                self.scanInstructionCatalog(), parent=self,
+                beam_names=glowObj.customGlWidget.beamline.beamNamesDict,
+                scan_targets=glowObj.scanDescription.get('scanTargets', []),
+                plots_by_beam=glowObj._scan_plot_names_by_beam(),
+                initial_property=(self.elementName, propName))
+            dialog.targetsChanged.connect(glowObj.setScanTargets)
             dialog.scanCreated.connect(self.add_scan_item)
             dialog.exec_()
 

@@ -8,6 +8,8 @@ The mixins attach scan editing, playback, and code generation to the GUIs.
 
 import ast
 import copy
+import csv
+from datetime import datetime
 import json
 import os
 import re
@@ -15,6 +17,8 @@ import string
 from collections import OrderedDict
 
 import numpy as np
+from matplotlib.figure import Figure
+from matplotlib.ticker import FormatStrFormatter
 
 from ...commons import qt, config
 from ....backends import raycing
@@ -32,6 +36,8 @@ SCENE_PROPERTY_NAMES = {
     'scaleVec', 'rotations', 'coordOffset', 'offsetCoord', 'tVec'}
 DEFAULT_OUTPUT = {'glowFrameName': 'frame{index:04d}.jpg'}
 FRAMES_CLEAN_KEY = 'framesClean'
+SCAN_SCALAR_SOURCES = ('intensity', 'flux', 'power')
+SCAN_TARGET_SOURCES = SCAN_SCALAR_SOURCES + tuple(raycing.allBeamFields)
 
 SCAN_SCENE_COMPONENTS = OrderedDict([
     ('scaleVec', ['x', 'y', 'z']),
@@ -206,6 +212,46 @@ def _format_scan_value(value, unit):
     return f'{value:g} {unit}'
 
 
+def normalize_scan_targets(rows, beam_names):
+    """Validate the scan-wide beam measurements stored in JSON."""
+    if not isinstance(rows, list):
+        raise ValueError('scanTargets must be a list')
+    beam_names = set(beam_names)
+    result = []
+    seen = set()
+    for row in rows:
+        if not isinstance(row, dict):
+            raise ValueError(f'Invalid scan target: {row!r}')
+        beam = str(row.get('beam', ''))
+        source = str(row.get('source', ''))
+        flags = row.get('rayFlag', [])
+        if type(flags) is int:
+            flags = [flags]
+        if (beam not in beam_names or source not in SCAN_TARGET_SOURCES or
+                not isinstance(flags, (list, tuple)) or not flags or
+                any(type(flag) is not int for flag in flags)):
+            raise ValueError(f'Invalid scan target: {row!r}')
+        flags = list(flags)
+        key = (beam, source, tuple(flags))
+        if key in seen:
+            raise ValueError(f'Duplicate scan target: {key!r}')
+        seen.add(key)
+        result.append({'beam': beam, 'source': source, 'rayFlag': flags})
+    return result
+
+
+def _scan_target_column_names(targets):
+    names = []
+    for target in targets:
+        flags = ','.join(map(str, target['rayFlag']))
+        name = f"{target['beam']}.{target['source']}[{flags}]"
+        if target['source'] in SCAN_SCALAR_SOURCES:
+            names.append(name)
+        else:
+            names.extend((name + '.center', name + '.fwhm'))
+    return names
+
+
 def default_scan_description():
     return {
         'version': 1,
@@ -213,6 +259,7 @@ def default_scan_description():
         'frames': 0,
         'output': copy.deepcopy(DEFAULT_OUTPUT),
         'items': [],
+        'scanTargets': [],
         }
 
 
@@ -284,6 +331,31 @@ def _value_sequence(spec, fallback_steps=None):
     if fallback_steps is None:
         return [spec]
     return [spec] * int(fallback_steps)
+
+
+def _scan_track_plot_x(track, frames):
+    count = int(track.get('duration', track.get('steps', 1)))
+    planned = _value_sequence(track.get('values'), count)
+    if not planned:
+        return np.arange(count, dtype=float), 'Point'
+    start = int(track.get('start', 0))
+    target, prop = track.get('target'), track.get('property')
+    values = []
+    for point in range(count):
+        frame = frames.get(f'frame_{start + point:04d}', {})
+        patch = (frame.get('scene', {}) if target in SCENE_TARGETS else
+                 frame.get('objects', {}).get(target, {}))
+        values.append(patch.get(prop, planned[min(point, len(planned) - 1)]))
+    parsed = [_split_numeric_unit(value) for value in values]
+    if (all(number is not None and np.isfinite(number)
+            for number, unit in parsed) and
+            len({unit for number, unit in parsed}) == 1):
+        unit = parsed[0][1]
+        label = f"{track.get('target', '')}.{track.get('property', '')}"
+        if unit:
+            label += f' ({unit})'
+        return np.array([number for number, unit in parsed]), label
+    return np.arange(count, dtype=float), 'Point'
 
 
 def _set_patch_value(frame, target, property_name, value):
@@ -594,81 +666,83 @@ class BaseScan:
         return frames
 
 
-class ScanRangeDialog(qt.QDialog):
-    """Small dialog for creating a one-property linear scan."""
+class ScanTargetSelector(qt.QWidget):
+    """Scan-wide beam target rows shared by both scan creation dialogs."""
 
-    scanCreated = qt.Signal(dict)
-
-    def __init__(self, target, property_name, current_value=None,
-                 target_name=None, parent=None):
+    def __init__(self, beam_names=(), scan_targets=(), plots_by_beam=None,
+                 parent=None):
         super().__init__(parent)
-        self.target = target_name or target
-        self.property_name = property_name
-        self.setWindowTitle(
-            f'Create scan: {self.target}.{property_name}')
-
-        self.startFrameEdit = _ScanLineEdit('0')
-        min_value, max_value = _scan_default_bounds(current_value)
-        self.minValueEdit = _ScanLineEdit(str(min_value))
-        self.maxValueEdit = _ScanLineEdit(str(max_value))
-        self.pointsEdit = _ScanLineEdit('10')
-        _configure_scan_editors(self, property_name)
-
+        self.beamNames = list(beam_names)
+        self.originalTargets = copy.deepcopy(list(scan_targets))
         layout = qt.QVBoxLayout(self)
-        form = qt.QFormLayout()
-        form.addRow('Target', qt.QLabel(str(self.target)))
-        form.addRow('Property', qt.QLabel(str(property_name)))
-        form.addRow('Start frame', self.startFrameEdit)
-        form.addRow('Min value', self.minValueEdit)
-        form.addRow('Max value', self.maxValueEdit)
-        form.addRow('Number of points', self.pointsEdit)
-        layout.addLayout(form)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(qt.QLabel('Scan targets (shared by all tracks)'))
+        self.targetTree = qt.QTreeWidget()
+        self.targetTree.setHeaderLabels(['Beam', 'Source', 'Ray states'])
+        self.targetTree.setColumnWidth(0, 150)
+        self.targetTree.setColumnWidth(1, 170)
+        self.targetTree.setEditTriggers(qt.QAbstractItemView.DoubleClicked)
+        self.targetDelegate = qt.ScanTargetDelegate(
+            self.beamNames, SCAN_TARGET_SOURCES, plots_by_beam or {},
+            self.targetTree)
+        self.targetTree.setItemDelegate(self.targetDelegate)
+        layout.addWidget(self.targetTree)
+        buttons = qt.QHBoxLayout()
+        add_target = qt.QPushButton('Add target')
+        remove_target = qt.QPushButton('Remove target')
+        add_target.clicked.connect(self.add_target_row)
+        remove_target.clicked.connect(self.remove_target_row)
+        buttons.addWidget(add_target)
+        buttons.addWidget(remove_target)
+        buttons.addStretch()
+        layout.addLayout(buttons)
+        for target in self.originalTargets:
+            self.add_target_row(target)
 
-        self.buttonBox = qt.QDialogButtonBox(
-            qt.QDialogButtonBox.Ok | qt.QDialogButtonBox.Cancel)
-        self.buttonBox.accepted.connect(self.accept)
-        self.buttonBox.rejected.connect(self.reject)
-        layout.addWidget(self.buttonBox)
-        ok_button = self.buttonBox.button(qt.QDialogButtonBox.Ok)
-        ok_button.setAutoDefault(False)
-        ok_button.setDefault(False)
-        qt.QTimer.singleShot(0, self.startFrameEdit.setFocus)
+    def add_target_row(self, target=None):
+        # QPushButton.clicked passes a bool when the row is created by hand.
+        if not isinstance(target, dict):
+            target = {}
+        item = qt.QTreeWidgetItem(self.targetTree)
+        item.setFlags(item.flags() | qt.Qt.ItemIsEditable)
+        item.setText(0, str(target.get(
+            'beam', self.beamNames[0] if self.beamNames else '')))
+        item.setText(1, str(target.get('source', 'intensity')))
+        flags = target.get('rayFlag', [1])
+        if isinstance(flags, int):
+            flags = [flags]
+        item.setText(2, repr(tuple(flags)))
+        self.targetTree.openPersistentEditor(item, 2)
+        self.targetTree.setCurrentItem(item)
 
-    def scan_item(self):
-        points = int(self.pointsEdit.text())
-        return {
-            'type': 'track',
-            'id': f'{self.target}.{self.property_name}',
-            'start': int(self.startFrameEdit.text()),
-            'duration': points,
-            'target': self.target,
-            'property': self.property_name,
-            'values': {
-                'type': 'linspace',
-                'start': self.minValueEdit.text(),
-                'stop': self.maxValueEdit.text(),
-                'steps': points,
-                },
-            }
+    def remove_target_row(self):
+        item = self.targetTree.currentItem()
+        if item is not None:
+            self.targetTree.takeTopLevelItem(
+                self.targetTree.indexOfTopLevelItem(item))
 
-    def accept(self):
-        try:
-            item = self.scan_item()
-            BaseScan({'items': [item]}).compile_frames()
-        except Exception as exc:
-            qt.QMessageBox.warning(self, 'Invalid scan',
-                                   f'Cannot create scan: {exc}')
-            return
-        self.scanCreated.emit(item)
-        super().accept()
+    def targets(self):
+        rows = []
+        for index in range(self.targetTree.topLevelItemCount()):
+            item = self.targetTree.topLevelItem(index)
+            flags = ast.literal_eval(str(item.text(2)))
+            rows.append({
+                'beam': str(item.text(0)),
+                'source': str(item.text(1)),
+                'rayFlag': flags,
+                })
+        return normalize_scan_targets(rows, self.beamNames)
 
 
 class ScanInstructionDialog(qt.QDialog):
-    """Dialog for adding a property event or track from the scan panel."""
+    """Dialog for adding a property event or track to the scan."""
 
     scanCreated = qt.Signal(dict)
+    targetsChanged = qt.Signal(list)
 
-    def __init__(self, catalog, start_frame=0, edit_item=None, parent=None):
+    def __init__(self, catalog, start_frame=0, edit_item=None, parent=None,
+                 beam_names=(), scan_targets=(), plots_by_beam=None,
+                 initial_property=None):
         super().__init__(parent)
         self.catalog = list(catalog or [])
         self.propertyMap = {}
@@ -677,7 +751,7 @@ class ScanInstructionDialog(qt.QDialog):
         self.editItem = copy.deepcopy(edit_item)
         self._editValuesEditable = True
         self.setWindowTitle('Add scan instruction')
-        self.resize(520, 520)
+        self.resize(680, 520)
 
         self.propertyTree = qt.QTreeWidget()
         self.propertyTree.setHeaderLabels(['Property', 'Current value'])
@@ -695,6 +769,10 @@ class ScanInstructionDialog(qt.QDialog):
         layout = qt.QVBoxLayout(self)
         layout.addWidget(qt.QLabel('Select scene or element property'))
         layout.addWidget(self.propertyTree)
+
+        self.targetSelector = ScanTargetSelector(
+            beam_names, scan_targets, plots_by_beam, self)
+        layout.addWidget(self.targetSelector)
 
         form = qt.QFormLayout()
         form.addRow('First frame', self.startFrameEdit)
@@ -721,6 +799,18 @@ class ScanInstructionDialog(qt.QDialog):
         self._populate_tree()
         if self.editItem is not None:
             self._apply_edit_item()
+        elif initial_property is not None:
+            target, property_name = initial_property
+            item = self.propertyItems.get(f'{target}::{property_name}')
+            if item is not None:
+                self.propertyTree.setCurrentItem(item)
+                lower, upper = _scan_default_bounds(
+                    self.selectedProperty.get('value'))
+                self.minValueEdit.setText(str(lower))
+                self.maxValueEdit.setText(str(upper))
+                self.pointsEdit.setText('10')
+                self.setWindowTitle(
+                    f'Create scan: {target}.{property_name}')
         qt.QTimer.singleShot(0, self.startFrameEdit.setFocus)
 
     def _populate_tree(self):
@@ -896,14 +986,90 @@ class ScanInstructionDialog(qt.QDialog):
 
     def accept(self):
         try:
-            item = self.scan_item()
-            BaseScan({'items': [item]}).compile_frames()
+            targets = self.targetSelector.targets()
+            if self._current_property() is None and self.editItem is None:
+                if targets == self.targetSelector.originalTargets:
+                    raise ValueError('Select a property or change scan targets')
+                item = None
+            else:
+                item = self.scan_item()
+                BaseScan({'items': [item]}).compile_frames()
         except Exception as exc:
             qt.QMessageBox.warning(self, 'Invalid instruction',
                                    f'Cannot create instruction: {exc}')
             return
-        self.scanCreated.emit(item)
+        if targets != self.targetSelector.originalTargets:
+            self.targetsChanged.emit(targets)
+        if item is not None:
+            self.scanCreated.emit(item)
         super().accept()
+
+
+class _ScanLivePlotWindow(qt.QWidget):
+    """Live target values against one scan track's planned values."""
+
+    closed = qt.Signal(int)
+
+    def __init__(self, plot_id, track, x, x_label, columns, value_start,
+                 target_label, parent=None):
+        super().__init__(parent, qt.Qt.Window)
+        self.plotId = plot_id
+        self.valueStart = value_start
+        self.valueCount = len(columns)
+        self.setAttribute(qt.Qt.WA_DeleteOnClose)
+        self.setWindowTitle(
+            f"Scan: {track.get('id', 'track')} / {target_label}")
+        start = int(track.get('start', 0))
+        self.frameToPoint = {
+            f'frame_{start + point:04d}': point
+            for point in range(len(x))}
+        self.y = [np.full(len(x), np.nan) for name in columns]
+
+        figure = Figure(figsize=(7, max(3, 2.2 * len(columns))))
+        self.axes = np.atleast_1d(
+            figure.subplots(len(columns), 1, sharex=True))
+        self.lines = []
+        for axis, name, values in zip(self.axes, columns, self.y):
+            line, = axis.plot(x, values, '.-', markersize=4)
+            axis.set_ylabel(name, fontsize=8)
+            axis.xaxis.set_major_formatter(FormatStrFormatter('%g'))
+            axis.yaxis.set_major_formatter(FormatStrFormatter('%g'))
+            self.lines.append(line)
+        self.axes[-1].set_xlabel(x_label)
+        lower, upper = float(np.min(x)), float(np.max(x))
+        pad = max(1., abs(lower) * .01) if lower == upper else 0.
+        self.axes[-1].set_xlim(lower - pad, upper + pad)
+        figure.subplots_adjust(
+            left=.28, right=.97, top=.97, bottom=.12, hspace=.45)
+
+        self.canvas = qt.FigCanvas(figure)
+        self.canvas.setMinimumHeight(max(300, 220 * len(columns)))
+        scroll = qt.QScrollArea(self)
+        scroll.setWidgetResizable(True)
+        scroll.setWidget(self.canvas)
+        layout = qt.QVBoxLayout(self)
+        layout.addWidget(qt.NavigationToolbar(self.canvas, self))
+        layout.addWidget(scroll)
+        self.resize(720, min(850, max(400, 230 * len(columns))))
+
+    def add_frame(self, frame_id, values):
+        point = self.frameToPoint.get(frame_id)
+        if point is None:
+            return
+        target_values = values[
+            self.valueStart:self.valueStart + self.valueCount]
+        for axis, line, data, value in zip(
+                self.axes, self.lines, self.y, target_values):
+            data[point] = (float(value) if value is not None and
+                           np.isfinite(value) else np.nan)
+            line.set_ydata(data)
+            axis.relim()
+            axis.autoscale_view(scalex=False, scaley=True)
+        self.canvas.draw_idle()
+
+    def closeEvent(self, event):
+        self.closed.emit(self.plotId)
+        super().closeEvent(event)
 
 
 class TimelineFrameListWidget(qt.QWidget):
@@ -1379,6 +1545,9 @@ class GlowScanMixin:
             description.setdefault('kind', 'timeline_recipe')
             description.setdefault('frames', 0)
             description.setdefault('items', [])
+        beam_names = self.customGlWidget.beamline.beamNamesDict
+        description['scanTargets'] = normalize_scan_targets(
+            description.get('scanTargets', []), beam_names)
         output = description.setdefault('output', {})
         output.setdefault('glowFrameName', DEFAULT_OUTPUT['glowFrameName'])
         return self._scan_portable_description(description)
@@ -1387,6 +1556,42 @@ class GlowScanMixin:
         self.scanDescription = self._scan_description_from_input(
             scanDescription)
         self.refreshScanPanel()
+
+    def setScanTargets(self, targets):
+        if self.scanRunning:
+            return
+        self.scanDescription['scanTargets'] = normalize_scan_targets(
+            targets, self.customGlWidget.beamline.beamNamesDict)
+
+    def _scan_plot_names_by_beam(self):
+        beamline = self.customGlWidget.beamline
+        beam_tags = beamline.beamNamesDict
+        result = {name: [] for name in beam_tags}
+        qook = getattr(self, 'parentRef', None)
+        plot_root = getattr(qook, 'rootPlotItem', None)
+        if plot_root is not None:
+            plots = qook.treeToDict(plot_root)
+        else:
+            layout = getattr(beamline, 'layoutStr', None) or {}
+            plots = layout.get('Project', {}).get('plots', {})
+        if not isinstance(plots, dict):
+            return result
+        for index, (plot_id, props) in enumerate(plots.items()):
+            if not isinstance(props, dict):
+                continue
+            plot_name = props.get('name')
+            if not plot_name and plot_root is not None:
+                plot_item = plot_root.child(index, 0)
+                plot_name = plot_item.text() if plot_item is not None else None
+            plot_name = str(plot_name or plot_id)
+            plot_beam = props.get('beam')
+            if isinstance(plot_beam, list):
+                plot_beam = tuple(plot_beam)
+            for beam_name, beam_tag in beam_tags.items():
+                if plot_beam in (beam_name, beam_tag):
+                    if plot_name not in result[beam_name]:
+                        result[beam_name].append(plot_name)
+        return result
 
     def _scan_sync_output_template(self):
         if not hasattr(self, 'scanWidget'):
@@ -1634,7 +1839,11 @@ class GlowScanMixin:
             return
         dialog = ScanInstructionDialog(
             self.scanInstructionCatalog(), edit_item=items[item_index],
-            parent=self)
+            parent=self,
+            beam_names=self.customGlWidget.beamline.beamNamesDict,
+            scan_targets=self.scanDescription.get('scanTargets', []),
+            plots_by_beam=self._scan_plot_names_by_beam())
+        dialog.targetsChanged.connect(self.setScanTargets)
         dialog.scanCreated.connect(
             lambda item, row=item_index: self.replaceScanItem(row, item))
         dialog.exec_()
@@ -1910,7 +2119,11 @@ class GlowScanMixin:
     def openScanInstructionDialog(self, frame_index=0):
         dialog = ScanInstructionDialog(
             self.scanInstructionCatalog(), start_frame=frame_index,
-            parent=self)
+            parent=self,
+            beam_names=self.customGlWidget.beamline.beamNamesDict,
+            scan_targets=self.scanDescription.get('scanTargets', []),
+            plots_by_beam=self._scan_plot_names_by_beam())
+        dialog.targetsChanged.connect(self.setScanTargets)
         dialog.scanCreated.connect(self.addScanItem)
         dialog.exec_()
 
@@ -2100,6 +2313,113 @@ class GlowScanMixin:
             self.customGlWidget.glDraw()
         return hasObjects
 
+    def _scan_close_csv(self):
+        csv_file = getattr(self, '_scanCsvFile', None)
+        self._scanCsvFile = None
+        self._scanCsvWriter = None
+        if csv_file is not None:
+            csv_file.close()
+
+    def _scan_open_csv(self, scan):
+        self._scan_close_csv()
+        self._scanActiveTargets = copy.deepcopy(
+            self.scanDescription.get('scanTargets', []))
+        if not self._scanActiveTargets:
+            return
+
+        self._scanCsvTracks = [
+            item for item in scan.items
+            if item.get('type', 'track') == 'track']
+        first_id = (self._scanCsvTracks[0].get('id', 'scan')
+                    if self._scanCsvTracks else 'scan')
+        stem = re.sub(r'[^A-Za-z0-9._-]+', '_', str(first_id)).strip('._')
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_%f')
+        filename = self._scan_resolve_output_filename(
+            f'{stem or "scan"}_{timestamp}.csv')
+        os.makedirs(os.path.dirname(os.path.abspath(filename)), exist_ok=True)
+
+        self._scanTrackState = {}
+        catalog = self.scanInstructionCatalog()
+        for track in self._scanCsvTracks:
+            key = (str(track['target']), str(track['property']))
+            prop = find_catalog_property(catalog, *key)
+            self._scanTrackState[key] = prop.get('value') if prop else None
+
+        header = ['frame']
+        header.extend(
+            f"track.{i}.{track.get('id', '')}"
+            for i, track in enumerate(self._scanCsvTracks, 1))
+        header.extend(_scan_target_column_names(self._scanActiveTargets))
+        try:
+            self._scanCsvFile = open(
+                filename, 'w', newline='', encoding='utf-8')
+            self._scanCsvWriter = csv.writer(self._scanCsvFile)
+            self._scanCsvWriter.writerow(header)
+            self._scanCsvFile.flush()
+        except Exception:
+            self._scan_close_csv()
+            raise
+
+    def _scan_effective_track_values(self, frame):
+        for target, patch in frame.get('objects', {}).items():
+            target_name = str(self._scan_portable_target(target))
+            for prop, value in patch.items():
+                self._scanTrackState[(target_name, str(prop))] = value
+        for prop, value in frame.get('scene', {}).items():
+            self._scanTrackState[('Scene', str(prop))] = value
+        return [
+            self._scanTrackState.get(
+                (str(track['target']), str(track['property'])))
+            for track in self._scanCsvTracks]
+
+    def _scan_write_csv_row(self, frame_id, frame):
+        if self._scanCsvWriter is None:
+            return
+        track_values = self._scan_effective_track_values(frame)
+        beam_values = self.customGlWidget.scan_target_values(
+            self._scanActiveTargets)
+        self._scanCsvWriter.writerow(
+            [frame_id, *track_values, *beam_values])
+        self._scanCsvFile.flush()
+        return beam_values
+
+    def _scan_close_live_plots(self):
+        for window in tuple(getattr(self, '_scanLivePlots', {}).values()):
+            window.close()
+        self._scanLivePlots = {}
+
+    def _scan_plot_closed(self, plot_id):
+        self._scanLivePlots.pop(plot_id, None)
+
+    def _scan_open_live_plots(self):
+        self._scan_close_live_plots()
+        if not self._scanActiveTargets:
+            return
+        for track in self._scanCsvTracks:
+            x, x_label = _scan_track_plot_x(track, self.scanFrames)
+            if not len(x):
+                continue
+            value_start = 0
+            for target in self._scanActiveTargets:
+                columns = _scan_target_column_names([target])
+                target_label = (columns[0].rsplit('.', 1)[0]
+                                if len(columns) == 2 else columns[0])
+                plot_id = getattr(self, '_scanPlotSerial', 0) + 1
+                self._scanPlotSerial = plot_id
+                window = _ScanLivePlotWindow(
+                    plot_id, track, x, x_label, columns, value_start,
+                    target_label, self)
+                window.closed.connect(self._scan_plot_closed)
+                self._scanLivePlots[plot_id] = window
+                window.show()
+                value_start += len(columns)
+
+    def _scan_update_live_plots(self, frame_id, values):
+        if values is None:
+            return
+        for window in tuple(getattr(self, '_scanLivePlots', {}).values()):
+            window.add_frame(frame_id, values)
+
     def startScan(self):
         if self.scanRunning:
             if self.scanPaused:
@@ -2117,6 +2437,15 @@ class GlowScanMixin:
 
         self.scanInitialState = self._scan_collect_initial_state(
             self.scanFrames)
+        try:
+            self._scan_open_csv(scan)
+            self._scan_open_live_plots()
+        except Exception as exc:
+            self._scan_close_live_plots()
+            self._scan_close_csv()
+            qt.QMessageBox.warning(
+                self, 'Start scan', f'Cannot prepare scan output: {exc}')
+            return
         self.scanAutoUpdateState = self._scan_auto_update_state()
         self._set_scan_auto_update(False)
         self.scanRunning = True
@@ -2201,6 +2530,21 @@ class GlowScanMixin:
 
         frame_id = self.scanFrameIds[self.scanFrameIndex]
         frame = self.scanFrames[frame_id]
+        try:
+            target_values = self._scan_write_csv_row(frame_id, frame)
+        except Exception as exc:
+            qt.QMessageBox.warning(
+                self, 'Save scan', f'Cannot write scan CSV: {exc}')
+            self.scanStopRequested = True
+            self.finishScan()
+            return
+        try:
+            self._scan_update_live_plots(frame_id, target_values)
+        except Exception as exc:
+            self._scan_close_live_plots()
+            qt.QMessageBox.warning(
+                self, 'Live scan plots',
+                f'Live plotting stopped: {exc}. The scan will continue.')
         filename = frame.get('output', {}).get('glowFrameName')
         if filename:
             filename = self._scan_resolve_output_filename(filename)
@@ -2226,6 +2570,7 @@ class GlowScanMixin:
             needsPropagation = self._scan_restore_initial_state()
         except Exception:
             self.completeScan()
+            return
 
         calc_process = getattr(self.customGlWidget, 'calc_process', None)
         if needsPropagation and calc_process is not None and \
@@ -2239,6 +2584,7 @@ class GlowScanMixin:
         self.completeScan()
 
     def completeScan(self):
+        self._scan_close_csv()
         was_stopped = self.scanFinishWasStopped
         self.scanRestoringInitialState = False
         self.scanWaitingPropagation = False

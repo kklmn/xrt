@@ -445,6 +445,7 @@ class xrtGlow(GlowScanMixin, qt.QWidget):
         return rayPanel
 
     def closeEvent(self, event):
+        self._scan_close_live_plots()
         self.customGlWidget.cleanup_gl_resources()
         self.customGlWidget.close_calc_process()
         event.accept()

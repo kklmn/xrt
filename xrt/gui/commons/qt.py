@@ -5,6 +5,7 @@ __date__ = "16 Nov 2025"
 from ctypes import c_int, sizeof
 from functools import partial
 from math import isfinite
+import ast
 import os.path as osp
 import re
 
@@ -523,6 +524,24 @@ def make_argument_validator(argName, parent=None):
     return _atomic_validator(inputTypes, parent)
 
 
+def make_ray_flag_editor(parent=None):
+    """Create the four-checkbox editor used for plot ray flags."""
+    group = QWidget(parent)
+    group.setAutoFillBackground(True)
+    layout = QHBoxLayout()
+    layout.setContentsMargins(2, 2, 2, 2)
+    layout.setSpacing(4)
+    group.cb = []
+    for flag, name in enumerate(['lost', 'good', 'out', 'over']):
+        cb = QCheckBox(name, group)
+        layout.addWidget(cb)
+        group.cb.append((cb, flag))
+    layout.addStretch()
+    group.setLayout(layout)
+    group.setProperty('fieldName', 'rayflag')
+    return group
+
+
 class DynamicArgumentDelegate(QStyledItemDelegate):
     def __init__(self, nameToModel=None, parent=None, mainWidget=None,
                  bl=None):
@@ -844,21 +863,7 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
                 return self._createLineEditor(parent, argName)
             return combo
         elif 'rayflag' in argNameL:  # plot only
-            group = QWidget(parent)
-            group.setAutoFillBackground(True)
-            layout = QHBoxLayout()
-            layout.setContentsMargins(2, 2, 2, 2)
-            layout.setSpacing(4)
-            group.cb = []
-            for ix, name in enumerate(['lost', 'good', 'out', 'over']):
-                cb = QCheckBox(name, group)
-                layout.addWidget(cb)
-                group.cb.append((cb, ix))
-
-            layout.addStretch()
-            group.setLayout(layout)
-            group.setProperty('fieldName', 'rayflag')
-            return group
+            return make_ray_flag_editor(parent)
         elif argNameL.endswith('unit'):
             if parentIndexName.lower() in ['xaxis', 'yaxis', 'caxis']:
                 for i in range(model.rowCount(parentIndex)):
@@ -1061,6 +1066,61 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
         if dialog.exec_():
             valueText = dialog.serialized_value()
             self._setModelValue(index.model(), index, valueText)
+
+
+class ScanTargetDelegate(DynamicArgumentDelegate):
+    """Editors for beam, beam-dependent source, and ray-state columns."""
+
+    def __init__(self, beam_names, sources, plots_by_beam=None, parent=None):
+        super().__init__(parent=parent)
+        self.beamNames = list(beam_names)
+        self.sources = list(sources)
+        self.plotsByBeam = dict(plots_by_beam or {})
+
+    def createEditor(self, parent, option, index):
+        if index.column() == 2:
+            editor = make_ray_flag_editor(parent)
+            for check_box, _ in editor.cb:
+                check_box.toggled.connect(
+                    lambda checked, widget=editor:
+                    self.commitData.emit(widget))
+            return editor
+
+        editor = QComboBox(parent)
+        if index.column() == 0:
+            editor.addItems(self.beamNames)
+        else:
+            editor.addItems(self.sources)
+            beam = str(index.sibling(index.row(), 0).data() or '')
+            for plot_name in self.plotsByBeam.get(beam, ()):
+                for suffix in ('image', 'pickle'):
+                    editor.addItem(f'{plot_name}.{suffix}')
+                    row = editor.count() - 1
+                    editor.model().item(row).setEnabled(False)
+                    editor.setItemData(
+                        row, 'Plot saving is not available yet',
+                        Qt.ToolTipRole)
+        editor.activated.connect(lambda _: self.commitData.emit(editor))
+        return editor
+
+    def setEditorData(self, editor, index):
+        if isinstance(editor, QComboBox):
+            return super().setEditorData(editor, index)
+        try:
+            flags = ast.literal_eval(str(index.data()))
+        except (SyntaxError, ValueError):
+            flags = ()
+        if isinstance(flags, int):
+            flags = (flags,)
+        selected = set(flags)
+        if 4 in selected:
+            selected.update((1, 2, 3))
+        if any(flag < 0 for flag in selected):
+            selected.add(0)
+        for check_box, flag in editor.cb:
+            check_box.blockSignals(True)
+            check_box.setChecked(flag in selected)
+            check_box.blockSignals(False)
 
 
 class MultiColumnFilterProxy(QSortFilterProxyModel):

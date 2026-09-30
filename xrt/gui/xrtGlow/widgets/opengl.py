@@ -977,6 +977,77 @@ class xrtGlWidget(qt.QOpenGLWidget):
             hsv_texture_data.tobytes()          # Raw data as bytes
         )
 
+    @staticmethod
+    def _scan_ray_mask(state, ray_flags):
+        mask = np.zeros(np.shape(state), dtype=bool)
+        for flag in ray_flags:
+            if flag == 0:
+                mask |= state < 0
+            elif flag == 4:
+                mask |= state > 0
+            else:
+                mask |= state == flag
+        return mask
+
+    @staticmethod
+    def do_hist1d(data, intensity, bins=256, limits=None):
+        """Calculate the intensity-weighted 1D histogram for a beam field."""
+        return np.histogram(data, bins=bins, range=limits, weights=intensity)
+
+    @staticmethod
+    def _scan_center_fwhm(data, weights):
+        if not len(data) or np.sum(weights) <= 0:
+            return None, None
+        if np.min(data) == np.max(data):
+            return float(data[0]), 0.
+        hist, edges = xrtGlWidget.do_hist1d(data, weights)
+        maximum = np.max(hist)
+        if not np.isfinite(maximum) or maximum <= 0:
+            return None, None
+        half_maximum = maximum * 0.5
+        above = np.flatnonzero(hist >= half_maximum)
+        first, last = int(above[0]), int(above[-1])
+        centers = (edges[:-1] + edges[1:]) * 0.5
+        left = (edges[0] if first == 0 else np.interp(
+            half_maximum,
+            [hist[first-1], hist[first]],
+            [centers[first-1], centers[first]]))
+        right = (edges[-1] if last == len(hist)-1 else np.interp(
+            half_maximum,
+            [hist[last+1], hist[last]],
+            [centers[last+1], centers[last]]))
+        return float((left + right) * 0.5), float(right - left)
+
+    def scan_target_values(self, targets):
+        """Read selected beam statistics after scan propagation completes."""
+        values = []
+        beamline = self.beamline
+        for target in targets:
+            source = target['source']
+            count = 1 if source in ('intensity', 'flux', 'power') else 2
+            beam_tag = beamline.beamNamesDict.get(target['beam'])
+            beam = (beamline.beamsDictU.get(beam_tag[0], {}).get(beam_tag[1])
+                    if beam_tag is not None else None)
+            if beam is None:
+                values.extend([None] * count)
+                continue
+            mask = self._scan_ray_mask(beam.state, target['rayFlag'])
+            intensity = np.asarray(beam.Jss + beam.Jpp)
+            if source == 'intensity':
+                values.append(float(np.sum(intensity[mask])))
+            elif source in ('flux', 'power'):
+                weighted = (intensity * beam.sourceWeight
+                            if hasattr(beam, 'sourceWeight') else intensity)
+                if source == 'power':
+                    weighted = weighted * beam.E * raycing.SIE0
+                values.append(float(np.sum(weighted[mask])))
+            else:
+                data = np.asarray(getattr(raycing, 'get_' + source)(beam))
+                finite = mask & np.isfinite(data) & np.isfinite(intensity)
+                values.extend(self._scan_center_fwhm(
+                    data[finite], intensity[finite]))
+        return values
+
     def build_histRGB(self, beam, limits=None, isScreen=False,
                       bins=[256, 256]):
         good = (beam.state == 1) | (beam.state == 2)

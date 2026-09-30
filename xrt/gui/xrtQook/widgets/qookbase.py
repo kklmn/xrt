@@ -67,7 +67,7 @@ from ... import xrtGlow as xrtglow  # analysis:ignore
 from ...xrtGlow._constants import DEFAULT_SCENE_SETTINGS as DEFAULT_GLOW_SCENE_SETTINGS
 from ...xrtGlow._utils import is_source, is_aperture, is_screen
 from ...xrtGlow.widgets.inspector import InstanceInspector, _getBeamName  # analysis:ignore
-from ...xrtGlow.widgets.scan import ScanRangeDialog, find_catalog_property
+from ...xrtGlow.widgets.scan import ScanInstructionDialog, find_catalog_property
 from ...xrtGlow.widgets.nodeeditor import (
     HAS_QTPYNODEEDITOR, _FlowGraphPanel, FLOW_NODE_STYLES)
 
@@ -2184,7 +2184,9 @@ class XrtQookBase(qt.QMainWindow):
     def _has_layout_scan_description(self, scanDescription):
         if not isinstance(scanDescription, dict):
             return False
-        if scanDescription.get('items') or scanDescription.get('tracks'):
+        if (scanDescription.get('items') or
+                scanDescription.get('tracks') or
+                scanDescription.get('scanTargets')):
             return True
         frames = scanDescription.get('frames')
         if isinstance(frames, dict) and frames:
@@ -2740,10 +2742,15 @@ class XrtQookBase(qt.QMainWindow):
                 self, 'Create scan',
                 'xrtGlow must be available before creating a scan.')
             return
-        elementItem, propName, currentValue = scanContext
+        elementItem, propName, _ = scanContext
         self.updateGlowScanOutputDirectory()
-        dialog = ScanRangeDialog(
-            str(elementItem.text()), propName, currentValue, parent=self)
+        dialog = ScanInstructionDialog(
+            self.blViewer.scanInstructionCatalog(), parent=self,
+            beam_names=self.blViewer.customGlWidget.beamline.beamNamesDict,
+            scan_targets=self.blViewer.scanDescription.get('scanTargets', []),
+            plots_by_beam=self.blViewer._scan_plot_names_by_beam(),
+            initial_property=(str(elementItem.text()), propName))
+        dialog.targetsChanged.connect(self.blViewer.setScanTargets)
         dialog.scanCreated.connect(self.addGlowScanItem)
         dialog.exec_()
 
