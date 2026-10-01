@@ -1941,6 +1941,8 @@ class BeamLine(object):
 
         for oeid, oeline in self.iter_oes_ordered():
             oeObj = oeline[0]
+            if oeObj.name == "VirtualScreen":
+                continue
             oeRecord = OrderedDict()
             oeRecord['properties'] = get_init_kwargs(oeObj, compact=True,
                                                      blname=self.name,
