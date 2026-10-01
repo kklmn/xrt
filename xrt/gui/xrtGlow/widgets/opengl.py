@@ -3284,7 +3284,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     if altOn and not shiftOn:
                         depth = np.cross(mouse_h, mouse_v)
                         length = np.linalg.norm(depth)
-                        shifts = (xm + ym) * depth / length if length else\
+                        depth_sign = -1 if el > 0 else 1
+                        shifts = depth_sign * ym * depth / length if length else\
                             np.zeros(3)
                     else:
                         shifts = xm * mouse_h + ym * mouse_v
