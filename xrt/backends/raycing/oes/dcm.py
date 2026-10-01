@@ -313,7 +313,7 @@ class DCM(OE):
             self.roll + self.positionRoll + self.cryst1roll, self.yaw, self.dx,
             local_z=self.local_z1, local_n=self.local_n1,
             fromVacuum=fromVacuum1, material=self.material)
-        goodAfter1 = (gb.state == 1) | (gb.state == 2)
+        goodAfter1 = gb.state > 0  # (gb.state == 1) | (gb.state == 2)
 # not intersected rays remain unchanged except their state:
         notGood = ~goodAfter1
         if notGood.sum() > 0:
@@ -342,7 +342,7 @@ class DCM(OE):
             -self.dx, self.cryst2longTransl, -self.cryst2perpTransl,
             local_z=self.local_z2, local_n=self.local_n2,
             fromVacuum=fromVacuum2, material=self.material2, is2ndXtal=True)
-        goodAfter2 = (gb2.state == 1) | (gb2.state == 2)
+        goodAfter2 = gb.state > 0  # (gb2.state == 1) | (gb2.state == 2)
 # in global coordinate system:
         raycing.virgin_local_to_global(self.bl, gb2, self.center, goodAfter2)
 # not intersected rays remain unchanged except their state:

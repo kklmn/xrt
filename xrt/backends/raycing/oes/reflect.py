@@ -132,7 +132,7 @@ class OEMainMethods(object):
         if hasattr(beam, 'createdByDiffract'):
             goodAfter = gb.state == 1
         else:
-            goodAfter = (gb.state == 1) | (gb.state == 2)
+            goodAfter = gb.state > 0  # = (gb.state == 1) | (gb.state == 2)
 # in global coordinate system:
         if goodAfter.sum() > 0:
             raycing.virgin_local_to_global(self.bl, gb, self.center, goodAfter)
