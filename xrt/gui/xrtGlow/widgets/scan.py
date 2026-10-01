@@ -1027,6 +1027,10 @@ class _ScanLivePlotWindow(qt.QWidget):
         self.setAttribute(qt.Qt.WA_DeleteOnClose)
         self.setWindowTitle(
             f"Scan: {track.get('id', 'track')} / {target_label}")
+        icons_dir = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            '_icons')
+        self.setWindowIcon(qt.QIcon(os.path.join(icons_dir, 'p_scan128.png')))
         start = int(track.get('start', 0))
         self.frameToPoint = {
             f'frame_{start + point:04d}': point

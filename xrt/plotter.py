@@ -2218,8 +2218,12 @@ class XYCPlot(object):
             self.total4D = []
 
         try:
-            self.fig.canvas.window().setWindowTitle(self.title)
-
+            canvas = self.fig.canvas
+            if canvas.manager is not None:
+                canvas.manager.set_window_title(self.title)
+            elif canvas.isWindow():
+                # Embedded canvases must preserve their host window's title.
+                canvas.setWindowTitle(self.title)
         except AttributeError:
             pass
         self.nRaysAll = np.int64(0)
