@@ -388,7 +388,7 @@ def _merge_dict(dst, src, path, warnings, item_id):
 class BaseScan:
     """A compact timeline recipe that expands into explicit frame patches."""
 
-    def __init__(self, description=None):
+    def __init__(self, description=None, disabled_items=()):
         self.description = normalize_string_input(copy.deepcopy(
             description or default_scan_description()))
         self.version = self.description.get('version', 1)
@@ -402,6 +402,10 @@ class BaseScan:
         self.frame_count = int(frame_count or 0)
         self.items = list(self.description.get(
             'items', self.description.get('tracks', [])))
+        self.disabled_items = set(disabled_items)
+        if (self.expanded_frames is None and
+                self.disabled_items):
+            self.frame_count = 0
         self.actions = copy.deepcopy(self.description.get('actions', {}))
         self.output = copy.deepcopy(
             self.description.get('output', DEFAULT_OUTPUT))
@@ -510,7 +514,9 @@ class BaseScan:
         if self.frame_count:
             return
         frame_count = 0
-        for item in self.items:
+        for index, item in enumerate(self.items):
+            if index in self.disabled_items:
+                continue
             item_type = item.get('type', 'track')
             if item_type == 'event':
                 frame_count = max(
@@ -654,7 +660,9 @@ class BaseScan:
             frames = self._compile_expanded_frames()
         else:
             frames = self._make_empty_frames()
-        for item in self.items:
+        for index, item in enumerate(self.items):
+            if index in self.disabled_items:
+                continue
             item_type = item.get('type', 'track')
             if item_type == 'event':
                 self._compile_event(frames, item)
@@ -1085,6 +1093,7 @@ class TimelineFrameListWidget(qt.QWidget):
     scanLoadRequested = qt.Signal()
     scanSaveRequested = qt.Signal()
     trackTimingChanged = qt.Signal(int, dict)
+    trackEnabledChanged = qt.Signal(int, bool)
     trackEditRequested = qt.Signal(int)
     framePopulateRequested = qt.Signal()
     frameClearRequested = qt.Signal()
@@ -1381,7 +1390,13 @@ class TimelineFrameListWidget(qt.QWidget):
                         flags |= qt.Qt.ItemIsEditable
                     else:
                         flags &= ~qt.Qt.ItemIsEditable
+                    if col == self.TRACK_COL_ID:
+                        flags |= qt.Qt.ItemIsUserCheckable
                     table_item.setFlags(flags)
+                    if col == self.TRACK_COL_ID:
+                        table_item.setCheckState(
+                            qt.Qt.Checked if row not in self.scan.disabled_items
+                            else qt.Qt.Unchecked)
                     self.trackTable.setItem(row, col, table_item)
             self.trackTable.resizeColumnsToContents()
         finally:
@@ -1454,6 +1469,11 @@ class TimelineFrameListWidget(qt.QWidget):
         if row < 0 or row >= len(self.scan.items):
             return
         item = self.scan.items[row]
+        if column == self.TRACK_COL_ID:
+            enabled = table_item.checkState() == qt.Qt.Checked
+            if enabled == (row in self.scan.disabled_items):
+                self.trackEnabledChanged.emit(row, enabled)
+            return
         if not self._track_column_is_editable(item, column):
             return
         if column in self.TRACK_VALUE_COLUMNS:
@@ -1555,6 +1575,7 @@ class GlowScanMixin:
     def setScanDescription(self, scanDescription):
         self.scanDescription = self._scan_description_from_input(
             scanDescription)
+        self._scanDisabledItems = set()
         self.refreshScanPanel()
 
     def setScanTargets(self, targets):
@@ -1794,7 +1815,8 @@ class GlowScanMixin:
         self._scan_sync_output_template()
         description = copy.deepcopy(self.scanDescription)
         description.pop(FRAMES_CLEAN_KEY, None)
-        scan = BaseScan(description)
+        scan = BaseScan(
+            description, disabled_items=getattr(self, '_scanDisabledItems', ()))
         frames = scan.compile_frames()
         if not frames:
             return
@@ -1822,6 +1844,10 @@ class GlowScanMixin:
         if item_index < 0 or item_index >= len(items):
             return
         del items[item_index]
+        self._scanDisabledItems = {
+            index - (index > item_index)
+            for index in getattr(self, '_scanDisabledItems', ())
+            if index != item_index}
         self.scanDescription['frames'] = self._scan_recipe_frame_count(items)
         self.refreshScanPanel()
 
@@ -1831,6 +1857,21 @@ class GlowScanMixin:
             return
         items[item_index] = self._scan_portable_item(item)
         self.scanDescription['frames'] = self._scan_recipe_frame_count(items)
+        self.refreshScanPanel()
+
+    def setScanItemEnabled(self, item_index, enabled):
+        if self.scanRunning:
+            self.refreshScanPanel()
+            return
+        items = self.scanDescription.get('items', [])
+        if item_index < 0 or item_index >= len(items):
+            return
+        disabled = getattr(self, '_scanDisabledItems', set())
+        if enabled:
+            disabled.discard(item_index)
+        else:
+            disabled.add(item_index)
+        self._scanDisabledItems = disabled
         self.refreshScanPanel()
 
     def editScanItem(self, item_index):
@@ -2328,8 +2369,9 @@ class GlowScanMixin:
             return
 
         self._scanCsvTracks = [
-            item for item in scan.items
-            if item.get('type', 'track') == 'track']
+            item for index, item in enumerate(scan.items)
+            if (item.get('type', 'track') == 'track' and
+                index not in scan.disabled_items)]
         first_id = (self._scanCsvTracks[0].get('id', 'scan')
                     if self._scanCsvTracks else 'scan')
         stem = re.sub(r'[^A-Za-z0-9._-]+', '_', str(first_id)).strip('._')
@@ -2429,7 +2471,10 @@ class GlowScanMixin:
                     qt.QTimer.singleShot(0, self.runScanFrame)
             return
 
-        scan = BaseScan(self.scanDescription)
+        self._scan_sync_output_template()
+        scan = BaseScan(
+            self.scanDescription,
+            disabled_items=getattr(self, '_scanDisabledItems', ()))
         self.scanFrames = scan.compile_frames()
         self.scanFrameIds = list(self.scanFrames.keys())
         if not self.scanFrameIds:

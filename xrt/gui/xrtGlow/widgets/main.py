@@ -206,6 +206,7 @@ class xrtGlow(GlowScanMixin, qt.QWidget):
         self.generatorArgs = []
         self.scanDescription = self._scan_description_from_input(
             scanDescription)
+        self._scanDisabledItems = set()
 
         section, what = 'Glow', 'scan'
         if config.configPaths.has_option(section, what):
@@ -532,6 +533,7 @@ class xrtGlow(GlowScanMixin, qt.QWidget):
         self.scanWidget.scanLoadRequested.connect(self.loadScanFromJson)
         self.scanWidget.scanSaveRequested.connect(self.saveScanToJson)
         self.scanWidget.trackTimingChanged.connect(self.updateScanItemTiming)
+        self.scanWidget.trackEnabledChanged.connect(self.setScanItemEnabled)
         self.scanWidget.trackEditRequested.connect(self.editScanItem)
         self.scanWidget.framePopulateRequested.connect(
             self.populateScanFrames)
@@ -543,7 +545,9 @@ class xrtGlow(GlowScanMixin, qt.QWidget):
 
     def refreshScanPanel(self):
         if hasattr(self, 'scanWidget'):
-            self.scanWidget.set_scan(BaseScan(self.scanDescription))
+            self.scanWidget.set_scan(BaseScan(
+                self.scanDescription,
+                disabled_items=self._scanDisabledItems))
 
     def openScanPanel(self):
         if hasattr(self, 'sideTabs') and hasattr(self, 'scanPanel'):
