@@ -58,6 +58,9 @@ SCAN_CODE_INDENT = 4 * ' '
 
 
 _SCAN_INT_MAX = 2147483647
+_SCAN_ICON_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    '_icons', 'p_scan128.png')
 
 
 class _ScanLineEdit(qt.QLineEdit):
@@ -752,6 +755,7 @@ class ScanInstructionDialog(qt.QDialog):
                  beam_names=(), scan_targets=(), plots_by_beam=None,
                  initial_property=None):
         super().__init__(parent)
+        self.setWindowIcon(qt.QIcon(_SCAN_ICON_PATH))
         self.catalog = list(catalog or [])
         self.propertyMap = {}
         self.propertyItems = {}
@@ -816,7 +820,7 @@ class ScanInstructionDialog(qt.QDialog):
                     self.selectedProperty.get('value'))
                 self.minValueEdit.setText(str(lower))
                 self.maxValueEdit.setText(str(upper))
-                self.pointsEdit.setText('10')
+                self.pointsEdit.setText('11')
                 self.setWindowTitle(
                     f'Create scan: {target}.{property_name}')
         qt.QTimer.singleShot(0, self.startFrameEdit.setFocus)
@@ -1027,10 +1031,7 @@ class _ScanLivePlotWindow(qt.QWidget):
         self.setAttribute(qt.Qt.WA_DeleteOnClose)
         self.setWindowTitle(
             f"Scan: {track.get('id', 'track')} / {target_label}")
-        icons_dir = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            '_icons')
-        self.setWindowIcon(qt.QIcon(os.path.join(icons_dir, 'p_scan128.png')))
+        self.setWindowIcon(qt.QIcon(_SCAN_ICON_PATH))
         start = int(track.get('start', 0))
         self.frameToPoint = {
             f'frame_{start + point:04d}': point
@@ -1051,8 +1052,7 @@ class _ScanLivePlotWindow(qt.QWidget):
         lower, upper = float(np.min(x)), float(np.max(x))
         pad = max(1., abs(lower) * .01) if lower == upper else 0.
         self.axes[-1].set_xlim(lower - pad, upper + pad)
-        figure.subplots_adjust(
-            left=.28, right=.97, top=.97, bottom=.12, hspace=.45)
+        figure.set_tight_layout(True)
 
         self.canvas = qt.FigCanvas(figure)
         self.canvas.setMinimumHeight(max(300, 220 * len(columns)))

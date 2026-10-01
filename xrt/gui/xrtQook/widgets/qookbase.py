@@ -211,7 +211,7 @@ class XrtQookBase(qt.QMainWindow):
         self.tabNames = "Live Doc", "xrtGlow"
         self.tabNameGlow = self.tabNames[1]
         tabWidgets = self.webHelp, self.blViewer
-        tabIcons = "icon-help.png", "3dg_256.png"
+        tabIcons = "icon-help.png", "glow_3t_256.png"
         self.docks = []
         for i, (tabName, w, tabIcon) in enumerate(zip(
                 self.tabNames, tabWidgets, tabIcons)):

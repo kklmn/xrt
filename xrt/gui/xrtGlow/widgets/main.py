@@ -156,7 +156,8 @@ class xrtGlow(GlowScanMixin, qt.QWidget):
         mpl.rc('font', **mplFont)
         self.setWindowTitle('xrtGlow')
         iconsDir = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), '_icons')
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            '_icons')
         self.setWindowIcon(qt.QIcon(os.path.join(iconsDir, 'icon-GLow.ico')))
         iconsQookDir = os.path.join(os.path.dirname(os.path.dirname(
             os.path.abspath(__file__))), '../xrtQook', '_icons')
