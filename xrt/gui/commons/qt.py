@@ -508,7 +508,7 @@ def make_argument_validator(argName, parent=None):
             componentTypes = ('scalar',)
         elif rootName == 'lim' or\
                 rootName.startswith(('limPhys', 'limOpt')):
-            componentTypes = ('scalar', 'sequence', 'None')
+            componentTypes = ('scalar',)
         else:
             componentTypes = ('scalar',)
         if 'sequence' in componentTypes:

@@ -210,7 +210,8 @@ class InstanceInspector(qt.QDialog):
                     self.add_param(parentItem, key, value)
                     self.original_data[key] = str(value)
                 else:
-                    if raycing.is_sequence(spVal[0]):
+                    if (raycing.is_sequence(spVal[0]) and
+                            raycing.is_sequence(spVal[1])):
                         cs = getattr(self.editorObject, 'curSurface', 0)
                         spVal = [spVal[0][cs], spVal[1][cs]]
                     for field, val in zip(['lmin', 'lmax'], spVal):
@@ -352,7 +353,8 @@ class InstanceInspector(qt.QDialog):
                            'saveName', 'persistentName', 'oe',
                            'raycingParam',
                            'beamState', 'beamC', 'useQtWidget', 'title',
-                           'rayFlag', 'density', 'outline', 'fluxUnit',
+#                           'rayFlag',
+                           'density', 'outline', 'fluxUnit',
                            'beamAbsorb', 'name'}
 
             self.dynamicPlotWidget = ConfigurablePlotWidget(
