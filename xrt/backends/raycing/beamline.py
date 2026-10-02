@@ -458,6 +458,7 @@ class BeamLine(object):
         self.fesDict = OrderedDict()
         self.flowSource = 'legacy'
         self.forceAlign = False
+        self.autoAlignEnabled = True
         self.beamsDictU = OrderedDict()
         self.flowU = OrderedDict()
         self.beamNamesDict = {}  # Used in run_process_from_file
@@ -553,6 +554,8 @@ class BeamLine(object):
         self.flowSource = 'prepared_to_run'
 
     def auto_align(self, oe, beam):
+        if not self.autoAlignEnabled:
+            return
         if self.flowSource == 'Qook':
             self.forceAlign = True
         if not (self.forceAlign or is_auto_align_required(oe)):
