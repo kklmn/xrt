@@ -117,6 +117,12 @@ sources in 2D and 3D. This is especially useful for undulators because they
 have sharp peaks, which requires a proper selection of angular and energy
 meshes.
 
+This example calculates a 3D flux density vs. energy and two transverse angles.
+The colors are scaled by the logarithm of the intensity. Two harmonics can be
+seen crossing the central line: an odd harmonic at 2400 eV and an even harmonic
+at 4800 eV. The calculation accounts for both finite electron-beam emittance and
+finite electron-beam energy spread, each of which broadens the harmonics.
+
 +------------+------------+------------+
 |  |I0_x'E|  |  |I0_z'E|  |   |IpPol|  |
 +------------+------------+------------+

@@ -1,26 +1,30 @@
 ﻿# -*- coding: utf-8 -*-
 """
 The module provides visualization routines for displaying spatial and
-energy distributions of synchrotron sources in 2D and 3D."""
+energy distributions of synchrotron sources in 2D and 3D.
+
+For heavy calculations, I recomend running calculations with `wantPickle = True`
+and then adjusting plotting properties in the next runs.
+"""
 
 __author__ = "Konstantin Klementiev"
-__date__ = "12 Mar 2014"
+__date__ = "1 Oct 2026"
 
-#import cmath
 import time
 import copy
 import numpy as np
-#import matplotlib as mpl
+import pickle
+# import matplotlib as mpl
 import matplotlib.pyplot as plt
-from matplotlib.colors import LogNorm
+from matplotlib.colors import LogNorm, Normalize
 
 import os, sys; sys.path.append(os.path.join('..', '..'))  # analysis:ignore
-#import xrt.backends.raycing as raycing
+# import xrt.backends.raycing as raycing
 import xrt.backends.raycing.sources as rs
 
-vmin = 2.5e-3
+vmin = 1e-4
 
-dpi = 82
+dpi = 96
 xOrigin2d = 84  # all sizes are in pixels
 yOrigin2d = 48
 space2dto1d = 8
@@ -29,14 +33,13 @@ xSpaceExtra = 20
 ySpaceExtra = 28
 
 
-def visualize(source, data, title, saveName=None, sign=1):
-    def one_fig(what, ts, tChar, otherChar):
-        sh = what.shape
+def visualize2D(source, data, title, saveName=None, sign=1):
+    def one_fig(data2D, ts, tChar, otherChar, sh, title1D):
         xFigSize = float(xOrigin2d + sh[0] + space2dto1d +
                          height1d + xSpaceExtra)
         yFigSize = float(yOrigin2d + sh[1] + space2dto1d +
                          height1d + ySpaceExtra)
-        fig = plt.figure(figsize=(xFigSize/dpi, yFigSize/dpi), dpi=dpi)
+        fig = plt.figure(figsize=(xFigSize/dpi, yFigSize/dpi), dpi=dpi*1.25)
         rect_2D = [xOrigin2d / xFigSize, yOrigin2d / yFigSize,
                    (sh[0]-1) / xFigSize, (sh[1]-1) / yFigSize]
         rect_1DE = copy.deepcopy(rect_2D)
@@ -47,81 +50,83 @@ def visualize(source, data, title, saveName=None, sign=1):
         rect_1Dx[2] = height1d / xFigSize
 
         extent = [source.eMin, source.eMax, ts[0], ts[-1]]
-        ax2D = plt.axes(rect_2D)
-        dataMax = what.max()
+        ax2D = fig.add_axes(rect_2D)
+        dataMax = data2D.max()
+        data2D[data2D < vmin] = vmin
         ax2D.imshow(
-            what.T, aspect='auto', cmap='hot', extent=extent,
-#            interpolation='nearest', origin='lower', figure=fig,
+            data2D.T, aspect='auto', cmap='hot', extent=extent,
+            # interpolation='nearest', origin='lower', figure=fig,
             interpolation=None, origin='lower', figure=fig,
             norm=LogNorm(vmin=dataMax*vmin, vmax=dataMax))
-        ax2D.set_xlabel('energy (eV)')
+        ax2D.set_xlabel('$E$ (eV)')
         ax2D.set_ylabel(r"${0}'$ (mrad)".format(tChar))
 
-        ax1DE = plt.axes(rect_1DE, sharex=ax2D)
-        ax1Dt = plt.axes(rect_1Dx, sharey=ax2D)
+        ax1DE = fig.add_axes(rect_1DE, sharex=ax2D)
+        if title1D is not None:
+            ax1DE.set_ylabel(title1D)
+        ax1Dt = fig.add_axes(rect_1Dx, sharey=ax2D)
         plt.setp(ax1DE.get_xticklabels() + ax1Dt.get_yticklabels(),
                  visible=False)
         dE = energies[1] - energies[0]
         dt = ts[1] - ts[0]
-        ax1DE.plot(energies, np.sum(what, axis=1)*dt, 'r')
-#            ax1DE.set_yscale('log')
-        ax1Dt.plot(np.sum(what/energies[:, None]*dE, axis=0), ts, 'r')
-#            ax1Dt.set_xscale('log')
+        up = np.sum(data2D, axis=1)*dt
+        ax1DE.plot(energies, up, 'r')
+        # ax1DE.set_yscale('log')
+        right = np.sum(data2D/energies[:, None]*dE, axis=0)
+        ax1Dt.plot(right, ts, 'r')
+        # ax1Dt.set_xscale('log')
         ax1DE.set_ylim(bottom=0)
-        ax1DE.set_yticks(np.array([0, 2, 4, 6, 8])*1e16)
+        # ax1DE.set_yticks(np.array([0, 2, 4, 6, 8])*1e16)
 
         ax2D.set_xlim(extent[0], extent[1])
         ax2D.set_ylim(extent[2], extent[3])
 
         ax1DE.text(
-            0.65, 1.0, r"Angular flux density {0} at ".format(title) +
-            r"${0}'=0$".format(otherChar) +
-            r" (ph/s/mrad$^2$/0.1%bw)", transform=ax1DE.transAxes,
-            size=12, color='r', ha='center', va='bottom')
+            0.2, 1.0, r"Angular flux density {0} at ".format(title) +
+            r"${0}'=0$".format(otherChar), transform=ax1DE.transAxes,
+            size=12, color='r', ha='left', va='bottom')
         ax1DE.text(
-            0.7, 0.95, "integrated\nover " + r"$d{0}'$".format(tChar),
+            0.7, 0.95, "integrated over " + r"$d{0}'$".format(tChar),
             transform=ax1DE.transAxes, size=12, color='k', ha='center',
             va='top')
         ax1Dt.text(
-            0.25, 0.5, "integrated\nover " + r"$d$ln(energy)", rotation=-90,
+            0.25, 0.5, "integrated\nover " + r"$dE/E$", rotation=-90,
             transform=ax1Dt.transAxes, size=12, color='k', ha='center',
             va='center')
         return fig, ax2D, ax1DE, ax1Dt
 
-
-    if hasattr(source, 'xs'):
-        xs = source.xs * 1e3  # from rad to mrad
-        zs = source.zs * 1e3  # from rad to mrad
+    if isinstance(source, rs.UndulatorUrgent):
+        data = np.concatenate((data[:, :0:-1, :], data), axis=1)
+        data = np.concatenate((data[:, :, :0:-1], sign*data), axis=2)
+        xs = np.concatenate((-source.xs[:0:-1], source.xs))
+        zs = np.concatenate((-source.zs[:0:-1], source.zs))
         energies = source.energies
     else:
         xs = np.mgrid[source.Theta_min:source.Theta_max + 0.5*source.dTheta:
-                      source.dTheta] * 1e3
+                      source.dTheta] * 1e3  # from rad to mrad
         zs = np.mgrid[source.Psi_min:source.Psi_max + 0.5*source.dPsi:
-                      source.dPsi] * 1e3
+                      source.dPsi] * 1e3  # from rad to mrad
         energies = np.mgrid[source.E_min:source.E_max + 0.5*source.dE:
                             source.dE]
-    xSlice = 0
-    zSlice = 0
-    if 'xrt' in source.prefix_save_name() or\
-            'srw' in source.prefix_save_name():
-        pass
-    else:
-        data = np.concatenate((data[:, :0:-1, :], data), axis=1)
-        data = np.concatenate((data[:, :, :0:-1], sign*data), axis=2)
-        xs = np.concatenate((-xs[:0:-1], xs), axis=1)
-        zs = np.concatenate((-zs[:0:-1], zs), axis=1)
+
     xSlice = (data.shape[1]-1) // 2
     zSlice = (data.shape[2]-1) // 2
 
-    figX, ax2EX, ax1EX, ax1XX = one_fig(data[:, :, zSlice], xs, 'x', 'z')
-    figZ, ax2EZ, ax1EZ, ax1ZZ = one_fig(data[:, xSlice, :], zs, 'z', 'x')
+    size = [350, 300]
+    title1D = r"$dI_0/dz'$"+"\n(ph/s/mrad/0.1%bw)"
+    figX, ax2EX, ax1EX, ax1XX = one_fig(data[:, :, zSlice], xs, 'x', 'z', size,
+                                        title1D)
+    size[1] = (size[1] * data.shape[2]) // data.shape[1]
+    title1D = r"$dI_0/dx'$"+"\n(ph/s/mrad/0.1%bw)"
+    figZ, ax2EZ, ax1EZ, ax1ZZ = one_fig(data[:, xSlice, :], zs, 'z', 'x', size,
+                                        title1D)
     dE = energies[1] - energies[0]
     integralEvsX = np.sum(data[:, :, zSlice]/energies[:, None], axis=0)*dE
     integralEvsZ = np.sum(data[:, xSlice, :]/energies[:, None], axis=0)*dE
 
     maxIntegral = max(np.max(integralEvsX), np.max(integralEvsZ))
-    ax1XX.set_xlim(maxIntegral*(sign-1)*0.5, maxIntegral)
-    ax1ZZ.set_xlim(maxIntegral*(sign-1)*0.5, maxIntegral)
+    ax1XX.set_xlim(maxIntegral*(sign-1)*0.55, maxIntegral*1.1)
+    ax1ZZ.set_xlim(maxIntegral*(sign-1)*0.55, maxIntegral*1.1)
 
     if saveName is not None:
         fName = "{0}_{1}'E-" + source.prefix_save_name() + ".png"
@@ -129,266 +134,314 @@ def visualize(source, data, title, saveName=None, sign=1):
         figZ.savefig(fName.format(saveName, 'z'))
 
 
+def imshow3d(ax, exz, colors, cut, norm=None, zorder=1):
+    e, x, z = exz
+    ce, cx, cz = cut
+    icut = next(i for (i, v) in enumerate(cut) if isinstance(v, int))
+    if icut == 0:
+        x2, z2 = np.meshgrid(x[cx], z[cz], indexing='ij')
+        e2 = np.full_like(x2, e[ce])
+    elif icut == 1:
+        e2, z2 = np.meshgrid(e[ce], z[cz], indexing='ij')
+        x2 = np.full_like(e2, x[cx])
+    elif icut == 2:
+        e2, x2 = np.meshgrid(e[ce], x[cx], indexing='ij')
+        z2 = np.full_like(e2, z[cz])
+    else:
+        raise ValueError("Invalid data cut")
+    ax.plot_surface(x2, e2, z2, rstride=1, cstride=1, facecolors=colors,
+                    shade=False, zorder=zorder)
+
+
+def make_fig_3d(cdata, nexz, exz, cexz, wantZplane=True):
+    e, x, z = exz
+    ce, cx, cz = cexz
+    ne, nx, nz = nexz
+
+    fig = plt.figure(num=1, clear=True, figsize=(12, 8))  # "num" and "clear"!
+    ax = fig.add_subplot(projection='3d', computed_zorder=False)
+    ax.set(xlabel="x", ylabel="e", zlabel="z")
+    ax.set_box_aspect((nx, 1.25*nx, nz))
+    ax.set_axis_off()
+
+    de = e[1] - e[0]
+    dx = x[1] - x[0]
+    dz = z[1] - z[0]
+    if wantZplane:
+        cut = slice(ce, None), slice(None, nx//2+1), cz
+        colors = cdata[*cut]
+        imshow3d(ax, exz, colors, cut, zorder=1)
+        lx = x[0]-dx, x[0]-dx, 0
+        le = e[ce], e[-1]+de, e[-1]+de
+        lz = [z[cz]] * 3
+        ax.plot(lx, le, lz, color='gray', lw=1, zorder=1.5)
+
+    cut = slice(ce, None), cx, slice(None, nz//2+1)
+    colors = cdata[*cut]
+    imshow3d(ax, exz, colors, cut, zorder=2)
+    lx = [0] * 3
+    le = e[ce], e[-1]+de, e[-1]+de
+    lz = z[0]-dz, z[0]-dz, 0
+    ax.plot(lx, le, lz, color='gray', lw=1, zorder=2.5)
+
+    cut = ce, slice(None), slice(None)
+    colors = cdata[*cut]
+    imshow3d(ax, exz, colors, cut, zorder=3)
+    lx = x[0]-dx, x[0]-dx, x[-1]+dx, x[-1]+dx, x[0]-dx
+    le = [e[ce]] * 5
+    lz = z[0]-dz, z[-1]+dz, z[-1]+dz, z[0]-dz, z[0]-dz
+    ax.plot(lx, le, lz, color='gray', lw=1, zorder=3.5)
+
+    if wantZplane:
+        cut = slice(None, ce+1), slice(None, nx//2+1), cz
+        colors = cdata[*cut]
+        imshow3d(ax, exz, colors, cut, zorder=4)
+        if ce > 0:
+            lx = x[0]-dx, x[0]-dx, 0
+            le = e[ce], e[0]-de, e[0]-de
+            lz = [z[cz]] * 3
+            ax.plot(lx, le, lz, color='gray', lw=1, zorder=4.5)
+    cut = slice(None, ce+1), cx, slice(None, nz//2+1)
+    colors = cdata[*cut]
+    imshow3d(ax, exz, colors, cut, zorder=5)
+    if ce > 0:
+        lx = [0] * 3
+        le = e[ce], e[0]-de, e[0]-de
+        lz = z[0]-dz, z[0]-dz, 0
+        ax.plot(lx, le, lz, color='gray', lw=1, zorder=5.5)
+
+    ax.text(-0.01, e[ce], z[0]-0.01, f'{e[ce]:.0f} eV', zdir='x',
+            color='gray', fontsize=14, ha='left', va='top', zorder=100)
+
+    fig.tight_layout()
+    return fig
+
+
 def visualize3D(source, data, isZplane=True, saveName=None):
-# Enthought library imports
-    from mayavi.scripts import mayavi2
-    from mayavi.sources.array_source import ArraySource
-#        from mayavi.modules.outline import Outline
-#        from mayavi.modules.volume import Volume
-    from mayavi.modules.text3d import Text3D
-    from mayavi.modules.image_plane_widget import ImagePlaneWidget
-    from mayavi.tools.camera import view
-    from mayavi.tools.animator import animate
+    if isinstance(source, rs.UndulatorUrgent):
+        data = np.concatenate((data[:, :0:-1, :], data), axis=1)
+        data = np.concatenate((data[:, :, :0:-1], data), axis=2)
+        xs = np.concatenate((-source.xs[:0:-1], source.xs))
+        zs = np.concatenate((-source.zs[:0:-1], source.zs))
+        es = source.energies
+    else:
+        xs = np.mgrid[source.Theta_min:source.Theta_max + 0.5*source.dTheta:
+                      source.dTheta] * 1e3  # from rad to mrad
+        zs = np.mgrid[source.Psi_min:source.Psi_max + 0.5*source.dPsi:
+                      source.dPsi] * 1e3  # from rad to mrad
+        es = np.mgrid[source.E_min:source.E_max + 0.5*source.dE: source.dE]
 
-    @mayavi2.standalone
-    def view_data(data):
-        """Example showing how to view a 3D numpy array in mayavi2.
-        """
-        def set_labelE(ind):
-            if hasattr(source, 'energies'):
-                energies = source.energies
-            else:
-                energies = np.mgrid[source.E_min:source.E_max + 0.5*source.dE:
-                                    source.dE]
-            return '{0:.0f} eV'.format(energies[ind])
+    cx = (len(xs)-1) // 2
+    cz = (len(zs)-1) // 2
 
-        def move_view(obj, evt):
-            labelE.text = set_labelE(ipwX.ipw.slice_index)
-            pos = labelE.position
-            labelE.position = ipwX.ipw.slice_index * src.spacing[0] + 1,\
-                pos[1], pos[2]
-            labelE.vector_text.update()
+    wantDark = False
+    if wantDark:
+        plt.style.use('dark_background')
 
-        def set_lut(ipw):
-            lutM = ipw.module_manager.scalar_lut_manager
-#                lutM.show_scalar_bar = True
-#                lutM.number_of_labels = 9
-            lutM.lut.scale = 'log10'
-            lutM.lut.range = [dataMax*vmin, dataMax]
-            lutM.lut_mode = 'hot'
+    cmapName = 'hot'
+    if True:  # want logarithmic colors
+        dataMax = np.max(data)
+        norm = LogNorm(vmin=dataMax*vmin, vmax=dataMax)  # accepts only 1D input
+        cdata = plt.get_cmap(cmapName)(norm(data.flatten())).reshape(
+            list(data.shape)+[4])  # rgba
+    else:  # want linear colors
+        norm = Normalize()
+        data[data < vmin] = vmin
+        cdata = plt.get_cmap(cmapName)(norm(data))
 
-        @animate()
-        def anim(data, ipwX):
-            scene.scene.off_screen_rendering = True
-            scene.scene.anti_aliasing_frames = 0
-            for i in range(0, data.shape[0], 1):
-                ipwX.ipw.slice_index = i
-                move_view(None, None)
-                if saveName is not None:
-                    scene.scene.save('{0}{1:04d}.png'.format(saveName, i))
-                yield
+    # prepare pictures for the docs:
+    # a = np.arange(15, 50)*100
+    # b = np.arange(232, 250, 2)*10
+    # c = np.arange(472, 490, 2)*10
+    # wanted = sorted(np.unique(np.concatenate((a, b, c, [4990]))))
 
-        # 'mayavi' is always defined on the interpreter.
-        scene = mayavi.new_scene()  # analysis:ignore
-        scene.scene.background = (0, 0, 0)
-        print(source.prefix_save_name())
-
-        src = ArraySource(transpose_input_array=True)
-        sh = data.shape
-#        print(sh)
-        if 'xrt' in source.prefix_save_name() or\
-                'srw' in source.prefix_save_name():
-            src.scalar_data = data[:, :sh[1]//2+1, :sh[2]//2+1].copy()
-        else:
-            src.scalar_data = data[:, ::-1, ::-1].copy()
-#        src.spacing = np.array([-0.05, 1, 1])
-#        src.spacing = np.array([-0.25, 1, 1])
-        src.spacing = np.array([-0.25, 0.25, 0.25])
-        mayavi.add_source(src)  # analysis:ignore
-        # Visualize the data.
-#            o = Outline()
-#            mayavi.add_module(o)
-
-        ipwY = ImagePlaneWidget()
-        mayavi.add_module(ipwY)  # analysis:ignore
-        ipwY.ipw.plane_orientation = 'y_axes'  # our x-axis
-        ipwY.ipw.slice_index = int(data.shape[1] - 1)
-#        if 'xrt' in source.prefix_save_name():
-#            ipwY.ipw.slice_index /= int(2)
-        ipwY.ipw.left_button_action = 0
-        set_lut(ipwY)
-
-        if isZplane:
-            ipwZ = ImagePlaneWidget()
-            mayavi.add_module(ipwZ)  # analysis:ignore
-            ipwZ.ipw.plane_orientation = 'z_axes'  # our z-axis
-            ipwZ.ipw.slice_index = int(data.shape[2] - 1)
-#            if 'xrt' in source.prefix_save_name():
-#                ipwZ.ipw.slice_index /= int(2)
-            ipwZ.ipw.left_button_action = 0
-
-        if 'xrt' in source.prefix_save_name() or\
-                'srw' in source.prefix_save_name():
-            pass
-        else:
-            data = np.concatenate((data[:, :0:-1, :], data), axis=1)
-            data = np.concatenate((data[:, :, :0:-1], data), axis=2)
-        sh = data.shape
-        print(sh)
-        src = ArraySource(transpose_input_array=True)
-        src.scalar_data = data.copy()
-#        src.spacing = np.array([-0.05, 1, 1])
-#        src.spacing = np.array([-0.25, 1, 1])
-        src.spacing = np.array([-0.25, 0.25, 0.25])
-        mayavi.add_source(src)  # analysis:ignore
-
-        ipwX = ImagePlaneWidget()
-        mayavi.add_module(ipwX)  # analysis:ignore
-        ipwX.ipw.plane_orientation = 'x_axes'  # energy
-        set_lut(ipwX)
-        ipwX.ipw.add_observer('WindowLevelEvent', move_view)
-        ipwX.ipw.add_observer('StartInteractionEvent', move_view)
-        ipwX.ipw.add_observer('EndInteractionEvent', move_view)
-
-        labelE = Text3D()
-        mayavi.add_module(labelE)  # analysis:ignore
-        labelE.position = (1, data.shape[1]*0.73*src.spacing[1],
-                           data.shape[2]*0.85*src.spacing[2])
-        labelE.orientation = 90, 0, 90
-        labelE.text = 'Energy'
-        labelE.scale = 3, 3, 1
-        labelE.actor.property.color = 0, 1, 1
-        labelE.orient_to_camera = False
-        labelE.text = set_labelE(0)
-
-        view(45, 70, 200)
-        wantToAnimate = True
-        if wantToAnimate:
-            anim(data, ipwX)
-        else:
-            ipwX.ipw.slice_index = data.shape[0]-1
-            move_view(None, None)
-
-    data[data < 1e-7] = 1e-7
-    dataMax = np.max(data)
-    view_data(data)
+    # for ce, e in zip([len(es)//2], [es[len(es)//2]]):  # just a central cut
+    for ce, e in enumerate(es):
+        # if e not in wanted:
+        #     continue
+        fig = make_fig_3d(cdata, data.shape, (es, xs, zs), (ce, cx, cz),
+                          wantZplane=True)
+        fname = f"{source.prefix_save_name()}_{saveName}_{e:.0f}.png"
+        fig.savefig(fname)
+        print(fname)
 
 
 def test_synchrotron_source(SourceClass, **kwargs):
-    tstart = time.time()
+    t0 = time.time()
 
     source = SourceClass(**kwargs)
 
-    # if source.prefix_save_name().startswith('srw'):
-    #     import pickle
-    #     pickleName = 'srw-und-non0em.pickle'
-    #     with open(pickleName, 'rb') as f:
-    #         I0, l1, l2, l3 = pickle.load(f)[0:4]
+    wantPickle = False  # for long calculations like srw, remove after use
+    pickleName = f'tmp-{source.prefix_save_name()}.pickle'
+    if wantPickle and os.path.isfile(pickleName):
+        with open(pickleName, 'rb') as f:
+            # I0, l1, l2, l3, grid = pickle.load(f)[:5]
+            I0, grid = pickle.load(f)[:2]
+            (source.Theta_min, source.Theta_max, source.dTheta,
+             source.Psi_min, source.Psi_max, source.dPsi,
+             source.E_min, source.E_max, source.dE) = grid
+    else:
+        es = np.linspace(kwargs['eMin'], kwargs['eMax'], kwargs['eN']+1)
+        for ie, ee in enumerate(es):
+            ti = time.time()
+            print(f"E = {ee:.1f} eV, {ie+1} of {len(es)} in {ti-t0:.1f} s")
+            I0t, l1t, l2t, l3t = source.intensities_on_mesh(
+                energy=[ee], eSpreadNSamples=11)
+            if ie == 0:
+                I0 = I0t
+                # I0, l1, l2, l3 = I0t, l1t, l2t, l3t
+            else:
+                I0 = np.concatenate([I0, I0t], axis=0)
+                # l1 = np.concatenate([l1, l1t], axis=0)
+                # l2 = np.concatenate([l2, l2t], axis=0)
+                # l3 = np.concatenate([l3, l3t], axis=0)
 
-    print('started')
-    I0, l1, l2, l3 = source.intensities_on_mesh()
-    I0 *= 1e-6  # from /sr to /mrad²
-    print('finished')
-    tstop = time.time()
-    print('calculations took {0:.1f} s'.format(tstop - tstart))
+    te = time.time()
+    print('calculations took {0:.1f} s'.format(te - t0))
 
-##for long calculations like srw:
-    # if source.prefix_save_name().startswith('srw'):
-    #     import pickle
-    #     pickleName = source.prefix_save_name()+'.pickle'
-    #     with open(pickleName, 'wb') as f:
-    #         pickle.dump((I0, l1, l2, l3, tstop-tstart), f, protocol=2)
+    if wantPickle and not os.path.isfile(pickleName):
+        with open(pickleName, 'wb') as f:
+            grid = [source.Theta_min, source.Theta_max, source.dTheta,
+                    source.Psi_min, source.Psi_max, source.dPsi,
+                    source.E_min, source.E_max, source.dE]
+            # pickle.dump((I0, l1, l2, l3, grid, tstop-tstart), f, protocol=4)
+            pickle.dump((I0, grid, te-t0), f, protocol=4)
 
-##visualize in 2D:
-    visualize(source, I0, r'$I_0$', 'I0')
-    # visualize(source, I0*(1+l1)/2., r'$I_{\sigma\sigma}$', 'Is')
-    # visualize(source, I0*(1-l1)/2., r'$I_{\pi\pi}$', 'Ip')
-    # visualize(source, I0*l2/2., r'$\Re{I_{\sigma\pi}}$', 'IspRe')
+    if 'xrt' in source.prefix_save_name():
+        I0 *= 1e-6  # from /sr to /mrad²
+
+    visualize2D(source, I0, r"$dI_0/dx'dz'$", 'I0')
+    # visualize2D(source, I0*(1+l1)/2., r"$dI_{\sigma\sigma}/dx'dz'$", 'Is')
+    # visualize2D(source, I0*(1-l1)/2., r"$dI_{\pi\pi}/dx'dz'$", Ip')
+    # visualize2D(source, I0*l2/2., r"$\Re{dI_{\sigma\pi}/dx'dz'}$", IspRe')
     # sign = -1
     # if hasattr(source, 'Kx'):
     #     if source.Kx > 0:
     #         sign = 1
-    # visualize(source, I0*l3/2., r'$\Im{I_{\sigma\pi}}$', 'IspIm', sign=sign)
+    # visualize2D(source, I0*l3/2., r'$\Im{I_{\sigma\pi}}$', 'IspIm', sign=sign)
 
-##select only one visualize3D at a time:
-    # visualize3D(source, I0, isZplane=False, saveName='Itot')
+    # select only one visualize3D at a time:
+    # visualize3D(source, I0, isZplane=True, saveName='Itot')
     # visualize3D(source, I0*(1+l1)/2., isZplane=False, saveName='IsPol')
     # visualize3D(source, I0*(1-l1)/2., isZplane=False, saveName='IpPol')
     # visualize3D(source, I0*l2/2., saveName='IspRe')
     # visualize3D(source, I0*l3/2., saveName='IspIm')
-#
-if __name__ == '__main__':
-    """Uncomment the block you want to test."""
 
-##*********** Bending Magnet ***************
-#    kwargs = dict(B0=1.7, eE=3., xPrimeMax=2.5, zPrimeMax=0.3,
-#                  eMin=1500, eMax=31500, eN=3000, nx=1, nz=10)
-###by WS:
-##    Source = rs.BendingMagnetWS
-##by xrt:
-#    kwargs['distE'] = 'BW'
-#    Source = rs.BendingMagnet
 
-##*********** Wiggler ***************
-#    kwargs = dict(period=80., K=13., n=12, eE=3., xPrimeMax=2.5,
-#                  zPrimeMax=0.3, eMin=1500, eMax=31500, eN=3000, nx=20, nz=20)
-##by WS:
-#    Source = rs.WigglerWS
-##by xrt:
-#    kwargs['distE'] = 'BW'
-#    Source = rs.Wiggler
+def run_test(what):
+    if what.lower().startswith('bm'):  # bending magnet
+        kwargs = dict(
+            B0=1.7, eE=3., xPrimeMax=2.5, zPrimeMax=0.3,
+            eMin=1500, eMax=16500, eN=3000, nx=20, nz=20)
 
-#*********** undulator ***************
-#    kwargs = dict(
-#        period=31.4, K=2.7, n=63, eE=6.08,
-#        xPrimeMax=0.3, zPrimeMax=0.3,
-#        eMin=500, eMax=31500, eN=1000, nx=20, nz=20)
-#    Kmax = 1.92
-#    thetaMax, psiMax = 100e-6, 50e-6
-#    kwargs = dict(name='IVU18.5', eE=3.0, eI=0.5,
-#                  eEpsilonX=0.263, eEpsilonZ=0.008, betaX=9., betaZ=2.,
-#                  period=18.5, n=108, K=Kmax,
-#                  eMin=1500, eMax=31500, eN=1000, nx=40, nz=4,
-#                  xPrimeMax=thetaMax*1e3, zPrimeMax=psiMax*1e3, distE='BW')
-    kwargs = dict(
-        period=31.4, K=2.7, n=63, eE=6.08, eI=0.5, xPrimeMax=0.3, zPrimeMax=0.15,
-        eSigmaX=134.2, eSigmaZ=6.325, eEpsilonX=1., eEpsilonZ=0.01,
-        eMin=1500, eMax=5000, eN=350, nx=40*4, nz=20*4)
-##by Urgent:
-#    kwargs['icalc'] = 3  # 0 emittance
-#    Source = rs.UndulatorUrgent
-###by SRW:
-#    import srw.xrtSRW as xrtSRW
-#    kwargs['R0'] = 50000
-## 974 s - single electron
-## 65501 s - zero spread
-## 66180 s -nonzero spread
-#    kwargs['eSigmaX'] = 0
-#    kwargs['eSigmaZ'] = 0
-#    kwargs['eEpsilonX'] = 0
-#    kwargs['eEpsilonZ'] = 0
-##    kwargs['eEspread'] = 1e-3
-#    kwargs['harmonicStart'] = 1
-#    kwargs['harmonicFin'] = 4
-#    Source = xrtSRW.UndulatorSRW
-#by xrt:
-    kwargs['R0'] = 50000
-#    kwargs['eSigmaX'] = 0
-#    kwargs['eSigmaZ'] = 0
-#    kwargs['eEpsilonX'] = 0
-#    kwargs['eEpsilonZ'] = 0
-    kwargs['eEspread'] = 1e-3*0
-    kwargs['distE'] = 'BW'
-    kwargs['xPrimeMaxAutoReduce'] = False
-    kwargs['zPrimeMaxAutoReduce'] = False
-#    kwargs['targetOpenCL'] = "CPU"
-    kwargs['filamentBeam'] = True
-    Source = rs.Undulator
+        if 'legacy' in what:  # by ws
+            Source = rs.BendingMagnetWS
+        else:  # by xrt:
+            Source = rs.BendingMagnet
+            kwargs['distE'] = 'BW'
 
-##*** helical undulator **************
-#    kwargs = dict(
-#        period=31.4, Ky=2.7, Kx=2.7, n=63, eE=6.08,
-#        xPrimeMax=0.3, zPrimeMax=0.3,
-#        eMin=500, eMax=10500, eN=1000, nx=20, nz=20)
-###by Urgent:
-##    Source = rs.UndulatorUrgent
-##by xrt:
-#    kwargs['phaseDeg'] = 90
-#    kwargs['distE'] = 'BW'
-#    kwargs['xPrimeMaxAutoReduce'] = False
-#    kwargs['zPrimeMaxAutoReduce'] = False
-#    Source = rs.Undulator
+    elif what.lower().startswith('w'):  # wiggler
+        kwargs = dict(
+            period=80., K=13., n=12, eE=3.,
+            xPrimeMax=2.5, zPrimeMax=0.3, eMin=1500, eMax=16500,
+            eN=3000, nx=20, nz=20)
+
+        if 'legacy' in what:  # by ws
+            Source = rs.WigglerWS
+        else:  # by xrt:
+            Source = rs.Wiggler
+            kwargs['distE'] = 'BW'
+
+    elif what.lower().startswith('u'):  # undulator
+        # kwargs = dict(
+        #     period=31.4, K=2.7, n=63, eE=6.08,
+        #     xPrimeMax=0.3, zPrimeMax=0.3,
+        #     eMin=500, eMax=16500, eN=1000, nx=20, nz=20)
+
+        # Kmax = 1.92
+        # thetaMax, psiMax = 100e-6, 50e-6
+        # kwargs = dict(
+        #     name='IVU18.5', eE=3.0, eI=0.5,
+        #     eEpsilonX=0.263, eEpsilonZ=0.008, betaX=9., betaZ=2.,
+        #     period=18.5, n=108, K=Kmax,
+        #     eMin=1500, eMax=16500, eN=1000, nx=40, nz=4,
+        #     xPrimeMax=thetaMax*1e3, zPrimeMax=psiMax*1e3)
+
+        kwargs = dict(  # creates pictures for the docs, rather heavy! pickle it
+            period=31.4, K=2.7, n=63, eE=6.08, eI=0.5,
+            xPrimeMax=0.25, zPrimeMax=0.15,
+            eSigmaX=134.2, eSigmaZ=6.325, eEpsilonX=1., eEpsilonZ=0.01,
+            eMin=1500, eMax=5000-10, eN=350-1, nx=25*16, nz=15*16)
+
+        if 'legacy' in what:  # by urgent
+            Source = rs.UndulatorUrgent
+            kwargs['icalc'] = 3  # 0 emittance
+        elif 'srw' in what.lower():  # untested in xrt 2.0.0
+            import srw.xrtSRW as xrtSRW
+            Source = xrtSRW.UndulatorSRW
+            kwargs['R0'] = 50000
+            # 974 s - single electron
+            # 65501 s - zero spread
+            # 66180 s -nonzero spread
+            # 0 emittance:
+            kwargs['eSigmaX'] = 0
+            kwargs['eSigmaZ'] = 0
+            kwargs['eEpsilonX'] = 0
+            kwargs['eEpsilonZ'] = 0
+            # kwargs['eEspread'] = 1e-3
+            kwargs['harmonicStart'] = 1
+            kwargs['harmonicFin'] = 4
+        else:  # by xrt:
+            Source = rs.Undulator
+            # kwargs['R0'] = 50000
+            # kwargs['eSigmaX'] = 0
+            # kwargs['eSigmaZ'] = 0
+            # kwargs['eEpsilonX'] = 0
+            # kwargs['eEpsilonZ'] = 0
+            kwargs['eEspread'] = 1e-3  # increases calculation time!
+            kwargs['distE'] = 'BW'
+            kwargs['xPrimeMaxAutoReduce'] = False
+            kwargs['zPrimeMaxAutoReduce'] = False
+            # kwargs['targetOpenCL'] = "CPU"
+            # kwargs['filamentBeam'] = True
+
+    elif what.lower().startswith('e'):  # elliptical undulator
+        kwargs = dict(
+            period=31.4, Ky=2.7, Kx=2.7, n=63, eE=6.08,
+            xPrimeMax=0.3, zPrimeMax=0.3,
+            eMin=1000, eMax=4500, eN=350, nx=50, nz=50)
+
+        if 'legacy' in what:  # by urgent
+            Source = rs.UndulatorUrgent
+            kwargs['icalc'] = 3  # 0 emittance
+        else:  # by xrt:
+            Source = rs.Undulator
+            kwargs['phaseDeg'] = 90
+            kwargs['distE'] = 'BW'
+            kwargs['xPrimeMaxAutoReduce'] = False
+            kwargs['zPrimeMaxAutoReduce'] = False
+            # 0 emittance:
+            kwargs['eSigmaX'] = 0
+            kwargs['eSigmaZ'] = 0
+            kwargs['eEpsilonX'] = 0
+            kwargs['eEpsilonZ'] = 0
 
     test_synchrotron_source(Source, **kwargs)
+
+
+if __name__ == '__main__':
+    """ select a test """
+
+    # run_test('BM legacy')
+    # run_test('BM')
+
+    # run_test('wiggler legacy')
+    # run_test('wiggler')
+
+    # run_test('undulator legacy')
+    run_test('undulator')
+
+    # run_test('elliptical undulator legacy')
+    # run_test('elliptical undulator')
 
     plt.show()

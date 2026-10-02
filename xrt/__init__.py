@@ -10,9 +10,11 @@ interactively viewing it in 3D.
 +----------------+---------------+-----------+
 
 .. |Itot| animationhover:: _images/Itot
-   :alt: &ensp;Intensity of undulator radiation on a transverse flat screen.
-       The long axis is energy. One can observe two harmonics crossing the
-       central line: the one at 2400 eV is odd and the one at 4800 eV is even.
+   :alt: &ensp;Undulator flux density vs. energy and two transverse angles.
+       The colors are scaled by the logarithm of the intensity. Two harmonics
+       can be seen crossing the central line: an odd harmonic at 2400 eV and an
+       even harmonic at 4800 eV. The calculation accounts for both finite
+       electron-beam emittance and finite electron-beam energy spread.
 
 .. |vcmSi-P| animationhover:: _images/vcmSi-FootprintP
    :alt: &ensp;Absorbed power and power density on a mirror at varying pitch
