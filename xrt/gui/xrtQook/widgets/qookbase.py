@@ -765,6 +765,14 @@ class XrtQookBase(qt.QMainWindow):
 
         if glWidget is not None:
             glWidget.beamUpdated.connect(elViewer.update_beam)
+            plotWidget = elViewer.dynamicPlotWidget
+            if hasattr(plotWidget, 'propagationRequested'):
+                plotWidget.propagationRequested.connect(partial(
+                    glWidget.request_propagation_once, accumulating=True))
+                glWidget.propagationComplete.connect(
+                    plotWidget.on_propagation_complete)
+                glWidget.accumulationStopped.connect(
+                    plotWidget.stop_accumulation)
             glWidget.oePropsUpdated.connect(elViewer.update_param)
             # TODO: update/redraw Qook tree immediately after inspector edits
             elViewer.propertiesChanged.connect(
@@ -819,6 +827,13 @@ class XrtQookBase(qt.QMainWindow):
         if hasattr(self, 'blViewer') and self.blViewer is not None:
             self.blViewer.customGlWidget.beamUpdated.connect(
                     plotViewer.update_beam)
+            glWidget = self.blViewer.customGlWidget
+            plotViewer.dynamicPlot.propagationRequested.connect(partial(
+                glWidget.request_propagation_once, accumulating=True))
+            glWidget.propagationComplete.connect(
+                plotViewer.dynamicPlot.on_propagation_complete)
+            glWidget.accumulationStopped.connect(
+                plotViewer.dynamicPlot.stop_accumulation)
         if (plotViewer.show()):
             pass
 
