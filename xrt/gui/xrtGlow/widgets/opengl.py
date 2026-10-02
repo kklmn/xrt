@@ -517,7 +517,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
         if hasattr(self, 'input_queue'):
             self.input_queue.put({
                         "command": "run_once",
-                        "object_type": "beamline"
+                        "object_type": "beamline",
+                        "mode": "accumulate" if accumulating else "update"
                         })
 
     def set_auto_update(self, value, clear_beams=False):
