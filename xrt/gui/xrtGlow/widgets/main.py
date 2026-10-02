@@ -512,6 +512,15 @@ class xrtGlow(GlowScanMixin, qt.QWidget):
                 elViewer.plotConfigCreated.connect(addInspectorPlot)
 
             self.customGlWidget.beamUpdated.connect(elViewer.update_beam)
+            plotWidget = elViewer.dynamicPlotWidget
+            if hasattr(plotWidget, 'propagationRequested'):
+                plotWidget.propagationRequested.connect(partial(
+                    self.customGlWidget.request_propagation_once,
+                    accumulating=True))
+                self.customGlWidget.propagationComplete.connect(
+                    plotWidget.on_propagation_complete)
+                self.customGlWidget.accumulationStopped.connect(
+                    plotWidget.stop_accumulation)
             self.customGlWidget.oePropsUpdated.connect(elViewer.update_param)
             elViewer.propertiesChanged.connect(
                 partial(self.customGlWidget.update_beamline, oeuuid,
