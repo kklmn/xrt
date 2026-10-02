@@ -3,9 +3,39 @@
 Version history
 ---------------
 
-Current GitHub code (last modified 3 Sep 2026):
-    - Add scans to xrtGlow. Scans generate a series of scene images and can
-      create a scan generator in the output script (via Job Settings/generator).
+Current GitHub code (last modified 1 Oct 2026):
+    - New functionality: interactive, multi-track parameter scans in Glow;
+      playback, reusable JSON recipes, and Qook script generation. Analytics
+      adds selectable beam targets, intensity/flux/power and center/FWHM
+      measurements, live curves, and CSV output against scanned values.
+
+    - Base propagation: consistent absolute flux and power normalization,
+      including combining beams from different sources and sampling conditions.
+      Geometric sources can specify total flux.
+
+    - Optical elements: selectable ray/wave modes for profiled gratings;
+      grating auto-positioning and diagnostics.
+
+    - UI: Input validators supporting units, arithmetic, and structured values;
+      global object-name validation; dictionary editors; better synchronization
+      between Qook, inspectors, and plots.
+
+    - Rendering: added electron trajectories in synchrotron sources; improved
+      solid geometry for plates, lenses, and closed surfaces.
+
+    - Inspector: plots can become project plots; broader axis-variable
+      selection, optical-element outlines, histogram grids, and
+      relative-position/orientation diagnostics.
+
+    - Remote control: headless dynamic beamline operation and generated Phoebus
+      control displays, plus expanded readbacks.
+
+    - Experiment simulation: multi-material, volume-based samples for
+      transmission microscopy and tomography, with accompanying examples.
+
+    - Overall stability: more reliable import/export, and runtime field
+      updates; serialization improvements; platform/library compatibility;
+      extensively revised examples and documentation.
 
 2.0.0b1 (beta) (26 Apr 2026):
     - Restoration and stabilization of xrtGlow and xrtQook workflows after
