@@ -3280,6 +3280,10 @@ class XrtQookBase(qt.QMainWindow):
     def closeEvent(self, event):
         if self.blViewer is not None:
             self.blViewer.close()
+
+        for dock in self.docks:
+            dock.close()
+
         self._shutdown_busy_icon_worker()
         self._shutdown_sphinx_worker()
         self._shutdown_qprocess()
