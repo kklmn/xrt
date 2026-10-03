@@ -77,7 +77,7 @@ Using xrtQook for script generation
 
 - Check the beamline layout with xrtGlow. In the selection list right click on
   oe01 and "Center here". Adjust the x and y scale in Transformations. Set Color
-  Axis range as [8995, 9005]. Add Side (YZ) projection in Grid/Projections.
+  Axis range as [8990, 9010]. Add Side (YZ) projection in Grid/Projections.
 
 .. imagezoom:: _images/qookTutor08.png
    :align: center
