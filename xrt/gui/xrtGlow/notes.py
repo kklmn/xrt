@@ -75,38 +75,38 @@ Notes on using xrtGlow
   zooming along the global axes, (b) disentangled side-view projections, and
   (c) color-coding based on positional (x, z) or angular (x′, z′) coordinates.
 
-+-------+-------+-------+
-| |gra| | |grb| | |grc| |
-+-------+-------+-------+
+  +-------+-------+-------+
+  | |gra| | |grb| | |grc| |
+  +-------+-------+-------+
 
-+-------+-------+
-| |grd| | |gre| |
-+-------+-------+
+  +-------+-------+
+  | |grd| | |gre| |
+  +-------+-------+
 
-.. |gra| imagezoom:: _images/glowRotations_a.png
-   :scale: 30%
-   :alt: &ensp;The reflected beam is originally not aligned with Y.
+  .. |gra| imagezoom:: _images/glowRotations_a.png
+     :scale: 30%
+     :alt: &ensp;The reflected beam is originally not aligned with Y.
 
-.. |grb| imagezoom:: _images/glowRotations_b.png
-   :scale: 30%
-   :alt: &ensp;Right click on the reflecting element (crystal analyzer) and
-       select "Align with Y global".
-   :loc: upper-right-corner
+  .. |grb| imagezoom:: _images/glowRotations_b.png
+     :scale: 30%
+     :alt: &ensp;Right click on the reflecting element (crystal analyzer) and
+         select "Align with Y global".
+     :loc: upper-right-corner
 
-.. |grc| imagezoom:: _images/glowRotations_c.png
-   :scale: 30%
-   :alt: &ensp;Now the beam connecting the crystal analyzer and the next
-       beamline element is aligned with Y.
-   :loc: upper-right-corner
+  .. |grc| imagezoom:: _images/glowRotations_c.png
+     :scale: 30%
+     :alt: &ensp;Now the beam connecting the crystal analyzer and the next
+         beamline element is aligned with Y.
+     :loc: upper-right-corner
 
-.. |grd| imagezoom:: _images/glowRotations_d.png
-   :scale: 30%
-   :alt: &ensp;Z scaling is doubled.
+  .. |grd| imagezoom:: _images/glowRotations_d.png
+     :scale: 30%
+     :alt: &ensp;Z scaling is doubled.
 
-.. |gre| imagezoom:: _images/glowRotations_e.png
-   :scale: 30%
-   :alt: &ensp;zprime coloring is applied and "Global color span" is unchecked.
-   :loc: upper-right-corner
+  .. |gre| imagezoom:: _images/glowRotations_e.png
+     :scale: 30%
+     :alt: &ensp;zprime coloring is applied and "Global color span" is unchecked.
+     :loc: upper-right-corner
 
 - Depth test is disabled by default for Points. Enable it if you do not want the
   footprints to shine through solid surfaces of optical elements. Be aware that
@@ -135,8 +135,35 @@ Notes on using xrtGlow
   scans will instead save every plot in the list of plots under a name composed
   of the plot title and scan filename template.
 
-.. imagezoom:: _images/xrtGlow6.png
-   :align: center
+  +---------------+
+  |     |gs0|     |
+  +---------------+
 
+  .. |gs0| imagezoom:: _images/xrtGlow6.png
+     :align: center
+
+- Not only can a scan produce scene animations, it can also generate signal
+  plots similar to alignment scans at a beamline. To create such a plot, use the
+  "Create Scan" command from the context menu of a property in the main xrtQook
+  tree or in a live object inspector in xrtGlow. In the scan dialog, click
+  "Add target", select a beam from the list of local and global beams and choose
+  a beam property, most commonly "intensity".
+
+  The following example demonstrates how to create a rocking curve from the
+  `Balder.xml` project.
+
+  +---------------+
+  |     |gs1|     |
+  +-------+-------+
+  | |gs2| | |gs3| |
+  +-------+-------+
+
+  .. |gs1| imagezoom:: _images/glowScans1.png
+
+  .. |gs2| imagezoom:: _images/glowScans2.png
+
+  .. |gs3| imagezoom:: _images/glowScans3.png
+     :scale: 47%
+     :loc: upper-right-corner
 
 """
