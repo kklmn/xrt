@@ -1,7 +1,6 @@
 ﻿# -*- coding: utf-8 -*-
 __date__ = "20 Jan 2024"
-# import sys
-# sys.path.append(r"C:\Ray-tracing")
+
 import numpy as np
 from scipy import ndimage
 # import pickle

@@ -12,8 +12,7 @@ Created with xrtQook
 """
 
 import numpy as np
-import sys
-sys.path.append(r"c:\Ray-tracing")
+import os, sys; sys.path.append(os.path.join('..', '..'))  # analysis:ignore
 import xrt.backends.raycing.sources as rsources
 import xrt.backends.raycing.screens as rscreens
 import xrt.backends.raycing.materials as rmats

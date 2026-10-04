@@ -27,10 +27,8 @@ The ray-traced deviation -106 µrad is close to the calculated refractive shift
 """
 __author__ = "Konstantin Klementiev"
 __date__ = "2018/02/17"
-import sys
 import numpy as np
-
-sys.path.append(r"C:\Ray-tracing")
+import os, sys; sys.path.append(os.path.join('..', '..'))  # analysis:ignore
 import xrt.backends.raycing.sources as rsources
 import xrt.backends.raycing.screens as rscreens
 import xrt.backends.raycing.materials as rmats

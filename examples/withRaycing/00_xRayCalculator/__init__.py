@@ -30,7 +30,8 @@ Example 1a: Undulator
 
     import numpy as np
     import matplotlib.pyplot as plt
-    import sys; sys.path.append(r"c:\Ray-tracing")
+    import os
+    sys.path.append(os.path.join('..', '..', '..'))  # analysis:ignore
     import xrt.backends.raycing.sources as rs
 
     source = rs.Undulator(eE=3.0, eI=0.5, eEpsilonX=0.263, eEpsilonZ=0.008,
@@ -74,7 +75,8 @@ Example 2a: Crystal reflectivity
 
     import numpy as np
     import matplotlib.pyplot as plt
-    import sys; sys.path.append(r"c:\Ray-tracing")
+    import os
+    sys.path.append(os.path.join('..', '..', '..'))  # analysis:ignore
     import xrt.backends.raycing.materials as rm
 
     crystal = rm.CrystalSi(hkl=(1, 1, 1))
