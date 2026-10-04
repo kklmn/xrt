@@ -3370,6 +3370,16 @@ class xrtGlWidget(qt.QOpenGLWidget):
         finally:
             self.doneCurrent()
 
+    def highlightOE(self, objid=None):
+        if objid is None:
+            self.selectedOE = 0
+        else:
+            res = {k:v for k, v in self.selectableOEs.items() if v == objid}
+            if len(res) == 0:
+                return
+            self.selectedOE = int(list(res.keys())[0])
+        self.glDraw()
+
     def mouseDoubleClickEvent(self, mdcevent):
         if self.selectedOE > 0:
             self.openElViewer.emit(self.selectableOEs.get(int(self.selectedOE),

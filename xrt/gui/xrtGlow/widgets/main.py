@@ -2474,6 +2474,9 @@ class xrtGlow(GlowScanMixin, qt.QWidget):
         menu.addSeparator()
         menu.exec_(self.customGlWidget.mapToGlobal(position))
 
+    def highlightOE(self, objid=None):
+        self.customGlWidget.highlightOE(objid)
+
     def exportToImage(self):
         saveDialog = qt.QFileDialog()
         saveDialog.setFileMode(qt.QFileDialog.AnyFile)

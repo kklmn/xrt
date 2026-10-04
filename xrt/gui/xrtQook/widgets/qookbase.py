@@ -1013,6 +1013,7 @@ class XrtQookBase(qt.QMainWindow):
         self.tree.setItemDelegateForColumn(1, comboDelegate)
         self.tree.expanded.connect(
             lambda _index: self.tree.resizeColumnToContents(0))
+        self.tree.selectionModel().selectionChanged.connect(self.highlightOE)
 
         # runTree view
         self.runTree.setModel(self.runModel)
@@ -3178,6 +3179,19 @@ class XrtQookBase(qt.QMainWindow):
             if self.tabWidget.tabText(itab) == self.tabNameGlow:
                 self.tabWidget.setTabIcon(itab, icon)
                 break
+
+    def highlightOE(self, selected, unselected):
+        if self.blViewer is None or len(selected.indexes()) == 0:
+            return
+        index = selected.indexes()[0]
+        if not index.isValid():
+            return
+        objItem = self.tree.model().itemFromIndex(index)
+        objid = str(objItem.data(qt.Qt.UserRole))
+        if not raycing.is_valid_uuid(objid):
+            self.blViewer.highlightOE()
+            return
+        self.blViewer.highlightOE(objid)
 
     def _shutdown_busy_icon_worker(self):
         if self.busyIconThread is None:
