@@ -49,19 +49,12 @@ Notes on using xrtGlow
   rays. It is especially important if Intensity defines the Value key in HSV
   color space when dark rays can shadow the whole beam.
 
-.. imagezoom:: _images/xrtGlow3.png
-   :align: right
-
 - A convenient way to inspect a detailed beam footprint on the coordinate grid
   is to use Projections: disable the Perspective, select only the footprint of
   interest on the Navigation Panel (or disable all and just leave the Virtual
-  Screen on), enable the projection, set to zero the Projection Line Opacity
-  (or Line Width, it will do the job too), increase the Projection Point
-  Opacity to improve the visibility, enable the Fine Grid. Increase the number
-  of rays in the source if necessary.
-
-.. imagezoom:: _images/xrtGlow4.png
-   :align: center
+  Screen on), enable the projection, set to zero the Projection Line Opacity,
+  increase the Projection Point Opacity to improve the visibility, enable the
+  Fine Grid. Increase the number of rays in the source if necessary.
 
 - If you have any doubts regarding the orientation of the optical element or
   trying to identify the directions, you can plot local coordinate axes by
@@ -69,6 +62,9 @@ Notes on using xrtGlow
   Make sure that the surface rendering is enabled for this element in the
   Navigation panel. Orientation of the diffraction planes will be represented
   by the yellow arrow in case of crystals with asymmetric cut.
+
+.. imagezoom:: _images/xrtGlow4.png
+   :align: center
 
 - A powerful exploration feature is the alignment of any chosen beamline
   propagation leg with the global Y direction. This enables (a) independent
