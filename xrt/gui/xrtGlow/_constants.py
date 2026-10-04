@@ -20,8 +20,8 @@ diffuse = {}
 specular = {}
 shininess = {}
 
-ambient['Cu'] = qt.QVector4D(0.8, 0.4, 0., 1.)
-diffuse['Cu'] = qt.QVector4D(0.50, 0.25, 0., 1.)
+ambient['Cu'] = qt.QVector4D(0.8, 0.4, 0.15, 1.)
+diffuse['Cu'] = qt.QVector4D(0.50, 0.25, 0.12, 1.)
 specular['Cu'] = qt.QVector4D(1., 0.9, 0.8, 1.)
 shininess['Cu'] = 100.
 
@@ -110,6 +110,7 @@ DEFAULT_SCENE_SETTINGS = {
     'rayFlag': {1, 2, 3},
     'showLostRays': False,
     'showLocalAxes': False,
+    'showContours': False,
     'showInternalBeam': True,
     'renderPlateSides': True,
     'showElectronTrajectory': False,
@@ -163,6 +164,7 @@ SCENE_CONTROL_LABELS = {
     'pointsDepthTest': 'Depth test for Points',
     'invertColors': 'Invert scene color',
     'showLocalAxes': 'Show local axes',
+    'showContours': 'Show contours',
     'showInternalBeam': 'Show internal beams in multi-surface OEs',
     'renderPlateSides': 'Render side surfaces for plates and lenses',
     }

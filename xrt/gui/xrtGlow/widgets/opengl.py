@@ -89,6 +89,10 @@ def _aperture_surfaces(oe):
 
 
 def _clear_surface_mesh(mesh3D):
+    for nsIndex in list(mesh3D.vao_c):
+        mesh3D.delete_contour(nsIndex)
+    mesh3D.contourLengths.clear()
+    mesh3D.contourVertices.clear()
     surfaceKeys = set(mesh3D.vao)
     for meshStoreName in ('ibo', 'vbo_vertices', 'vbo_normals',
                           'vbo_positions', 'vbo_colors'):
@@ -930,6 +934,15 @@ class xrtGlWidget(qt.QOpenGLWidget):
             pass
 #            print('\nshaderMag: Done!')
         self.shaderGeo = shaderGeo
+
+        shaderContour = qt.QOpenGLShaderProgram()
+        shaderContour.addShaderFromSourceCode(
+            qt.QOpenGLShader.Vertex, OEMesh3D.vertex_contour)
+        shaderContour.addShaderFromSourceCode(
+            qt.QOpenGLShader.Fragment, OEMesh3D.fragment_contour)
+        if not shaderContour.link():
+            print('shaderContour: Failed to link:', shaderContour.log())
+        self.shaderContour = shaderContour
         gl.glGetError()
 
     def init_coord_grid(self):
@@ -2267,6 +2280,47 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.update_coord_grid()
         self.toggleLoop()
 
+    def render_contours(self, contours, model):
+        if not self.showContours:
+            return
+        depthTest = gl.glIsEnabled(gl.GL_DEPTH_TEST)
+        depthMask = gl.glGetBooleanv(gl.GL_DEPTH_WRITEMASK)
+        lineWidth = gl.glGetFloatv(gl.GL_LINE_WIDTH)
+        try:
+            gl.glEnable(gl.GL_DEPTH_TEST)
+            gl.glDepthMask(gl.GL_FALSE)
+            widthRange = gl.glGetFloatv(gl.GL_SMOOTH_LINE_WIDTH_RANGE
+                                       if gl.glIsEnabled(gl.GL_LINE_SMOOTH)
+                                       else gl.GL_ALIASED_LINE_WIDTH_RANGE)
+            gl.glLineWidth(float(np.clip(self.contourWidth, *widthRange)))
+            for mesh, kind, index in contours:
+                isSelected = self.selectedOE > 0 and\
+                    mesh.stencilNum == self.selectedOE
+                if kind == 'surface':
+                    mesh.render_contour(
+                        model*mesh.surface_orientation(index), self.mView,
+                        self.mProj, self.shaderContour, oeIndex=index,
+                        isSelected=isSelected)
+                elif kind == 'geometric':
+                    mesh.render_contour(
+                        model*mesh.transMatrix[0], self.mView, self.mProj,
+                        self.shaderContour, scale=mesh.geometric_source_scale(
+                            self.scaleVec, self.geomSrcParam),
+                        isSelected=isSelected)
+                else:
+                    for arrayDef in mesh.magnet_arrays:
+                        roll = qt.QMatrix4x4()
+                        roll.rotate(arrayDef.get('roll', 0.), 0, 1, 0)
+                        mesh.render_contour(
+                            model*mesh.transMatrix[0]*roll, self.mView,
+                            self.mProj, self.shaderContour,
+                            oeIndex=arrayDef['nsIndex'], isSelected=isSelected)
+        finally:
+            gl.glLineWidth(float(lineWidth))
+            gl.glDepthMask(bool(depthMask))
+            if not depthTest:
+                gl.glDisable(gl.GL_DEPTH_TEST)
+
     def paintGL(self):
         def makeCenterStr(centerList, prec):
             retStr = '('
@@ -2351,6 +2405,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 self.delete_all_oe_buffers(oeid)
 
             gl.glEnable(gl.GL_STENCIL_TEST)
+            visibleContours = []
 
             for oeuuid, mesh3D in self.meshDict.items():
                 item = self.parent.getItem(oeuuid, 'surface')
@@ -2378,6 +2433,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                     self.mProj, int(is2ndXtal),
                                     isSelected=isSelected,
                                     shader=self.shaderMesh)
+                                if self.showContours:
+                                    visibleContours.append((
+                                        mesh3D, 'surface', int(is2ndXtal)))
                             except Exception as e:
                                 print(e)
                 elif is_aperture(oeToPlot):
@@ -2394,6 +2452,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                     mMMLoc, self.mView,
                                     self.mProj, blade, isSelected=isSelected,
                                     shader=self.shaderMesh)
+                                if self.showContours:
+                                    visibleContours.append((
+                                        mesh3D, 'surface', blade))
                             except Exception as e:
                                 print(e)
                 elif is_source(oeToPlot):
@@ -2413,12 +2474,18 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                     shape=self.geomSrcParam,
                                     isSelected=isSelected,
                                     shader=self.shaderGeo)
+                                if self.showContours:
+                                    visibleContours.append((
+                                        mesh3D, 'geometric', 0))
                             else:
                                 mesh3D.render_magnets(
                                     mMMLoc, self.mView, self.mProj,
                                     shape=self.magnetShape,
                                     isSelected=isSelected,
                                     shader=self.shaderMag)
+                                if self.showContours:
+                                    visibleContours.append((
+                                        mesh3D, 'magnet', 0))
                         except Exception as e:
                             print(e)
 
@@ -2450,11 +2517,16 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                     self.mProj, int(is2ndXtal),
                                     isSelected=isSelected,
                                     shader=self.shaderMesh)
+                            if self.showContours:
+                                visibleContours.append((
+                                    mesh3D, 'surface', int(is2ndXtal)))
                         except Exception as e:
                             print(e)
 
             gl.glStencilFunc(gl.GL_ALWAYS, 0, 0xff)
             gl.glDisable(gl.GL_STENCIL_TEST)
+            if visibleContours:
+                self.render_contours(visibleContours, mMMLoc)
 
             if self.pointsDepthTest:
                 gl.glEnable(gl.GL_DEPTH_TEST)

@@ -33,6 +33,56 @@ __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "27 Jan 2026"
 
 
+def contour_segments(paths, closed=False):
+    """Convert physical edge paths to independent GL_LINES segments."""
+    segments = []
+    for path in paths:
+        path = np.asarray(path)
+        if closed and len(path) > 1 and not np.allclose(path[0], path[-1]):
+            path = np.vstack((path, path[0]))
+        if len(path) > 1:
+            segments.append(np.stack((path[:-1], path[1:]), axis=1))
+    return np.concatenate(segments).reshape(-1, 3).astype(np.float32)\
+        if segments else np.empty((0, 3), dtype=np.float32)
+
+
+def mesh_contour_segments(vertices, indices=None, creaseAngle=30.):
+    """Find boundaries and creases, excluding triangle diagonals and seams."""
+    vertices = np.asarray(vertices, dtype=float).reshape(-1, 3)
+    if not len(vertices):
+        return np.empty((0, 3), dtype=np.float32)
+    # Generated face meshes and STL files duplicate vertices at shared edges.
+    extent = np.max(np.ptp(vertices, axis=0))
+    tolerance = max(extent * 1e-7, np.finfo(float).eps)
+    keys = np.rint((vertices - vertices.min(axis=0)) / tolerance).astype(
+        np.int64)
+    _, representatives, welded = np.unique(
+        keys, axis=0, return_index=True, return_inverse=True)
+    triangles = np.arange(len(vertices)) if indices is None else\
+        np.asarray(indices)
+    triangles = triangles.reshape(-1, 3)
+    points = vertices[triangles]
+    normals = np.cross(points[:, 1] - points[:, 0],
+                       points[:, 2] - points[:, 0])
+    lengths = np.linalg.norm(normals, axis=1)
+    edges = {}
+    for triangle, normal, length in zip(welded[triangles], normals, lengths):
+        if length <= tolerance**2 or len(set(triangle)) < 3:
+            continue
+        normal = normal / length
+        for a, b in ((0, 1), (1, 2), (2, 0)):
+            edge = tuple(sorted((triangle[a], triangle[b])))
+            edges.setdefault(edge, []).append(normal)
+    threshold = np.cos(np.radians(creaseAngle))
+    selected = [edge for edge, normals in edges.items()
+                if len(normals) == 1 or any(
+                    abs(np.dot(normals[0], normal)) < threshold
+                    for normal in normals[1:])]
+    return vertices[representatives[np.asarray(selected, dtype=int)]].reshape(
+        -1, 3).astype(np.float32) if selected else\
+        np.empty((0, 3), dtype=np.float32)
+
+
 class Beam3D():
 
     vertex_source = '''
@@ -523,12 +573,13 @@ class OEMesh3D():
     uniform mat4 projection;
     uniform mat4 view;
     uniform vec3 cScale;
-
-    vec3 rPos = position*cScale;
+    uniform float depthBias;
 
     void main()
     {
+        vec3 rPos = position*cScale;
         gl_Position = projection*view*model*vec4(rPos, 1.);
+        gl_Position.z -= depthBias * gl_Position.w;
     }
     '''
 
@@ -720,6 +771,8 @@ class OEMesh3D():
         self.vbo_colors = {}
 
         self.vbo_contour = {}
+        self.contourLengths = {}
+        self.contourVertices = {}
         self._firstPlateEdges = None
         self.trajectory = None
         self.trajectory_vao = None
@@ -1719,6 +1772,15 @@ class OEMesh3D():
                     'shape': oeShape,
                     'edges': plateEdges}
 
+        def surface_contour(surface):
+            grid = surface.reshape(localTiles[1], localTiles[0], 3)
+            if isClosedSurface:
+                return contour_segments([grid[:, 0], grid[:, -1]], closed=True)
+            return contour_segments(get_surface_edges(surface),
+                                    closed=oeShape == 'round')
+
+        contours = [surface_contour(points)]
+
         if oeShape == 'round':
             # Reuse the evaluated outer ring. Re-evaluating it here would
             # pass Cartesian x and y to local_r() as parametric s and phi.
@@ -1831,6 +1893,13 @@ class OEMesh3D():
 
         # Bottom Surface, use is2ndXtal for plates
         if not (isPlate):  # or isScreen or isAperture):
+            if not isScreen:
+                contours.append(surface_contour(bottomPoints))
+                if oeShape != 'round' and not isClosedSurface:
+                    cornerIndices = [0, localTiles[0]-1,
+                                     len(points)-localTiles[0], len(points)-1]
+                    contours.append(contour_segments([
+                        [points[i], bottomPoints[i]] for i in cornerIndices]))
             allSurfaces = np.vstack((allSurfaces, bottomPoints))
             allNormals = np.vstack((nv, bottomNormals))
             allIndices = np.hstack((allIndices, allIndices + indArrOffset))
@@ -1884,12 +1953,15 @@ class OEMesh3D():
                     outwardDirections = [None] if oeShape == 'round' else [
                         (-1, 0, 0), (1, 0, 0),
                         (0, -1, 0), (0, 1, 0)]
-                    for firstEdge, secondEdge, outward in zip(
-                            firstEdges, plateEdges, outwardDirections):
+                    for edgeIndex, (firstEdge, secondEdge, outward) in enumerate(
+                            zip(firstEdges, plateEdges, outwardDirections)):
                         if len(firstEdge) != len(secondEdge):
                             continue
                         sidePoints, sideNormals, sideIndices = \
                             make_side_strip(firstEdge, secondEdge, outward)
+                        if oeShape != 'round' and edgeIndex < 2:
+                            contours.append(contour_segments([
+                                [firstEdge[i], secondEdge[i]] for i in (0, -1)]))
                         allSurfaces = np.vstack((allSurfaces, sidePoints))
                         allNormals = np.vstack((allNormals, sideNormals))
                         allIndices = np.hstack((
@@ -1919,13 +1991,17 @@ class OEMesh3D():
                                             triFB + indArrOffset,
                                             triFB + indArrOffset+len(tF)))
 
+        contourPoints = np.concatenate(contours)
         if isScreen or isAperture:
             if hasattr(self.oe, 'R'):
                 allSurfaces[:, [0, 1, 2]] = allSurfaces[:, [2, 1, 0]]
+                contourPoints = contourPoints[:, [2, 1, 0]]
 #                allNormals[:, [0, 1, 2]] = allNormals[:, [2, 1, 0]]
             else:
                 allSurfaces[:, [1, 2]] = allSurfaces[:, [2, 1]]
+                contourPoints = contourPoints[:, [0, 2, 1]]
 #                allNormals[:, [1, 2]] = allNormals[:, [2 ,1]]
+        self.contourVertices[nsIndex] = contourPoints
         return allSurfaces, allNormals, allIndices
 
     def prepare_surface_mesh(self, nsIndex=0, updateMesh=False,
@@ -1975,6 +2051,7 @@ class OEMesh3D():
 
             self.vao[nsIndex] = vao
             self.ibo[nsIndex] = None  # Check if works with glDrawElements
+            self.prepare_contour(nsIndex, mesh_contour_segments(self.oe.points))
             return
 
         surfmesh = {}
@@ -1991,6 +2068,11 @@ class OEMesh3D():
             allSurfaces, allNormals, allIndices =\
                 self.generate_disk_ring_segment(
                     rmin=rmin, rmax=rmax, thickness=self.apertureThickness)
+            faces = allIndices.reshape(-1, 3)
+            capFaces = faces[np.all(np.abs(allNormals[faces, 2]) > 0.5,
+                                    axis=1)]
+            self.contourVertices[nsIndex] = mesh_contour_segments(
+                allSurfaces, capFaces.ravel())[:, [0, 2, 1]]
             allSurfaces[:, [1, 2]] = allSurfaces[:, [2, 1]]
         elif isinstance(self.oe, rapts.SiemensStar):
             radius = self.oe.rx
@@ -2000,6 +2082,8 @@ class OEMesh3D():
                 self.siemens_star(radius, nSpokes, phi0,
                                   thickness=self.apertureThickness)
             allSurfaces[:, [1, 2]] = allSurfaces[:, [2, 1]]
+            self.contourVertices[nsIndex] = mesh_contour_segments(
+                allSurfaces, allIndices)
         else:
             xLimits, yLimits = self.get_limits(nsIndex, is2ndXtal, autoSize)
             self.xLimits = copy.deepcopy(xLimits)
@@ -2014,15 +2098,6 @@ class OEMesh3D():
 
         self.allSurfaces = allSurfaces
         self.allIndices = allIndices
-
-#        if oeShape == 'round':
-#            surfmesh['contour'] = tB
-#        else:
-#            surfmesh['contour'] = np.vstack((tL, tF, np.flip(tR, axis=0), tB))
-#        surfmesh['lentb'] = len(tB)
-
-#        self.bBox[:, 0] = np.min(surfmesh['contour'], axis=0)
-#        self.bBox[:, 1] = np.max(surfmesh['contour'], axis=0)
 
         if updateMesh:
             oldVBOpoints = self.vbo_vertices[nsIndex] if\
@@ -2081,6 +2156,7 @@ class OEMesh3D():
         vao.release()
 
         self.vao[nsIndex] = vao
+        self.prepare_contour(nsIndex, self.contourVertices.pop(nsIndex))
 
 #        if isScreen:
 #            axisGridArray, gridLabels, precisionLabels =\
@@ -2094,7 +2170,62 @@ class OEMesh3D():
 #        gridvao = qt.QOpenGLVertexArrayObject()
 #        gridvao.create()
 
+    def delete_contour(self, nsIndex):
+        for store in (self.vao_c, self.vbo_contour):
+            resource = store.pop(nsIndex, None)
+            if resource is not None:
+                resource.destroy()
+        self.contourLengths.pop(nsIndex, None)
+
+    def prepare_contour(self, nsIndex, vertices):
+        self.delete_contour(nsIndex)
+        vertices = np.ascontiguousarray(vertices, dtype=np.float32).reshape(-1, 3)
+        self.contourLengths[nsIndex] = len(vertices)
+        if not len(vertices):
+            return
+        vao = qt.QOpenGLVertexArrayObject()
+        vao.create()
+        buffer = create_qt_buffer(vertices)
+        vao.bind()
+        buffer.bind()
+        gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+        gl.glEnableVertexAttribArray(0)
+        buffer.release()
+        vao.release()
+        self.vao_c[nsIndex] = vao
+        self.vbo_contour[nsIndex] = buffer
+
+    def render_contour(self, model, view, projection, shader, oeIndex=0,
+                       scale=None, isSelected=False):
+        vao = self.vao_c.get(oeIndex)
+        if vao is None:
+            return
+        shader.bind()
+        vao.bind()
+        try:
+            shader.setUniformValue("model", model)
+            shader.setUniformValue("view", view)
+            shader.setUniformValue("projection", projection)
+            shader.setUniformValue("cScale", scale or qt.QVector3D(1, 1, 1))
+            if isSelected:
+                color = qt.QVector4D(*self.parent.textColor, 1.)
+            elif is_aperture(self.oe):
+                brightness = 0.5 if self.parent.invertColors else 2.
+                color = qt.QVector4D(ambient['Cu'].toVector3D()*brightness, 1.)
+            else:
+                color = qt.QVector4D(*self.parent.lineColor, 1.)
+            shader.setUniformValue("cColor", color)
+            shader.setUniformValue("depthBias", 1e-5)
+            gl.glDrawArrays(gl.GL_LINES, 0, self.contourLengths[oeIndex])
+        finally:
+            vao.release()
+            shader.release()
+
     def delete_mesh(self):
+        for nsIndex in list(self.vao_c):
+            self.delete_contour(nsIndex)
+        self.contourLengths.clear()
+        self.contourVertices.clear()
         for nsIndex in self.vao.keys():
             vao = self.vao[nsIndex]
 
@@ -2589,6 +2720,7 @@ class OEMesh3D():
         return instancePositions, instanceColors
 
     def _destroy_magnet_buffers(self, nsIndex, destroyBase=True):
+        self.delete_contour(nsIndex)
         if self.vbo_positions.get(nsIndex) is not None:
             self.vbo_positions[nsIndex].destroy()
             self.vbo_positions[nsIndex] = None
@@ -2704,6 +2836,16 @@ class OEMesh3D():
             gl.glVertexAttribDivisor(3, 1)
             self.vbo_colors[nsIndex].release()
             self.vao[nsIndex].release()
+            baseVertices = vertices if useBmArc else\
+                self.cube_vertices.reshape(-1, 6)[:, :3]
+            # Contours are small; expanding instances here keeps their draw
+            # path shared with ordinary surface contours.
+            lines = mesh_contour_segments(baseVertices)
+            if not useBmArc:
+                lines *= np.asarray(self._magnet_dimensions(shape)[:3])
+            contour = (lines[np.newaxis, :, :] +
+                       instancePositions[:, np.newaxis, :]).reshape(-1, 3)
+            self.prepare_contour(nsIndex, contour)
         self.num_poles = num_poles
 
         try:
@@ -2711,6 +2853,16 @@ class OEMesh3D():
         except Exception as e:
             print(e)
             self._destroy_trajectory_buffers()
+
+    def surface_orientation(self, oeIndex):
+        rotOffsets = qt.QMatrix4x4()
+        if is_screen(self.oe):
+            phiOffset = getattr(self.oe, 'phiOffset', 0)
+            thetaOffset = getattr(self.oe, 'thetaOffset', 0)
+            rotOffsets.rotate(np.degrees(phiOffset), 0, 0, 1)
+            rotOffsets.rotate(-np.degrees(thetaOffset), 0, 1, 0)
+        return self.transMatrix[0] if is_aperture(self.oe) else\
+            self.transMatrix[oeIndex]*rotOffsets
 
     def render_surface(self, mMod, mView, mProj, oeIndex=0,
                        isSelected=False, shader=None):
@@ -2733,15 +2885,7 @@ class OEMesh3D():
 #        elif is_aperture(self.oe):
 #            xLimits, yLimits = self.xLimits, self.yLimits
 
-        rotOffsets = qt.QMatrix4x4()
-        if is_screen(self.oe):
-            phiOffset = getattr(self.oe, 'phiOffset', 0)
-            thetaOffset = getattr(self.oe, 'thetaOffset', 0)
-            rotOffsets.rotate(np.degrees(phiOffset), 0, 0, 1)
-            rotOffsets.rotate(-np.degrees(thetaOffset), 0, 1, 0)
-
-        oeOrientation = self.transMatrix[0] if is_aperture(self.oe) else\
-            self.transMatrix[oeIndex]*rotOffsets
+        oeOrientation = self.surface_orientation(oeIndex)
 
         arrLen = self.arrLengths[oeIndex]
 
@@ -3059,6 +3203,7 @@ class OEMesh3D():
 #        self.vbo_normals[nsIndex] = create_qt_buffer(normals.copy())
         self.ibo[nsIndex] = create_qt_buffer(indices, isIndex=True)
         self.arrLengths[nsIndex] = len(indices)
+        self.prepare_contour(nsIndex, mesh_contour_segments(vertices, indices))
 
         vao = qt.QOpenGLVertexArrayObject()
         vao.create()
@@ -3081,6 +3226,15 @@ class OEMesh3D():
         self.vao[nsIndex] = vao
 #        self.ibo[nsIndex] = None
 
+    def geometric_source_scale(self, scale, shape):
+        maxScale = max(
+            shape.get('minSize', 1.),
+            2 * max(np.max(np.abs(np.atleast_1d(value)))
+                    for value in (getattr(self.oe, 'dx', 0),
+                                  getattr(self.oe, 'dy', 0),
+                                  getattr(self.oe, 'dz', 0))))
+        return qt.QVector3D(*(1./scale * maxScale * np.max(scale)).tolist())
+
     def render_geometric_source(self, mMod, mView, mProj, scale,
                                 shape={}, oeIndex=0,
                                 isSelected=False, shader=None):
@@ -3089,15 +3243,7 @@ class OEMesh3D():
         oeOrientation = self.transMatrix[oeIndex]
         arrLen = self.arrLengths[oeIndex]
 
-        dx = getattr(self.oe, 'dx', 0)
-        dy = getattr(self.oe, 'dy', 0)
-        dz = getattr(self.oe, 'dz', 0)
-
-        maxScale = max(
-            shape.get('minSize', 1.),
-            2 * max(np.max(np.abs(np.atleast_1d(value)))
-                    for value in (dx, dy, dz)))
-        compScale = 1./scale * maxScale * np.max(scale)
+        compScale = self.geometric_source_scale(scale, shape)
 
         shader.bind()
         vao.bind()
@@ -3111,7 +3257,8 @@ class OEMesh3D():
         shader.setUniformValue("model", mMod*oeOrientation)
         shader.setUniformValue("view", mView)
         shader.setUniformValue("projection", mProj)
-        shader.setUniformValue("cScale", qt.QVector3D(*compScale.tolist()))
+        shader.setUniformValue("cScale", compScale)
+        shader.setUniformValue("depthBias", 0.)
         shader.setUniformValue("cColor", qt.QVector4D(*faceColor))
         gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
         gl.glDrawElements(gl.GL_TRIANGLES, arrLen,
