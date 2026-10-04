@@ -8,7 +8,7 @@ from ._sets_units import (
 from ._flow_utils import parametrize, format_energy_input
 from .singletons import is_sequence
 
-from .beamline import BeamLine
+from .beamline import BeamLine, _DEBUG_
 
 
 DEFAULT_OUTPUT_POLICY = {
@@ -30,9 +30,18 @@ def propagationProcess(q_in, q_out, with_epics_histograms=False,
         try:
             message = q_in.get_nowait()
 #            print("MH", message)
-            handler.process_message(message)
         except queue.Empty:
             pass
+        else:
+            try:
+                handler.process_message(message)
+            except Exception as e:
+                if _DEBUG_:
+                    raise
+                print("Propagation command failed:", message.get("command"), e)
+                handler.needUpdate = False
+                handler.stop = True
+                q_out.put({"error": str(e)})
 #            time.sleep(0.1)
         if handler.exit:
             break
@@ -44,6 +53,7 @@ def propagationProcess(q_in, q_out, with_epics_histograms=False,
             started = True if handler.startEl is None else False
             flowLen = len(handler.bl.flowU)
             flowCounter = 0
+            propagationFailed = False
 
             for oeid, meth in handler.bl.flowU.items():
                 if not started:  # Skip until the modified element
@@ -59,8 +69,6 @@ def propagationProcess(q_in, q_out, with_epics_histograms=False,
                     oe = oeLine[0]
 
                 for func, fkwargs in meth.items():
-                    method = getattr(oe, func)
-                    call_kwargs = handler.prepare_method_kwargs(fkwargs)
                     if handler.output_policy.get('progress'):
                         q_out.put({
                             "status": 0,
@@ -71,11 +79,16 @@ def propagationProcess(q_in, q_out, with_epics_histograms=False,
                             "finished": False,
                         })
                     try:
+                        method = getattr(oe, func)
+                        call_kwargs = handler.prepare_method_kwargs(fkwargs)
                         method(**call_kwargs)
                     except Exception as e:
-                        raise
-                        print("Error in PropagationProcess\n", e)
-                        continue
+                        if _DEBUG_:
+                            raise
+                        print("Propagation failed:", oe.name, func, e)
+                        q_out.put({"error": f"{oe.name}.{func}: {e}"})
+                        propagationFailed = True
+                        break
                     flowCounter += 1
                     if handler.output_policy.get('progress'):
                         q_out.put({
@@ -147,6 +160,15 @@ def propagationProcess(q_in, q_out, with_epics_histograms=False,
                                     'sender_id': oeid,
                                     'status': 0}
                         q_out.put(msg_hist)
+                if propagationFailed:
+                    break
+
+            if propagationFailed:
+                handler.needUpdate = False
+                handler.startEl = None
+                handler.stop = True
+                continue
+
             handler.bl.forceAlign = False
             q_out.put({"status": 0, "repeat": repeats})
             handler.needUpdate = False
@@ -414,6 +436,7 @@ class MessageHandler:
     def handle_start(self, message):
         print("Starting processing loop.")
         self.stop = False
+        self.startEl = None
         if message.get('run', True):
             self.needUpdate = True
 
@@ -423,6 +446,7 @@ class MessageHandler:
 
     def handle_run_once(self, message):
         print("Starting processing loop.")
+        self.stop = False
         self.needUpdate = True
         startEl = message.get('start_el')
         if startEl is not None:

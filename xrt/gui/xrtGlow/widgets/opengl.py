@@ -620,7 +620,13 @@ class xrtGlWidget(qt.QOpenGLWidget):
         updObj = None
         for argName, argValue in list(kwargs.items()):
             if isinstance(argValue, str):
-                argValue = raycing.parametrize(argValue)
+                try:
+                    argValue = raycing.parametrize(argValue)
+                except Exception as e:
+                    if _DEBUG_:
+                        raise
+                    print("Property parsing failed:", argName, argValue, e)
+                    return
                 kwargs[argName] = argValue
 
             if oeid is None:
@@ -688,14 +694,26 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         argValue = arrayValue
 
             else:
-                refKind = raycing.ref_kind_for_arg(arg0)
-                if refKind is not None:
-                    argValue = raycing.normalize_ref(
-                        argValue, self.beamline, refKind, target='uuid')
-                    kwargs[arg0] = argValue
+                try:
+                    refKind = raycing.ref_kind_for_arg(arg0)
+                    if refKind is not None:
+                        argValue = raycing.normalize_ref(
+                            argValue, self.beamline, refKind, target='uuid')
+                        kwargs[arg0] = argValue
+                except Exception as e:
+                    if _DEBUG_:
+                        raise
+                    print("Property reference failed:", argName, argValue, e)
+                    return
 
             # updating local beamline tree here
-            setattr(updObj, arg0, argValue)
+            try:
+                setattr(updObj, arg0, argValue)
+            except Exception as e:
+                if _DEBUG_:
+                    raise
+                print("Property assignment failed:", argName, argValue, e)
+                return
             if arg0 not in changedArgs:
                 changedArgs.append(arg0)
             initAttr = f'_{arg0}Init'
@@ -1102,6 +1120,16 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
         while not progress_queue.empty():
             msg = progress_queue.get()
+            if 'error' in msg:
+                print("Propagation stopped:", msg['error'])
+                self.loopRunning = False
+                if self.QookSignal is not None:
+                    self.QookSignal.emit((
+                        1., f"Propagation failed: {msg['error']}"))
+                if getattr(self.parent, 'scanRunning', False):
+                    self.parent.scanWaitingPropagation = False
+                    self.parent.scanPaused = True
+                continue
             if 'beam' in msg:
                 for beamKey, beam in msg['beam'].items():
                     beamTag = (msg['sender_id'], beamKey)
@@ -2246,9 +2274,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 retStr += '{0:.{1}f}, '.format(dim, prec)
             return retStr[:-2] + ')'
 
-        self.frameBufferGL = gl.glGetIntegerv(gl.GL_VIEWPORT)
-
-        if True:
+        try:
+            self.frameBufferGL = gl.glGetIntegerv(gl.GL_VIEWPORT)
             gl.glClearColor(*self.bgColor, 1.0)
 
             gl.glClear(gl.GL_COLOR_BUFFER_BIT |
@@ -2876,9 +2903,11 @@ class xrtGlWidget(qt.QOpenGLWidget):
             self.cBox.textShader.release()
             self.cBox.vaoText.release()
 
-#        except Exception as e:  # TODO: properly handle exceptions
-#            raise
-#            pass
+        except Exception as e:
+            if _DEBUG_:
+                raise
+            print("paintGL failed:", e)
+            return
 
         if self.parent is not None:
             self.parent.tryPostPropagationActions()

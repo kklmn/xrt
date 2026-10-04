@@ -2270,10 +2270,16 @@ class XrtQookBase(qt.QMainWindow):
                         self.beamLine.layoutStr,
                         layoutScanDescription)
 
-                with open(self.layoutFileName, 'w',
-                          encoding="utf-8") as json_file:
-                    raycing.json.dump(
-                        self.beamLine.layoutStr, json_file, indent=4)
+                try:
+                    with open(self.layoutFileName, 'w',
+                              encoding="utf-8") as json_file:
+                        raycing.json.dump(
+                            self.beamLine.layoutStr, json_file, indent=4)
+                except Exception as e:
+                    if _DEBUG_:
+                        raise
+                    print("Layout save failed:", self.layoutFileName, e)
+                    return False
                 saveStatus = True
             elif self.layoutFileName.lower().endswith("xml"):
                 self.confText = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
