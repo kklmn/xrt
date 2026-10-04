@@ -17,22 +17,28 @@ angular parameters.
 
 See aslo :ref:`Notes on using xrtGlow <glow_notes>`.
 
-+-------------+-------------+
-|   |glow1|   |   |glow2|   |
-+-------------+-------------+
++-------------+-------------+-------------+
+|   |glow1|   |   |glow2|   |   |glow3|   |
++-------------+-------------+-------------+
 
 .. |glow1| imagezoom:: _images/xrtGlow1.png
-   :alt: &ensp;A view of xrtQook with embedded xrtGlow. Visible is a virtual
-       screen draggable by mouse, a curved mirror surface with a footprint on
-       it and the color (energy) distribution on the virtual screen. The scale
-       along the beamline is compressed by a factor of 100.
+   :alt: &ensp;A 3D view of a von Hamos spectrometer. The scaling on
+       this image is isotropic. The coloring is by energy.
 
 .. |glow2| imagezoom:: _images/xrtGlow2.png
-   :align: right
-   :alt: &ensp; xrtGlow with three double-paraboloid lenses. The scaling on
+   :align: center
+   :alt: &ensp; A 3D view of three double-paraboloid lenses. The scaling on
        this image is isotropic. The source (on the left) is a parallel
        geometric source. The coloring is by axial divergence (red=0), showing
        the effect of refractive focusing.
+
+.. |glow3| imagezoom:: _images/xrtGlow3.png
+   :align: right
+   :alt: &ensp; A 3D view of a beamline in the vicinity of its insertion device.
+       The scaling in this image is anisotropic and strongly compressed along
+       the beamline direction. The yellow lines represent the envelope of
+       electron trajectories, visualizing the effect of the electron-beam
+       emittance.
 
 """
 

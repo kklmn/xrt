@@ -3,11 +3,6 @@ u"""
 xrtQook -- a GUI for creating a beamline
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. imagezoom:: _images/xrtQook.png
-   :align: right
-   :alt: &ensp;A view of xrtQook with an empty beamline tree on the left and a
-       help panel on the right.
-
 The main interface to xrt is through a python script. Many examples of such
 scripts can be found in the supplied folders `examples` and `tests`. The script
 imports the modules of xrt, instantiates beamline parts, such as synchrotron or
@@ -28,9 +23,21 @@ documentation.
 
 See a brief :ref:`tutorial for xrtQook <qook_tutorial>`.
 
-.. raw:: html
++-------------+-------------+
+|   |qook1|   |   |qook2|   |
++-------------+-------------+
 
-    <div class="clearer"> </div>
+.. |qook1| imagezoom:: _images/xrtQook1.png
+   :alt: &ensp;A view of xrtQook with an embedded xrtGlow window. The scale
+       along the beamline is compressed by a factor of 100. The optical element
+       Mirror2 is selected in the beamline tree, which highlights its 3D view in
+       xrtGlow. The same selection also opens the relevant help page in the
+       Live Doc tab, here hidden behing xrtGlow.
+
+.. |qook2| imagezoom:: _images/xrtQook2.png
+   :align: right
+   :alt: &ensp; The Live Doc tab displaying a help entry for the selected
+       optical element Mirror2.
 
 """
 

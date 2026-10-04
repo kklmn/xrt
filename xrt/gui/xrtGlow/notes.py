@@ -5,7 +5,7 @@ u"""
 Notes on using xrtGlow
 ----------------------
 
-.. imagezoom:: _images/xrtGlow1.png
+.. imagezoom:: _images/xrtQook1.png
    :align: center
 
 - Examine a few examples in `.../examples/withRaycing/_QookBeamlines`.
