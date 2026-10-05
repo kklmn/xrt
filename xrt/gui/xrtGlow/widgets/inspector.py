@@ -442,6 +442,7 @@ class InstanceInspector(qt.QDialog):
         toolTip = None
         child0 = qt.QStandardItem(str(paramName))
         child0.setFlags(self.paramFlag)
+        child0.setToolTip(qt.argument_input_tooltip(paramName))
         editorHint = self.getArgumentEditorHint(paramName)
         child1 = qt.QStandardItem()
         if editorHint is not None:
@@ -1064,6 +1065,7 @@ class ConfigurablePlotWidget(qt.QWidget):
         toolTip = None
         child0 = qt.QStandardItem(str(paramName))
         child0.setFlags(self.paramFlag)
+        child0.setToolTip(qt.argument_input_tooltip(paramName))
         child1 = qt.QStandardItem(str(value))
 
         ch1flag = (self.paramFlag if paramName == 'name'

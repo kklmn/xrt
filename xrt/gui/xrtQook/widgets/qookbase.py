@@ -1551,6 +1551,7 @@ class XrtQookBase(qt.QMainWindow):
         toolTip = None
         child0 = qt.QStandardItem(str(paramName))
         child0.setFlags(self.paramFlag)
+        child0.setToolTip(qt.argument_input_tooltip(paramName))
         child1 = qt.QStandardItem()
         if editorHint is not None:
             child0.setData(editorHint, qt.EDITOR_HINT_ROLE)

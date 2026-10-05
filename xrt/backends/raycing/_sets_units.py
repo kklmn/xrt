@@ -203,7 +203,7 @@ argumentInputGroups = {
     'scalar': {
         'amplitude', 'B0', 'B0x', 'B0y', 'betaX', 'betaZ', 'bumpHeight',
         'b', 'bThickness', 'bThicknessLow', 'c', 'cameraAngle',
-        'cameraDistance', 'coordOffset',
+        'cameraDistance', 'coordOffset', 'azimuth', 'height',
         'corrLength', 'cryst2longTransl', 'cryst2perpTransl', 'cX', 'cY',
         'd', 'depth', 'dxFacet', 'dxGap', 'dyFacet', 'dyGap', 'eEpsilonX',
         'eEpsilonZ', 'eEspread', 'eI', 'eN', 'ellipseA', 'ellipseB', 'f',

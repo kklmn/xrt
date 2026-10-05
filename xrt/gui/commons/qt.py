@@ -342,6 +342,14 @@ def _argument_input_types(argName):
     return ('string',)
 
 
+def argument_input_tooltip(argName):
+    """Describe the input group assigned to an argument."""
+    for inputTypes, argNames in argumentInputGroups.items():
+        if str(argName) in argNames:
+            return 'Input: ' + ', '.join(_as_input_types(inputTypes))
+    return ''
+
+
 def _compound_fields(argName):
     fields = compoundArgs.get(argName)
     if fields is None and argName.startswith(('limPhys', 'limOpt')):
