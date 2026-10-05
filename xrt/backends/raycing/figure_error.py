@@ -440,6 +440,7 @@ class FigureErrorImported(FigureErrorBase):
         self.get_angles()
 
     def _init_empty(self):
+        self.surfArrays = {}
         self.x1d = np.array(np.linspace(-1, 1, 5))
         self.y1d = np.array(np.linspace(-1, 1, 5))
         self.nx, self.ny = len(self.x1d), len(self.y1d)

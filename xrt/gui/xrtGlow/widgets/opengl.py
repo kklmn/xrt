@@ -16,7 +16,8 @@ from matplotlib.colors import hsv_to_rgb
 from .._constants import (_DEBUG_, msg_start, msg_stop, msg_exit, MAXRAYS,
                           DEFAULT_SCENE_SETTINGS)
 from .._utils import (generate_hsv_texture, create_qt_buffer, update_qt_buffer,
-                      is_source, is_oe, is_plate, is_aperture, is_screen,
+                      is_source, is_geometric_source, is_oe, is_plate,
+                      is_aperture, is_screen,
                       is_dcm, snsc)
 from ..ogl import CoordinateBox, Beam3D, OEMesh3D
 
@@ -1922,7 +1923,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         else:  # must be the source
             try:
                 mesh3D = self.meshDict.get(oeuuid, OEMesh3D(oeToPlot, self))
-                if isinstance(oeToPlot, raycing.sources.GeometricSource):
+                if is_geometric_source(oeToPlot):
                     mesh3D.prepare_geometric_source(shape=self.geomSrcParam)
                 else:
                     mesh3D.prepare_magnets(shape=self.magnetShape)
@@ -1960,7 +1961,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
             oeuuid == self.virtScreen['uuid'] and self.vScreenManualSize)
         if is_source(oeToPlot):
             try:
-                if isinstance(oeToPlot, raycing.sources.GeometricSource):
+                if is_geometric_source(oeToPlot):
                     self.meshDict[oeuuid].prepare_geometric_source(
                             shape=self.geomSrcParam, updateMesh=True)
                 else:
@@ -2466,8 +2467,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             gl.glStencilFunc(gl.GL_ALWAYS, np.uint8(oeNum),
                                              0xff)
                         try:
-                            if isinstance(oeToPlot,
-                                          raycing.sources.GeometricSource):
+                            if is_geometric_source(oeToPlot):
                                 mesh3D.render_geometric_source(
                                     mMMLoc, self.mView, self.mProj,
                                     scale=self.scaleVec,

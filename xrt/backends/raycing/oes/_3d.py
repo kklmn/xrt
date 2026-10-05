@@ -18,10 +18,10 @@ class MeshOE(OE):
 
     def __init__(self, *args, **kwargs):
         u"""
-        The top surface is identified by selecting triangles whose surface
-        normals have a positive (and typically largest) z-component. The
-        corresponding vertices are extracted and used to reconstruct a
-        continuous surface z = f(x, y).
+        The top surface is the connected, uppermost set of triangles whose
+        unit normals have a significant z-component, regardless of triangle
+        winding. The corresponding vertices are extracted and used to
+        reconstruct a continuous surface z = f(x, y).
 
         Depending on *surfaceHint*, the surface is approximated either by a
         polynomial fit or by a spline-based interpolation. In the spline mode,
@@ -58,6 +58,7 @@ class MeshOE(OE):
         surfaceHint = kwargs.pop('surfaceHint', 'quad')
         super().__init__(*args, **kwargs)
         self.stl_mesh = None
+        self.fileName = None
         self.orientation = orientation
         self.recenter = recenter
         self.surfaceHint = surfaceHint
@@ -70,9 +71,10 @@ class MeshOE(OE):
 
     @orientation.setter
     def orientation(self, orientation):
+        previousValue = getattr(self, '_orientation', None)
         self._orientation = orientation
-        if self.stl_mesh is not None:
-            self.fit_surface()
+        if self.stl_mesh is not None and not self.fit_surface():
+            self._orientation = previousValue
 
     @property
     def recenter(self):
@@ -80,9 +82,10 @@ class MeshOE(OE):
 
     @recenter.setter
     def recenter(self, recenter):
+        previousValue = getattr(self, '_recenter', None)
         self._recenter = recenter
-        if self.stl_mesh is not None:
-            self.fit_surface()
+        if self.stl_mesh is not None and not self.fit_surface():
+            self._recenter = previousValue
 
     @property
     def surfaceHint(self):
@@ -90,9 +93,10 @@ class MeshOE(OE):
 
     @surfaceHint.setter
     def surfaceHint(self, surfaceHint):
+        previousValue = getattr(self, '_surfaceHint', None)
         self._surfaceHint = surfaceHint
-        if self.stl_mesh is not None:
-            self.fit_surface()
+        if self.stl_mesh is not None and not self.fit_surface():
+            self._surfaceHint = previousValue
 
     @property
     def fileName(self):
@@ -103,6 +107,11 @@ class MeshOE(OE):
         if not fileName:
             self._fileName = None
             self.stl_mesh = None
+            self.points = None
+            self.normals = None
+            self.cpoly = None
+            self.z_spline = None
+            self.dcx = self.dcy = self.dcz = 0.
             return
 
         if not isSTLsupported:
@@ -114,10 +123,16 @@ class MeshOE(OE):
             print("STL file does not exist:", fileName)
             return
 
+        previousState = self.__dict__.copy()
         try:
             self.read_file(path)
-            self.fit_surface()
+            if not self.fit_surface():
+                self.__dict__.clear()
+                self.__dict__.update(previousState)
+                return
         except Exception as e:
+            self.__dict__.clear()
+            self.__dict__.update(previousState)
             print("STL file import error:", e)
             return
 
@@ -127,25 +142,46 @@ class MeshOE(OE):
         self.stl_mesh = mesh.Mesh.from_file(filename)
 
     def fit_surface(self):
+        """Refit the mesh safely; return whether the fit succeeded."""
+        if self.stl_mesh is None:
+            return False
+
+        previousState = self.__dict__.copy()
+        try:
+            if self._fit_surface():
+                return True
+        except Exception as e:
+            print("STL surface fit error:", e)
+
+        self.__dict__.clear()
+        self.__dict__.update(previousState)
+        return False
+
+    def _fit_surface(self):
 
         def pkey(p, ndigits=8):
             return tuple(np.round(p, ndigits))
 
-        if self.stl_mesh is None:
-            return
         normals = np.array(self.stl_mesh.normals)
         faces = self.stl_mesh.data
         xrt_ax = {'X': 0, 'Y': 1, 'Z': 2}
-        # TODO: catch exception
         z_ax = xrt_ax[self.orientation[2].upper()]
 
         x_arr = getattr(self.stl_mesh, self.orientation[0].lower())
         y_arr = getattr(self.stl_mesh, self.orientation[1].lower())
         z_arr = getattr(self.stl_mesh, self.orientation[2].lower())
 
-        topSurfIndex = np.where(normals[:, z_ax] > 0.1)[0]
-        # we take z-coord of the last point in triangle. arbitrary choice
-        z_coordinates = np.array(z_arr[topSurfIndex, 2])
+        normalLengths = np.linalg.norm(normals, axis=1)
+        normalZ = np.divide(
+            normals[:, z_ax], normalLengths,
+            out=np.zeros_like(normalLengths), where=normalLengths > 0)
+        topSurfIndex = np.flatnonzero(np.abs(normalZ) > 0.1)
+        if not len(topSurfIndex):
+            print(
+                "STL surface fit error: no non-degenerate surface along the "
+                f"{self.orientation[2]} axis")
+            return False
+        z_coordinates = np.max(z_arr[topSurfIndex], axis=1)
         izmax = topSurfIndex[np.argmax(z_coordinates)]
 
         tri_keys = [[pkey(p) for p in face[1]] for face in faces]
@@ -231,6 +267,7 @@ class MeshOE(OE):
         self.points = np.array(self.stl_mesh.vectors).reshape(-1, 3) -\
             np.array([self.dcx, self.dcy, self.dcz + zs0])
         self.normals = np.repeat(self.stl_mesh.normals, 3, axis=0)
+        return True
 
     def local_z(self, x, y):
         if getattr(self, 'z_spline', None) is not None:

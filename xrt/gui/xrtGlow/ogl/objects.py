@@ -1996,11 +1996,11 @@ class OEMesh3D():
             if hasattr(self.oe, 'R'):
                 allSurfaces[:, [0, 1, 2]] = allSurfaces[:, [2, 1, 0]]
                 contourPoints = contourPoints[:, [2, 1, 0]]
-#                allNormals[:, [0, 1, 2]] = allNormals[:, [2, 1, 0]]
+                allNormals[:, [0, 1, 2]] = allNormals[:, [2, 1, 0]]
             else:
                 allSurfaces[:, [1, 2]] = allSurfaces[:, [2, 1]]
                 contourPoints = contourPoints[:, [0, 2, 1]]
-#                allNormals[:, [1, 2]] = allNormals[:, [2 ,1]]
+                allNormals[:, [1, 2]] = allNormals[:, [2, 1]]
         self.contourVertices[nsIndex] = contourPoints
         return allSurfaces, allNormals, allIndices
 
@@ -2026,8 +2026,11 @@ class OEMesh3D():
             vao.create()
             self.vao[nsIndex] = None  # Will be updated after generation
 
-        if hasattr(self.oe, 'stl_mesh') and hasattr(self.oe, 'points'):
-            self.isStl = True
+        self.isStl = (
+            getattr(self.oe, 'stl_mesh', None) is not None and
+            getattr(self.oe, 'points', None) is not None and
+            getattr(self.oe, 'normals', None) is not None)
+        if self.isStl:
             self.vbo_vertices[nsIndex] = create_qt_buffer(
                     self.oe.points.copy())
             self.vbo_normals[nsIndex] = create_qt_buffer(
@@ -2097,6 +2100,7 @@ class OEMesh3D():
         surfmesh['indices'] = allIndices
 
         self.allSurfaces = allSurfaces
+        self.allNormals = allNormals
         self.allIndices = allIndices
 
         if updateMesh:
@@ -3073,12 +3077,28 @@ class OEMesh3D():
     def export_stl(self, filename):
         if isSTLsupported and hasattr(self, 'allSurfaces'):
             try:
-                triangles = self.allSurfaces[self.allIndices].reshape(-1, 3, 3)
+                triangleIndices = self.allIndices.reshape(-1, 3)
+                triangles = self.allSurfaces[triangleIndices].copy()
+                outwardNormals = self.allNormals[triangleIndices].sum(axis=1)
+                facetNormals = np.cross(
+                    triangles[:, 1] - triangles[:, 0],
+                    triangles[:, 2] - triangles[:, 0])
+                flip = np.einsum(
+                    'ij,ij->i', facetNormals, outwardNormals) < 0
+                triangles[flip] = triangles[flip, ::-1]
+
                 m = mesh.Mesh(np.zeros(triangles.shape[0],
                                        dtype=mesh.Mesh.dtype))
                 m.vectors[:] = triangles
                 m.update_normals()
-                m.save(filename)
+                normalLengths = np.linalg.norm(m.normals, axis=1)
+                if np.any(normalLengths == 0) or not np.all(
+                        np.isfinite(normalLengths)):
+                    print("STL export error: mesh has non-finite or "
+                          "degenerate triangles")
+                    return
+                m.normals[:] /= normalLengths[:, np.newaxis]
+                m.save(filename, update_normals=False)
             except Exception as e:
                 print(e)
 

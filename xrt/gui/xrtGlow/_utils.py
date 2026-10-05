@@ -133,6 +133,10 @@ def is_source(oe):
     return res
 
 
+def is_geometric_source(oe):
+    return isinstance(oe, (rsources.GeometricSource, rsources.BeamFromFile))
+
+
 def snsc(angleDeg, phDeg):
     angleRad = np.radians(angleDeg-phDeg)
     return 0.5*(np.sign(np.cos(angleRad))+np.sign(np.sin(angleRad)))

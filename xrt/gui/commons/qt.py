@@ -912,9 +912,26 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
                 elif what == 'materialsindex':
                     fExts = ["H5", "HDF5", "All"]
                     break
-            btn = QPushButton("Open file...", parent)
-            btn.clicked.connect(partial(self.openDialog, index, fExts, what))
-            return btn
+            editor = QLineEdit(parent)
+            editor.setProperty('fieldName', 'filename')
+            browseAction = editor.addAction(
+                editor.style().standardIcon(QStyle.SP_DialogOpenButton),
+                QLineEdit.TrailingPosition)
+            browseAction.setToolTip("Browse for a file...")
+            browseAction.triggered.connect(
+                partial(self.openDialog, index, fExts, what, editor))
+
+            clearAction = editor.addAction(
+                editor.style().standardIcon(QStyle.SP_DialogCloseButton),
+                QLineEdit.TrailingPosition)
+            clearAction.setToolTip("Clear file (set to None)")
+            clearAction.setEnabled(False)
+            editor.textChanged.connect(
+                lambda text: clearAction.setEnabled(
+                    bool(text.strip()) and text.strip() != 'None'))
+            clearAction.triggered.connect(
+                partial(self.setFileEditorValue, editor, 'None'))
+            return editor
         elif "from source" in argNameL:
             elList = ['None']
             if self.bl is not None:
@@ -1004,7 +1021,10 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
             if editor.validator() is not None and\
                     not editor.hasAcceptableInput():
                 return
-            self._setModelValue(model, index, editor.text())
+            value = editor.text()
+            if editor.property('fieldName') == 'filename' and not value.strip():
+                value = 'None'
+            self._setModelValue(model, index, value)
         elif isinstance(editor, QPushButton):
             pass
         elif editor.property('fieldName') == 'kind':
@@ -1027,10 +1047,16 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
     def updateEditorGeometry(self, editor, option, index):
         editor.setGeometry(option.rect)
 
-    def openDialog(self, index, fileFormats, what):
+    def setFileEditorValue(self, editor, value):
+        editor.setText(value)
+        self.commitData.emit(editor)
+
+    def openDialog(self, index, fileFormats, what, editor=None):
         from ...gui.commons import config
 
-        openDialog = QFileDialog()
+        targetIndex = QPersistentModelIndex(index)
+        dialogParent = editor.window() if editor is not None else self.parent()
+        openDialog = QFileDialog(dialogParent)
         openDialog.setFileMode(QFileDialog.ExistingFile)
         openDialog.setAcceptMode(QFileDialog.AcceptOpen)
         formats = [fmt for fmt in fileFormats if fmt.lower() != 'all']
@@ -1051,10 +1077,14 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
             d = osp.dirname(path)
             openDialog.setDirectory(d)
 
-        if (openDialog.exec_()):
-            openFileName = openDialog.selectedFiles()[0]
+        accepted = openDialog.exec_()
+        selectedFiles = openDialog.selectedFiles() if accepted else []
+        openDialog.deleteLater()
+        if selectedFiles and targetIndex.isValid():
+            openFileName = selectedFiles[0]
             if openFileName:
-                self._setModelValue(index.model(), index, openFileName)
+                self._setModelValue(
+                    targetIndex.model(), QModelIndex(targetIndex), openFileName)
                 config.put(config.configPaths, section, what, openFileName)
                 config.write_configs()
 

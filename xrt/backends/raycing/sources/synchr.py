@@ -687,19 +687,7 @@ class SourceFromField(IntegratedSource):
             if fname:
                 self.customFieldData = self.read_custom_field(fname, readkw)
         else:  # Test with periodic field
-            self.Kx = 0.
-            self.Ky = 1  # 17.274 #1.7
-            self.phase = 0
-            self.L0 = 50  # 100 #10.
-            self.Np = 50  # 70 #30
-            self.quadm = 50
-            self.gIntervals = 2  # *self.Np
-            self.wtGrid = np.linspace(-self.L0*self.Np*0.5,
-                                      self.L0*self.Np*0.5,
-                                      1000*self.Np)  # 1000 points per period
-            self.customFieldData = None
-            Bx, By, Bz = self._magnetic_field_periodic(self.wtGrid)
-            self.customFieldData = np.vstack((self.wtGrid, Bx, By, Bz)).T
+            self._set_periodic_field()
 
         self.needReset = True
 
@@ -724,8 +712,24 @@ class SourceFromField(IntegratedSource):
             if fname:
                 self.customFieldData = self.read_custom_field(fname, kwargs)
         else:
-            self.customFieldData = None
+            self._set_periodic_field()
         self.needReset = True
+
+    def _set_periodic_field(self):
+        self.Kx = 0.
+        self.Ky = 1.
+        self.phase = 0.
+        self.L0 = 50.
+        self.Np = 50
+        self.quadm = 50
+        self.gIntervals = 2
+        self.deviceLength = self.L0*self.Np
+        self.wtGrid = np.linspace(-self.deviceLength*0.5,
+                                  self.deviceLength*0.5,
+                                  1000*self.Np)
+        self.customFieldData = None
+        Bx, By, Bz = self._magnetic_field_periodic(self.wtGrid)
+        self.customFieldData = np.vstack((self.wtGrid, Bx, By, Bz)).T
 
     def prefix_save_name(self):
         return '5-SFF-xrt'

@@ -23,7 +23,8 @@ from .._constants import (
         RENDERING_TEXTEDITS, SOURCE_MAGNET_TEXTEDITS,
         SOURCE_RENDERING_CONTROL_LABELS, SOURCE_RENDERING_TEXTEDITS,
         SCENE_CONTROL_LABELS, SCENE_TEXTEDITS, itemTypes)
-from .._utils import is_source, is_oe, is_aperture, is_screen
+from .._utils import (is_source, is_geometric_source, is_oe, is_aperture,
+                      is_screen)
 from .inspector import InstanceInspector
 from .scan import BaseScan, GlowScanMixin, TimelineFrameListWidget
 from .opengl import xrtGlWidget
@@ -1172,7 +1173,7 @@ class xrtGlow(GlowScanMixin, qt.QWidget):
             renderingLayout.addLayout(teLayout)
 
         oeTileValidator = qt.QIntValidator()
-        oeTileValidator.setRange(1, 200)
+        oeTileValidator.setRange(2, 1000)
         for ia, (axis, defv) in enumerate(zip(
                 ['OE tessellation X', 'OE tessellation Y'],
                 self.customGlWidget.tiles)):
@@ -1187,6 +1188,7 @@ class xrtGlow(GlowScanMixin, qt.QWidget):
             axLabel.setMinimumWidth(100)
             layout.addWidget(axLabel)
             axEdit.setMaximumWidth(48)
+            axEdit.setToolTip("Grid points per axis: 2–1000")
             layout.addWidget(axEdit)
             layout.addStretch()
             renderingLayout.addLayout(layout)
@@ -1247,7 +1249,7 @@ class xrtGlow(GlowScanMixin, qt.QWidget):
         params['shape'] = shape
         glWidget.geomSrcParam = params
         glWidget.queue_mesh_update(
-            predicate=lambda oe: isinstance(oe, rsources.GeometricSource))
+            predicate=is_geometric_source)
         glWidget.glDraw()
 
     def initControlPanels(self):
@@ -2356,7 +2358,7 @@ class xrtGlow(GlowScanMixin, qt.QWidget):
         glw = self.customGlWidget
         menu = qt.QMenu()
         subMenuF = menu.addMenu('File')
-        for actText, actFunc in zip(['Export to image',
+        for actText, actFunc in zip(['Export image to file',
                                      'Copy image to clipboard',
                                      'Save scene properties',
                                      'Load scene properties',
@@ -2366,6 +2368,8 @@ class xrtGlow(GlowScanMixin, qt.QWidget):
                                      self.saveSceneDialog,
                                      self.loadSceneDialog,
                                      self.restoreDefaultSceneProperties]):
+            if actText == 'Save scene properties':
+                subMenuF.addSeparator()
             mAction = qt.QAction(self)
             mAction.setText(actText)
             mAction.triggered.connect(actFunc)
@@ -2469,8 +2473,11 @@ class xrtGlow(GlowScanMixin, qt.QWidget):
                            partial(self.toGlobal, oeuuid))
             menu.addAction('View Properties',
                            partial(self.runElementViewer, oeuuid))
-            menu.addAction('Export OE shape to STL',
-                           partial(self.exportOeShape, oeuuid))
+            if is_oe(oe):
+                subMenuF.addSeparator()
+                subMenuF.addAction(
+                    'Export OE shape to STL',
+                    partial(self.exportOeShape, oeuuid))
         menu.addSeparator()
         menu.exec_(self.customGlWidget.mapToGlobal(position))
 
@@ -2728,8 +2735,7 @@ class xrtGlow(GlowScanMixin, qt.QWidget):
                 self.geometricSourceShape.blockSignals(wasBlocked)
             if self.customGlWidget.geomSrcParam != previousGeomSrcParam:
                 self.customGlWidget.queue_mesh_update(
-                    predicate=lambda oe: isinstance(
-                        oe, rsources.GeometricSource))
+                    predicate=is_geometric_source)
 
         if offsetParams:
             self.customGlWidget.set_view_offsets(**offsetParams, redraw=False)
