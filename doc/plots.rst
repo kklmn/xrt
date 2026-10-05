@@ -1,3 +1,10 @@
+.. autosummary::
+   :signatures: none
+
+   xrt.plotter.XYCPlot
+   xrt.plotter.XYCAxis
+   xrt.plotter.SaveResults
+
 .. _plots:
 
 Customizing your plots
