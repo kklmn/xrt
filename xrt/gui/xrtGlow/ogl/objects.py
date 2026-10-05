@@ -1209,7 +1209,7 @@ class OEMesh3D():
         isScreen = is_screen(self.oe)
         isAperture = is_aperture(self.oe)
         isFZP = isinstance(self.oe, (roes.NormalFZP,
-                                     roes.GeneralFZPin0YZ))
+                                     roes.GeneralFZP))
         if isFZP and abs(np.sin(self.oe.pitch)) > abs(np.cos(self.oe.pitch)):
             yDim = 2
 
