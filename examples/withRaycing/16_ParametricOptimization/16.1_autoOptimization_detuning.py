@@ -25,6 +25,8 @@ import xrt.backends.raycing as raycing
 import xrt.plotter as xrtplot
 import xrt.runner as xrtrun
 
+showIn3D = True
+
 Si111 = rmats.CrystalSi(
     hkl=[1, 1, 1],
     name=r"Si111")
@@ -63,6 +65,7 @@ def build_beamline():
         bragg='10000 eV',
         material=Si111,
         material2=Si111,
+        cryst2pitch=25e-6,
         cryst2perpTransl=6.5023)
 
     beamLine.Aperture = rapts.RectangularAperture(
@@ -106,13 +109,13 @@ def define_plots():
         beam=r"FSMFootprint",
         xaxis=xrtplot.XYCAxis(
             fwhmFormatStr='%.2f',
-            label=r"x", bins=512, ppb=1),
+            label=r"x", bins=128, ppb=2),
         yaxis=xrtplot.XYCAxis(
             fwhmFormatStr='%.2f',
-            label=r"z", bins=512, ppb=1),
+            label=r"z", bins=128, ppb=2),
         caxis=xrtplot.XYCAxis(
             fwhmFormatStr="%.2f",
-            label=r"energy", bins=512, ppb=1,
+            label=r"energy", bins=256, ppb=1,
             unit=r"eV",
             limits=[9995, 10005]),
         aspect=r"auto",
@@ -133,7 +136,7 @@ def propagation_function(dTheta):
     xrtrun.run_ray_tracing(
         plots=plots,
         repeats=10,
-        processes=1,
+        processes=2,
         backend=r"raycing",
         beamLine=beamLine,
         afterScript=closePlots)
@@ -146,6 +149,16 @@ def closePlots():
 
 
 def main():
+    if showIn3D:
+        beamLine = build_beamline()
+        beamLine.Wiggler.nrays = 25_000
+        beamLine.glow(scale=[10**3, 10**3, 10**3],
+                      centerAt="Generic DCM",
+                      sceneSettings={"rotations": [-25, 15],
+                                     "invertColors": True,
+                                     "showContours": True})
+        return
+
     res = optimize.brent(propagation_function,
                          brack=(0, 1e-5, 5e-5),
                          tol=1e-3,
