@@ -192,7 +192,6 @@ class PlotViewer(qt.QDialog):
                  plotId=None):
         super().__init__(parent)
         self.setAttribute(qt.Qt.WA_DeleteOnClose)
-        self.setWindowTitle("Live Plot Builder")
         hiddenProps = {'_object', 'fluxUnit'}
 
         splitter = qt.QSplitter()
@@ -205,9 +204,20 @@ class PlotViewer(qt.QDialog):
             splitter.addWidget(self.dynamicPlot.rWidget)
         layout = qt.QVBoxLayout(self)
         layout.addWidget(splitter)
+        self._update_window_title()
+
+    def _update_window_title(self):
+        name = self.dynamicPlot.dynamicPlot.name
+        title = "Live Plot Builder"
+        if name:
+            title += " - {}".format(name)
+        self.setWindowTitle(title)
 
     def update_plot_param(self, paramTuple):
         self.dynamicPlot.update_plot_param(paramTuple)
+        if (paramTuple[0] == self.dynamicPlot.plotId and
+                paramTuple[2] == 'name'):
+            self._update_window_title()
 
     def update_beam(self, beamTag):
         self.dynamicPlot.update_beam(beamTag)
