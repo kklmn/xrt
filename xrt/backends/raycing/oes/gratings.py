@@ -9,10 +9,10 @@ from .base import OE
 
 
 class NormalFZP(OE):
-    """Implements a circular Fresnel Zone Plate, as it is described in
-    X-Ray Data Booklet, Section 4.4. The zones lie on the same flat plane, they
-    have a zero thickness and have transmittivity zero and one. The optical
-    axis is the local Z axis.
+    """Circular Fresnel Zone Plate placed normally to incoming beam, as
+    described in X-Ray Data Booklet, Section 4.4. The zones lie on the same flat
+    plane, they have a zero thickness and have transmittivity zero and one.
+    The optical axis is the local Z axis.
 
     .. warning::
 
@@ -138,9 +138,10 @@ class NormalFZP(OE):
 
 # class GeneralFZPin0YZ(ToroidMirror):
 # class GeneralFZPin0YZ(EllipticalMirrorParam):
-class GeneralFZPin0YZ(OE):
-    """Implements a general Fresnel Zone Plate, where the zones are determined
-    by two foci and the surface shape of the OE.
+# class GeneralFZPin0YZ(OE):
+class GeneralFZP(OE):  # renamed from GeneralFZPin0YZ
+    """General Fresnel Zone Plate, where the zones are determined by two foci
+    and the surface shape of the OE.
 
     .. warning::
 
@@ -432,7 +433,7 @@ class ProfiledGrating(OE):
 
 
 class BlazedGrating(ProfiledGrating):
-    r"""Implements a grating of triangular shape given by two angles. The front
+    r"""Grating of triangular shape given by two angles. The front
     side of the triangle (the one looking towards the source) is at *blaze*
     angle to the base plane. The back side is at *antiblaze* angle.
 
@@ -627,10 +628,7 @@ class BlazedGrating(ProfiledGrating):
 
 
 class LaminarGrating(ProfiledGrating):
-    """
-    Implements a grating of rectangular profile.
-
-    """
+    """Grating of rectangular profile."""
 
     hiddenParams = ['gratingDensity']
 
@@ -780,10 +778,7 @@ class LaminarGrating(ProfiledGrating):
 
 
 class VLSLaminarGrating(ProfiledGrating):
-    """
-    Implements a grating of rectangular profile with variable period.
-
-    """
+    """Grating of rectangular profile with variable period."""
 
     hiddenParams = ['gratingDensity']
 

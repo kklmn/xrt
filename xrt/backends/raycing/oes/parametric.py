@@ -7,8 +7,8 @@ from .base import OE
 
 
 class EllipticalMirrorParam(OE):
-    """The elliptical mirror is implemented as a parametric surface. The
-    parameterization is the following: *s* - is local coordinate along the
+    """Elliptical mirror as a parametric surface.
+    The parameterization is the following: *s* - is local coordinate along the
     major axis with origin at the ellipse center. *phi* and *r* are local polar
     coordinates in planes normal to the major axis at every point *s*. The
     polar axis is upwards.
@@ -286,8 +286,8 @@ EllipticalMirror = EllipticalMirrorParam
 
 
 class ParabolicalMirrorParam(OE):
-    """The parabolical mirror is implemented as a parametric surface. The
-    parameterization is the following: *s* - is local coordinate along the
+    """Parabolical mirror as a parametric surface.
+    The parameterization is the following: *s* - is local coordinate along the
     paraboloid axis with origin at the focus. *phi* and *r* are local polar
     coordinates in planes normal to the axis at every point *s*. The polar axis
     is upwards.
@@ -537,8 +537,8 @@ ParabolicMirror = ParabolicalMirrorParam
 
 
 class HyperbolicMirrorParam(OE):
-    """The hyperbolic mirror is implemented as a parametric surface. The
-    parameterization is the following: *s* - is local coordinate along the
+    """Hyperbolic mirror as a parametric surface.
+    The parameterization is the following: *s* - is local coordinate along the
     major axis with origin at the hyperbola center. *phi* and *r* are local
     polar coordinates in planes normal to the major axis at every point *s*.
     The polar axis is upwards.
@@ -834,7 +834,7 @@ class SurfaceOfRevolution(OE):
 
 
 class ParaboloidCapillaryMirror(SurfaceOfRevolution):
-    """Paraboloid of revolution a.k.a. Mirror Lens. By default will be oriented
+    """Paraboloid of revolution or `Mirror Lens`. By default will be oriented
     for focusing. Set yaw to 180deg for collimation."""
 
     def __init__(self, *args, **kwargs):
@@ -902,7 +902,7 @@ class ParaboloidCapillaryMirror(SurfaceOfRevolution):
 
 
 class EllipsoidCapillaryMirror(SurfaceOfRevolution):
-    """Ellipsoid of revolution a.k.a. Mirror Lens. Do not forget to set
+    """Ellipsoid of revolution or `Mirror Lens`. Do not forget to set
     reasonable limPhysY."""
 
     def __init__(self, *args, **kwargs):
@@ -1001,7 +1001,7 @@ class EllipsoidCapillaryMirror(SurfaceOfRevolution):
 
 
 class HyperboloidCapillaryMirror(SurfaceOfRevolution):
-    """Hyperboloid of revolution a.k.a. Mirror Lens. Unlike
+    """Hyperboloid of revolution or `Mirror Lens`. Unlike
     EllipsoidCapillaryMirror, reflective is the *outer* surface. Do not
     forget to set reasonable limPhysY."""
 

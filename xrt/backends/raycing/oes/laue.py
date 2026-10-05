@@ -9,7 +9,7 @@ __fdir__ = os.path.dirname(__file__)
 
 
 class LauePlate(OE):
-    """A flat Laue plate. The thickness is defined in its *material* part."""
+    """Flat Laue plate. The thickness is defined in its *material* part."""
 
     def local_n(self, x, y):
         a, b, c = 0, 0, 1

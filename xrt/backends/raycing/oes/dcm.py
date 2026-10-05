@@ -10,7 +10,7 @@ from .base import OE
 
 
 class DCM(OE):
-    """Implements a Double Crystal Monochromator with flat crystals."""
+    """Double Crystal Monochromator with flat crystals."""
 
     hiddenMethods = ['reflect', 'multiple_reflect', 'propagate_wave']
 

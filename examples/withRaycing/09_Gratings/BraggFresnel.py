@@ -35,7 +35,7 @@ def build_beamline(nrays=1e5):
         siCryst.get_Bragg_angle(E0) - siCryst.get_dtheta_symmetric_Bragg(E0)
     # pitch = np.pi/2
     f = 0, p * np.cos(pitch), p * np.sin(pitch)
-    beamLine.fzp = roe.GeneralFZPin0YZ(
+    beamLine.fzp = roe.GeneralFZP(
         beamLine, 'FZP', [0., p, 0.], pitch=pitch,
         material=siCryst, f1='inf', f2=f, E=E0, N=340)
     beamLine.fzp.order = 1

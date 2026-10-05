@@ -145,7 +145,7 @@ rst_epilog = """
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 #extensions = ['sphinx.ext.autodoc', 'sphinx.ext.pngmath']
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.mathjax', 'sphinx_tabs.tabs',
-              'animation']
+              'sphinx.ext.autosummary', 'animation']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

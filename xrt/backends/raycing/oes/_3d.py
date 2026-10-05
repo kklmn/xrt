@@ -14,10 +14,10 @@ except ImportError:
 
 
 class MeshOE(OE):
+    """Optical element defined by an STL mesh."""
+
     def __init__(self, *args, **kwargs):
         u"""
-        Optical element defined by an STL mesh.
-
         The top surface is identified by selecting triangles whose surface
         normals have a positive (and typically largest) z-component. The
         corresponding vertices are extracted and used to reconstruct a

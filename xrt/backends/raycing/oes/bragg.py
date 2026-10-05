@@ -359,7 +359,7 @@ class GeneralBraggToroid(JohannToroid):
 
 
 class DicedJohannToroid(DicedOE, JohannToroid):
-    """A diced version of :class:`JohannToroid`."""
+    """Diced version of :class:`JohannToroid`."""
 
     def __init__(self, *args, **kwargs):
         kwargs = self.pop_kwargs(**kwargs)
@@ -376,7 +376,7 @@ class DicedJohannToroid(DicedOE, JohannToroid):
 
 
 class DicedJohanssonToroid(DicedJohannToroid, JohanssonToroid):
-    """A diced version of :class:`JohanssonToroid`."""
+    """Diced version of :class:`JohanssonToroid`."""
 
     def facet_center_n(self, x, y):
         return JohanssonToroid.local_n(self, x, y)

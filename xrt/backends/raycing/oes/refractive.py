@@ -9,9 +9,8 @@ from .dcm import DCM
 
 
 class Plate(DCM):
-    """Implements a body with two surfaces. It is derived from :class:`DCM`
-    because it also has two interfaces but the parameters referring to the 2nd
-    crystal should be ignored."""
+    """Body with two surfaces. Derived from :class:`DCM` because it also has two
+    interfaces but the parameters referring to the 2nd crystal are ignored."""
 
     hiddenMethods = DCM.hiddenMethods + ['double_reflect']
     hiddenParams = ['order', 'bragg', 'cryst1roll', 'cryst2roll',
@@ -256,7 +255,7 @@ class Plate(DCM):
 
 
 class ParaboloidFlatLens(Plate):
-    """Implements a refractive lens or a stack of lenses (CRL) with one side
+    """Refractive lens or a stack of lenses (CRL) with one side
     as paraboloid and the other one flat."""
 
     hiddenMethods = Plate.hiddenMethods + ['double_refract']
@@ -603,7 +602,7 @@ class ParaboloidFlatLens(Plate):
 
 
 class ParabolicCylinderFlatLens(ParaboloidFlatLens):
-    u"""Implements a refractive lens or a stack of lenses (CRL) with one side
+    u"""Refractive lens or a stack of lenses (CRL) with one side
     as parabolic cylinder and the other one flat. The lenslets focalize in one
     direction and they are flat in their local *x* direction and curved in the
     local *y* direction."""
@@ -671,8 +670,8 @@ class ParabolicCylinderFlatLens(ParaboloidFlatLens):
 
 
 class DoubleParaboloidLens(ParaboloidFlatLens):
-    """Implements a refractive lens or a stack of lenses (CRL) with two equal
-    paraboloids from both sides."""
+    """Refractive lens or a stack of lenses (CRL) with two equal paraboloids
+    from both sides."""
 
     cl_local_z = """
     float local_z(float8 cl_plist, int i, float x, float y)
@@ -706,7 +705,7 @@ class DoubleParaboloidLens(ParaboloidFlatLens):
 
 
 class DoubleParabolicCylinderLens(ParabolicCylinderFlatLens):
-    """Implements a refractive lens or a stack of lenses (CRL) with two equal
+    """Refractive lens or a stack of lenses (CRL) with two equal
     parabolic cylinders from both sides."""
 
     def local_z2(self, x, y):

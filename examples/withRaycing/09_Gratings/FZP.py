@@ -38,7 +38,7 @@ def build_beamline(nrays=1e5):
     # beamLine.fzp = roe.NormalFZP(
     #     beamLine, 'FZP', [0, 10., 0], pitch=np.pi/2, shape='round',
     #     material=mGold, f=2., E=E0, N=50)
-    beamLine.fzp = roe.GeneralFZPin0YZ(
+    beamLine.fzp = roe.GeneralFZP(
         beamLine, 'FZP', [0, 10., 0], pitch=np.pi/2, shape='round',
         material=mGold, f1='inf', f2=(0, 0, 2.), E=E0, N=500, phaseShift=np.pi)
 

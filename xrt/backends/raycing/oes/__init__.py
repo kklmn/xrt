@@ -16,14 +16,58 @@ coordinate system.
 Module :mod:`~xrt.backends.raycing.oes` defines also several other optical
 elements with various geometries.
 
+.. autosummary::
+   :signatures: none
+
+   OE
+   DicedOE
+   JohannCylinder
+   JohanssonCylinder
+   JohannToroid
+   JohanssonToroid
+   GeneralBraggToroid
+   DicedJohannToroid
+   DicedJohanssonToroid
+   LauePlate
+   BentLaueCylinder
+   BentLaue2D
+   GroundBentLaueCylinder
+   BentLaueSphere
+   BentFlatMirror
+   ToroidMirror
+   EllipticalMirrorParam
+   ParabolicalMirrorParam
+   HyperbolicMirrorParam
+   ConicalMirror
+   DCM
+   DCMwithSagittalFocusing
+   Plate
+   ParaboloidFlatLens
+   ParabolicCylinderFlatLens
+   DoubleParaboloidLens
+   DoubleParabolicCylinderLens
+   SurfaceOfRevolution
+   ParaboloidCapillaryMirror
+   EllipsoidCapillaryMirror
+   HyperboloidCapillaryMirror
+   NormalFZP
+   GeneralFZP
+   BlazedGrating
+   LaminarGrating
+   VLSLaminarGrating
+   MeshOE
+
 .. autoclass:: OE()
    :members: __init__, local_z, local_n, local_n_distorted, local_g, reflect,
              multiple_reflect, prepare_wave
+
 .. autoclass:: DicedOE(OE)
    :members: __init__, facet_center_z, facet_center_n, facet_delta_z,
              facet_delta_n
+
 .. autoclass:: JohannCylinder(OE)
    :members: __init__
+
 .. autoclass:: JohanssonCylinder(JohannCylinder)
 .. autoclass:: JohannToroid(OE)
    :members: __init__
@@ -81,7 +125,7 @@ elements with various geometries.
    :members: __init__
 .. autoclass:: NormalFZP(OE)
    :members: __init__, rays_good
-.. autoclass:: GeneralFZPin0YZ(OE)
+.. autoclass:: GeneralFZP(OE)
    :members: __init__
 .. autoclass:: BlazedGrating(OE)
    :members: __init__
@@ -119,7 +163,7 @@ __all__ = ('OE', 'DicedOE', 'JohannCylinder', 'JohanssonCylinder',
            'ParaboloidFlatLens', 'ParabolicCylinderFlatLens',
            'DoubleParaboloidLens', 'DoubleParabolicCylinderLens',
            'SurfaceOfRevolution', 'NormalFZP',
-           'GeneralFZPin0YZ', 'BlazedGrating', 'LaminarGrating',
+           'GeneralFZP', 'BlazedGrating', 'LaminarGrating',
            'VLSLaminarGrating', 'MeshOE')
 import collections
 __allSectioned__ = collections.OrderedDict([
@@ -142,7 +186,7 @@ __allSectioned__ = collections.OrderedDict([
         ('ParaboloidCapillaryMirror', 'EllipsoidCapillaryMirror',
          'HyperboloidCapillaryMirror')),
     ('Gratings and zone plates',
-        ('NormalFZP', 'GeneralFZPin0YZ', 'BlazedGrating', 'LaminarGrating',
+        ('NormalFZP', 'GeneralFZP', 'BlazedGrating', 'LaminarGrating',
          'VLSLaminarGrating'))
     ])
 
@@ -179,7 +223,7 @@ from .refractive import (
     DoubleParabolicCylinderLens)
 
 from .gratings import (
-    NormalFZP, GeneralFZPin0YZ, BlazedGrating, LaminarGrating,
+    NormalFZP, GeneralFZP, BlazedGrating, LaminarGrating,
     VLSLaminarGrating, VLSGrating)
 
 from ._3d import MeshOE
@@ -240,7 +284,7 @@ class MirrorOnTripodWithTwoXStages(OE, rst.Tripod, rst.TwoXStages):
 
 
 class BentFlatMirror(OE):
-    """Implements cylindrical parabolic mirror. Exemplifies inclusion of a new
+    """Cylindrical parabolic mirror. Exemplifies inclusion of a new
     parameter (here, *R*) without the need of explicit repetition of all the
     parameters of the parent class."""
 
@@ -322,7 +366,7 @@ class VCM(SimpleVCM, MirrorOnTripodWithTwoXStages):
 
 
 class ToroidMirror(OE):
-    """Implements toroidal mirror. Exemplifies inclusion of new
+    """Toroidal mirror. Exemplifies inclusion of new
     parameters (here, *R* and *r*) without the need of explicit repetition
     of all the parameters of the parent class."""
 
@@ -661,7 +705,7 @@ class ConicalMirror(OE):
 
 
 class DCMwithSagittalFocusing(DCM):  # composed by Roelof van Silfhout
-    """Creates a DCM with a horizontally focusing 2nd crystal."""
+    """DCM with horizontally focusing 2nd crystal."""
 
     def __init__(self, *args, **kwargs):
         r"""
