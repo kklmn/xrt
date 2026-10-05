@@ -134,7 +134,9 @@ def is_source(oe):
 
 
 def is_geometric_source(oe):
-    return isinstance(oe, (rsources.GeometricSource, rsources.BeamFromFile))
+    return isinstance(oe, (rsources.GeometricSource, rsources.MeshSource,
+                           rsources.CollimatedMeshSource,
+                           rsources.BeamFromFile))
 
 
 def snsc(angleDeg, phDeg):
