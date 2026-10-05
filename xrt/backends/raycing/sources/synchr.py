@@ -643,7 +643,7 @@ class Wiggler(BendingMagnet):
 
 
 class SourceFromField(IntegratedSource):
-    """Undulator sources of xrt calculated from custom magnet fields."""
+    """Undulator source of xrt calculated from custom magnetic field."""
 
     def __init__(self, *args, uniformRayDensity=True, gp=1e-3, **kwargs):
         """

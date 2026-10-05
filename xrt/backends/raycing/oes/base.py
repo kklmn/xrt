@@ -183,29 +183,34 @@ class OE(OEMainMethods):
             surface, e.g. for metalized stripes on a mirror.
 
         *isParametric*: bool
-            If True, the OE is defined by parametric equations rather than by
-            z(*x*, *y*) function. For example, parametric representation is
-            useful for describing closed surfaces, such as capillaries. The
-            user must supply the transformation functions :meth:`param_to_xyz`
-            and :meth:`xyz_to_param` between local (*x*, *y*, *z*) and (*s*,
-            *phi*, *r*) and the parametric surface *local_r* dependent on (*s*,
-            *phi*). The exact meaning of these three new parameters is up to
-            the user because this meaning is self-contained in the above
-            mentioned user-supplied functions. For example, these can be viewed
-            as cylindrical-like coordinates, where *s* is a running coordinate
-            on a 3D axial curve, *phi* and *r* are polar coordinates in planes
-            normal to the axial curve and crossing that curve at point *s*.
-            Class :class:`SurfaceOfRevolution` gives an example of the
-            transformation functions and represents a useful kind of parametric
-            surface.
-            The methods :meth:`local_n` (surface normal) and :meth:`local_g`
-            (grating vector, if used for this OE) return 3D vectors in local
-            xyz space but now the two input coordinate parameters
-            are *s* and *phi*.
+            If True, the OE is defined by parametric equations rather than by a
+            surface function z(*x*, *y*). A parametric representation is
+            particularly useful for describing closed surfaces, such as
+            capillaries. The user must provide the transformation functions
+            :meth:`param_to_xyz()` and :meth:`xyz_to_param()`, which map between
+            the local Cartesian coordinates (*x*, *y*, *z*) and the parametric
+            coordinates (*s*, *phi*, *r*), as well as the surface function
+            local_r(*s*, *phi*). The exact meaning of the parameters
+            (*s*, *phi*, *r*) is defined entirely by these user-supplied
+            functions. For example, they may be interpreted as generalized
+            cylindrical coordinates, where *s* is a longitudinal coordinate
+            along a three-dimensional curve, while *phi* and *r* are polar
+            coordinates in planes normal to the curve and intersecting it at
+            position *s*. The class :class:`SurfaceOfRevolution` provides an
+            example implementation of these transformation functions and
+            represents a useful class of parametric surfaces.
+
+            The methods :meth:`local_n()` (surface normal) and :meth:`local_g()`
+            (grating vector, if applicable) return three-dimensional vectors in
+            the local Cartesian coordinate system. In the parametric case,
+            however, their coordinate arguments are (*s*, *phi*) rather than
+            (*x*, *y*).
+
             The limits [*limPhysX*, *limOptX*] and [*limPhysY*, *limOptY*]
-            still define, correspondingly, the limits in local *x* and *y*.
-            The local beams (footprints) will additionally contain *s*, *phi*
-            and *r* arrays.
+            continue to define the physical and optical boundaries in the local
+            *x* and *y* coordinates, respectively. In addition, local beam
+            footprints contain arrays of the parametric coordinates *s*, *phi*
+            and *r*.
 
         *shape*: str or list of [x, y] pairs
             The shape of OE. Supported: 'rect', 'round' or a list of [x, y]
