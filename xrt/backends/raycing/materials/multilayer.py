@@ -11,7 +11,7 @@ chbar = CHBAR  # left here for copatibility
 
 class Multilayer(object):
     u"""
-    :class:`Multilayer` serves for getting reflectivity of a multilayer. The
+    Interface to reflectivity and transmittivity of a multilayer. The
     multilayer may have variable thicknesses of the two alternating layers as
     functions of local *x* and *y* and/or as a function of the layer number.
     """
@@ -592,7 +592,7 @@ class GradedMultilayer(Multilayer):
 class Coated(Multilayer):
     """
     Derivative class from :class:`Mutilayer` with a single reflective layer on
-    a substrate.
+    top of a substrate.
     """
 
     hiddenParams = {'tLayer', 'tThickness', 'bLayer', 'bThickness', 'power',

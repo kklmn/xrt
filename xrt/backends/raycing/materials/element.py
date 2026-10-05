@@ -104,9 +104,9 @@ def read_atomic_data(elem):
 
 
 class Element(object):
-    """This class serves for accessing the scattering factors f0, f1 and f2 of
-    a chemical element. It can also report other atomic data listed in
-    ``AtomicData.dat`` file adopted from XOP [XOP]_.
+    """Interface to scattering factors f0, f1 and f2 of a chemical element.
+    It can also report other atomic data listed in ``AtomicData.dat`` file
+    adopted from XOP [XOP]_.
     """
 
     def __init__(self, elem=None, table='Chantler'):

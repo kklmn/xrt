@@ -32,7 +32,7 @@ def parse_hkl(s):
 
 
 class Crystal(Material):
-    u"""The parent class for crystals. The descendants must define
+    u"""The base class for crystals; the descendants define a method
     :meth:`get_structure_factor`. :class:`Crystal` gives reflectivity and
     transmittivity of a crystal in Bragg and Laue cases."""
 

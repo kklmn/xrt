@@ -7,6 +7,23 @@ Module :mod:`~xrt.backends.raycing.materials` defines atomic and material
 properties related to x-ray scattering, diffraction and propagation:
 reflectivity, transmittivity, refractive index, absorption coefficient etc.
 
+.. autosummary::
+   :signatures: none
+
+    read_atomic_data
+    Element
+    Material
+    Multilayer
+    Coated
+    Crystal
+    CrystalFcc
+    CrystalDiamond
+    CrystalSi
+    CrystalFromCell
+    Powder
+    MonoCrystal
+    TXMMaterial
+
 .. autofunction:: read_atomic_data
 
 .. autoclass:: Element()

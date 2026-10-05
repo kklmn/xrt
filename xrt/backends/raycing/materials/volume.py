@@ -8,7 +8,7 @@ from .material import Material
 
 class TXMMaterial(Material):
     """
-    A file-backed indexed-volume transmission sample material.
+    Indexed-volume transmission sample material from HDF5 file.
 
     The HDF5 file must use the following layout::
 

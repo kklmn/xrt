@@ -13,9 +13,9 @@ spl_kw = {'kind': 'cubic', 'bounds_error': False, 'fill_value': 'extrapolate'}
 
 class Material(object):
     """
-    :class:`Material` serves for getting reflectivity, transmittivity,
-    refractive index and absorption coefficient of a material specified by its
-    chemical formula and density. See also predefined materials in modules
+    Interface to reflectivity, transmittivity, refractive index and absorption
+    coefficient of a material specified by its chemical formula and density.
+    See also predefined materials in modules
     :mod:`~xrt.backends.raycing.materials.compounds` and
     :mod:`~xrt.backends.raycing.materials.elemental`.
 

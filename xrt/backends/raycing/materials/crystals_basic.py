@@ -8,8 +8,7 @@ from .crystal import Crystal
 
 class CrystalFcc(Crystal):
     r"""
-    A derivative class from :class:`Crystal` that defines the structure factor
-    for an fcc crystal as:
+    FCC crystal. Defines the structure factor as:
 
     .. math::
 
@@ -33,8 +32,7 @@ class CrystalFcc(Crystal):
 
 class CrystalDiamond(CrystalFcc):
     r"""
-    A derivative class from :class:`Crystal` that defines the structure factor
-    for a diamond-like crystal as:
+    Diamond-like crystal. Defines the structure factor as:
 
     .. math::
 
@@ -82,8 +80,7 @@ class CrystalDiamond(CrystalFcc):
 
 class CrystalSi(CrystalDiamond):
     """
-    A derivative class from :class:`CrystalDiamond` that defines the crystal
-    d-spacing as a function of temperature.
+    Si crystal with d-spacing as a function of temperature.
     """
 
     def __init__(self, *args, **kwargs):
@@ -155,10 +152,10 @@ class CrystalSi(CrystalDiamond):
 
 
 class CrystalFromCell(Crystal):
-    """:class:`CrystalFromCell` builds a crystal from cell parameters and
-    atomic positions which can be found e.g. in Crystals.dat of XOP [XOP]_ or
-    xraylib. See also predefined crystals in module
-    :mod:`~xrt.backends.raycing.materials.crystals`.
+    """
+    Crystal from cell parameters and atomic positions. The crystal data can be
+    found e.g. in Crystals.dat of XOP [XOP]_ or xraylib. See also predefined
+    crystals in module :mod:`~xrt.backends.raycing.materials.crystals`.
 
     Examples:
         >>> xtalQu = rm.CrystalFromCell(
@@ -442,11 +439,11 @@ class CrystalFromCell(Crystal):
 
 class Powder(CrystalFromCell):
     u"""
-    A derivative class from :class:`CrystalFromCell` with randomly distributed
-    atomic plane orientations similar to the real polycrystalline powders. The
-    distribution is uniform in the spherical coordinates, so that the angles of
-    longitudinal and transverse deflection (θ and χ) are both functions of
-    uniformly sampled over [0, 1) variables μ and ν: θ = arccos(μ), χ = 2πν.
+    Crystal with randomly distributed atomic plane orientations. Serves as a
+    model to polycrystalline powders. The distribution is uniform in the
+    spherical coordinates, so that the angles of longitudinal and transverse
+    deflection (θ and χ) are both functions of uniformly sampled over [0, 1)
+    variables μ and ν: θ = arccos(μ), χ = 2πν.
 
     The class parameter *hkl* defines the highest reflex, so that
     reflectivities are calculated for all possible combinations of indices
@@ -513,8 +510,7 @@ class CrystalHarmonics(CrystalFromCell):
 
 class MonoCrystal(CrystalFromCell):
     u"""
-    A derivative class from :class:`CrystalFromCell`, used for calculation of
-    the single crystal diffraction patterns (so far cubic symettries only).
+    Calculates single crystal diffraction (so far cubic symettries only).
     Similar to the parent class, parameter *hkl* defines the cut orientation,
     whereas *Nmax* stands for the highest index to consider, i.e. for every ray
     the code would calculate the range of reflexes from [-Nmax, -Nmax, -Nmax]
