@@ -4,7 +4,7 @@ Raycing backend
 .. automodule:: xrt.backends.raycing
 
 .. toctree::
-   :maxdepth: 4
+   :maxdepth: 3
 
    raycing-intro.rst
 
