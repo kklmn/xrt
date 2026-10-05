@@ -510,6 +510,12 @@ class InstanceInspector(qt.QDialog):
         else:
             displayValue = _format_display_value(value)
 
+        if value is not None:
+            unit = {'RsagFit': 'mm', 'RmerFit': 'mm',
+                    'fitRmsError': 'µm'}.get(paramName)
+            if unit is not None:
+                displayValue += ' ' + unit
+
         model = item.model()
         signalsBlocked = model.signalsBlocked() if model is not None else None
         if model is not None:

@@ -787,8 +787,9 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
         elif argNameL == 'coefficientconvention':
             combo.addItems(['normalized', 'direct'])
             return combo
-        elif argNameL == 'surfacehint':
-            combo.addItems(['flat', 'quad', 'spline'])
+        elif argNameL in ('surfacehintx', 'surfacehinty'):
+            combo.addItems(['flat', 'parabolic', 'circular', 'elliptical',
+                            'spline'])
             return combo
         elif 'density' in argName:  # uniformRayDensity would fall under bool
             combo.addItems(['histogram', 'kde'])

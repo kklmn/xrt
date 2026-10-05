@@ -822,6 +822,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
             for argName, argValue in dependentValues.items():
                 self.oePropsUpdated.emit((oeid, argName, argValue))
 
+        for diagName in getattr(updObj, 'fitDiagnostics', ()):
+            self.oePropsUpdated.emit((oeid, diagName,
+                                      getattr(updObj, diagName)))
+
         if updatedArgs and (sender == 'OEE' or dependentValues):
             if 'fileName' in changedArgs and hasattr(
                     updObj, 'materialsIndex'):

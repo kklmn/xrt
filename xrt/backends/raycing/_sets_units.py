@@ -20,6 +20,7 @@ shapeArgSet = {'limPhysX', 'limPhysY', 'limPhysX2', 'limPhysY2',
                'R', 'r', 'Rm', 'Rs', 'p', 'q', 'f1', 'f2', 'pAxis',
                'parabolaAxis', 'shape', 'renderStyle', 'renderSize',
                'n', 'period', 'fileName', 'orientation',
+               'surfaceHintX', 'surfaceHintY',
                'focus', 'zmax', 't', 'nCRL'}  # TODO: sources
 
 derivedArgSet = {'center', 'pitch', 'bragg', 'R', 'r', 'Rm', 'Rs'}
@@ -53,12 +54,14 @@ dependentArgGroups = (
     ('q', 'f2'),
     ('p', 'q'),
     ('cryst2perpTransl', 'fixedOffset', 't'),
+    ('surfaceHintX', 'surfaceHintY'),
     ('focus', 'nCRL', 'material'),
 )
 
 diagnosticArgs = ('gamma', 'E1', 'eSigmaXprime', 'eSigmaZprime',
                   'ellipseA', 'ellipseB', 'hyperbolaA', 'hyperbolaB', 'cff',
-                  'diffractionAngle', 'includedAngle')
+                  'diffractionAngle', 'includedAngle',
+                  'RsagFit', 'RmerFit', 'conicXFit', 'conicYFit', 'fitRmsError')
 
 allUnitsAng = {'rad': 1.,
                'mrad': 1e-3,

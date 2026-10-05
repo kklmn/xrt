@@ -55,7 +55,7 @@ allArguments = ['bl', 'name', 'center', 'bragg', 'pitch', 'roll', 'yaw',
                 'coefficientConvention', 'targetE',
                 'targetOpenCL', 'precisionOpenCL', 'propagationMode',
                 'fileName', 'recenter',
-                'orientation', 'figureError', 'surfaceHint']
+                'orientation', 'figureError', 'surfaceHintX', 'surfaceHintY']
 
 
 def flatten(x):
