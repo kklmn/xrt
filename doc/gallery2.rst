@@ -21,6 +21,7 @@ Gallery of plots and scripts 2. X-ray optics
 
 .. automodule:: examples.withRaycing.10_MultipleReflect
 
-.. include:: ../examples/withRaycing/15_XRD/P02_PD.xml 
-   :start-after: <description>
-   :end-before: </description>
+.. automodule:: examples.withRaycing.15_XRD
+
+.. automodule:: examples.withRaycing.16_ParametricOptimization
+
