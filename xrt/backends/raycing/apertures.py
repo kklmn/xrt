@@ -3,6 +3,21 @@
 Apertures
 ---------
 
+.. autosummary::
+   :signatures: none
+
+    RectangularAperture
+    RoundAperture
+    RectangularBeamStop
+    RoundBeamStop
+    DoubleSlit
+    DoubleBeamStop
+    PolygonalAperture
+    PolygonalBeamStop
+    GridAperture
+    GridBeamStop
+    SiemensStar
+
 Module :mod:`apertures` defines rectangular and round apertures and a set of
 coplanar rectangular apertures. Rectangular apertures may have one or more
 defining edges. For example, a simple obstacle, like a beam stop block would
@@ -91,8 +106,7 @@ allArguments = ('bl', 'name', 'center', 'blades', 'vertices', 'x', 'z',
 
 
 class RectangularAperture(object):
-    """Implements an aperture or an obstacle as a combination of straight
-    edges."""
+    """Aperture as a combination of straight edges."""
 
     @staticmethod
     def get_argument_editor_hint(argName):
@@ -717,7 +731,7 @@ class SetOfRectangularAperturesOnZActuator(RectangularAperture):
 
 
 class RoundAperture(object):
-    """Implements a round aperture meant to represent a pipe or a flange."""
+    """Round aperture meant to represent a pipe or a flange."""
 
     @staticmethod
     def get_argument_editor_hint(argName):
@@ -967,8 +981,7 @@ class RoundAperture(object):
 
 
 class RoundBeamStop(RoundAperture):
-    """Implements a round beamstop. Descends from RoundAperture and has the
-    same parameters.
+    """Round beamstop. Descends from RoundAperture and has the same parameters.
 
     In beam-stop mode the nominal aperture opening is the stopped (solid)
     region, while rays outside it pass through.
@@ -982,8 +995,7 @@ class RoundBeamStop(RoundAperture):
 
 
 class DoubleSlit(RectangularAperture):
-    """Implements an aperture or an obstacle with a combination of horizontal
-    and/or vertical edge(s)."""
+    """Aperture or obstacle as a combination of straight edges."""
 
     def __init__(self, *args, **kwargs):
         """Same parameters as in :class:`RectangularAperture` and additionally
@@ -1094,8 +1106,7 @@ class DoubleBeamStop(DoubleSlit):
 
 
 class PolygonalAperture(object):
-    """Implements an aperture or an obstacle defined as a set of polygon
-    vertices."""
+    """Aperture or obstacle defined as a set of polygon vertices."""
 
     @staticmethod
     def get_argument_editor_hint(argName):
@@ -1400,7 +1411,7 @@ class PolygonalBeamStop(PolygonalAperture):
 
 
 class GridAperture(PolygonalAperture):
-    """Implements a grid of rectangular apertures.
+    """Grid of rectangular apertures.
     See `tests/raycing/test_polygonal_aperture.py`"""
 
     hiddenParams = ['vertices']
@@ -1538,7 +1549,7 @@ class GridBeamStop(GridAperture):
 
 
 class SiemensStar(PolygonalAperture):
-    """Implements a Siemens Star pattern.
+    """Siemens Star aperture.
     See `tests/raycing/test_polygonal_aperture.py`"""
 
     hiddenParams = ['vertices']
