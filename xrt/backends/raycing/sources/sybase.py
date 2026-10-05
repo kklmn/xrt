@@ -27,7 +27,8 @@ else:
 
 
 class SourceBase:
-    """Base class for the Synchrotron Sources. Not to be called explicitly."""
+    """Base class for all synchrotron sources of xrt, not to be called
+    explicitly."""
 
     hiddenParams = {'eN', 'nx', 'nz'}
 
@@ -949,7 +950,7 @@ class SourceBase:
 
 
 class IntegratedSource(SourceBase):
-    """Base class for the Sources with numerically integrated amplitudes:
+    """Base class for sources with numerically integrated amplitudes:
     :class:`SourceFromField` and :class:`Undulator`.
     Not to be called explicitly."""
 

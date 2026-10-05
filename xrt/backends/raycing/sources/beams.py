@@ -46,7 +46,7 @@ class BeamProxy(object):
 
 
 class Beam(object):
-    """Container for the beam arrays.
+    """Container for beam arrays and variables, see `listOfAttrs`.
 
     *x*, *y*, *z*: float
         Starting points of the rays.

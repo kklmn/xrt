@@ -2,6 +2,27 @@
 r"""
 Sources
 -------
+
+.. autosummary::
+   :signatures: none
+
+    Beam
+    GeometricSource
+    MeshSource
+    CollimatedMeshSource
+    GaussianBeam
+    LaguerreGaussianBeam
+    HermiteGaussianBeam
+    UndulatorUrgent
+    WigglerWS
+    BendingMagnetWS
+    SourceBase
+    IntegratedSource
+    Undulator
+    SourceFromField
+    Wiggler
+    BendingMagnet
+
 .. _sampling-strategies:
 
 Sampling strategies
@@ -242,6 +263,13 @@ Grid sampling does not use these beam counters. Its absolute flux and
 power are obtained by directly integrating the intensity map, or the
 intensity map multiplied by photon energy, over the grid.
 
+Beam container
+^^^^^^^^^^^^^^
+
+.. autoattribute:: Beam.listOfAttrs
+
+.. autoclass:: Beam
+   :members: export_beam, concatenate
 
 Geometric sources
 ^^^^^^^^^^^^^^^^^
@@ -255,8 +283,6 @@ The intensity and polarization of each ray are determined via coherency matrix.
 This way is appropriate for incoherent addition of rays, in which the
 components of the coherency matrix of different rays are simply added.
 
-.. autoclass:: Beam
-   :members: export_beam, concatenate
 .. autoclass:: GeometricSource()
    :members: __init__
 .. autoclass:: MeshSource()

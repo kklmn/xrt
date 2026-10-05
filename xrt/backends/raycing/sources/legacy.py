@@ -115,11 +115,13 @@ def read_output(tmpwd, outName, skiprows, usecols, comments, useZip, msg=None):
 
 class UndulatorUrgent(object):
     u"""
-    Undulator source that uses the external code Urgent. It has some drawbacks,
-    as demonstrated in the section :ref:`comparison-synchrotron-sources`, but
-    nonetheless can be used for comparison purposes. If you are going to use
-    it, the code is freely available as part of XOP package.
+    Undulator source that uses the external code `urgent` (legacy source).
+    It has some drawbacks, as demonstrated in the section
+    :ref:`comparison-synchrotron-sources`, but nonetheless can be used for
+    comparison purposes. If you are going to use it, the code is freely
+    available as part of XOP package.
     """
+
     def __init__(
         self, bl=None, name='UrgentU', center=(0, 0, 0), nrays=raycing.nrays,
         period=32., K=2.668, Kx=0., Ky=0., n=12, eE=6., eI=0.1,
@@ -759,11 +761,13 @@ class UndulatorUrgent(object):
 
 class WigglerWS(UndulatorUrgent):
     u"""
-    Wiggler source that uses the external code ws. It has some drawbacks,
-    as demonstrated in the section :ref:`comparison-synchrotron-sources`, but
-    nonetheless can be used for comparison purposes. If you are going to use
-    it, the code is freely available as part of XOP package.
+    Wiggler source that uses the external code `ws` (legacy source).
+    It has some drawbacks, as demonstrated in the section
+    :ref:`comparison-synchrotron-sources`, but nonetheless can be used for
+    comparison purposes. If you are going to use it, the code is freely
+    available as part of XOP package.
     """
+
     def __init__(self, *args, **kwargs):
         u"""Uses WS code. All the parameters are the same as in
         UndulatorUrgent."""
@@ -824,12 +828,13 @@ class WigglerWS(UndulatorUrgent):
 
 class BendingMagnetWS(WigglerWS):
     u"""
-    Bending magnet source that uses the external code ws. It has some
-    drawbacks, as demonstrated in the section
+    Bending magnet source that uses the external code `ws` (legacy source).
+    It has some drawbacks, as demonstrated in the section
     :ref:`comparison-synchrotron-sources`, but nonetheless can be used for
     comparison purposes. If you are going to use it, the code is freely
     available as parts of XOP package.
     """
+
     def __init__(self, *args, **kwargs):
         u"""Uses WS code.
 

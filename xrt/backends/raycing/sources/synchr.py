@@ -72,8 +72,8 @@ def _build_undulator_trajectory(grid, period, Kx, Ky, phase, gamma,
 
 class BendingMagnet(SourceBase):
     u"""
-    Bending magnet source. The computation is reasonably fast and thus a GPU
-    is not required and is not implemented.
+    Bending magnet source of xrt. The computation is reasonably fast and thus
+    a GPU is not required and is not implemented.
     """
 
     def __init__(self, *args, **kwargs):
@@ -523,7 +523,7 @@ class BendingMagnet(SourceBase):
 
 class Wiggler(BendingMagnet):
     u"""
-    Wiggler source. The computation is reasonably fast and thus a GPU
+    Wiggler source of xrt. The computation is reasonably fast and thus a GPU
     is not required and is not implemented.
     """
 
@@ -643,7 +643,7 @@ class Wiggler(BendingMagnet):
 
 
 class SourceFromField(IntegratedSource):
-    """Dedicated class for the sources based on a custom field table."""
+    """Undulator sources of xrt calculated from custom magnet fields."""
 
     def __init__(self, *args, uniformRayDensity=True, gp=1e-3, **kwargs):
         """
@@ -1386,8 +1386,8 @@ class SourceFromField(IntegratedSource):
 
 class Undulator(IntegratedSource):
     u"""
-    Undulator source. The computation is volumnous and thus a decent GPU is
-    highly recommended.
+    Undulator source of xrt. The computation is volumnous and thus a decent GPU
+    is highly recommended.
     """
 
     def __init__(self, *args, **kwargs):

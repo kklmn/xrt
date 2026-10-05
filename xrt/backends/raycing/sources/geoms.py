@@ -191,8 +191,8 @@ def make_flux_normalization(tFlux, beam):
 
 
 class GeometricSource(object):
-    """Implements a geometric source - a source with the ray origin,
-    divergence and energy sampled with the given distribution laws."""
+    """Geometric source - a source with the ray origin, divergence and energy
+    sampled with given distribution laws."""
 
     def __init__(
         self, bl=None, name='', center=(0, 0, 0), nrays=raycing.nrays,
@@ -563,7 +563,7 @@ class GeometricSource(object):
 
 
 class GaussianBeam(GeometricSource):
-    r"""Implements a Gaussian beam https://en.wikipedia.org/wiki/Gaussian_beam.
+    r"""Gaussian beam https://en.wikipedia.org/wiki/Gaussian_beam.
 
     .. warning::
         Without a prepared wave it generates geometric rays, which is
@@ -783,8 +783,7 @@ class GaussianBeam(GeometricSource):
 
 
 class LaguerreGaussianBeam(GaussianBeam):
-    r"""Implements Laguerre-Gaussian beam
-    https://en.wikipedia.org/wiki/Gaussian_beam.
+    r"""Laguerre-Gaussian beam https://en.wikipedia.org/wiki/Gaussian_beam.
     It must be used for an already available set of 3D points which are
     obtained by :meth:`prepare_wave` of a slit, oe or screen. See a usage
     example in ``\tests\raycing\laguerre_hermite_gaussian_beam.py``."""
@@ -805,8 +804,7 @@ class LaguerreGaussianBeam(GaussianBeam):
 
 
 class HermiteGaussianBeam(GaussianBeam):
-    r"""Implements Hermite-Gaussian beam
-    https://en.wikipedia.org/wiki/Gaussian_beam.
+    r"""Hermite-Gaussian beam https://en.wikipedia.org/wiki/Gaussian_beam.
     It must be used for an already available set of 3D points which are
     obtained by :meth:`prepare_wave` of a slit, oe or screen. See a usage
     example in ``\tests\raycing\laguerre_hermite_gaussian_beam.py``."""
@@ -825,8 +823,8 @@ class HermiteGaussianBeam(GaussianBeam):
 
 
 class MeshSource(object):
-    """Implements a point source representing a rectangular angular mesh of
-    rays. Primarily, it is meant for internal usage for matching the maximum
+    """Point source of a rectangular angular mesh of divergent rays.
+    Primarily, it is meant for internal usage for matching the maximum
     divergence to the optical sizes of optical elements."""
 
     def __init__(
@@ -1099,9 +1097,7 @@ class NESWSource(MeshSource):
 
 
 class CollimatedMeshSource(object):
-    """Implements a source representing a mesh of collimated rays. Is similar
-    to :class:`MeshSource`.
-    """
+    """Mesh of collimated rays, similarly to :class:`MeshSource`."""
 
     def __init__(
             self, bl=None, name='', center=(0, 0, 0),
