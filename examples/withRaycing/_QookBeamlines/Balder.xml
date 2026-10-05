@@ -29,8 +29,8 @@
 	<Materials type="prop">
 		<C type="value">
 			<properties type="prop">
-				<elements type="param">['C']</elements>
-				<quantities type="param">[1.0]</quantities>
+				<elements type="param">[C]</elements>
+				<quantities type="param">[1]</quantities>
 				<kind type="param">plate</kind>
 				<rho type="param">3.52</rho>
 				<t type="param">None</t>
@@ -44,8 +44,8 @@
 		</C>
 		<stripeSi type="value">
 			<properties type="prop">
-				<elements type="param">['Si']</elements>
-				<quantities type="param">[1.0]</quantities>
+				<elements type="param">[Si]</elements>
+				<quantities type="param">[1]</quantities>
 				<kind type="param">mirror</kind>
 				<rho type="param">2.33</rho>
 				<t type="param">None</t>
@@ -59,16 +59,16 @@
 		</stripeSi>
 		<Si type="value">
 			<properties type="prop">
-				<tK type="param">102.14999999999998</tK>
-				<a type="param">5.429401790029894</a>
+				<tK type="param">102.15</tK>
+				<a type="param">5.4294018</a>
 				<hkl type="param">[1, 1, 1]</hkl>
-				<d type="param">3.1346665850123956</d>
-				<V type="param">160.05009834580392</V>
-				<elements type="param">['Si']</elements>
-				<quantities type="param">[1.0]</quantities>
+				<d type="param">3.1346666</d>
+				<V type="param">160.0501</V>
+				<elements type="param">[Si]</elements>
+				<quantities type="param">[1]</quantities>
 				<rho type="param">0</rho>
 				<t type="param">None</t>
-				<factDW type="param">1.0</factDW>
+				<factDW type="param">1</factDW>
 				<geom type="param">Bragg reflected</geom>
 				<table type="param">Chantler total</table>
 				<name type="param">Si</name>
@@ -84,16 +84,16 @@
 		</Si>
 		<Si_2 type="value">
 			<properties type="prop">
-				<tK type="param">133.14999999999998</tK>
-				<a type="param">5.429385154169608</a>
+				<tK type="param">133.15</tK>
+				<a type="param">5.4293852</a>
 				<hkl type="param">[1, 1, 1]</hkl>
-				<d type="param">3.1346569802939808</d>
-				<V type="param">160.04862715449056</V>
-				<elements type="param">['Si']</elements>
-				<quantities type="param">[1.0]</quantities>
+				<d type="param">3.134657</d>
+				<V type="param">160.04863</V>
+				<elements type="param">[Si]</elements>
+				<quantities type="param">[1]</quantities>
 				<rho type="param">0</rho>
 				<t type="param">None</t>
-				<factDW type="param">1.0</factDW>
+				<factDW type="param">1</factDW>
 				<geom type="param">Bragg reflected</geom>
 				<table type="param">Chantler total</table>
 				<name type="param">Si_2</name>
@@ -109,7 +109,7 @@
 		</Si_2>
 		<stripeSiO2 type="value">
 			<properties type="prop">
-				<elements type="param">['Si', 'O']</elements>
+				<elements type="param">[Si, O]</elements>
 				<quantities type="param">[1, 2]</quantities>
 				<kind type="param">mirror</kind>
 				<rho type="param">2.2</rho>
@@ -125,36 +125,38 @@
 	</Materials>
 	<beamLine type="value">
 		<properties type="prop">
-			<azimuth type="param">0.0</azimuth>
-			<height type="param">0.0</height>
+			<azimuth type="param">0</azimuth>
+			<height type="param">0</height>
 			<alignE type="param">auto</alignE>
 			<fileName type="param">None</fileName>
 			<name type="param">beamLine</name>
 			<description type="param">None</description>
+			<serializationRays type="param">5000</serializationRays>
 		</properties>
 		<_object type="param">xrt.backends.raycing.BeamLine</_object>
 		<SoleilW50 type="value">
 			<properties type="prop">
 				<bl type="param">beamLine</bl>
 				<name type="param">SoleilW50</name>
-				<center type="param">[0.0, 0.0, 0.0]</center>
+				<center type="param">[0, 0, 0]</center>
 				<pitch type="param">0</pitch>
 				<yaw type="param">0</yaw>
 				<nrays type="param">100000</nrays>
-				<eE type="param">3.0</eE>
+				<eE type="param">3</eE>
 				<eI type="param">0.5</eI>
-				<eEspread type="param">0.0</eEspread>
+				<eEspread type="param">0</eEspread>
 				<eSigmaX type="param">48.66</eSigmaX>
 				<eSigmaZ type="param">6.197</eSigmaZ>
 				<eEpsilonX type="param">0.263</eEpsilonX>
 				<eEpsilonZ type="param">0.008</eEpsilonZ>
-				<betaX type="param">9.003025095057032</betaX>
-				<betaZ type="param">4.800351125000001</betaZ>
+				<betaX type="param">9.0030251</betaX>
+				<betaZ type="param">4.8003511</betaZ>
 				<xPrimeMax type="param">0.22</xPrimeMax>
-				<zPrimeMax type="param">0.06000000000000001</zPrimeMax>
+				<zPrimeMax type="param">0.06</zPrimeMax>
 				<distE type="param">eV</distE>
-				<eMin type="param">9999.0</eMin>
+				<eMin type="param">9999</eMin>
 				<eMax type="param">10002.5</eMax>
+				<B0 type="param">1.8090904</B0>
 				<K type="param">8.446</K>
 				<period type="param">50</period>
 				<n type="param">39</n>
@@ -165,7 +167,6 @@
 			<_object type="param">xrt.backends.raycing.sources.synchr.Wiggler</_object>
 			<shine type="prop">
 				<parameters type="prop">
-					<toGlobal type="param">True</toGlobal>
 					<withAmplitudes type="param">True</withAmplitudes>
 					<fixedEnergy type="param">None</fixedEnergy>
 					<accuBeam type="param">None</accuBeam>
@@ -180,14 +181,14 @@
 			<properties type="prop">
 				<bl type="param">beamLine</bl>
 				<name type="param">FSM0</name>
-				<center type="param">[0.0, 15000.0, 0.0]</center>
-				<x type="param">[1.0, -0.0, 0.0]</x>
-				<z type="param">[0.0, 0.0, 1.0]</z>
+				<center type="param">[0, 15000, 0]</center>
+				<x type="param">[1, -0, 0]</x>
+				<z type="param">[0, 0, 1]</z>
 				<compressX type="param">None</compressX>
 				<compressZ type="param">None</compressZ>
-				<limPhysX type="param">[0.0, 0.0]</limPhysX>
-				<limPhysY type="param">[0.0, 0.0]</limPhysY>
-				<cLimits type="param">[0.0, 0.0]</cLimits>
+				<limPhysX type="param">[0, 0]</limPhysX>
+				<limPhysY type="param">[0, 0]</limPhysY>
+				<cLimits type="param">[0, 0]</cLimits>
 				<histShape type="param">[256, 256]</histShape>
 			</properties>
 			<_object type="param">xrt.backends.raycing.screens.Screen</_object>
@@ -207,18 +208,18 @@
 			<properties type="prop">
 				<bl type="param">beamLine</bl>
 				<name type="param">FEFixedMask</name>
-				<center type="param">[0.0, 15750.0, 0.0]</center>
+				<center type="param">[0, 15750, 0]</center>
 				<blades type="param">{'left': -3.15, 'right': 3.15, 'bottom': -0.7875000000000001, 'top': 0.7875000000000001}</blades>
-				<x type="param">[1.0, -0.0, 0.0]</x>
-				<z type="param">[0.0, 0.0, 1.0]</z>
+				<x type="param">[1, -0, 0]</x>
+				<z type="param">[0, 0, 1]</z>
 				<alarmLevel type="param">None</alarmLevel>
 				<renderStyle type="param">mask</renderStyle>
+				<renderSize type="param">{'slitThicknessFraction': None, 'apertureBladeWidth': None, 'apertureDefaultSpan': None, 'apertureThickness': None}</renderSize>
 			</properties>
 			<_object type="param">xrt.backends.raycing.apertures.RectangularAperture</_object>
 			<propagate type="prop">
 				<parameters type="prop">
 					<beam type="param">SoleilW50_global</beam>
-					<needNewGlobal type="param">False</needNewGlobal>
 				</parameters>
 				<_object type="param">xrt.backends.raycing.apertures.RectangularAperture.propagate</_object>
 				<output type="prop">
@@ -230,14 +231,14 @@
 			<properties type="prop">
 				<bl type="param">beamLine</bl>
 				<name type="param">FSM_FE</name>
-				<center type="param">[0.0, 16000.0, 0.0]</center>
-				<x type="param">[1.0, -0.0, 0.0]</x>
-				<z type="param">[0.0, 0.0, 1.0]</z>
+				<center type="param">[0, 16000, 0]</center>
+				<x type="param">[1, -0, 0]</x>
+				<z type="param">[0, 0, 1]</z>
 				<compressX type="param">None</compressX>
 				<compressZ type="param">None</compressZ>
-				<limPhysX type="param">[0.0, 0.0]</limPhysX>
-				<limPhysY type="param">[0.0, 0.0]</limPhysY>
-				<cLimits type="param">[0.0, 0.0]</cLimits>
+				<limPhysX type="param">[0, 0]</limPhysX>
+				<limPhysY type="param">[0, 0]</limPhysY>
+				<cLimits type="param">[0, 0]</cLimits>
 				<histShape type="param">[256, 256]</histShape>
 			</properties>
 			<_object type="param">xrt.backends.raycing.screens.Screen</_object>
@@ -259,8 +260,8 @@
 				<wedgeAngle type="param">0</wedgeAngle>
 				<bl type="param">beamLine</bl>
 				<name type="param">Filter1</name>
-				<center type="param">[0.0, 23620.0, 0.0]</center>
-				<pitch type="param">1.5707963267948966</pitch>
+				<center type="param">[0, 23620, 0]</center>
+				<pitch type="param">1.5707963</pitch>
 				<roll type="param">0</roll>
 				<yaw type="param">0</yaw>
 				<positionRoll type="param">0</positionRoll>
@@ -269,13 +270,13 @@
 				<extraRoll type="param">0</extraRoll>
 				<extraYaw type="param">0</extraYaw>
 				<extraRotationSequence type="param">RzRyRx</extraRotationSequence>
-				<alarmLevel type="param">0.0</alarmLevel>
+				<alarmLevel type="param">0</alarmLevel>
 				<material type="param">C</material>
 				<figureError type="param">None</figureError>
 				<alpha type="param">None</alpha>
-				<limPhysX type="param">[-9.0, 9.0]</limPhysX>
+				<limPhysX type="param">[-9, 9]</limPhysX>
 				<limOptX type="param">None</limOptX>
-				<limPhysY type="param">[-4.0, 4.0]</limPhysY>
+				<limPhysY type="param">[-4, 4]</limPhysY>
 				<limOptY type="param">None</limOptY>
 				<isParametric type="param">False</isParametric>
 				<shape type="param">rect</shape>
@@ -288,8 +289,6 @@
 			<double_refract type="prop">
 				<parameters type="prop">
 					<beam type="param">SoleilW50_global</beam>
-					<needLocal type="param">True</needLocal>
-					<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
 				</parameters>
 				<_object type="param">xrt.backends.raycing.oes.refractive.Plate.double_refract</_object>
 				<output type="prop">
@@ -303,7 +302,7 @@
 			<properties type="prop">
 				<bl type="param">beamLine</bl>
 				<name type="param">VCM</name>
-				<center type="param">[0.0, 25290.0, 0.0]</center>
+				<center type="param">[0, 25290, 0]</center>
 				<pitch type="param">0.0022</pitch>
 				<roll type="param">0</roll>
 				<yaw type="param">0</yaw>
@@ -313,20 +312,20 @@
 				<extraYaw type="param">0</extraYaw>
 				<rotationSequence type="param">RzRyRx</rotationSequence>
 				<extraRotationSequence type="param">RzRyRx</extraRotationSequence>
-				<surface type="param">['Si']</surface>
+				<surface type="param">[Si]</surface>
 				<material type="param">stripeSi</material>
 				<alpha type="param">None</alpha>
-				<limPhysX type="param">[-15.0, 15.0]</limPhysX>
-				<limOptX type="param">[-6.0, 6.0]</limOptX>
-				<limPhysY type="param">[-680.0, 680.0]</limPhysY>
-				<limOptY type="param">[-670.0, 670.0]</limOptY>
+				<limPhysX type="param">[-15, 15]</limPhysX>
+				<limOptX type="param">[-6, 6]</limOptX>
+				<limPhysY type="param">[-680, 680]</limPhysY>
+				<limOptY type="param">[-670, 670]</limOptY>
 				<isParametric type="param">False</isParametric>
 				<shape type="param">rect</shape>
 				<gratingDensity type="param">None</gratingDensity>
 				<order type="param">1</order>
 				<shouldCheckCenter type="param">False</shouldCheckCenter>
-				<R type="param">22990927.63691956</R>
-				<alarmLevel type="param">0.0</alarmLevel>
+				<R type="param">22990928</R>
+				<alarmLevel type="param">0</alarmLevel>
 				<targetOpenCL type="param">None</targetOpenCL>
 				<precisionOpenCL type="param">float32</precisionOpenCL>
 				<figureError type="param">None</figureError>
@@ -335,9 +334,7 @@
 			<reflect type="prop">
 				<parameters type="prop">
 					<beam type="param">Filter1_global</beam>
-					<needLocal type="param">True</needLocal>
 					<noIntersectionSearch type="param">False</noIntersectionSearch>
-					<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
 				</parameters>
 				<_object type="param">xrt.backends.raycing.oes.BentFlatMirror.reflect</_object>
 				<output type="prop">
@@ -350,14 +347,14 @@
 			<properties type="prop">
 				<bl type="param">beamLine</bl>
 				<name type="param">FSM_VCM</name>
-				<center type="param">[0.0, 26300.0, 0.0]</center>
-				<x type="param">[1.0, -0.0, 0.0]</x>
-				<z type="param">[0.0, 0.0, 1.0]</z>
+				<center type="param">[0, 26300, 0]</center>
+				<x type="param">[1, -0, 0]</x>
+				<z type="param">[0, 0, 1]</z>
 				<compressX type="param">None</compressX>
 				<compressZ type="param">None</compressZ>
-				<limPhysX type="param">[0.0, 0.0]</limPhysX>
-				<limPhysY type="param">[0.0, 0.0]</limPhysY>
-				<cLimits type="param">[0.0, 0.0]</cLimits>
+				<limPhysX type="param">[0, 0]</limPhysX>
+				<limPhysY type="param">[0, 0]</limPhysY>
+				<cLimits type="param">[0, 0]</cLimits>
 				<histShape type="param">[256, 256]</histShape>
 			</properties>
 			<_object type="param">xrt.backends.raycing.screens.Screen</_object>
@@ -376,22 +373,22 @@
 		<DCM type="value">
 			<properties type="prop">
 				<braggOffset type="param">0</braggOffset>
-				<bragg type="param">0.20350054873088813</bragg>
+				<bragg type="param">0.20350055</bragg>
 				<cryst1roll type="param">0</cryst1roll>
 				<cryst2roll type="param">0</cryst2roll>
 				<cryst2pitch type="param">0</cryst2pitch>
 				<cryst2finePitch type="param">0</cryst2finePitch>
-				<cryst2perpTransl type="param">9.973635149665128</cryst2perpTransl>
+				<cryst2perpTransl type="param">9.9736351</cryst2perpTransl>
 				<cryst2longTransl type="param">65</cryst2longTransl>
-				<limPhysX2 type="param">[-10.0, 10.0]</limPhysX2>
-				<limPhysY2 type="param">[-90.0, 90.0]</limPhysY2>
+				<limPhysX2 type="param">[-10, 10]</limPhysX2>
+				<limPhysY2 type="param">[-90, 90]</limPhysY2>
 				<limOptX2 type="param">None</limOptX2>
 				<limOptY2 type="param">None</limOptY2>
 				<material2 type="param">Si_2</material2>
 				<fixedOffset type="param">None</fixedOffset>
 				<bl type="param">beamLine</bl>
 				<name type="param">DCM</name>
-				<center type="param">[0.0, 27060.0, 7.788050258949205]</center>
+				<center type="param">[0, 27060, 7.7880503]</center>
 				<pitch type="param">0</pitch>
 				<roll type="param">0</roll>
 				<yaw type="param">0</yaw>
@@ -401,14 +398,14 @@
 				<extraRoll type="param">0</extraRoll>
 				<extraYaw type="param">0</extraYaw>
 				<extraRotationSequence type="param">RzRyRx</extraRotationSequence>
-				<alarmLevel type="param">0.0</alarmLevel>
-				<surface type="param">['Si111']</surface>
+				<alarmLevel type="param">0</alarmLevel>
+				<surface type="param">[Si111]</surface>
 				<material type="param">Si</material>
 				<figureError type="param">None</figureError>
-				<alpha type="param">0.0</alpha>
-				<limPhysX type="param">[-10.0, 10.0]</limPhysX>
+				<alpha type="param">0</alpha>
+				<limPhysX type="param">[-10, 10]</limPhysX>
 				<limOptX type="param">None</limOptX>
-				<limPhysY type="param">[-30.0, 30.0]</limPhysY>
+				<limPhysY type="param">[-30, 30]</limPhysY>
 				<limOptY type="param">None</limOptY>
 				<isParametric type="param">False</isParametric>
 				<shape type="param">rect</shape>
@@ -422,10 +419,8 @@
 			<double_reflect type="prop">
 				<parameters type="prop">
 					<beam type="param">VCM_global</beam>
-					<needLocal type="param">True</needLocal>
 					<fromVacuum1 type="param">True</fromVacuum1>
 					<fromVacuum2 type="param">True</fromVacuum2>
-					<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
 				</parameters>
 				<_object type="param">xrt.backends.raycing.oes.dcm.DCM.double_reflect</_object>
 				<output type="prop">
@@ -439,18 +434,18 @@
 			<properties type="prop">
 				<bl type="param">beamLine</bl>
 				<name type="param">BSBlock</name>
-				<center type="param">[0.0, 29100.0, 0.0]</center>
+				<center type="param">[0, 29100, 0]</center>
 				<blades type="param">{'bottom': 22}</blades>
-				<x type="param">[1.0, -0.0, 0.0]</x>
-				<z type="param">[0.0, 0.0, 1.0]</z>
-				<alarmLevel type="param">0.0</alarmLevel>
+				<x type="param">[1, -0, 0]</x>
+				<z type="param">[0, 0, 1]</z>
+				<alarmLevel type="param">0</alarmLevel>
 				<renderStyle type="param">mask</renderStyle>
+				<renderSize type="param">{'slitThicknessFraction': None, 'apertureBladeWidth': None, 'apertureDefaultSpan': None, 'apertureThickness': None}</renderSize>
 			</properties>
 			<_object type="param">xrt.backends.raycing.apertures.RectangularAperture</_object>
 			<propagate type="prop">
 				<parameters type="prop">
 					<beam type="param">DCM_global</beam>
-					<needNewGlobal type="param">False</needNewGlobal>
 				</parameters>
 				<_object type="param">xrt.backends.raycing.apertures.RectangularAperture.propagate</_object>
 				<output type="prop">
@@ -462,18 +457,18 @@
 			<properties type="prop">
 				<bl type="param">beamLine</bl>
 				<name type="param">SlitAfterDCM</name>
-				<center type="param">[0.0, 29200.0, 0.0]</center>
+				<center type="param">[0, 29200, 0]</center>
 				<blades type="param">{'left': -7, 'right': 7, 'bottom': 34.73996095703098, 'top': 38.73996095703098}</blades>
-				<x type="param">[1.0, -0.0, 0.0]</x>
-				<z type="param">[0.0, 0.0, 1.0]</z>
+				<x type="param">[1, -0, 0]</x>
+				<z type="param">[0, 0, 1]</z>
 				<alarmLevel type="param">0.5</alarmLevel>
 				<renderStyle type="param">mask</renderStyle>
+				<renderSize type="param">{'slitThicknessFraction': None, 'apertureBladeWidth': None, 'apertureDefaultSpan': None, 'apertureThickness': None}</renderSize>
 			</properties>
 			<_object type="param">xrt.backends.raycing.apertures.RectangularAperture</_object>
 			<propagate type="prop">
 				<parameters type="prop">
 					<beam type="param">DCM_global</beam>
-					<needNewGlobal type="param">False</needNewGlobal>
 				</parameters>
 				<_object type="param">xrt.backends.raycing.apertures.RectangularAperture.propagate</_object>
 				<output type="prop">
@@ -485,14 +480,14 @@
 			<properties type="prop">
 				<bl type="param">beamLine</bl>
 				<name type="param">FSM_DCM</name>
-				<center type="param">[0.0, 29400.0, 42.79]</center>
-				<x type="param">[1.0, -0.0, 0.0]</x>
-				<z type="param">[0.0, 0.0, 1.0]</z>
+				<center type="param">[0, 29400, 42.79]</center>
+				<x type="param">[1, -0, 0]</x>
+				<z type="param">[0, 0, 1]</z>
 				<compressX type="param">None</compressX>
 				<compressZ type="param">None</compressZ>
-				<limPhysX type="param">[0.0, 0.0]</limPhysX>
-				<limPhysY type="param">[0.0, 0.0]</limPhysY>
-				<cLimits type="param">[0.0, 0.0]</cLimits>
+				<limPhysX type="param">[0, 0]</limPhysX>
+				<limPhysY type="param">[0, 0]</limPhysY>
+				<cLimits type="param">[0, 0]</cLimits>
 				<histShape type="param">[256, 256]</histShape>
 			</properties>
 			<_object type="param">xrt.backends.raycing.screens.Screen</_object>
@@ -512,29 +507,29 @@
 			<properties type="prop">
 				<bl type="param">beamLine</bl>
 				<name type="param">VFM</name>
-				<center type="param">[0.0, 30575.0, 42.79]</center>
+				<center type="param">[0, 30575, 42.79]</center>
 				<pitch type="param">-0.0022</pitch>
 				<roll type="param">0</roll>
 				<yaw type="param">0</yaw>
-				<positionRoll type="param">3.141592653589793</positionRoll>
+				<positionRoll type="param">3.1415927</positionRoll>
 				<extraPitch type="param">0</extraPitch>
 				<extraRoll type="param">0</extraRoll>
 				<extraYaw type="param">0</extraYaw>
 				<rotationSequence type="param">RzRyRx</rotationSequence>
 				<extraRotationSequence type="param">RzRyRx</extraRotationSequence>
-				<surface type="param">['SiO2']</surface>
+				<surface type="param">[SiO2]</surface>
 				<material type="param">stripeSiO2</material>
 				<alpha type="param">None</alpha>
-				<limPhysX type="param">[-20.0, 20.0]</limPhysX>
-				<limOptX type="param">[-10.0, 10.0]</limOptX>
-				<limPhysY type="param">[-700.0, 700.0]</limPhysY>
-				<limOptY type="param">[-700.0, 700.0]</limOptY>
+				<limPhysX type="param">[-20, 20]</limPhysX>
+				<limOptX type="param">[-10, 10]</limOptX>
+				<limPhysY type="param">[-700, 700]</limPhysY>
+				<limOptY type="param">[-700, 700]</limOptY>
 				<isParametric type="param">False</isParametric>
 				<shape type="param">rect</shape>
 				<gratingDensity type="param">None</gratingDensity>
 				<order type="param">1</order>
 				<shouldCheckCenter type="param">False</shouldCheckCenter>
-				<R type="param">13897738.483566936</R>
+				<R type="param">13897738</R>
 				<r type="param">40.77</r>
 				<alarmLevel type="param">0.2</alarmLevel>
 				<targetOpenCL type="param">None</targetOpenCL>
@@ -545,9 +540,7 @@
 			<reflect type="prop">
 				<parameters type="prop">
 					<beam type="param">DCM_global</beam>
-					<needLocal type="param">True</needLocal>
 					<noIntersectionSearch type="param">False</noIntersectionSearch>
-					<returnLocalAbsorbed type="param">None</returnLocalAbsorbed>
 				</parameters>
 				<_object type="param">xrt.backends.raycing.oes.ToroidMirror.reflect</_object>
 				<output type="prop">
@@ -560,18 +553,18 @@
 			<properties type="prop">
 				<bl type="param">beamLine</bl>
 				<name type="param">SlitAfterVFM</name>
-				<center type="param">[0.0, 31720.0, 0.0]</center>
+				<center type="param">[0, 31720, 0]</center>
 				<blades type="param">{'left': -7, 'right': 7, 'bottom': 40.79, 'top': 44.79}</blades>
-				<x type="param">[1.0, -0.0, 0.0]</x>
-				<z type="param">[0.0, 0.0, 1.0]</z>
+				<x type="param">[1, -0, 0]</x>
+				<z type="param">[0, 0, 1]</z>
 				<alarmLevel type="param">0.5</alarmLevel>
 				<renderStyle type="param">mask</renderStyle>
+				<renderSize type="param">{'slitThicknessFraction': None, 'apertureBladeWidth': None, 'apertureDefaultSpan': None, 'apertureThickness': None}</renderSize>
 			</properties>
 			<_object type="param">xrt.backends.raycing.apertures.RectangularAperture</_object>
 			<propagate type="prop">
 				<parameters type="prop">
 					<beam type="param">VFM_global</beam>
-					<needNewGlobal type="param">False</needNewGlobal>
 				</parameters>
 				<_object type="param">xrt.backends.raycing.apertures.RectangularAperture.propagate</_object>
 				<output type="prop">
@@ -583,14 +576,14 @@
 			<properties type="prop">
 				<bl type="param">beamLine</bl>
 				<name type="param">FSM_VFM</name>
-				<center type="param">[0.0, 32000.0, 42.79]</center>
-				<x type="param">[1.0, -0.0, 0.0]</x>
-				<z type="param">[0.0, 0.0, 1.0]</z>
+				<center type="param">[0, 32000, 42.79]</center>
+				<x type="param">[1, -0, 0]</x>
+				<z type="param">[0, 0, 1]</z>
 				<compressX type="param">None</compressX>
 				<compressZ type="param">None</compressZ>
-				<limPhysX type="param">[0.0, 0.0]</limPhysX>
-				<limPhysY type="param">[0.0, 0.0]</limPhysY>
-				<cLimits type="param">[0.0, 0.0]</cLimits>
+				<limPhysX type="param">[0, 0]</limPhysX>
+				<limPhysY type="param">[0, 0]</limPhysY>
+				<cLimits type="param">[0, 0]</cLimits>
 				<histShape type="param">[256, 256]</histShape>
 			</properties>
 			<_object type="param">xrt.backends.raycing.screens.Screen</_object>
@@ -610,18 +603,18 @@
 			<properties type="prop">
 				<bl type="param">beamLine</bl>
 				<name type="param">OH_PS</name>
-				<center type="param">[0.0, 32070.0, 0.0]</center>
+				<center type="param">[0, 32070, 0]</center>
 				<blades type="param">{'left': -20, 'right': 20, 'bottom': 25, 'top': 55}</blades>
-				<x type="param">[1.0, -0.0, 0.0]</x>
-				<z type="param">[0.0, 0.0, 1.0]</z>
+				<x type="param">[1, -0, 0]</x>
+				<z type="param">[0, 0, 1]</z>
 				<alarmLevel type="param">0.2</alarmLevel>
 				<renderStyle type="param">mask</renderStyle>
+				<renderSize type="param">{'slitThicknessFraction': None, 'apertureBladeWidth': None, 'apertureDefaultSpan': None, 'apertureThickness': None}</renderSize>
 			</properties>
 			<_object type="param">xrt.backends.raycing.apertures.RectangularAperture</_object>
 			<propagate type="prop">
 				<parameters type="prop">
 					<beam type="param">VFM_global</beam>
-					<needNewGlobal type="param">False</needNewGlobal>
 				</parameters>
 				<_object type="param">xrt.backends.raycing.apertures.RectangularAperture.propagate</_object>
 				<output type="prop">
@@ -633,18 +626,18 @@
 			<properties type="prop">
 				<bl type="param">beamLine</bl>
 				<name type="param">slitEH</name>
-				<center type="param">[0.0, 43000.0, 0.0]</center>
+				<center type="param">[0, 43000, 0]</center>
 				<blades type="param">{'left': -0.4802124996111384, 'right': 0.4802124996111384, 'bottom': 35.79, 'top': 49.79}</blades>
-				<x type="param">[1.0, -0.0, 0.0]</x>
-				<z type="param">[0.0, 0.0, 1.0]</z>
+				<x type="param">[1, -0, 0]</x>
+				<z type="param">[0, 0, 1]</z>
 				<alarmLevel type="param">0.5</alarmLevel>
 				<renderStyle type="param">mask</renderStyle>
+				<renderSize type="param">{'slitThicknessFraction': None, 'apertureBladeWidth': None, 'apertureDefaultSpan': None, 'apertureThickness': None}</renderSize>
 			</properties>
 			<_object type="param">xrt.backends.raycing.apertures.RectangularAperture</_object>
 			<propagate type="prop">
 				<parameters type="prop">
 					<beam type="param">VFM_global</beam>
-					<needNewGlobal type="param">False</needNewGlobal>
 				</parameters>
 				<_object type="param">xrt.backends.raycing.apertures.RectangularAperture.propagate</_object>
 				<output type="prop">
@@ -656,14 +649,14 @@
 			<properties type="prop">
 				<bl type="param">beamLine</bl>
 				<name type="param">FSM_Sample</name>
-				<center type="param">[0.0, 45863.0, 42.79]</center>
-				<x type="param">[1.0, -0.0, 0.0]</x>
-				<z type="param">[0.0, 0.0, 1.0]</z>
+				<center type="param">[0, 45863, 42.79]</center>
+				<x type="param">[1, -0, 0]</x>
+				<z type="param">[0, 0, 1]</z>
 				<compressX type="param">None</compressX>
 				<compressZ type="param">None</compressZ>
-				<limPhysX type="param">[0.0, 0.0]</limPhysX>
-				<limPhysY type="param">[0.0, 0.0]</limPhysY>
-				<cLimits type="param">[0.0, 0.0]</cLimits>
+				<limPhysX type="param">[0, 0]</limPhysX>
+				<limPhysY type="param">[0, 0]</limPhysY>
+				<cLimits type="param">[0, 0]</cLimits>
 				<histShape type="param">[256, 256]</histShape>
 			</properties>
 			<_object type="param">xrt.backends.raycing.screens.Screen</_object>
@@ -683,13 +676,13 @@
 	<FigureErrors type="prop">
 	</FigureErrors>
 	<plots type="value">
-		<plot01 type="prop">
+		<plot01 type="value">
 			<beam type="param">FSM0_local</beam>
-			<rayFlag type="param">(1,)</rayFlag>
+			<rayFlag type="param">[1]</rayFlag>
 			<xaxis type="prop">
 				<label type="param">$x$</label>
 				<unit type="param">mm</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">None</limits>
 				<offset type="param">0</offset>
@@ -699,12 +692,13 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</xaxis>
 			<yaxis type="prop">
 				<label type="param">$z$</label>
 				<unit type="param">mm</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">None</limits>
 				<offset type="param">0</offset>
@@ -714,12 +708,13 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</yaxis>
 			<caxis type="prop">
 				<label type="param">energy</label>
 				<unit type="param">eV</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">None</limits>
 				<offset type="param">0</offset>
@@ -729,6 +724,7 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.2f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</caxis>
 			<aspect type="param">equal</aspect>
@@ -738,30 +734,32 @@
 			<title type="param">FSM0</title>
 			<invertColorMap type="param">False</invertColorMap>
 			<negative type="param">False</negative>
+			<showCornerLabels type="param">True</showCornerLabels>
 			<fluxKind type="param">total</fluxKind>
 			<fluxUnit type="param">auto</fluxUnit>
 			<fluxFormatStr type="param">%.1p</fluxFormatStr>
 			<contourLevels type="param">None</contourLevels>
 			<contourColors type="param">None</contourColors>
 			<contourFmt type="param">%.1f</contourFmt>
-			<contourFactor type="param">1.0</contourFactor>
-			<saveName type="param">['05-2.2mrad-07-10keV-focused-01FSM0.png']</saveName>
+			<contourFactor type="param">1</contourFactor>
+			<saveName type="param">[05-2.2mrad-07-10keV-focused-01FSM0.png]</saveName>
 			<persistentName type="param">None</persistentName>
 			<raycingParam type="param">0</raycingParam>
 			<beamState type="param">None</beamState>
 			<beamC type="param">None</beamC>
 			<beamAbsorb type="param">None</beamAbsorb>
 			<showAbsorbed type="param">False</showAbsorbed>
+			<name type="param">plot01</name>
 			<drawOeArea type="param">False</drawOeArea>
 			<_object type="param">xrt.plotter.XYCPlot</_object>
 		</plot01>
-		<plot02 type="prop">
+		<plot02 type="value">
 			<beam type="param">Filter1_local1</beam>
-			<rayFlag type="param">(1,)</rayFlag>
+			<rayFlag type="param">[1]</rayFlag>
 			<xaxis type="prop">
 				<label type="param">$x$</label>
 				<unit type="param">mm</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">[-7, 7]</limits>
 				<offset type="param">0</offset>
@@ -771,12 +769,13 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</xaxis>
 			<yaxis type="prop">
 				<label type="param">$y$</label>
 				<unit type="param">mm</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">None</limits>
 				<offset type="param">0</offset>
@@ -786,12 +785,13 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</yaxis>
 			<caxis type="prop">
 				<label type="param">energy</label>
 				<unit type="param">eV</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">[0, 10002.5]</limits>
 				<offset type="param">0</offset>
@@ -801,6 +801,7 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.2f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</caxis>
 			<aspect type="param">equal</aspect>
@@ -810,30 +811,32 @@
 			<title type="param">Filter1 footprint1 I</title>
 			<invertColorMap type="param">False</invertColorMap>
 			<negative type="param">False</negative>
+			<showCornerLabels type="param">True</showCornerLabels>
 			<fluxKind type="param">total</fluxKind>
 			<fluxUnit type="param">auto</fluxUnit>
 			<fluxFormatStr type="param">%.1p</fluxFormatStr>
 			<contourLevels type="param">None</contourLevels>
 			<contourColors type="param">None</contourColors>
 			<contourFmt type="param">%.1f</contourFmt>
-			<contourFactor type="param">1.0</contourFactor>
-			<saveName type="param">['05-2.2mrad-07-10keV-focused-02Filter1 footprint1 I.png']</saveName>
+			<contourFactor type="param">1</contourFactor>
+			<saveName type="param">[05-2.2mrad-07-10keV-focused-02Filter1 footprint1 I.png]</saveName>
 			<persistentName type="param">None</persistentName>
 			<raycingParam type="param">0</raycingParam>
 			<beamState type="param">None</beamState>
 			<beamC type="param">None</beamC>
 			<beamAbsorb type="param">None</beamAbsorb>
 			<showAbsorbed type="param">False</showAbsorbed>
+			<name type="param">plot02</name>
 			<drawOeArea type="param">False</drawOeArea>
 			<_object type="param">xrt.plotter.XYCPlot</_object>
 		</plot02>
-		<plot03 type="prop">
+		<plot03 type="value">
 			<beam type="param">Filter1_local1</beam>
-			<rayFlag type="param">(1,)</rayFlag>
+			<rayFlag type="param">[1]</rayFlag>
 			<xaxis type="prop">
 				<label type="param">$x$</label>
 				<unit type="param">mm</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">[-7, 7]</limits>
 				<offset type="param">0</offset>
@@ -843,12 +846,13 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</xaxis>
 			<yaxis type="prop">
 				<label type="param">$y$</label>
 				<unit type="param">mm</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">None</limits>
 				<offset type="param">0</offset>
@@ -858,12 +862,13 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</yaxis>
 			<caxis type="prop">
 				<label type="param">energy</label>
 				<unit type="param">eV</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">[0, 10002.5]</limits>
 				<offset type="param">0</offset>
@@ -873,6 +878,7 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.2f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</caxis>
 			<aspect type="param">equal</aspect>
@@ -882,30 +888,32 @@
 			<title type="param">Filter1 footprint1 P</title>
 			<invertColorMap type="param">False</invertColorMap>
 			<negative type="param">False</negative>
+			<showCornerLabels type="param">True</showCornerLabels>
 			<fluxKind type="param">power</fluxKind>
 			<fluxUnit type="param">auto</fluxUnit>
 			<fluxFormatStr type="param">%.0f</fluxFormatStr>
 			<contourLevels type="param">[0.85, 0.95]</contourLevels>
-			<contourColors type="param">['b', 'r']</contourColors>
+			<contourColors type="param">[b, r]</contourColors>
 			<contourFmt type="param">%.1f W/mm$^2$</contourFmt>
-			<contourFactor type="param">1.0</contourFactor>
-			<saveName type="param">['05-2.2mrad-07-10keV-focused-03Filter1 footprint1 P.png']</saveName>
+			<contourFactor type="param">1</contourFactor>
+			<saveName type="param">[05-2.2mrad-07-10keV-focused-03Filter1 footprint1 P.png]</saveName>
 			<persistentName type="param">None</persistentName>
 			<raycingParam type="param">0</raycingParam>
 			<beamState type="param">None</beamState>
 			<beamC type="param">None</beamC>
 			<beamAbsorb type="param">None</beamAbsorb>
 			<showAbsorbed type="param">False</showAbsorbed>
+			<name type="param">plot03</name>
 			<drawOeArea type="param">False</drawOeArea>
 			<_object type="param">xrt.plotter.XYCPlot</_object>
 		</plot03>
-		<plot04 type="prop">
+		<plot04 type="value">
 			<beam type="param">Filter1_local2</beam>
-			<rayFlag type="param">(1,)</rayFlag>
+			<rayFlag type="param">[1]</rayFlag>
 			<xaxis type="prop">
 				<label type="param">$x$</label>
 				<unit type="param">mm</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">[-7, 7]</limits>
 				<offset type="param">0</offset>
@@ -915,12 +923,13 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</xaxis>
 			<yaxis type="prop">
 				<label type="param">$y$</label>
 				<unit type="param">mm</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">None</limits>
 				<offset type="param">0</offset>
@@ -930,12 +939,13 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</yaxis>
 			<caxis type="prop">
 				<label type="param">energy</label>
 				<unit type="param">eV</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">[0, 10002.5]</limits>
 				<offset type="param">0</offset>
@@ -945,6 +955,7 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.2f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</caxis>
 			<aspect type="param">equal</aspect>
@@ -954,30 +965,32 @@
 			<title type="param">Filter1 footprint2 P</title>
 			<invertColorMap type="param">False</invertColorMap>
 			<negative type="param">False</negative>
+			<showCornerLabels type="param">True</showCornerLabels>
 			<fluxKind type="param">power</fluxKind>
 			<fluxUnit type="param">auto</fluxUnit>
 			<fluxFormatStr type="param">%.0f</fluxFormatStr>
 			<contourLevels type="param">[0.85, 0.95]</contourLevels>
-			<contourColors type="param">['b', 'r']</contourColors>
+			<contourColors type="param">[b, r]</contourColors>
 			<contourFmt type="param">%.1f W/mm$^2$</contourFmt>
-			<contourFactor type="param">1.0</contourFactor>
-			<saveName type="param">['05-2.2mrad-07-10keV-focused-04Filter1 footprint2 P.png']</saveName>
+			<contourFactor type="param">1</contourFactor>
+			<saveName type="param">[05-2.2mrad-07-10keV-focused-04Filter1 footprint2 P.png]</saveName>
 			<persistentName type="param">None</persistentName>
 			<raycingParam type="param">0</raycingParam>
 			<beamState type="param">None</beamState>
 			<beamC type="param">None</beamC>
 			<beamAbsorb type="param">None</beamAbsorb>
 			<showAbsorbed type="param">False</showAbsorbed>
+			<name type="param">plot04</name>
 			<drawOeArea type="param">False</drawOeArea>
 			<_object type="param">xrt.plotter.XYCPlot</_object>
 		</plot04>
-		<plot05 type="prop">
+		<plot05 type="value">
 			<beam type="param">VCM_local</beam>
 			<rayFlag type="param">[1, 2, 3]</rayFlag>
 			<xaxis type="prop">
 				<label type="param">$x$</label>
 				<unit type="param">mm</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">[-16, 16]</limits>
 				<offset type="param">0</offset>
@@ -987,12 +1000,13 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</xaxis>
 			<yaxis type="prop">
 				<label type="param">$y$</label>
 				<unit type="param">mm</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">[-660, 660]</limits>
 				<offset type="param">0</offset>
@@ -1002,12 +1016,13 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.0f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</yaxis>
 			<caxis type="prop">
 				<label type="param">energy</label>
 				<unit type="param">eV</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">[0, 10002.5]</limits>
 				<offset type="param">0</offset>
@@ -1017,6 +1032,7 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.2f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</caxis>
 			<aspect type="param">auto</aspect>
@@ -1026,30 +1042,32 @@
 			<title type="param">VCM footprint P</title>
 			<invertColorMap type="param">False</invertColorMap>
 			<negative type="param">False</negative>
+			<showCornerLabels type="param">True</showCornerLabels>
 			<fluxKind type="param">power</fluxKind>
 			<fluxUnit type="param">auto</fluxUnit>
 			<fluxFormatStr type="param">%.0f</fluxFormatStr>
 			<contourLevels type="param">[0.85, 0.95]</contourLevels>
-			<contourColors type="param">['b', 'r']</contourColors>
+			<contourColors type="param">[b, r]</contourColors>
 			<contourFmt type="param">%.3f W/mm$^2$</contourFmt>
-			<contourFactor type="param">1.0</contourFactor>
-			<saveName type="param">['05-2.2mrad-07-10keV-focused-05VCM footprint P.png']</saveName>
+			<contourFactor type="param">1</contourFactor>
+			<saveName type="param">[05-2.2mrad-07-10keV-focused-05VCM footprint P.png]</saveName>
 			<persistentName type="param">None</persistentName>
 			<raycingParam type="param">0</raycingParam>
 			<beamState type="param">None</beamState>
 			<beamC type="param">None</beamC>
 			<beamAbsorb type="param">None</beamAbsorb>
 			<showAbsorbed type="param">False</showAbsorbed>
+			<name type="param">plot05</name>
 			<drawOeArea type="param">False</drawOeArea>
 			<_object type="param">xrt.plotter.XYCPlot</_object>
 		</plot05>
-		<plot06 type="prop">
+		<plot06 type="value">
 			<beam type="param">DCM_local1</beam>
 			<rayFlag type="param">[1, 2, 4]</rayFlag>
 			<xaxis type="prop">
 				<label type="param">$x$</label>
 				<unit type="param">mm</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">[-12, 12]</limits>
 				<offset type="param">0</offset>
@@ -1059,12 +1077,13 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</xaxis>
 			<yaxis type="prop">
 				<label type="param">$y$</label>
 				<unit type="param">mm</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">[-32, 32]</limits>
 				<offset type="param">0</offset>
@@ -1074,12 +1093,13 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</yaxis>
 			<caxis type="prop">
 				<label type="param">energy</label>
 				<unit type="param">eV</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">None</limits>
 				<offset type="param">0</offset>
@@ -1089,6 +1109,7 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.2f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</caxis>
 			<aspect type="param">auto</aspect>
@@ -1098,30 +1119,32 @@
 			<title type="param">Xtal1_footprint C</title>
 			<invertColorMap type="param">False</invertColorMap>
 			<negative type="param">False</negative>
+			<showCornerLabels type="param">True</showCornerLabels>
 			<fluxKind type="param">total</fluxKind>
 			<fluxUnit type="param">auto</fluxUnit>
 			<fluxFormatStr type="param">%.1p</fluxFormatStr>
 			<contourLevels type="param">None</contourLevels>
 			<contourColors type="param">None</contourColors>
 			<contourFmt type="param">%.1f</contourFmt>
-			<contourFactor type="param">1.0</contourFactor>
-			<saveName type="param">['05-2.2mrad-07-10keV-focused-06Xtal1_footprint C.png']</saveName>
+			<contourFactor type="param">1</contourFactor>
+			<saveName type="param">[05-2.2mrad-07-10keV-focused-06Xtal1_footprint C.png]</saveName>
 			<persistentName type="param">None</persistentName>
 			<raycingParam type="param">0</raycingParam>
 			<beamState type="param">None</beamState>
 			<beamC type="param">None</beamC>
 			<beamAbsorb type="param">None</beamAbsorb>
 			<showAbsorbed type="param">False</showAbsorbed>
+			<name type="param">plot06</name>
 			<drawOeArea type="param">True</drawOeArea>
 			<_object type="param">xrt.plotter.XYCPlot</_object>
 		</plot06>
-		<plot07 type="prop">
+		<plot07 type="value">
 			<beam type="param">DCM_local1</beam>
-			<rayFlag type="param">(1,)</rayFlag>
+			<rayFlag type="param">[1]</rayFlag>
 			<xaxis type="prop">
 				<label type="param">$x$</label>
 				<unit type="param">mm</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">[-12, 12]</limits>
 				<offset type="param">0</offset>
@@ -1131,12 +1154,13 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</xaxis>
 			<yaxis type="prop">
 				<label type="param">$y$</label>
 				<unit type="param">mm</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">[-32, 32]</limits>
 				<offset type="param">0</offset>
@@ -1146,12 +1170,13 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</yaxis>
 			<caxis type="prop">
 				<label type="param">energy</label>
 				<unit type="param">eV</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">None</limits>
 				<offset type="param">0</offset>
@@ -1161,6 +1186,7 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.2f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</caxis>
 			<aspect type="param">auto</aspect>
@@ -1170,30 +1196,32 @@
 			<title type="param">Xtal1_footprint P</title>
 			<invertColorMap type="param">False</invertColorMap>
 			<negative type="param">False</negative>
+			<showCornerLabels type="param">True</showCornerLabels>
 			<fluxKind type="param">power</fluxKind>
 			<fluxUnit type="param">auto</fluxUnit>
 			<fluxFormatStr type="param">%.0f</fluxFormatStr>
 			<contourLevels type="param">[0.85, 0.95]</contourLevels>
-			<contourColors type="param">['b', 'r']</contourColors>
+			<contourColors type="param">[b, r]</contourColors>
 			<contourFmt type="param">%.1f W/mm$^2$</contourFmt>
-			<contourFactor type="param">1.0</contourFactor>
-			<saveName type="param">['05-2.2mrad-07-10keV-focused-07Xtal1_footprint P.png']</saveName>
+			<contourFactor type="param">1</contourFactor>
+			<saveName type="param">[05-2.2mrad-07-10keV-focused-07Xtal1_footprint P.png]</saveName>
 			<persistentName type="param">None</persistentName>
 			<raycingParam type="param">0</raycingParam>
 			<beamState type="param">None</beamState>
 			<beamC type="param">None</beamC>
 			<beamAbsorb type="param">None</beamAbsorb>
 			<showAbsorbed type="param">False</showAbsorbed>
+			<name type="param">plot07</name>
 			<drawOeArea type="param">True</drawOeArea>
 			<_object type="param">xrt.plotter.XYCPlot</_object>
 		</plot07>
-		<plot08 type="prop">
+		<plot08 type="value">
 			<beam type="param">DCM_local2</beam>
 			<rayFlag type="param">[1, 2, 4, -2]</rayFlag>
 			<xaxis type="prop">
 				<label type="param">$x$</label>
 				<unit type="param">mm</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">[-12, 12]</limits>
 				<offset type="param">0</offset>
@@ -1203,12 +1231,13 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</xaxis>
 			<yaxis type="prop">
 				<label type="param">$y$</label>
 				<unit type="param">mm</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">[-92, 92]</limits>
 				<offset type="param">0</offset>
@@ -1218,12 +1247,13 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</yaxis>
 			<caxis type="prop">
 				<label type="param">energy</label>
 				<unit type="param">eV</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">None</limits>
 				<offset type="param">0</offset>
@@ -1233,6 +1263,7 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.2f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</caxis>
 			<aspect type="param">auto</aspect>
@@ -1242,30 +1273,32 @@
 			<title type="param">Xtal2_footprint</title>
 			<invertColorMap type="param">False</invertColorMap>
 			<negative type="param">False</negative>
+			<showCornerLabels type="param">True</showCornerLabels>
 			<fluxKind type="param">total</fluxKind>
 			<fluxUnit type="param">auto</fluxUnit>
 			<fluxFormatStr type="param">%.1p</fluxFormatStr>
 			<contourLevels type="param">None</contourLevels>
 			<contourColors type="param">None</contourColors>
 			<contourFmt type="param">%.1f</contourFmt>
-			<contourFactor type="param">1.0</contourFactor>
-			<saveName type="param">['05-2.2mrad-07-10keV-focused-08Xtal2_footprint.png']</saveName>
+			<contourFactor type="param">1</contourFactor>
+			<saveName type="param">[05-2.2mrad-07-10keV-focused-08Xtal2_footprint.png]</saveName>
 			<persistentName type="param">None</persistentName>
 			<raycingParam type="param">2</raycingParam>
 			<beamState type="param">None</beamState>
 			<beamC type="param">None</beamC>
 			<beamAbsorb type="param">None</beamAbsorb>
 			<showAbsorbed type="param">False</showAbsorbed>
+			<name type="param">plot08</name>
 			<drawOeArea type="param">True</drawOeArea>
 			<_object type="param">xrt.plotter.XYCPlot</_object>
 		</plot08>
-		<plot09 type="prop">
+		<plot09 type="value">
 			<beam type="param">DCM_local2</beam>
 			<rayFlag type="param">[1, 4]</rayFlag>
 			<xaxis type="prop">
 				<label type="param">$x$</label>
 				<unit type="param">mm</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">[-12, 12]</limits>
 				<offset type="param">0</offset>
@@ -1275,12 +1308,13 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</xaxis>
 			<yaxis type="prop">
 				<label type="param">$y$</label>
 				<unit type="param">mm</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">[-92, 92]</limits>
 				<offset type="param">0</offset>
@@ -1290,12 +1324,13 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</yaxis>
 			<caxis type="prop">
 				<label type="param">energy</label>
 				<unit type="param">eV</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">None</limits>
 				<offset type="param">10000</offset>
@@ -1305,6 +1340,7 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.2f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</caxis>
 			<aspect type="param">auto</aspect>
@@ -1314,30 +1350,32 @@
 			<title type="param">Xtal2_footprintE</title>
 			<invertColorMap type="param">False</invertColorMap>
 			<negative type="param">False</negative>
+			<showCornerLabels type="param">True</showCornerLabels>
 			<fluxKind type="param">total</fluxKind>
 			<fluxUnit type="param">auto</fluxUnit>
 			<fluxFormatStr type="param">%.1p</fluxFormatStr>
 			<contourLevels type="param">None</contourLevels>
 			<contourColors type="param">None</contourColors>
 			<contourFmt type="param">%.1f</contourFmt>
-			<contourFactor type="param">1.0</contourFactor>
-			<saveName type="param">['05-2.2mrad-07-10keV-focused-09Xtal2_footprintE.png']</saveName>
+			<contourFactor type="param">1</contourFactor>
+			<saveName type="param">[05-2.2mrad-07-10keV-focused-09Xtal2_footprintE.png]</saveName>
 			<persistentName type="param">None</persistentName>
 			<raycingParam type="param">2</raycingParam>
 			<beamState type="param">None</beamState>
 			<beamC type="param">None</beamC>
 			<beamAbsorb type="param">None</beamAbsorb>
 			<showAbsorbed type="param">False</showAbsorbed>
+			<name type="param">plot09</name>
 			<drawOeArea type="param">True</drawOeArea>
 			<_object type="param">xrt.plotter.XYCPlot</_object>
 		</plot09>
-		<plot10 type="prop">
+		<plot10 type="value">
 			<beam type="param">BSBlock_local</beam>
 			<rayFlag type="param">[1, 2, -1002]</rayFlag>
 			<xaxis type="prop">
 				<label type="param">$x$</label>
 				<unit type="param">mm</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">[-15, 15]</limits>
 				<offset type="param">0</offset>
@@ -1347,12 +1385,13 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</xaxis>
 			<yaxis type="prop">
 				<label type="param">$z$</label>
 				<unit type="param">mm</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">[20, 50]</limits>
 				<offset type="param">0</offset>
@@ -1362,12 +1401,13 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</yaxis>
 			<caxis type="prop">
 				<label type="param">energy</label>
 				<unit type="param">eV</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">None</limits>
 				<offset type="param">0</offset>
@@ -1377,6 +1417,7 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.2f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</caxis>
 			<aspect type="param">equal</aspect>
@@ -1386,30 +1427,32 @@
 			<title type="param">BSBlock</title>
 			<invertColorMap type="param">False</invertColorMap>
 			<negative type="param">False</negative>
+			<showCornerLabels type="param">True</showCornerLabels>
 			<fluxKind type="param">total</fluxKind>
 			<fluxUnit type="param">auto</fluxUnit>
 			<fluxFormatStr type="param">%.1p</fluxFormatStr>
 			<contourLevels type="param">None</contourLevels>
 			<contourColors type="param">None</contourColors>
 			<contourFmt type="param">%.1f</contourFmt>
-			<contourFactor type="param">1.0</contourFactor>
-			<saveName type="param">['05-2.2mrad-07-10keV-focused-10BSBlock.png']</saveName>
+			<contourFactor type="param">1</contourFactor>
+			<saveName type="param">[05-2.2mrad-07-10keV-focused-10BSBlock.png]</saveName>
 			<persistentName type="param">None</persistentName>
 			<raycingParam type="param">0</raycingParam>
 			<beamState type="param">None</beamState>
 			<beamC type="param">None</beamC>
 			<beamAbsorb type="param">None</beamAbsorb>
 			<showAbsorbed type="param">False</showAbsorbed>
+			<name type="param">plot10</name>
 			<drawOeArea type="param">True</drawOeArea>
 			<_object type="param">xrt.plotter.XYCPlot</_object>
 		</plot10>
-		<plot11 type="prop">
+		<plot11 type="value">
 			<beam type="param">SlitAfterDCM_local</beam>
 			<rayFlag type="param">[1, 2, -1003]</rayFlag>
 			<xaxis type="prop">
 				<label type="param">$x$</label>
 				<unit type="param">mm</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">[-8, 8]</limits>
 				<offset type="param">0</offset>
@@ -1419,14 +1462,15 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</xaxis>
 			<yaxis type="prop">
 				<label type="param">$z$</label>
 				<unit type="param">mm</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
-				<limits type="param">[28.73996095703098, 44.73996095703098]</limits>
+				<limits type="param">[28.739961, 44.739961]</limits>
 				<offset type="param">0</offset>
 				<bins type="param">128</bins>
 				<ppb type="param">2</ppb>
@@ -1434,12 +1478,13 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</yaxis>
 			<caxis type="prop">
 				<label type="param">energy</label>
 				<unit type="param">eV</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">None</limits>
 				<offset type="param">0</offset>
@@ -1449,6 +1494,7 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.2f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</caxis>
 			<aspect type="param">equal</aspect>
@@ -1458,30 +1504,32 @@
 			<title type="param">SlitAfterDCM</title>
 			<invertColorMap type="param">False</invertColorMap>
 			<negative type="param">False</negative>
+			<showCornerLabels type="param">True</showCornerLabels>
 			<fluxKind type="param">total</fluxKind>
 			<fluxUnit type="param">auto</fluxUnit>
 			<fluxFormatStr type="param">%.1p</fluxFormatStr>
 			<contourLevels type="param">None</contourLevels>
 			<contourColors type="param">None</contourColors>
 			<contourFmt type="param">%.1f</contourFmt>
-			<contourFactor type="param">1.0</contourFactor>
-			<saveName type="param">['05-2.2mrad-07-10keV-focused-11SlitAfterDCM.png']</saveName>
+			<contourFactor type="param">1</contourFactor>
+			<saveName type="param">[05-2.2mrad-07-10keV-focused-11SlitAfterDCM.png]</saveName>
 			<persistentName type="param">None</persistentName>
 			<raycingParam type="param">0</raycingParam>
 			<beamState type="param">None</beamState>
 			<beamC type="param">None</beamC>
 			<beamAbsorb type="param">None</beamAbsorb>
 			<showAbsorbed type="param">False</showAbsorbed>
+			<name type="param">plot11</name>
 			<drawOeArea type="param">True</drawOeArea>
 			<_object type="param">xrt.plotter.XYCPlot</_object>
 		</plot11>
-		<plot12 type="prop">
+		<plot12 type="value">
 			<beam type="param">VFM_local</beam>
 			<rayFlag type="param">[1, 2, 3]</rayFlag>
 			<xaxis type="prop">
 				<label type="param">$x$</label>
 				<unit type="param">mm</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">[-12, 12]</limits>
 				<offset type="param">0</offset>
@@ -1491,12 +1539,13 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</xaxis>
 			<yaxis type="prop">
 				<label type="param">$y$</label>
 				<unit type="param">mm</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">[-710, 710]</limits>
 				<offset type="param">0</offset>
@@ -1506,12 +1555,13 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</yaxis>
 			<caxis type="prop">
 				<label type="param">energy</label>
 				<unit type="param">eV</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">None</limits>
 				<offset type="param">0</offset>
@@ -1521,6 +1571,7 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.2f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</caxis>
 			<aspect type="param">auto</aspect>
@@ -1530,30 +1581,32 @@
 			<title type="param">VFM_footprint</title>
 			<invertColorMap type="param">False</invertColorMap>
 			<negative type="param">False</negative>
+			<showCornerLabels type="param">True</showCornerLabels>
 			<fluxKind type="param">total</fluxKind>
 			<fluxUnit type="param">auto</fluxUnit>
 			<fluxFormatStr type="param">%.1p</fluxFormatStr>
 			<contourLevels type="param">None</contourLevels>
 			<contourColors type="param">None</contourColors>
 			<contourFmt type="param">%.1f</contourFmt>
-			<contourFactor type="param">1.0</contourFactor>
-			<saveName type="param">['05-2.2mrad-07-10keV-focused-12VFM_footprint.png']</saveName>
+			<contourFactor type="param">1</contourFactor>
+			<saveName type="param">[05-2.2mrad-07-10keV-focused-12VFM_footprint.png]</saveName>
 			<persistentName type="param">None</persistentName>
 			<raycingParam type="param">0</raycingParam>
 			<beamState type="param">None</beamState>
 			<beamC type="param">None</beamC>
 			<beamAbsorb type="param">None</beamAbsorb>
 			<showAbsorbed type="param">False</showAbsorbed>
+			<name type="param">plot12</name>
 			<drawOeArea type="param">True</drawOeArea>
 			<_object type="param">xrt.plotter.XYCPlot</_object>
 		</plot12>
-		<plot13 type="prop">
+		<plot13 type="value">
 			<beam type="param">SlitAfterVFM_local</beam>
 			<rayFlag type="param">[1, 2, -1004]</rayFlag>
 			<xaxis type="prop">
 				<label type="param">$x$</label>
 				<unit type="param">mm</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">[-8, 8]</limits>
 				<offset type="param">0</offset>
@@ -1563,12 +1616,13 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</xaxis>
 			<yaxis type="prop">
 				<label type="param">$z$</label>
 				<unit type="param">mm</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">[34.79, 50.79]</limits>
 				<offset type="param">0</offset>
@@ -1578,12 +1632,13 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</yaxis>
 			<caxis type="prop">
 				<label type="param">energy</label>
 				<unit type="param">eV</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">None</limits>
 				<offset type="param">0</offset>
@@ -1593,6 +1648,7 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.2f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</caxis>
 			<aspect type="param">equal</aspect>
@@ -1602,30 +1658,32 @@
 			<title type="param">SlitAfterVFM</title>
 			<invertColorMap type="param">False</invertColorMap>
 			<negative type="param">False</negative>
+			<showCornerLabels type="param">True</showCornerLabels>
 			<fluxKind type="param">total</fluxKind>
 			<fluxUnit type="param">auto</fluxUnit>
 			<fluxFormatStr type="param">%.1p</fluxFormatStr>
 			<contourLevels type="param">None</contourLevels>
 			<contourColors type="param">None</contourColors>
 			<contourFmt type="param">%.1f</contourFmt>
-			<contourFactor type="param">1.0</contourFactor>
-			<saveName type="param">['05-2.2mrad-07-10keV-focused-13SlitAfterVFM.png']</saveName>
+			<contourFactor type="param">1</contourFactor>
+			<saveName type="param">[05-2.2mrad-07-10keV-focused-13SlitAfterVFM.png]</saveName>
 			<persistentName type="param">None</persistentName>
 			<raycingParam type="param">0</raycingParam>
 			<beamState type="param">None</beamState>
 			<beamC type="param">None</beamC>
 			<beamAbsorb type="param">None</beamAbsorb>
 			<showAbsorbed type="param">False</showAbsorbed>
+			<name type="param">plot13</name>
 			<drawOeArea type="param">True</drawOeArea>
 			<_object type="param">xrt.plotter.XYCPlot</_object>
 		</plot13>
-		<plot14 type="prop">
+		<plot14 type="value">
 			<beam type="param">OH_PS_local</beam>
 			<rayFlag type="param">[1, 2, 4, -1005]</rayFlag>
 			<xaxis type="prop">
 				<label type="param">$x$</label>
 				<unit type="param">mm</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">[-10, 10]</limits>
 				<offset type="param">0</offset>
@@ -1635,12 +1693,13 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</xaxis>
 			<yaxis type="prop">
 				<label type="param">$z$</label>
 				<unit type="param">mm</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">[30, 50]</limits>
 				<offset type="param">0</offset>
@@ -1650,12 +1709,13 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</yaxis>
 			<caxis type="prop">
 				<label type="param">energy</label>
 				<unit type="param">eV</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">None</limits>
 				<offset type="param">0</offset>
@@ -1665,6 +1725,7 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.2f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</caxis>
 			<aspect type="param">equal</aspect>
@@ -1674,32 +1735,34 @@
 			<title type="param">OH-PS</title>
 			<invertColorMap type="param">False</invertColorMap>
 			<negative type="param">False</negative>
+			<showCornerLabels type="param">True</showCornerLabels>
 			<fluxKind type="param">total</fluxKind>
 			<fluxUnit type="param">auto</fluxUnit>
 			<fluxFormatStr type="param">%.1p</fluxFormatStr>
 			<contourLevels type="param">None</contourLevels>
 			<contourColors type="param">None</contourColors>
 			<contourFmt type="param">%.1f</contourFmt>
-			<contourFactor type="param">1.0</contourFactor>
-			<saveName type="param">['05-2.2mrad-07-10keV-focused-14OH-PS.png']</saveName>
+			<contourFactor type="param">1</contourFactor>
+			<saveName type="param">[05-2.2mrad-07-10keV-focused-14OH-PS.png]</saveName>
 			<persistentName type="param">None</persistentName>
 			<raycingParam type="param">0</raycingParam>
 			<beamState type="param">None</beamState>
 			<beamC type="param">None</beamC>
 			<beamAbsorb type="param">None</beamAbsorb>
 			<showAbsorbed type="param">False</showAbsorbed>
+			<name type="param">plot14</name>
 			<drawOeArea type="param">True</drawOeArea>
 			<_object type="param">xrt.plotter.XYCPlot</_object>
 		</plot14>
-		<plot15 type="prop">
+		<plot15 type="value">
 			<beam type="param">slitEH_local</beam>
 			<rayFlag type="param">[1, 2, -1006]</rayFlag>
 			<xaxis type="prop">
 				<label type="param">$x$</label>
 				<unit type="param">mm</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
-				<limits type="param">[-0.4802124996111384, 0.4802124996111384]</limits>
+				<limits type="param">[-0.4802125, 0.4802125]</limits>
 				<offset type="param">0</offset>
 				<bins type="param">128</bins>
 				<ppb type="param">2</ppb>
@@ -1707,14 +1770,15 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</xaxis>
 			<yaxis type="prop">
 				<label type="param">$z$</label>
 				<unit type="param">mm</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
-				<limits type="param">[42.30978750038886, 43.27021249961114]</limits>
+				<limits type="param">[42.309788, 43.270212]</limits>
 				<offset type="param">0</offset>
 				<bins type="param">128</bins>
 				<ppb type="param">2</ppb>
@@ -1722,12 +1786,13 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.1f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</yaxis>
 			<caxis type="prop">
 				<label type="param">energy</label>
 				<unit type="param">eV</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">None</limits>
 				<offset type="param">0</offset>
@@ -1737,6 +1802,7 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.2f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</caxis>
 			<aspect type="param">equal</aspect>
@@ -1746,30 +1812,32 @@
 			<title type="param">slitEH</title>
 			<invertColorMap type="param">False</invertColorMap>
 			<negative type="param">False</negative>
+			<showCornerLabels type="param">True</showCornerLabels>
 			<fluxKind type="param">total</fluxKind>
 			<fluxUnit type="param">auto</fluxUnit>
 			<fluxFormatStr type="param">%.1p</fluxFormatStr>
 			<contourLevels type="param">None</contourLevels>
 			<contourColors type="param">None</contourColors>
 			<contourFmt type="param">%.1f</contourFmt>
-			<contourFactor type="param">1.0</contourFactor>
-			<saveName type="param">['05-2.2mrad-07-10keV-focused-15slitEH.png']</saveName>
+			<contourFactor type="param">1</contourFactor>
+			<saveName type="param">[05-2.2mrad-07-10keV-focused-15slitEH.png]</saveName>
 			<persistentName type="param">None</persistentName>
 			<raycingParam type="param">0</raycingParam>
 			<beamState type="param">None</beamState>
 			<beamC type="param">None</beamC>
 			<beamAbsorb type="param">None</beamAbsorb>
 			<showAbsorbed type="param">False</showAbsorbed>
+			<name type="param">plot15</name>
 			<drawOeArea type="param">True</drawOeArea>
 			<_object type="param">xrt.plotter.XYCPlot</_object>
 		</plot15>
-		<plot16 type="prop">
+		<plot16 type="value">
 			<beam type="param">FSM_Sample_local</beam>
 			<rayFlag type="param">[1, 2]</rayFlag>
 			<xaxis type="prop">
 				<label type="param">$x$</label>
 				<unit type="param">mm</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">[-2, 2]</limits>
 				<offset type="param">0</offset>
@@ -1779,14 +1847,15 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%1.3f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</xaxis>
 			<yaxis type="prop">
 				<label type="param">$z$</label>
 				<unit type="param">mm</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
-				<limits type="param">[40.79, 44.79]</limits>
+				<limits type="param">None</limits>
 				<offset type="param">0</offset>
 				<bins type="param">128</bins>
 				<ppb type="param">2</ppb>
@@ -1794,12 +1863,13 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%1.3f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</yaxis>
 			<caxis type="prop">
 				<label type="param">energy</label>
 				<unit type="param">eV</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">None</limits>
 				<offset type="param">0</offset>
@@ -1809,6 +1879,7 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.2f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</caxis>
 			<aspect type="param">equal</aspect>
@@ -1818,30 +1889,32 @@
 			<title type="param">FSM-Sample</title>
 			<invertColorMap type="param">False</invertColorMap>
 			<negative type="param">False</negative>
+			<showCornerLabels type="param">True</showCornerLabels>
 			<fluxKind type="param">total</fluxKind>
 			<fluxUnit type="param">auto</fluxUnit>
 			<fluxFormatStr type="param">%.1p</fluxFormatStr>
 			<contourLevels type="param">None</contourLevels>
 			<contourColors type="param">None</contourColors>
 			<contourFmt type="param">%.1f</contourFmt>
-			<contourFactor type="param">1.0</contourFactor>
-			<saveName type="param">['05-2.2mrad-07-10keV-focused-16FSM-Sample.png']</saveName>
+			<contourFactor type="param">1</contourFactor>
+			<saveName type="param">[05-2.2mrad-07-10keV-focused-16FSM-Sample.png]</saveName>
 			<persistentName type="param">None</persistentName>
 			<raycingParam type="param">0</raycingParam>
 			<beamState type="param">None</beamState>
 			<beamC type="param">None</beamC>
 			<beamAbsorb type="param">None</beamAbsorb>
 			<showAbsorbed type="param">False</showAbsorbed>
+			<name type="param">plot16</name>
 			<drawOeArea type="param">False</drawOeArea>
 			<_object type="param">xrt.plotter.XYCPlot</_object>
 		</plot16>
-		<plot17 type="prop">
+		<plot17 type="value">
 			<beam type="param">FSM_Sample_local</beam>
-			<rayFlag type="param">(1,)</rayFlag>
+			<rayFlag type="param">[1]</rayFlag>
 			<xaxis type="prop">
 				<label type="param">$x$</label>
 				<unit type="param">mm</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">[-2, 2]</limits>
 				<offset type="param">0</offset>
@@ -1851,14 +1924,15 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%1.3f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</xaxis>
 			<yaxis type="prop">
 				<label type="param">$z$</label>
 				<unit type="param">mm</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
-				<limits type="param">[40.79, 44.79]</limits>
+				<limits type="param">None</limits>
 				<offset type="param">0</offset>
 				<bins type="param">128</bins>
 				<ppb type="param">2</ppb>
@@ -1866,12 +1940,13 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%1.3f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</yaxis>
 			<caxis type="prop">
 				<label type="param">energy</label>
 				<unit type="param">eV</unit>
-				<factor type="param">1.0</factor>
+				<factor type="param">1</factor>
 				<data type="param">auto</data>
 				<limits type="param">None</limits>
 				<offset type="param">10000</offset>
@@ -1881,6 +1956,7 @@
 				<invertAxis type="param">False</invertAxis>
 				<outline type="param">0.5</outline>
 				<fwhmFormatStr type="param">%.2f</fwhmFormatStr>
+				<grid type="param">False</grid>
 				<_object type="param">xrt.plotter.XYCAxis</_object>
 			</caxis>
 			<aspect type="param">equal</aspect>
@@ -1890,20 +1966,22 @@
 			<title type="param">FSM-SampleE</title>
 			<invertColorMap type="param">False</invertColorMap>
 			<negative type="param">False</negative>
+			<showCornerLabels type="param">True</showCornerLabels>
 			<fluxKind type="param">total</fluxKind>
 			<fluxUnit type="param">auto</fluxUnit>
 			<fluxFormatStr type="param">%.1p</fluxFormatStr>
 			<contourLevels type="param">None</contourLevels>
 			<contourColors type="param">None</contourColors>
 			<contourFmt type="param">%.1f</contourFmt>
-			<contourFactor type="param">1.0</contourFactor>
-			<saveName type="param">['05-2.2mrad-07-10keV-focused-17FSM-SampleE.png']</saveName>
+			<contourFactor type="param">1</contourFactor>
+			<saveName type="param">[05-2.2mrad-07-10keV-focused-17FSM-SampleE.png]</saveName>
 			<persistentName type="param">None</persistentName>
 			<raycingParam type="param">0</raycingParam>
 			<beamState type="param">None</beamState>
 			<beamC type="param">None</beamC>
 			<beamAbsorb type="param">None</beamAbsorb>
 			<showAbsorbed type="param">False</showAbsorbed>
+			<name type="param">plot17</name>
 			<drawOeArea type="param">False</drawOeArea>
 			<_object type="param">xrt.plotter.XYCPlot</_object>
 		</plot17>

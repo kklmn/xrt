@@ -43,7 +43,6 @@ def define_plots():
         xaxis=xrtp.XYCAxis(r'$x$', 'mm'), yaxis=xrtp.XYCAxis(r'$z$', 'mm'),
         caxis=xrtp.XYCAxis('energy', 'eV'), title='DCM')
     plot.xaxis.limits = [-7., 7.]
-    plot.yaxis.limits = [38.1-7., 38.1+7.]
     plot.fluxFormatStr = '%.1p'
     plot.textPanel = plot.fig.text(0.88, 0.8, '',
                                    transform=plot.fig.transFigure, size=14,

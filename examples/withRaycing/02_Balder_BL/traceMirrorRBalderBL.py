@@ -59,7 +59,6 @@ def define_plots():
             xaxis=xrtp.XYCAxis(r'$x$', 'mm'), yaxis=xrtp.XYCAxis(r'$z$', 'mm'),
             caxis=xrtp.XYCAxis('energy', 'eV'), title='DCM')
         plot.xaxis.limits = [-7., 7.]
-        plot.yaxis.limits = [38.1-7., 38.1+7.]
         plot.fluxFormatStr = '%.2p'
         plot.textPanel = plot.fig.text(
             0.88, 0.8, '', transform=plot.fig.transFigure, size=14, color='r',
@@ -72,7 +71,6 @@ def define_plots():
         yaxis=xrtp.XYCAxis(r'$z$', 'mm'),
         caxis=xrtp.XYCAxis('energy', 'eV'), title='Sample')
     plot.xaxis.limits = [-300, 300]
-    plot.yaxis.limits = [42.8-0.6, 42.8+0.6]
     plot.ax2dHist.xaxis.set_major_locator(FixedLocator([-200, 0, 200]))
     plot.xaxis.fwhmFormatStr = '%.0f'
     plot.yaxis.fwhmFormatStr = '%.2f'

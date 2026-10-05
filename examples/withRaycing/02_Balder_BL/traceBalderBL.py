@@ -213,7 +213,7 @@ def define_plots(beamLine, prefix, suffix):
         'beamFSMSample', (1, 2),
         xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=[-dz, dz],
                            fwhmFormatStr='%1.3f'),
-        yaxis=xrtp.XYCAxis(r'$z$', 'mm', limits=[cz-dz, cz+dz],
+        yaxis=xrtp.XYCAxis(r'$z$', 'mm', limits=[-dz, dz],
                            fwhmFormatStr='%1.3f'),
         caxis='category', title=beamLine.fsmSample.name)
     add_plot(plots, plot, prefix, suffix)
@@ -222,7 +222,7 @@ def define_plots(beamLine, prefix, suffix):
         'beamFSMSample', (1,),
         xaxis=xrtp.XYCAxis(r'$x$', 'mm', limits=[-dz, dz],
                            fwhmFormatStr='%1.3f'),
-        yaxis=xrtp.XYCAxis(r'$z$', 'mm', limits=[cz-dz, cz+dz],
+        yaxis=xrtp.XYCAxis(r'$z$', 'mm', limits=[-dz, dz],
                            fwhmFormatStr='%1.3f'),
         ePos=1, title=beamLine.fsmSample.name+'E')
     plot.fluxFormatStr = '%.2e'
