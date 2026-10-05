@@ -3,6 +3,15 @@
 Surface Roughness
 -----------------
 
+.. autosummary::
+   :signatures: none
+
+    FigureErrorBase
+    FigureErrorImported
+    RandomRoughness
+    GaussianBump
+    Waviness
+
 Basic containers for surface roughness generators.
 
 .. autoclass:: xrt.backends.raycing.figure_error.FigureErrorBase()
@@ -270,7 +279,7 @@ class FigureErrorBase():
 
 class FigureErrorImported(FigureErrorBase):
     """
-    Figure error defined by an external data file.
+    Figure error defined by external data file.
 
     This class loads a surface distortion (height map) from a file and
     exposes it through the standard :class:`FigureErrorBase` interface.
@@ -621,7 +630,7 @@ class RandomRoughness(FigureErrorBase):
 
 
 class GaussianBump(FigureErrorBase):
-    """Localized surface deformation defined by a Gaussian profile."""
+    """Local surface deformation defined by Gaussian profile."""
 
     def __init__(self, bumpHeight=10., cX=0., cY=0.,
                  sigmaX=10., sigmaY=10., **kwargs):
