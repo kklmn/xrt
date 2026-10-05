@@ -450,11 +450,14 @@ class Powder(CrystalFromCell):
 
     The class parameter *hkl* defines the highest reflex, so that
     reflectivities are calculated for all possible combinations of indices
-    [mnp], where 0 ≤ m ≤ h, 0 ≤ n ≤ k, 0 ≤ p ≤ l. Only one reflection with the
-    highest amplitude is picked for each incident ray.
+    [mnp], where 0 ≤ m ≤ h, 0 ≤ n ≤ k, 0 ≤ p ≤ l, excluding [000]. One
+    reflection is randomly selected for each incident ray, with probability
+    proportional to ``abs(r_s)**2 + abs(r_p)**2`` over the candidate reflections.
+    The selected reflection retains its complex s- and p-polarized amplitudes.
 
     .. warning::
-        Heavy computational load. Requires OpenCL.
+        Heavy computational load. NumPy CPU and OpenCL backends are available;
+        OpenCL is recommended for large beams and reflection ranges.
 
     """
 
@@ -480,12 +483,15 @@ class CrystalHarmonics(CrystalFromCell):
     u"""
     A derivative class from :class:`CrystalFromCell`, used to calculate
     multiple orders of the given reflex in one run: n*[hkl], where 1 ≤ n ≤ Nmax
-    i.e. [111], [222], [333] or [220], [440], [660]. Only one harmonic with
-    highest reflectivity is picked for each incident ray. Use this class to
-    estimate the efficiency of higher harmonic rejection schemes.
+    i.e. [111], [222], [333] or [220], [440], [660]. One harmonic is selected
+    for each incident ray by maximizing ``abs(r_s) + abs(r_p)``. The selected
+    harmonic retains its complex s- and p-polarized amplitudes. Use this class
+    to estimate the efficiency of higher harmonic rejection schemes.
 
     .. warning::
-        Heavy computational load. Requires OpenCL.
+        NumPy CPU and OpenCL backends are available. OpenCL highly recommended,
+        NumPy backend is substantially slower on large beams or many
+        harmonics.
 
     """
 
@@ -512,14 +518,16 @@ class MonoCrystal(CrystalFromCell):
     Similar to the parent class, parameter *hkl* defines the cut orientation,
     whereas *Nmax* stands for the highest index to consider, i.e. for every ray
     the code would calculate the range of reflexes from [-Nmax, -Nmax, -Nmax]
-    to [Nmax, Nmax, Nmax] (required amount of reflectivity calculations is
-    therefore 2*(2*Nmax+1)^3 per every ray), but only return one of them
-    regarding their intensities. Brighter reflexes would be selected with
-    higher probability.
+    to [Nmax, Nmax, Nmax], excluding [000]. One reflection is randomly
+    selected for each incident ray, with probability proportional to
+    ``abs(r_s)**2 + abs(r_p)**2`` over the candidate reflections. The selected
+    reflection retains its complex s- and p-polarized amplitudes. The search
+    uses two passes for cumulative selection; the second pass selects one
+    reflection per ray.
 
     .. warning::
-        Heavy computational load. Requires OpenCL. Decent GPU highly
-        recommended.
+        Heavy computational load. NumPy CPU and OpenCL backends are available;
+        OpenCL is recommended for large beams and reflection ranges.
 
     """
 

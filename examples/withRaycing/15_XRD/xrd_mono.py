@@ -1,20 +1,11 @@
 # -*- coding: utf-8 -*-
+"""Calculate single crystal or powder diffraction patterns.
+
+See the package's __init__.py for the geometry, usage and illustrated results.
+Created with xrtQook.
 """
 __author__ = "Roman Chernikov", "Konstantin Klementiev"
 __date__ = "2018-10-01"
-
-Created with xrtQook
-
-
-
-
-Single Crystal Diffraction
-------------------
-Sample script to calculate the Single Crystal Laue Diffraction pattern.
-
-
-
-"""
 
 import sys
 import os
@@ -31,6 +22,8 @@ import xrt.backends.raycing.run as rrun  # analysis:ignore
 import xrt.backends.raycing as raycing  # analysis:ignore
 import xrt.plotter as xrtplot  # analysis:ignore
 import xrt.runner as xrtrun  # analysis:ignore
+
+showIn3D = False
 
 PowderSample = rmats.Powder(
     chi=[0, 6.283185307179586],
@@ -90,7 +83,7 @@ def build_beamline():
         yaw=0 if powder else '45deg',
         rotationSequence='RxRyRz',
         material=PowderSample if powder else MonoCrystalSample,
-        targetOpenCL=(0, 0),
+        targetOpenCL='auto',  # None for numpy
         precisionOpenCL='float32')
 
     P02_2.FSM_Sample = rscreens.Screen(
@@ -218,12 +211,19 @@ def plot_generator(beamLine, plots):
 
 def main():
     P02_2 = build_beamline()
+    if showIn3D:
+        P02_2.Undulator01.nrays = 5e5
+        P02_2.glow(scale=[10**2.5, 10**2.5, 10**2.5],
+                   centerAt="After Sample",
+                   sceneSettings={"rotations": [-25, 15]})
+
     plots = define_plots()
     xrtrun.run_ray_tracing(
         plots=plots,
         generator=plot_generator,
         generatorArgs=[P02_2, plots],
         repeats=10,
+        processes=5 if P02_2.Sample.targetOpenCL is None else 1,
 #        pickleEvery=5,  # analysis:ignore
         backend=r"raycing",
         beamLine=P02_2,

@@ -2,6 +2,9 @@
 import time
 import numpy as np
 import inspect
+from copy import copy
+from itertools import product
+from scipy.spatial.transform import Rotation
 
 from ... import raycing
 from .. import sources as rs
@@ -480,6 +483,101 @@ class OEMainMethods(object):
         norm = (a_out**2 + b_out**2 + c_out**2)**0.5
         return a_out/norm, b_out/norm, c_out/norm
 
+    @np.errstate(divide='ignore', invalid='ignore', over='ignore')
+    def _reflect_crystal_np(self, goodN, lb, matcr, oeNormal):
+        from ..materials import CrystalSi  # We do the same in opencl
+
+        matcr = copy(matcr)  # temporary instance
+        energy = lb.E[goodN]
+        incoming = np.array([lb.a[goodN], lb.b[goodN], lb.c[goodN]])
+        output = [v.copy() for v in incoming] + [
+            np.zeros(len(energy), complex), np.zeros(len(energy), complex)]
+        if not len(energy):
+            return tuple(output)
+        normals = np.array([np.broadcast_to(v, energy.shape) for v in oeNormal],
+                           dtype=float)
+        plane, surface = normals[:3], normals[-3:]
+        harmonics = matcr.kind == 'crystal harmonics'
+        if harmonics:
+            hkls = [tuple(n*i for i in matcr.hkl)
+                    for n in range(1, matcr.Nmax+1)]
+        else:
+            ranges = ([range(i+1) for i in matcr.hkl] if matcr.kind == 'powder'
+                      else [range(-matcr.Nmax, matcr.Nmax+1)]*3)
+            hkls = [hkl for hkl in product(*ranges) if any(hkl)]
+        rotation = None
+        if matcr.kind == 'monocrystal':
+            cut = np.array(matcr.hkl, float)
+            cut /= np.linalg.norm(cut)
+            plane /= np.linalg.norm(plane, axis=0)
+            axis = np.cross(cut, plane.T)
+            sine = np.linalg.norm(axis, axis=1)
+            axis[sine == 0] = np.cross(
+                cut, np.eye(3)[np.argmin(np.abs(cut))])
+            axis /= np.linalg.norm(axis, axis=1)[:, None]
+            rotation = Rotation.from_rotvec(
+                axis * np.arctan2(sine, cut @ plane)[:, None])
+        # Match the OpenCL silicon temperature and thick-Bragg conventions.
+        if matcr.tK is not None and matcr.tK > 0 and \
+                np.all(np.asarray(matcr.atoms) == 14):
+            a = 5.419490 * (CrystalSi.dl_l(matcr, matcr.tK) -
+                            CrystalSi.dl_l(matcr, 273.15) + 1)
+            matcr.a = matcr.b = matcr.c = a
+            matcr.alpha = matcr.beta = matcr.gamma = 90
+        thickness = 0 if matcr.t is None else matcr.t
+        matcr.t = (None if matcr.geom == 'Bragg reflected' and
+                   (thickness == 0 or thickness > .5) else thickness)
+        gamma0 = np.sum(incoming * surface, axis=0)
+        get_structure_factor = matcr.get_structure_factor
+        matcr.get_structure_factor = lambda E, q: get_structure_factor(energy, q)
+        wavelength = CH / energy
+
+        def evaluate(hkl):
+            matcr.hkl = hkl
+            normal = (rotation.apply(np.asarray(hkl)/np.linalg.norm(hkl)).T
+                      if rotation is not None else plane)
+            dot = np.sum(incoming * normal, axis=0)
+            normal = np.where(dot > 0, -normal, normal)
+            g = (normal - surface*np.sum(normal*surface, axis=0)) / matcr.d
+            u = gamma0**2 - 2*np.sum(incoming*g, axis=0)*wavelength - \
+                np.sum(g*g, axis=0)*wavelength**2
+            sign = -1 if matcr.geom.startswith('Bragg') else 1
+            outgoing = incoming - surface*(gamma0 + sign*np.sqrt(abs(u))) + \
+                g*wavelength
+            outgoing /= np.linalg.norm(outgoing, axis=0)
+            rs, rp = matcr.get_amplitude(
+                energy, gamma0, np.sum(outgoing*surface, axis=0), -abs(dot))
+            rp = np.where(wavelength > 2*matcr.d, 0, rp)
+            return (*outgoing, np.where(np.isfinite(rs), rs, 0),
+                    np.where(np.isfinite(rp), rp, 0))
+
+        total = np.zeros(len(energy))
+        for hkl in hkls:
+            trial = evaluate(hkl)
+            if harmonics:
+                score = abs(trial[3]) + abs(trial[4])
+                take = score >= total  # OpenCL chooses the last equal maximum
+                for dest, value in zip(output, trial):
+                    dest[take] = value[take]
+                total[take] = score[take]
+            else:
+                total += abs(trial[3])**2 + abs(trial[4])**2
+        if not harmonics:
+            threshold = np.minimum(np.random.rand(len(energy))*total,
+                                   np.nextafter(total, -np.inf))
+            pending = total > 0
+            cumulative = np.zeros(len(energy))
+            for hkl in hkls:
+                if not pending.any():
+                    break
+                trial = evaluate(hkl)
+                cumulative += abs(trial[3])**2 + abs(trial[4])**2
+                take = pending & (cumulative > threshold)
+                for dest, value in zip(output, trial):
+                    dest[take] = value[take]
+                pending[take] = False
+        return tuple(output)
+
     def _reflect_crystal_cl(self, goodN, lb, matcr, oeNormal):
         DW = self.cl_precisionF(matcr.factDW)
         thickness = self.cl_precisionF(0 if matcr.t is None else matcr.t)
@@ -929,20 +1027,19 @@ class OEMainMethods(object):
                 lb.b[goodN] = lb.b[goodN] * n1overn2 + oeNormal[1]*dn
                 lb.c[goodN] = lb.c[goodN] * n1overn2 + oeNormal[2]*dn
             elif toWhere in [5, 6, 7]:  # powder, 'monocrystal', 'harmonics'
-                if self.ucl is not None:
+                if self.targetOpenCL is not None and self.ucl is not None:
                     trc0 = time.time()
                     aP, bP, cP, rasP, rapP =\
                         self._reflect_crystal_cl(goodN, lb, matSur, oeNormal)
                     print('Reflect_crystal completed in {0} s'.format(
                         time.time() - trc0))
-    #                lb.concatenate(lb)
-                    lb.a[goodN] = aP
-                    lb.b[goodN] = bP
-                    lb.c[goodN] = cP
-                    goodN = (lb.state == 1) | (lb.state == 2)
                 else:
-                    print('WARNING! Selected material requires active OpenCL device')
-                    print('Beam will pass through without interaction')
+                    aP, bP, cP, rasP, rapP =\
+                        self._reflect_crystal_np(goodN, lb, matSur, oeNormal)
+                lb.a[goodN] = aP
+                lb.b[goodN] = bP
+                lb.c[goodN] = cP
+                goodN = (lb.state == 1) | (lb.state == 2)
 #                good = np.append(good, good)
             else:  # pass straight, do nothing
                 pass
@@ -965,10 +1062,7 @@ class OEMainMethods(object):
 
             if findReflectivity:
                 if toWhere in [5, 6, 7]:  # powder,
-                    if self.ucl is not None:
-                        refl = rasP, rapP
-                    else:
-                        refl = 1., 1.
+                    refl = rasP, rapP
                 elif matKind == 'crystal':
                     beamOutDotSurfaceNormal = a_out*oeNormal[-3] + \
                         b_out*oeNormal[-2] + c_out*oeNormal[-1]
