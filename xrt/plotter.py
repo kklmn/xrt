@@ -237,7 +237,7 @@ def deserialize_plots(data, beamLine=None):
 class XYCAxis(object):
     u"""
     Contains a generic record structure describing each of the 3 axes:
-    X, Y and Color (typ. Energy)."""
+    X, Y and Color (typ energy)."""
 
     def __init__(
         self, label='', unit='mm', factor=None, data='auto', limits=None,
