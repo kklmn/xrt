@@ -6,6 +6,12 @@ Screens
 Module :mod:`~xrt.backends.raycing.screens` defines a flat screen and a
 hemispheric screen that intercept a beam and give its image.
 
+.. autosummary::
+   :signatures: none
+
+   Screen
+   HemisphericScreen
+
 .. autoclass:: xrt.backends.raycing.screens.Screen()
    :members: __init__, expose, prepare_wave
 
