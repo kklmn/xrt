@@ -27,6 +27,7 @@ smallest transmitted energy bandwidth therefore occurs at a nonzero detuning.
        microradians.
 
 .. |convergencePlot| imagezoom:: _images/DCM_detuning_Convergence.png
+   :loc: upper-right-corner
    :alt: &ensp;Energy FWHM versus objective evaluation index, starting at zero.
 
 Resolution and flux
