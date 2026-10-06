@@ -66,7 +66,8 @@ from .. import tutorial  # analysis:ignore
 from ... import xrtGlow as xrtglow  # analysis:ignore
 from ...xrtGlow._constants import DEFAULT_SCENE_SETTINGS as DEFAULT_GLOW_SCENE_SETTINGS
 from ...xrtGlow._utils import is_source, is_aperture, is_screen
-from ...xrtGlow.widgets.inspector import InstanceInspector, _getBeamName  # analysis:ignore
+from ...xrtGlow.widgets.inspector import (
+    InstanceInspector, _getBeamName, _getArgumentUnit)  # analysis:ignore
 from ...xrtGlow.widgets.scan import ScanInstructionDialog, find_catalog_property
 from ...xrtGlow.widgets.nodeeditor import (
     HAS_QTPYNODEEDITOR, _FlowGraphPanel, FLOW_NODE_STYLES)
@@ -1551,7 +1552,13 @@ class XrtQookBase(qt.QMainWindow):
         toolTip = None
         child0 = qt.QStandardItem(str(paramName))
         child0.setFlags(self.paramFlag)
-        child0.setToolTip(qt.argument_input_tooltip(paramName))
+        obj = None
+        if (isinstance(parent, qt.QStandardItem) and
+                str(parent.text()) == 'properties' and
+                parent.parent() is not None):
+            obj = self.getVal(self.getClassName(parent.parent()))
+        child0.setToolTip(
+            qt.argument_input_tooltip(paramName, _getArgumentUnit(paramName, obj)))
         child1 = qt.QStandardItem()
         if editorHint is not None:
             child0.setData(editorHint, qt.EDITOR_HINT_ROLE)

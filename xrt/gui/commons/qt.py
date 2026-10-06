@@ -324,6 +324,8 @@ VAL_PATTERNS = {
     'format': FORMAT_STR,
     'None': r'None',
     'auto': r'auto',
+    'half': r'half',
+    'all': r'all',
     'inf': r'inf',
     'bool': r'(?:True|False)',
     'string': r'.+'}
@@ -342,12 +344,17 @@ def _argument_input_types(argName):
     return ('string',)
 
 
-def argument_input_tooltip(argName):
-    """Describe the input group assigned to an argument."""
+def argument_input_tooltip(argName, unit=None):
+    """Describe accepted input types and non-default argument units."""
+    argName = str(argName)
+    hints = []
     for inputTypes, argNames in argumentInputGroups.items():
-        if str(argName) in argNames:
-            return 'Input: ' + ', '.join(_as_input_types(inputTypes))
-    return ''
+        if argName in argNames:
+            hints.append('Input: ' + ', '.join(_as_input_types(inputTypes)))
+            break
+    if unit is not None:
+        hints.append('Unit: ' + unit)
+    return '\n'.join(hints)
 
 
 def _compound_fields(argName):

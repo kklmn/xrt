@@ -115,6 +115,64 @@ allUnitsCurrent = {'mA': 1e-3,
 allUnitsCurrentStr = {'mA': 'mA',
                       'A': 'A'}
 
+# GUI unit hints for arguments that depart from the mm/rad/eV defaults.
+# Values describe bare numeric input (or diagnostic output), not conversions.
+argumentUnitExceptions = {
+    'eE': 'GeV',
+    'eI': 'A',
+    'eSigmaX': 'µm',
+    'eSigmaZ': 'µm',
+    'eEpsilonX': 'nm·rad',
+    'eEpsilonZ': 'nm·rad',
+    'betaX': 'm',
+    'betaZ': 'm',
+    'xPrimeMax': 'mrad',
+    'zPrimeMax': 'mrad',
+    'B0': 'T',
+    'B0x': 'T',
+    'B0y': 'T',
+    'phaseDeg': '°',
+    'polarization': '° (numeric linear polarization angle)',
+    'd': 'Å (crystal interatomic spacing)',
+    'V': 'Å³',
+    'tK': 'K',
+    'tThickness': 'Å',
+    'bThickness': 'Å',
+    'tThicknessLow': 'Å',
+    'bThicknessLow': 'Å',
+    'idThickness': 'Å',
+    'substThickness': 'Å',
+    'substRoughness': 'Å',
+    'cThickness': 'Å',
+    'surfaceRoughness': 'Å',
+    'bumpHeight': 'nm',
+    'diffractionAngle': '°',
+    'includedAngle': '°',
+    'fitRmsError': 'µm',
+    'cameraAngle': '°',
+    'rotations': '° (scene view)',
+}
+
+
+# Reused argument names mapped to (class path, unit) alternatives.
+# Class paths are resolved by the GUI after the backend has initialized.
+argumentUnitContextExceptions = {
+    'a': (('xrt.backends.raycing.materials.Crystal', 'Å'),),
+    'b': (('xrt.backends.raycing.materials.Crystal', 'Å'),),
+    'c': (('xrt.backends.raycing.materials.Crystal', 'Å'),),
+    'alpha': (('xrt.backends.raycing.materials.CrystalFromCell', '°'),),
+    'beta': (('xrt.backends.raycing.materials.CrystalFromCell', '°'),),
+    'gamma': (('xrt.backends.raycing.materials.CrystalFromCell', '°'),),
+    'rho': (
+        ('xrt.backends.raycing.sources.BendingMagnet', 'm'),
+        ('xrt.backends.raycing.materials.Material', 'g/cm³'),
+        ('xrt.backends.raycing.oes.gratings.ProfiledGrating', 'mm⁻¹')),
+    'amplitude': (('xrt.backends.raycing.figure_error.Waviness', 'nm'),),
+    'rms': (('xrt.backends.raycing.figure_error.RandomRoughness',
+             'nm (rmsKind=height); µrad (rmsKind=slope)'),),
+}
+
+
 lengthUnitParams = {'center': 'mm',
                     'R': 'mm',
                     'r': 'mm',
@@ -165,8 +223,8 @@ argumentInputGroups = {
         'totalFlux', 'zmax', 'pickleEvery', 'repeats', 'updateEvery',
         'factor', 'a', 'V', 'fixedEnergy'},
     ('scalar', 'inf'): {'substThickness'},
-    ('scalar', 'string'): {'processes', 'threads'},
-    ('scalar', 'auto'): {'center', 'nrays', 'x', 'z'},
+    ('scalar', 'half', 'all'): {'processes', 'threads'},
+    ('scalar', 'auto'): {'center', 'x', 'z'},
     ('scalar', 'sequence'): {'dx', 'dy', 'dz', 'focus', 'nCRL', 'rms', 'r',
                              'R', 'w0'},
     ('scalar', 'sequence', 'None'): {'order', 'taper'},
@@ -211,7 +269,7 @@ argumentInputGroups = {
         'Ky', 'L0', 'materialsIndex', 'n', 'N', 'nPairs', 'nRK', 'nSpokes',
         'nx', 'nz', 'period', 'phaseShift', 'phi0',
         'contourFactor', 'ePos', 'offset', 'phiOffset', 'ppb', 'px', 'pz',
-        'r0', 'raycingParam', 'rx', 'rz',
+        'r0', 'raycingParam', 'rx', 'rz', 'nrays',
         'nu', 'power', 'rotations', 'scaleVec', 'shadeFraction', 'sigmaX',
         'sigmaY', 'substRoughness',
         'tK', 'tThickness', 'tThicknessLow', 'thetaOffset', 'vortex',

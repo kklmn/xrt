@@ -18,6 +18,9 @@ from .._constants import DISPLAY_NUMBER_FORMAT
 from .._utils import is_aperture, is_screen, is_parametric_oe
 
 from ....backends import raycing
+from ....backends.raycing._flow_utils import _class_from_string
+from ....backends.raycing._sets_units import (
+    argumentUnitExceptions, argumentUnitContextExceptions)
 from ....backends.raycing import materials as rmats
 from ....backends.raycing import sources as rs
 from ....backends.raycing.myopencl import ALL_CL_DEVICES
@@ -31,6 +34,26 @@ __date__ = "27 Jan 2026"
 
 oeDiagnosticArgs = ('incoming from', 'center distance (mm)',
                     'grazing angle (°)', 'incidence angle (°)')
+
+
+# Resolve the declared class paths once for both the inspector and Qook trees.
+_argumentUnitContextTypes = {
+    argName: tuple((_class_from_string(typeName), unit)
+                   for typeName, unit in contexts)
+    for argName, contexts in argumentUnitContextExceptions.items()}
+
+
+def _getArgumentUnit(argName, obj=None):
+    unit = argumentUnitExceptions.get(str(argName))
+    if unit is not None:
+        return unit
+    for contextType, contextUnit in _argumentUnitContextTypes.get(
+            str(argName), ()):
+        matches = (issubclass(obj, contextType) if isinstance(obj, type) else
+                   isinstance(obj, contextType))
+        if matches:
+            return contextUnit
+    return None
 
 
 def _format_display_value(value):
@@ -442,7 +465,9 @@ class InstanceInspector(qt.QDialog):
         toolTip = None
         child0 = qt.QStandardItem(str(paramName))
         child0.setFlags(self.paramFlag)
-        child0.setToolTip(qt.argument_input_tooltip(paramName))
+        child0.setToolTip(
+            qt.argument_input_tooltip(
+                paramName, _getArgumentUnit(paramName, self.editorObject)))
         editorHint = self.getArgumentEditorHint(paramName)
         child1 = qt.QStandardItem()
         if editorHint is not None:
@@ -1065,7 +1090,8 @@ class ConfigurablePlotWidget(qt.QWidget):
         toolTip = None
         child0 = qt.QStandardItem(str(paramName))
         child0.setFlags(self.paramFlag)
-        child0.setToolTip(qt.argument_input_tooltip(paramName))
+        child0.setToolTip(
+            qt.argument_input_tooltip(paramName, _getArgumentUnit(paramName)))
         child1 = qt.QStandardItem(str(value))
 
         ch1flag = (self.paramFlag if paramName == 'name'
