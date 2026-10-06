@@ -38,7 +38,7 @@ Current GitHub code (last modified 1 Oct 2026):
       extensively revised examples and documentation.
 
     - Add a documented example on
-      :ref:`controlling a virtual xrt beamline with EPICS <tweens>`.
+      :ref:`controlling a virtual xrt beamline with EPICS <twins>`.
 
 2.0.0b1 (beta) (26 Apr 2026):
     - Restoration and stabilization of xrtGlow and xrtQook workflows after
