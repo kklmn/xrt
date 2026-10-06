@@ -26,7 +26,7 @@ reflection with a probability weighted by its intensity.
    :width: 420
    :alt: Single crystal diffraction geometry and rays in xrtGlow.
 
-.. |lauegram| imagezoom:: _images/Lauegram Intensity.png
+.. |lauegram| imagezoom:: _images/Lauegram_Intensity.png
    :width: 420
    :alt: Simulated silicon Laue diffraction intensity on the detector.
 
