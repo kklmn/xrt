@@ -25,3 +25,5 @@ Gallery of plots and scripts 2. X-ray optics
 
 .. automodule:: examples.withRaycing.16_ParametricOptimization
 
+.. automodule:: examples.withRaycing.17_STL
+
