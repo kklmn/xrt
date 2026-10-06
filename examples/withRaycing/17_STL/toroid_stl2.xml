@@ -628,9 +628,9 @@ divergence easy to see. Keep these settings and the same scene view for
 the following comparisons.
 
 .. imagezoom:: _images/17_1_stl_flat_start.png
+   :align: center
    :scale: 60%
-
-The analytical and flat branches, colored by horizontal ray angle.
+   :alt: &ensp;The analytical and flat branches, colored by horizontal ray angle.
 
 2. Load the coarse STL
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -638,7 +638,7 @@ The analytical and flat branches, colored by horizontal ray angle.
 Center the scene on ``toroidMirrorSTL`` and double-click it to open its
 inspector. Double-click the value beside ``fileName`` to open the file
 editor, then browse to ``toroidMirrorSTL.stl`` in the example directory.
-This file is approximately 122 KiB and contains a 25 x 25 vertex grid.
+This file is approximately 122 KiB and contains a 25×25 vertex grid.
 Keep ``orientation = XYZ`` and ``recenter = True``.
 
 For this first comparison, leave both ``surfaceHintX`` and ``surfaceHintY``
@@ -654,9 +654,10 @@ with the reference values of 50 mm and 200 mm. Note the fit error for
 comparison with the next step.
 
 .. imagezoom:: _images/17_2_stl_toro_25.png
+   :align: center
    :scale: 60%
-
-The 25 x 25 STL looks plausible in the scene, but focuses differently.
+   :alt: &ensp;The 25×25 STL looks plausible in the scene, but focuses
+       differently.
 
 .. list-table:: Analytical reference versus the coarse STL
    :widths: 50 50
@@ -671,9 +672,9 @@ The 25 x 25 STL looks plausible in the scene, but focuses differently.
           :scale: 80%
 
 .. imagezoom:: _images/17_2_diag.png
+   :align: center
    :scale: 60%
-
-The coarse STL's fitted radii and RMS height residual.
+   :alt: &ensp;The coarse STL's fitted radii and RMS height residual.
 
 3. Increase the sampling and match the profiles
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -687,7 +688,7 @@ The exported model can also be viewed and modified using third-party 3D
 tools.
 
 For this example, we already provide ``toroidMirrorSTL100.stl``, created
-in a similar manner. The suffix refers to its 100 x 100 vertex grid.
+in a similar manner. The suffix refers to its 100×100 vertex grid.
 Load this file into ``toroidMirrorSTL``. First keep both hints set to
 ``parabolic`` and observe the ``screen_STL`` spot. Then change the hints
 to:
@@ -720,9 +721,10 @@ spots: the height residual describes the surface fit, while the screen
 plots show its effect on focusing.
 
 .. imagezoom:: _images/17_3_stl_toro_100.png
+   :align: center
    :scale: 60%
-
-The dense STL with circular X and parabolic Y hints, viewed as in step 1.
+   :alt: &ensp;The dense STL with circular X and parabolic Y hints, viewed as
+       in step 1.
 
 .. list-table:: Dense STL: effect of the sagittal hint
    :widths: 50 50
@@ -737,9 +739,10 @@ The dense STL with circular X and parabolic Y hints, viewed as in step 1.
           :scale: 80%
 
 .. imagezoom:: _images/17_3_diag.png
+   :align: center
    :scale: 60%
-
-The matching profiles recover radii close to those of the reference mirror.
+   :alt: &ensp;The matching profiles recover radii close to those of the
+       reference mirror.
 
 4. Explore the effect of the illuminated footprint
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
