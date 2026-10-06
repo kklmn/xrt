@@ -10,6 +10,7 @@ __date__ = "27 Jan 2026"
 import os  # analysis:ignore
 import sys  # analysis:ignore
 import textwrap  # analysis:ignore
+import traceback
 import numpy as np  # analysis:ignore
 import re  # analysis:ignore
 from datetime import date  # analysis:ignore
@@ -2480,6 +2481,7 @@ class XrtQookBase(qt.QMainWindow):
 
     def importLayout(self, layoutJSON=None, filename=None):
         project = None
+        canImport = self.isEmpty
         if not self.isEmpty:
             msgBox = qt.QMessageBox()
             if msgBox.warning(self,
@@ -2489,9 +2491,9 @@ class XrtQookBase(qt.QMainWindow):
                               qt.QMessageBox.No,
                               defaultButton=qt.QMessageBox.No)\
                     == qt.QMessageBox.Yes:
-                self.isEmpty = True
+                canImport = True
 
-        if self.isEmpty:
+        if canImport:
             openFileName = ""
 
             if layoutJSON is not None:
@@ -2523,10 +2525,17 @@ class XrtQookBase(qt.QMainWindow):
 
                 self.progressBar.setFormat(ldMsg)
 
-                parseOK = True  # False
-                if parseOK:
+                try:
                     tmpBL = raycing.BeamLine(fileName=openFileName)
                     project = tmpBL.export_to_json()
+                except Exception as error:
+                    traceback.print_exc()
+                    self.progressBar.setFormat("Error importing layout")
+                    qt.QMessageBox.critical(
+                        self, "Error importing layout",
+                        "Could not load layout from {0}\n\n{1}: {2}".format(
+                            openFileName, type(error).__name__, error))
+                    return
 
             if project is None:
                 self.progressBar.setFormat(
