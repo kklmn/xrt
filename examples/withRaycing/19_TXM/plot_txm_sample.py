@@ -7,8 +7,7 @@ millions of voxels, which is not a good target for matplotlib's 3D scatter.
 
 from __future__ import print_function
 
-import argparse
-from pathlib import Path
+import os
 
 import h5py
 import matplotlib
@@ -18,16 +17,18 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 
-HERE = Path(__file__).resolve().parent
-DEFAULT_FILE = HERE / "txm_sample_50um_500.h5"
-MATERIAL_COLORS = {
+# Edit these settings before running the script from an IDE.
+sampleFile = "txm_sample_50um_500.h5"
+outputDir = "."
+maxScatterPoints = 80000
+materialColors = {
     1: "tab:blue",
     2: "tab:orange",
     3: "tab:green",
     4: "tab:red",
     5: "tab:cyan",
 }
-MATERIALS = {0: "Water",
+materials = {0: "Water",
         1: "Rock Salt",
         2: "Air",
         3: "Kapton",
@@ -49,7 +50,8 @@ def voxel_centers(lim, n):
     return np.linspace(lim[0], lim[1], n, endpoint=False) + 0.5 * step
 
 
-def save_scatter(grid, xlim, ylim, zlim, output, max_points=80000, seed=11):
+def save_scatter(
+        grid, xlim, ylim, zlim, output, max_points=maxScatterPoints, seed=11):
     nz, ny, nx = grid.shape
     x = voxel_centers(xlim, nx)
     y = voxel_centers(ylim, ny)
@@ -65,14 +67,14 @@ def save_scatter(grid, xlim, ylim, zlim, output, max_points=80000, seed=11):
 
     fig = plt.figure(figsize=(8, 7), constrained_layout=True)
     ax = fig.add_subplot(111, projection="3d")
-    for value in sorted(MATERIAL_COLORS):
+    for value in sorted(materialColors):
         mask = values == value
         if not np.any(mask):
             continue
         ax.scatter(
             x[ix[mask]] * 1e3, z[iz[mask]] * 1e3, y[iy[mask]] * 1e3,
-            s=1, alpha=0.45, color=MATERIAL_COLORS[value],
-            label="{0}".format(MATERIALS.get(value)))
+            s=1, alpha=0.45, color=materialColors[value],
+            label="{0}".format(materials.get(value)))
 
     ax.set_xlabel("x (um)")
     ax.set_ylabel("z (um)")
@@ -109,36 +111,22 @@ def save_xz_projection(grid, xlim, ylim, zlim, output):
     return projection
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(
-        description="Plot a synthetic TXM indexed-volume HDF5 sample.")
-    parser.add_argument(
-        "fileName", nargs="?", type=Path, default=DEFAULT_FILE,
-        help="HDF5 sample file. Defaults to txm_sample_50um_500.h5.")
-    parser.add_argument(
-        "--output-dir", type=Path, default=HERE,
-        help="Directory for generated PNG files.")
-    parser.add_argument(
-        "--max-scatter-points", type=int, default=80000,
-        help="Maximum occupied voxels shown in the 3D scatter plot.")
-    return parser.parse_args()
-
-
 def main():
-    args = parse_args()
-    grid, xlim, ylim, zlim = load_sample(args.fileName)
-    args.output_dir.mkdir(parents=True, exist_ok=True)
+    file_name = os.fspath(sampleFile)
+    output_dir = os.fspath(outputDir)
+    grid, xlim, ylim, zlim = load_sample(file_name)
+    os.makedirs(output_dir, exist_ok=True)
 
-    scatter_file = args.output_dir / "txm_sample_scatter.png"
-    projection_file = args.output_dir / "txm_sample_xz_projection.png"
+    scatter_file = os.path.join(output_dir, "txm_sample_scatter.png")
+    projection_file = os.path.join(output_dir, "txm_sample_xz_projection.png")
 
     shown = save_scatter(
         grid, xlim, ylim, zlim, scatter_file,
-        max_points=args.max_scatter_points)
+        max_points=maxScatterPoints)
     projection = save_xz_projection(grid, xlim, ylim, zlim, projection_file)
 
     unique, counts = np.unique(grid, return_counts=True)
-    print("Loaded: {0}".format(args.fileName))
+    print("Loaded: {0}".format(file_name))
     print("Grid shape (z, y, x): {0}".format(grid.shape))
     print("Voxel counts: {0}".format(dict(zip(unique.tolist(), counts.tolist()))))
     print("Scatter voxels shown: {0}".format(shown))

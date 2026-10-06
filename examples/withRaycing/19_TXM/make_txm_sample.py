@@ -13,15 +13,14 @@ The optional /indexGrid backgroundIndex attribute defaults to 0.
 
 from __future__ import print_function
 
-import argparse
-from pathlib import Path
+import os
 
 import h5py
 import numpy as np
 
 
-HERE = Path(__file__).resolve().parent
-DEFAULT_FILE = HERE / "txm_sample_50um_500.h5"
+# Edit the sample output path before running from an IDE.
+sampleFile = "txm_sample_50um_500.h5"
 
 
 def make_grid(n=500):
@@ -121,21 +120,12 @@ def write_sample(file_name, n=500, width=0.05, height=0.05, thickness=0.01):
     return grid
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(
-        description="Create a synthetic TXM indexed-volume HDF5 sample.")
-    parser.add_argument(
-        "fileName", nargs="?", type=Path, default=DEFAULT_FILE,
-        help="Output HDF5 file. Defaults to txm_sample_50um_500.h5.")
-    return parser.parse_args()
-
-
 def main():
-    args = parse_args()
-    args.fileName.parent.mkdir(parents=True, exist_ok=True)
-    grid = write_sample(args.fileName)
+    file_name = os.fspath(sampleFile)
+    os.makedirs(os.path.dirname(file_name) or ".", exist_ok=True)
+    grid = write_sample(file_name)
     unique, counts = np.unique(grid, return_counts=True)
-    print("Wrote: {0}".format(args.fileName))
+    print("Wrote: {0}".format(file_name))
     print("Grid shape (z, y, x): {0}".format(grid.shape))
     print("Voxel counts: {0}".format(dict(zip(unique.tolist(),
           counts.tolist()))))
