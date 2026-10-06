@@ -13,15 +13,15 @@ Sources
     GaussianBeam
     LaguerreGaussianBeam
     HermiteGaussianBeam
-    UndulatorUrgent
-    WigglerWS
     BendingMagnetWS
+    WigglerWS
+    UndulatorUrgent
     SourceBase
+    BendingMagnet
+    Wiggler
     IntegratedSource
     Undulator
     SourceFromField
-    Wiggler
-    BendingMagnet
 
 .. _sampling-strategies:
 
@@ -520,26 +520,25 @@ application example :ref:`here <example-undulator-sizes>`.
    brilliance of undulator radiation considering the energy spread effect,
    J. Synchrotron Rad. **16** (2009) 380–6.
 
-.. autoclass:: UndulatorUrgent()
+.. autoclass:: BendingMagnetWS()
    :members: __init__
 .. autoclass:: WigglerWS()
    :members: __init__
-.. autoclass:: BendingMagnetWS()
+.. autoclass:: UndulatorUrgent()
    :members: __init__
 
 .. autoclass:: SourceBase()
    :members: __init__, real_photon_source_sizes,
              multi_electron_stack, intensities_on_mesh
-.. autoclass:: IntegratedSource()
-   :members: __init__, test_convergence, shine
-
-.. autoclass:: Undulator()
-   :members: __init__, get_SIGMA, get_SIGMAP, power_vs_K, tuning_curves
-.. autoclass:: SourceFromField()
+.. autoclass:: BendingMagnet()
    :members: __init__
 .. autoclass:: Wiggler()
    :members: __init__
-.. autoclass:: BendingMagnet()
+.. autoclass:: IntegratedSource()
+   :members: __init__, test_convergence, shine
+.. autoclass:: Undulator()
+   :members: __init__, get_SIGMA, get_SIGMAP, power_vs_K, tuning_curves
+.. autoclass:: SourceFromField()
    :members: __init__
 
 .. _comparison-synchrotron-sources:

@@ -27,7 +27,7 @@ else:
 
 
 class SourceBase:
-    """Base class for all synchrotron sources of xrt, not to be called
+    """Base class for all internal synchrotron sources of xrt, not to be called
     explicitly."""
 
     hiddenParams = {'eN', 'nx', 'nz'}
@@ -950,8 +950,8 @@ class SourceBase:
 
 
 class IntegratedSource(SourceBase):
-    """Base class for sources with numerically integrated amplitudes:
-    :class:`SourceFromField` and :class:`Undulator`.
+    """Base class for xrt sources with numerically integrated amplitudes:
+    :class:`Undulator` and :class:`SourceFromField`.
     Not to be called explicitly."""
 
     hiddenParams = getattr(SourceBase, 'hiddenParams', set()) | {'gIntervals'}

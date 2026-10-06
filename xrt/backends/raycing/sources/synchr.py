@@ -649,11 +649,12 @@ class Wiggler(BendingMagnet):
 
 class SourceFromField(IntegratedSource):
     """
-    Synchrotron source that calculates electric field amplitudes by
-    numerical integration along the electron trajectory in an arbitrary
-    magnetic field. Accepts tabulated fields from analytical models or
-    measurements and supports *aperiodic undulators*, custom-field wigglers,
-    assemblies of bending magnets, and any other magnetic configurations.
+    Synchrotron source that calculates electric-field amplitudes through
+    numerical integration along the electron trajectory in a user-defined 3D
+    magnetic field․ It accepts tabulated magnetic fields derived from analytical
+    models or measurements and supports quasi-periodic undulators, custom-field
+    wigglers, bending-magnet edge radiation, and virtually any magnetic-field
+    configuration.
 
     Implemented in NumPy and OpenCL. OpenCL is highly recommended for
     aperiodic structures and measured magnetic fields because achieving

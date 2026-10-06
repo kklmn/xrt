@@ -783,7 +783,7 @@ class GaussianBeam(GeometricSource):
 
 
 class LaguerreGaussianBeam(GaussianBeam):
-    r"""Laguerre-Gaussian beam https://en.wikipedia.org/wiki/Gaussian_beam.
+    r"""Laguerre-Gaussian version of GaussianBeam.
     It must be used for an already available set of 3D points which are
     obtained by :meth:`prepare_wave` of a slit, oe or screen. See a usage
     example in ``\tests\raycing\laguerre_hermite_gaussian_beam.py``."""
@@ -804,7 +804,7 @@ class LaguerreGaussianBeam(GaussianBeam):
 
 
 class HermiteGaussianBeam(GaussianBeam):
-    r"""Hermite-Gaussian beam https://en.wikipedia.org/wiki/Gaussian_beam.
+    r"""Hermite-Gaussian version of GaussianBeam.
     It must be used for an already available set of 3D points which are
     obtained by :meth:`prepare_wave` of a slit, oe or screen. See a usage
     example in ``\tests\raycing\laguerre_hermite_gaussian_beam.py``."""
