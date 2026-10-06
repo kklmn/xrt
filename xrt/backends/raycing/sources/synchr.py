@@ -71,9 +71,12 @@ def _build_undulator_trajectory(grid, period, Kx, Ky, phase, gamma,
 
 
 class BendingMagnet(SourceBase):
-    u"""
-    Bending magnet source of xrt. The computation is reasonably fast and thus
-    a GPU is not required and is not implemented.
+    """
+    Bending magnet source based on a simplified analytical radiation model for
+    a constant magnetic field. Supports probabilistic sampling of ray origins
+    along the circular electron trajectory.
+    Uses Bessel functions from ``scipy.special``, runs reasonably fast on CPU,
+    and supports multithreading and multiprocessing.
     """
 
     def __init__(self, *args, **kwargs):
@@ -522,9 +525,11 @@ class BendingMagnet(SourceBase):
 
 
 class Wiggler(BendingMagnet):
-    u"""
-    Wiggler source of xrt. The computation is reasonably fast and thus a GPU
-    is not required and is not implemented.
+    """
+    Wiggler source modeled as an incoherent sum of bending magnet sources.
+    Uses the same radiation model and inherits its performance benefits.
+    Ignores fine structure in the spectral and spatial photon distributions
+    and must be used with caution for low-emittance synchrotron rings.
     """
 
     hiddenParams = getattr(BendingMagnet,
@@ -643,7 +648,17 @@ class Wiggler(BendingMagnet):
 
 
 class SourceFromField(IntegratedSource):
-    """Undulator source of xrt calculated from custom magnetic field."""
+    """
+    Synchrotron source that calculates electric field amplitudes by
+    numerical integration along the electron trajectory in an arbitrary
+    magnetic field. Accepts tabulated fields from analytical models or
+    measurements and supports *aperiodic undulators*, custom-field wigglers,
+    assemblies of bending magnets, and any other magnetic configurations.
+
+    Implemented in NumPy and OpenCL. OpenCL is highly recommended for
+    aperiodic structures and measured magnetic fields because achieving
+    convergence can require extremely dense integration grids.
+    """
 
     def __init__(self, *args, uniformRayDensity=True, gp=1e-3, **kwargs):
         """
@@ -1389,9 +1404,19 @@ class SourceFromField(IntegratedSource):
 
 
 class Undulator(IntegratedSource):
-    u"""
-    Undulator source of xrt. The computation is volumnous and thus a decent GPU
-    is highly recommended.
+    """
+    Undulator source that calculates electric field amplitudes by numerical
+    integration along the electron trajectory in a sinusoidal magnetic field,
+    including fields with varying amplitude (tapered undulators).
+    The integration grid covers a single period in the far-field approximation
+    and the full undulator length for near-field calculations or tapered
+    undulators, making the latter much more computationally demanding.
+
+    Implemented in NumPy and OpenCL. Both backends are reasonably fast in the
+    far-field paraxial approximation, but high magnetic fields, acceptance
+    angles extending far beyond the central radiation peak, and photon energies
+    above ~5th harmonic may require finer integration grids for convergence. A
+    capable GPU is highly recommended for these cases.
     """
 
     def __init__(self, *args, **kwargs):
