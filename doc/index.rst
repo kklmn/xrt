@@ -49,7 +49,7 @@ User's Guide
    plots.rst
    runs.rst
    gpu.rst
-   tweens.rst
+   twins.rst
    gallery1.rst
    gallery2.rst
    gallery3.rst
