@@ -111,6 +111,7 @@ DEFAULT_SCENE_SETTINGS = {
     'showLostRays': False,
     'showLocalAxes': False,
     'showContours': False,
+    'showWireframe': False,
     'showInternalBeam': True,
     'renderPlateSides': True,
     'showElectronTrajectory': False,
@@ -165,6 +166,7 @@ SCENE_CONTROL_LABELS = {
     'invertColors': 'Invert scene color',
     'showLocalAxes': 'Show local axes',
     'showContours': 'Show contours',
+    'showWireframe': 'Show wireframe',
     'showInternalBeam': 'Show internal beams in multi-surface OEs',
     'renderPlateSides': 'Render side surfaces for plates and lenses',
     }

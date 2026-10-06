@@ -11,16 +11,19 @@ except ImportError:
 if isOpenGL:
 
     from OpenGL.GL import (
-        glBlendFunc, glBlendFuncSeparate, glClear, glClearColor, glDepthMask,
+        glBlendFunc, glBlendFuncSeparate, glClear, glClearColor, glDepthFunc,
+        glDepthMask,
         glDisable, glDrawArrays, glDrawArraysInstanced, glDrawElements,
         glEnable, glEnableVertexAttribArray, glGetBooleanv, glGetError,
         glGetFloatv, glGetIntegerv, glHint, glIsEnabled,
-        glLineWidth, glPolygonMode, glReadPixels, glStencilFunc, glStencilOp,
+        glLineWidth, glPolygonMode, glPolygonOffset, glReadPixels, glStencilFunc,
+        glStencilOp,
         glVertexAttribDivisor, glVertexAttribPointer, glViewport,
         GL_ALIASED_LINE_WIDTH_RANGE, GL_ALWAYS, GL_BLEND, GL_COLOR_BUFFER_BIT,
-        GL_DEPTH_BUFFER_BIT,
+        GL_DEPTH_BUFFER_BIT, GL_DEPTH_FUNC, GL_LEQUAL,
         GL_DEPTH_TEST, GL_DEPTH_WRITEMASK, GL_FALSE, GL_FILL, GL_FLOAT,
-        GL_FRONT_AND_BACK, GL_LINE_WIDTH,
+        GL_FRONT_AND_BACK, GL_LINE_WIDTH, GL_POLYGON_MODE,
+        GL_POLYGON_OFFSET_FACTOR, GL_POLYGON_OFFSET_LINE, GL_POLYGON_OFFSET_UNITS,
         GL_KEEP, GL_LINE, GL_LINES, GL_LINE_SMOOTH, GL_LINE_SMOOTH_HINT,
         GL_MULTISAMPLE, GL_NICEST, GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_POINTS,
         GL_SMOOTH_LINE_WIDTH_RANGE,

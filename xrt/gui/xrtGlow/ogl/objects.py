@@ -385,6 +385,8 @@ class OEMesh3D():
     //uniform mat4 view;
 
     uniform mat4 v_inv;
+    uniform bool wireframe;
+    uniform vec4 wireColor;
     uniform vec2 texlimitsx;
     uniform vec2 texlimitsy;
     uniform vec2 texlimitsz;
@@ -431,6 +433,11 @@ class OEMesh3D():
 
     void main()
     {
+      if (wireframe)
+        {
+          fragColor = wireColor;
+          return;
+        }
       vec3 normalDirection = normalize(varyingNormalDirection);
       vec3 viewDirection = normalize(vec3(v_inv * vec4(0.0, 0.0, 0.0, 1.0) -
                                           w_position));
@@ -634,6 +641,8 @@ class OEMesh3D():
     out vec4 fragColor;
 
     uniform mat4 v_inv;
+    uniform bool wireframe;
+    uniform vec4 wireColor;
 
     const int lightCount = 8;
     const vec3 lightDirections[8] = vec3[8](
@@ -665,6 +674,11 @@ class OEMesh3D():
 
     void main()
     {
+      if (wireframe)
+        {
+          fragColor = wireColor;
+          return;
+        }
 
       vec3 normalDirection = normalize(varyingNormalDirection);
       vec3 viewDirection = normalize(vec3(v_inv * vec4(0.0, 0.0, 0.0, 1.0) -
@@ -2868,6 +2882,43 @@ class OEMesh3D():
         return self.transMatrix[0] if is_aperture(self.oe) else\
             self.transMatrix[oeIndex]*rotOffsets
 
+    def render_wireframe(self, shader, draw, *args):
+        """Overlay triangle edges using the bound surface shader and VAO."""
+        if not self.parent.showWireframe:
+            return
+
+        polygonMode = gl.glGetIntegerv(gl.GL_POLYGON_MODE)
+        depthFunc = gl.glGetIntegerv(gl.GL_DEPTH_FUNC)
+        depthMask = gl.glGetBooleanv(gl.GL_DEPTH_WRITEMASK)
+        lineWidth = gl.glGetFloatv(gl.GL_LINE_WIDTH)
+        offsetFactor = gl.glGetFloatv(gl.GL_POLYGON_OFFSET_FACTOR)
+        offsetUnits = gl.glGetFloatv(gl.GL_POLYGON_OFFSET_UNITS)
+        enabled = {cap: gl.glIsEnabled(cap) for cap in (
+            gl.GL_DEPTH_TEST, gl.GL_STENCIL_TEST, gl.GL_POLYGON_OFFSET_LINE)}
+        try:
+            gl.glEnable(gl.GL_DEPTH_TEST)
+            gl.glDepthFunc(gl.GL_LEQUAL)
+            gl.glDepthMask(gl.GL_FALSE)
+            # Filled surfaces already provide the picking stencil.
+            gl.glDisable(gl.GL_STENCIL_TEST)
+            gl.glEnable(gl.GL_POLYGON_OFFSET_LINE)
+            gl.glPolygonOffset(-1., -1.)
+            gl.glLineWidth(1.)
+            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
+            shader.setUniformValue(
+                'wireColor', qt.QVector4D(*self.parent.lineColor, 1.))
+            shader.setUniformValue('wireframe', True)
+            draw(*args)
+        finally:
+            shader.setUniformValue('wireframe', False)
+            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, int(polygonMode[0]))
+            gl.glPolygonOffset(float(offsetFactor), float(offsetUnits))
+            gl.glLineWidth(float(lineWidth))
+            gl.glDepthMask(bool(depthMask))
+            gl.glDepthFunc(int(depthFunc))
+            for cap, wasEnabled in enabled.items():
+                (gl.glEnable if wasEnabled else gl.glDisable)(cap)
+
     def render_surface(self, mMod, mView, mProj, oeIndex=0,
                        isSelected=False, shader=None):
 
@@ -2933,20 +2984,25 @@ class OEMesh3D():
         shader.setUniformValue("opacity", float(self.parent.pointOpacity*2))
         shader.setUniformValue("surfOpacity", float(surfOpacity))
         shader.setUniformValue("isApt", 0)
+        shader.setUniformValue('wireframe', False)
 
         if beamTexture is not None:
             beamTexture.bind()
 
-        if self.isStl:
-            gl.glDrawArrays(gl.GL_TRIANGLES, 0, arrLen)
-        else:
-            gl.glDrawElements(gl.GL_TRIANGLES, arrLen,
-                              gl.GL_UNSIGNED_INT, [])
-
-        if beamTexture is not None:
-            beamTexture.release()
-        shader.release()
-        vao.release()
+        try:
+            if self.isStl:
+                draw = gl.glDrawArrays
+                args = (gl.GL_TRIANGLES, 0, arrLen)
+            else:
+                draw = gl.glDrawElements
+                args = (gl.GL_TRIANGLES, arrLen, gl.GL_UNSIGNED_INT, [])
+            draw(*args)
+            self.render_wireframe(shader, draw, *args)
+        finally:
+            if beamTexture is not None:
+                beamTexture.release()
+            shader.release()
+            vao.release()
 
     def render_trajectory(self, mMod, mView, mProj, shifts=None,
                           envelopeRadii=None, envelopeStep=None,
@@ -3008,71 +3064,74 @@ class OEMesh3D():
 
     def render_magnets(self, mMod, mView, mProj, shape={},
                        isSelected=False, shader=None):
-        if shader is None:
+        if shader is None or not self.vao:
             return
         shape = self._resolve_magnet_shape(shape)
 
         shader.bind()
-        if not self.vao:
-            return
+        try:
+            shader.setUniformValue("view", mView)
+            shader.setUniformValue("projection", mProj)
 
-        shader.setUniformValue("view", mView)
-        shader.setUniformValue("projection", mProj)
+            shader.setUniformValue("v_inv", mView.inverted()[0])
 
-        shader.setUniformValue("v_inv", mView.inverted()[0])
+            mat = 'Si'
+            ambient_in = ambient['selected'] if isSelected else ambient[mat]
+            diffuse_in = diffuse[mat]
+            specular_in = specular[mat]
+            shininess_in = shininess[mat]
 
-        mat = 'Si'
-        ambient_in = ambient['selected'] if isSelected else ambient[mat]
-        diffuse_in = diffuse[mat]
-        specular_in = specular[mat]
-        shininess_in = shininess[mat]
+            shader.setUniformValue("frontMaterial.ambient", ambient_in)
+            shader.setUniformValue("frontMaterial.diffuse", diffuse_in)
+            shader.setUniformValue("frontMaterial.specular", specular_in)
+            shader.setUniformValue("frontMaterial.shininess", shininess_in)
 
-        shader.setUniformValue("frontMaterial.ambient", ambient_in)
-        shader.setUniformValue("frontMaterial.diffuse", diffuse_in)
-        shader.setUniformValue("frontMaterial.specular", specular_in)
-        shader.setUniformValue("frontMaterial.shininess", shininess_in)
+            magnetArrays = getattr(
+                self, 'magnet_arrays',
+                [dict(nsIndex=0, roll=0.0)])
+            vertexCounts = getattr(self, 'magnet_vertex_counts', {})
+            instanceCounts = getattr(self, 'magnet_instance_counts', {})
+            scaleInShader = getattr(self, 'magnet_scale_in_shader', {})
+            if not isinstance(scaleInShader, dict):
+                scaleInShader = {0: scaleInShader}
 
-        magnetArrays = getattr(
-            self, 'magnet_arrays',
-            [dict(nsIndex=0, roll=0.0)])
-        vertexCounts = getattr(self, 'magnet_vertex_counts', {})
-        instanceCounts = getattr(self, 'magnet_instance_counts', {})
-        scaleInShader = getattr(self, 'magnet_scale_in_shader', {})
-        if not isinstance(scaleInShader, dict):
-            scaleInShader = {0: scaleInShader}
+            for arrayDef in magnetArrays:
+                nsIndex = arrayDef['nsIndex']
+                vao = self.vao.get(nsIndex)
+                if vao is None:
+                    continue
 
-        for arrayDef in magnetArrays:
-            nsIndex = arrayDef['nsIndex']
-            vao = self.vao.get(nsIndex)
-            if vao is None:
-                continue
+                arrayRoll = qt.QMatrix4x4()
+                arrayRoll.rotate(arrayDef.get('roll', 0.0), 0, 1, 0)
+                oeOrientation = self.transMatrix[0] * arrayRoll
 
-            arrayRoll = qt.QMatrix4x4()
-            arrayRoll.rotate(arrayDef.get('roll', 0.0), 0, 1, 0)
-            oeOrientation = self.transMatrix[0] * arrayRoll
+                vao.bind()
 
-            vao.bind()
+                model = mMod*oeOrientation
+                shader.setUniformValue("model", model)
+                mModScale = qt.QMatrix4x4()
+                mModScale.setToIdentity()
+                if scaleInShader.get(nsIndex, True):
+                    mag_dx, mag_dy, mag_dz, _ = self._magnet_dimensions(shape)
+                    mModScale.scale(*(np.array([mag_dx, mag_dy, mag_dz])))
+                shader.setUniformValue("scale", mModScale)
 
-            model = mMod*oeOrientation
-            shader.setUniformValue("model", model)
-            mModScale = qt.QMatrix4x4()
-            mModScale.setToIdentity()
-            if scaleInShader.get(nsIndex, True):
-                mag_dx, mag_dy, mag_dz, _ = self._magnet_dimensions(shape)
-                mModScale.scale(*(np.array([mag_dx, mag_dy, mag_dz])))
-            shader.setUniformValue("scale", mModScale)
+    #            mvp = mMod*mView
+                shader.setUniformValue("m_3x3_inv_transp", model.normalMatrix())
 
-#            mvp = mMod*mView
-            shader.setUniformValue("m_3x3_inv_transp", model.normalMatrix())
-
-            vertex_count = vertexCounts.get(
-                nsIndex, getattr(self, 'magnet_vertex_count', 36))
-            instance_count = instanceCounts.get(
-                nsIndex, int(self.num_poles*2))
-            gl.glDrawArraysInstanced(
-                gl.GL_TRIANGLES, 0, vertex_count, instance_count)
-            vao.release()
-        shader.release()
+                vertex_count = vertexCounts.get(
+                    nsIndex, getattr(self, 'magnet_vertex_count', 36))
+                instance_count = instanceCounts.get(
+                    nsIndex, int(self.num_poles*2))
+                shader.setUniformValue('wireframe', False)
+                args = (gl.GL_TRIANGLES, 0, vertex_count, instance_count)
+                try:
+                    gl.glDrawArraysInstanced(*args)
+                    self.render_wireframe(shader, gl.glDrawArraysInstanced, *args)
+                finally:
+                    vao.release()
+        finally:
+            shader.release()
 
     def export_stl(self, filename):
         if isSTLsupported and hasattr(self, 'allSurfaces'):
