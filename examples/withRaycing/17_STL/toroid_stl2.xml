@@ -627,7 +627,7 @@ span**. The rainbow shows the horizontal ray angles and makes the
 divergence easy to see. Keep these settings and the same scene view for
 the following comparisons.
 
-.. figure:: _images/1_stl_flat_start.png
+.. figure:: _images/17_1_stl_flat_start.png
    :width: 100%
    :alt: Analytical mirror focusing on the left and flat MeshOE diverging on the right.
 
@@ -654,7 +654,7 @@ and ``fitRmsError`` (RMS height residual in micrometres). Compare the radii
 with the reference values of 50 mm and 200 mm. Note the fit error for
 comparison with the next step.
 
-.. figure:: _images/2_stl_toro_25.png
+.. figure:: _images/17_2_stl_toro_25.png
    :width: 100%
    :alt: Analytical mirror and coarse STL mirror in the same scene view.
 
@@ -666,14 +666,14 @@ comparison with the next step.
 
    * - Analytical ``ToroidMirror``
      - 25 x 25 STL, both hints parabolic
-   * - .. image:: _images/2_toroid.png
+   * - .. image:: _images/17_2_toroid.png
           :width: 100%
           :alt: Focal spot from the analytical ToroidMirror.
-     - .. image:: _images/2_STL_25.png
+     - .. image:: _images/17_2_STL_25.png
           :width: 100%
           :alt: Focal spot from the 25 x 25 STL with parabolic X and Y hints.
 
-.. figure:: _images/2_diag.png
+.. figure:: _images/17_2_diag.png
    :width: 400px
    :alt: Fit diagnostics for the coarse STL with parabolic X and Y hints.
 
@@ -723,7 +723,7 @@ be smaller than in step 2. Compare these diagnostics alongside the focal
 spots: the height residual describes the surface fit, while the screen
 plots show its effect on focusing.
 
-.. figure:: _images/3_stl_toro_100.png
+.. figure:: _images/17_3_stl_toro_100.png
    :width: 100%
    :alt: Analytical and dense STL mirrors producing similar focusing in xrtGlow.
 
@@ -735,14 +735,14 @@ plots show its effect on focusing.
 
    * - X parabolic, Y parabolic
      - X circular, Y parabolic
-   * - .. image:: _images/3_stl_para.png
+   * - .. image:: _images/17_3_stl_para.png
           :width: 100%
           :alt: Dense STL focal spot with both hints parabolic.
-     - .. image:: _images/3_stl_para_circ.png
+     - .. image:: _images/17_3_stl_para_circ.png
           :width: 100%
           :alt: Dense STL focal spot with circular X and parabolic Y hints.
 
-.. figure:: _images/3_diag.png
+.. figure:: _images/17_3_diag.png
    :width: 400px
    :alt: Fit diagnostics for the dense STL with circular X and parabolic Y hints.
 
