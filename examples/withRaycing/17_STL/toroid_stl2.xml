@@ -629,9 +629,8 @@ the following comparisons.
 
 .. imagezoom:: _images/17_1_stl_flat_start.png
    :scale: 60%
-   :alt: Analytical mirror focusing on the left and flat MeshOE diverging on the right.
 
-   The analytical and flat branches, colored by horizontal ray angle.
+The analytical and flat branches, colored by horizontal ray angle.
 
 2. Load the coarse STL
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -656,9 +655,8 @@ comparison with the next step.
 
 .. imagezoom:: _images/17_2_stl_toro_25.png
    :scale: 60%
-   :alt: Analytical mirror and coarse STL mirror in the same scene view.
 
-   The 25 x 25 STL looks plausible in the scene, but focuses differently.
+The 25 x 25 STL looks plausible in the scene, but focuses differently.
 
 .. list-table:: Analytical reference versus the coarse STL
    :widths: 50 50
@@ -668,17 +666,14 @@ comparison with the next step.
      - 25 x 25 STL, both hints parabolic
    * - .. imagezoom:: _images/17_2_toroid.png
           :scale: 80%
-          :alt: Focal spot from the analytical ToroidMirror.
      - .. imagezoom:: _images/17_2_STL_25.png
           :align: right
           :scale: 80%
-          :alt: Focal spot from the 25 x 25 STL with parabolic X and Y hints.
 
 .. imagezoom:: _images/17_2_diag.png
    :scale: 60%
-   :alt: Fit diagnostics for the coarse STL with parabolic X and Y hints.
 
-   The coarse STL's fitted radii and RMS height residual.
+The coarse STL's fitted radii and RMS height residual.
 
 3. Increase the sampling and match the profiles
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -726,9 +721,8 @@ plots show its effect on focusing.
 
 .. imagezoom:: _images/17_3_stl_toro_100.png
    :scale: 60%
-   :alt: Analytical and dense STL mirrors producing similar focusing in xrtGlow.
 
-   The dense STL with circular X and parabolic Y hints, viewed as in step 1.
+The dense STL with circular X and parabolic Y hints, viewed as in step 1.
 
 .. list-table:: Dense STL: effect of the sagittal hint
    :widths: 50 50
@@ -738,17 +732,14 @@ plots show its effect on focusing.
      - X circular, Y parabolic
    * - .. imagezoom:: _images/17_3_stl_para.png
           :scale: 80%
-          :alt: Dense STL focal spot with both hints parabolic.
      - .. imagezoom:: _images/17_3_stl_para_circ.png
           :align: right
           :scale: 80%
-          :alt: Dense STL focal spot with circular X and parabolic Y hints.
 
 .. imagezoom:: _images/17_3_diag.png
    :scale: 60%
-   :alt: Fit diagnostics for the dense STL with circular X and parabolic Y hints.
 
-   The matching profiles recover radii close to those of the reference mirror.
+The matching profiles recover radii close to those of the reference mirror.
 
 4. Explore the effect of the illuminated footprint
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
