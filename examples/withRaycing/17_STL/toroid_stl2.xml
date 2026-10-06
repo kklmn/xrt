@@ -585,6 +585,19 @@
 Focusing with an STL mirror
 ===========================
 
+This example demonstrates interoperability with CAD models using STL_.
+The STL format describes surface geometry as a collection of triangles.
+It is lightweight and lets us exchange models without heavy CAD
+dependencies. STL support in xrt relies on the ``numpy-stl`` package.
+Make sure it is installed in the Python environment used to run this
+example:
+
+.. code-block:: bash
+
+   pip install numpy-stl
+
+.. _STL: https://en.wikipedia.org/wiki/STL_(file_format)
+
 This example compares an analytical ``ToroidMirror`` with a surface
 reconstructed from an STL file by ``MeshOE``. It shows how the choice of
 surface hints and the sampling of the exported geometry affect focusing.
@@ -669,9 +682,19 @@ comparison with the next step.
 3. Increase the sampling and match the profiles
 -----------------------------------------------
 
-Replace the file with ``toroidMirrorSTL100.stl``. The suffix refers to its
-100 x 100 vertex grid. First keep both hints set to ``parabolic`` and
-observe the ``screen_STL`` spot. Then change the hints to:
+To export a more densely sampled STL model, open the **Rendering** panel
+and change **OE tessellation X** and **OE tessellation Y** from 25 to 100
+points along each dimension. Hover over the analytical ``toroidMirror01``
+in the scene and make sure it is highlighted. Right-click and choose
+**File &gt; Export OE shape to STL**, then save the model as an STL file.
+The exported model can also be viewed and modified using third-party 3D
+tools.
+
+For this example, we already provide ``toroidMirrorSTL100.stl``, created
+in a similar manner. The suffix refers to its 100 x 100 vertex grid.
+Load this file into ``toroidMirrorSTL``. First keep both hints set to
+``parabolic`` and observe the ``screen_STL`` spot. Then change the hints
+to:
 
 * ``surfaceHintX = circular`` for the sagittal profile;
 * ``surfaceHintY = parabolic`` for the meridional profile.
