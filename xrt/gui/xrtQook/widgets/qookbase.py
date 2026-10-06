@@ -13,6 +13,7 @@ import textwrap  # analysis:ignore
 import numpy as np  # analysis:ignore
 import re  # analysis:ignore
 from datetime import date  # analysis:ignore
+from html import escape
 import inspect  # analysis:ignore
 
 from functools import partial  # analysis:ignore
@@ -1338,6 +1339,13 @@ class XrtQookBase(qt.QMainWindow):
 
     def _on_sphinx_thread_html_ready(self):
         """Set our sphinx documentation based on thread result"""
+        if self.sphinxWorker.renderError is not None:
+            self.webHelp.setHtml(
+                "<h3>Documentation could not be rendered</h3>"
+                "<p>{0}</p><pre style='white-space: pre-wrap;'>{1}</pre>".format(
+                    escape(self.sphinxWorker.renderError),
+                    escape(self.sphinxWorker.doc or "")))
+            return
         url = "http://{0}:{1}/{2}.html".format(
             self._webserver.host, self._webserver.port, ext.xrtQookPageName)
         self.webHelp.load(qt.QUrl(url))

@@ -8,6 +8,7 @@ __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "27 Jan 2026"
 
 import os  # analysis:ignore
+import traceback
 from ..commons import qt  # analysis:ignore
 from ..commons import ext  # analysis:ignore
 
@@ -97,12 +98,18 @@ class SphinxWorker(qt.QObject):
         self.img_path = img_path
 
     def render(self):
-        cntx = ext.generate_context(
-            name=self.docName,
-            argspec=self.docArgspec,
-            note=self.docNote)
-        ext.sphinxify(self.doc, cntx, img_path=self.img_path)
-        self.html_ready.emit()
+        self.renderError = None
+        try:
+            cntx = ext.generate_context(
+                name=self.docName,
+                argspec=self.docArgspec,
+                note=self.docNote)
+            ext.sphinxify(self.doc, cntx, img_path=self.img_path)
+        except Exception as error:
+            self.renderError = "{0}: {1}".format(type(error).__name__, error)
+            traceback.print_exc()
+        finally:
+            self.html_ready.emit()
 
 
 class BusyIconWorker(qt.QObject):
