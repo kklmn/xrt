@@ -163,7 +163,8 @@ class AnimationDirective(Directive):
 
         alt = self.options.get('alt', '')
         if alt:
-            if alt.startswith("&ensp;") or alt.startswith("&emsp;"):
+            if (alt.startswith("&ensp;") or alt.startswith("&emsp;") or
+                    alt.startswith("&#8194;")):
                 # Unicode &ensp; or &emsp;
                 alt = '{0}'.format(alt)
             else:
