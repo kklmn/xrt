@@ -168,14 +168,6 @@ def warn_deprecated_list_auto_align(param_name):
         stacklevel=3)
 
 
-def warn_deprecated_glow_v2():
-    warnings.warn(
-        "BeamLine.glow(v2=...) is deprecated and will be removed in xrt 2.0 "
-        "final. Use BeamLine.glow(mode='dynamic') or mode='static' instead.",
-        FutureWarning,
-        stacklevel=3)
-
-
 def append_to_flow(meth, bOut, frame):
     oe = meth.__self__
     if oe.bl is None:

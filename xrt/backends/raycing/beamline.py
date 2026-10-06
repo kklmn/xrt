@@ -193,7 +193,6 @@ import importlib
 import json
 import xml.etree.ElementTree as ET
 import time
-import warnings
 
 from .singletons import colorPrint, basestring, is_sequence, _VERBOSITY_
 from .physconsts import SIE0, CH  # analysis:ignore
@@ -202,7 +201,7 @@ from ._flow_utils import (
     get_params, create_paramdict_oe, is_valid_uuid, parametrize,
     create_paramdict_mat, get_init_val, get_init_kwargs, get_obj_str,
     create_paramdict_fe, is_auto_align_value, get_auto_align_energy,
-    warn_deprecated_glow_v2, normalize_string_input, normalize_ref,
+    normalize_string_input, normalize_ref,
     limited_source_rays)
 from ._rotate import rotate_z, rotate_beam
 from ._named_arrays import Center
@@ -468,6 +467,7 @@ class BeamLine(object):
         self.blExplorer = None
         self.statusSignal = None
         self.layoutStr = None
+        self._layoutLoaded = False
         self.scanDescription = None
         if fileName:
             if str(fileName).lower().endswith("xml"):
@@ -1119,7 +1119,7 @@ class BeamLine(object):
 
     def glow(self, scale=[], centerAt='', startFrom=0, colorAxis=None,
              colorAxisLimits=None, generator=None, generatorArgs=[],
-             mode='dynamic', v2=None, epicsPrefix=None, epicsMap={},
+             mode='dynamic', epicsPrefix=None, epicsMap={},
              scanDescription=None, scan=None, alignYlocal=None,
              alignYglobal=None, **kwargs):
         r"""
@@ -1172,11 +1172,6 @@ class BeamLine(object):
             layout and enables interactive updates. ``'static'`` opens a
             snapshot view of the already traced rays. Defaults to
             ``'dynamic'``.
-
-        *v2*: bool or None
-            Deprecated compatibility alias for *mode*. ``True`` requests the
-            dynamic viewer and ``False`` requests the legacy static viewer.
-            Use *mode* instead. Will be removed in xrt 2.0 final.
 
         *epicsPrefix*: str or None
             Optional EPICS prefix used by xrtGlow in dynamic mode.
@@ -1234,31 +1229,15 @@ class BeamLine(object):
             print(e)
             return
 
-        from .run import run_process
+        if self._layoutLoaded:
+            from ._flow_utils import run_process_from_file as run_process
+        else:
+            from .run import run_process
         with limited_source_rays(self, self.serializationRays):
-            run_process(self)
-
-        if v2 is not None:
-            warn_deprecated_glow_v2()
-            if v2:
-                if mode == 'static':
-                    warnings.warn(
-                        "BeamLine.glow(mode='static', v2=True) is "
-                        "conflicting. The explicit mode value wins; remove "
-                        "v2 and use mode='static' instead.",
-                        FutureWarning,
-                        stacklevel=3)
-                else:
-                    mode = 'dynamic'
-            elif mode == 'dynamic':
-                warnings.warn(
-                    "BeamLine.glow(v2=False) is deprecated. It is treated as "
-                    "mode='static' for backward compatibility. Remove v2 to "
-                    "keep the default dynamic viewer, or use "
-                    "mode='static' explicitly.",
-                    FutureWarning,
-                    stacklevel=3)
-                mode = 'static'
+            outDict = run_process(self)
+        if self._layoutLoaded:
+            # prepare_flow reads outDict from its caller to name the beams.
+            self.prepare_flow()
 
         if mode not in ('static', 'dynamic'):
             raise ValueError("Unknown glow mode {!r}. Use 'static' or "
@@ -1883,6 +1862,7 @@ class BeamLine(object):
         self.populate_oes_dict_from_json(data['Project'][beamlineName])
         if 'flow' in data['Project'].keys():
             self.flowU = data['Project']['flow']
+        self._layoutLoaded = True
 
     def export_to_json(self):
 
