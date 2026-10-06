@@ -819,8 +819,13 @@ class xrtGlWidget(qt.QOpenGLWidget):
             dependentValues.pop(depField, None)
         if dependentValues:
             updatedArgs.update(dependentValues)
-            for argName, argValue in dependentValues.items():
-                self.oePropsUpdated.emit((oeid, argName, argValue))
+        for argName in updatedArgs:
+            argValue = getattr(updObj, argName)
+            refKind = raycing.ref_kind_for_arg(argName)
+            if refKind is not None:
+                argValue = raycing.normalize_ref(
+                    argValue, self.beamline, refKind, target='display')
+            self.oePropsUpdated.emit((oeid, argName, argValue))
 
         for diagName in getattr(updObj, 'fitDiagnostics', ()):
             self.oePropsUpdated.emit((oeid, diagName,
