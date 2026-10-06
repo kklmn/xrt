@@ -583,7 +583,7 @@
 	</run_ray_tracing>
 <description>
 Focusing with an STL mirror
-===========================
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This example demonstrates interoperability with CAD models using STL_.
 The STL format describes surface geometry as a collection of triangles.
@@ -610,7 +610,7 @@ The analytical mirror, ``toroidMirror01``, is the reference; the imported
 mirror, ``toroidMirrorSTL``, is the element we will modify.
 
 1. Start with a flat surface
-----------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Open ``toroid_stl2.xml`` from ``examples/withRaycing/17_STL`` in xrtQook
 and view the beamline in xrtGlow. If you already have the template open,
@@ -628,13 +628,13 @@ divergence easy to see. Keep these settings and the same scene view for
 the following comparisons.
 
 .. figure:: _images/17_1_stl_flat_start.png
-   :width: 100%
+   :scale: 100%
    :alt: Analytical mirror focusing on the left and flat MeshOE diverging on the right.
 
    The analytical and flat branches, colored by horizontal ray angle.
 
 2. Load the coarse STL
-----------------------
+~~~~~~~~~~~~~~~~~~~~~~
 
 Center the scene on ``toroidMirrorSTL`` and double-click it to open its
 inspector. Double-click the value beside ``fileName`` to open the file
@@ -655,7 +655,7 @@ with the reference values of 50 mm and 200 mm. Note the fit error for
 comparison with the next step.
 
 .. figure:: _images/17_2_stl_toro_25.png
-   :width: 100%
+   :scale: 100%
    :alt: Analytical mirror and coarse STL mirror in the same scene view.
 
    The 25 x 25 STL looks plausible in the scene, but focuses differently.
@@ -667,20 +667,21 @@ comparison with the next step.
    * - Analytical ``ToroidMirror``
      - 25 x 25 STL, both hints parabolic
    * - .. image:: _images/17_2_toroid.png
-          :width: 100%
+          :scale: 100%
           :alt: Focal spot from the analytical ToroidMirror.
      - .. image:: _images/17_2_STL_25.png
-          :width: 100%
+          :align: right
+          :scale: 100%
           :alt: Focal spot from the 25 x 25 STL with parabolic X and Y hints.
 
 .. figure:: _images/17_2_diag.png
-   :width: 400px
+   :scale: 100%
    :alt: Fit diagnostics for the coarse STL with parabolic X and Y hints.
 
    The coarse STL's fitted radii and RMS height residual.
 
 3. Increase the sampling and match the profiles
------------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To export a more densely sampled STL model, open the **Rendering** panel
 and change **OE tessellation X** and **OE tessellation Y** from 25 to 100
@@ -724,7 +725,7 @@ spots: the height residual describes the surface fit, while the screen
 plots show its effect on focusing.
 
 .. figure:: _images/17_3_stl_toro_100.png
-   :width: 100%
+   :scale: 100%
    :alt: Analytical and dense STL mirrors producing similar focusing in xrtGlow.
 
    The dense STL with circular X and parabolic Y hints, viewed as in step 1.
@@ -736,20 +737,21 @@ plots show its effect on focusing.
    * - X parabolic, Y parabolic
      - X circular, Y parabolic
    * - .. image:: _images/17_3_stl_para.png
-          :width: 100%
+          :scale: 100%
           :alt: Dense STL focal spot with both hints parabolic.
      - .. image:: _images/17_3_stl_para_circ.png
-          :width: 100%
+          :align: right
+          :scale: 100%
           :alt: Dense STL focal spot with circular X and parabolic Y hints.
 
 .. figure:: _images/17_3_diag.png
-   :width: 400px
+   :scale: 100%
    :alt: Fit diagnostics for the dense STL with circular X and parabolic Y hints.
 
    The matching profiles recover radii close to those of the reference mirror.
 
 4. Explore the effect of the illuminated footprint
---------------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 On both ``geometricSource01`` and ``geometricSource02``, reduce ``dxprime``
 from ``0.01`` to ``0.001``. This reduces the horizontal angular spread by
@@ -768,7 +770,7 @@ profile. Restore ``dxprime = 0.01`` on both sources to make the effect of
 the larger footprint visible again.
 
 What this comparison shows
---------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 A similar-looking surface is not enough to guarantee the same focal spot.
 Ray tracing uses the reconstructed surface and its normals; small errors
