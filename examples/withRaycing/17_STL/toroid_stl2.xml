@@ -630,7 +630,7 @@ the following comparisons.
 .. imagezoom:: _images/17_1_stl_flat_start.png
    :align: center
    :scale: 60%
-   :alt: &ensp;The analytical and flat branches, colored by horizontal ray angle.
+   :alt: &#8194;The analytical and flat branches, colored by horizontal ray angle.
 
 2. Load the coarse STL
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -656,7 +656,7 @@ comparison with the next step.
 .. imagezoom:: _images/17_2_stl_toro_25.png
    :align: center
    :scale: 60%
-   :alt: &ensp;The 25×25 STL looks plausible in the scene, but focuses
+   :alt: &#8194;The 25×25 STL looks plausible in the scene, but focuses
        differently.
 
 .. list-table:: Analytical reference versus the coarse STL
@@ -674,7 +674,7 @@ comparison with the next step.
 .. imagezoom:: _images/17_2_diag.png
    :align: center
    :scale: 60%
-   :alt: &ensp;The coarse STL's fitted radii and RMS height residual.
+   :alt: &#8194;The coarse STL's fitted radii and RMS height residual.
 
 3. Increase the sampling and match the profiles
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -723,7 +723,7 @@ plots show its effect on focusing.
 .. imagezoom:: _images/17_3_stl_toro_100.png
    :align: center
    :scale: 60%
-   :alt: &ensp;The dense STL with circular X and parabolic Y hints, viewed as
+   :alt: &#8194;The dense STL with circular X and parabolic Y hints, viewed as
        in step 1.
 
 .. list-table:: Dense STL: effect of the sagittal hint
@@ -741,7 +741,7 @@ plots show its effect on focusing.
 .. imagezoom:: _images/17_3_diag.png
    :align: center
    :scale: 60%
-   :alt: &ensp;The matching profiles recover radii close to those of the
+   :alt: &#8194;The matching profiles recover radii close to those of the
        reference mirror.
 
 4. Explore the effect of the illuminated footprint
