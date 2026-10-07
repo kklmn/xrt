@@ -643,12 +643,13 @@ class XYCAxis(object):
         'µ',   U+00B5 micro sign
         'μ',   U+03BC Greek mu
         """
+        unit = raycing.normalize_mu(self.unit)
         factor = 1.
         if self.unit in ['keV', ]:
             factor = 1e-3
         elif self.unit in ['mrad', 'meV']:
             factor = 1.0e3
-        elif self.unit in [r'$\mu$rad', 'µrad', 'μrad', 'urad']:
+        elif unit in [r'$\mu$rad', 'µrad', 'urad']:
             factor = 1.0e6
         elif self.unit in ['MeV']:
             factor = 1.0e-6
@@ -660,7 +661,7 @@ class XYCAxis(object):
                     factor = 1e-2
                 elif self.unit in ['mm', ]:
                     factor = 10.
-                elif self.unit in [r'$\mu$m', 'µm', 'μm', 'um']:
+                elif unit in [r'$\mu$m', 'µm', 'um']:
                     factor = 1.0e4
                 elif self.unit in ['nm', ]:
                     factor = 1.0e7
@@ -671,7 +672,7 @@ class XYCAxis(object):
                     factor = 1e-6
                 elif self.unit in ['mm', ]:
                     factor = 1.
-                elif self.unit in [r'$\mu$m', 'µm', 'μm', 'um']:
+                elif unit in [r'$\mu$m', 'µm', 'um']:
                     factor = 1.0e3
                 elif self.unit in ['nm', ]:
                     factor = 1.0e6

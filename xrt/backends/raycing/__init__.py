@@ -62,6 +62,7 @@ from .epics import EpicsDevice, DynamicBeamline
 from ._named_arrays import NamedArrayFactory, Center, Limits, Opening, Image2D
 
 from ._flow_utils import (
+    normalize_mu,
     auto_units_angle, auto_units_angle_with_energy, append_to_flow,
     append_to_flow_decorator, set_name, to_valid_var_name,
     vec_to_quat, multiply_quats,

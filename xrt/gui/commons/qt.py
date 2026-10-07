@@ -37,6 +37,7 @@ from qtpy.QtSql import (QSqlDatabase, QSqlQuery, QSqlTableModel,
 
 from ...backends.raycing._sets_units import (
     allUnitsAng, allUnitsEnergy, argumentInputGroups, compoundArgs)
+from ...backends.raycing._flow_utils import normalize_mu
 
 RAW_VALUE_ROLE = Qt.UserRole + 1
 EDITOR_HINT_ROLE = Qt.UserRole + 2
@@ -311,7 +312,7 @@ def _unit_pattern(unitDict):
 
 
 ANGLE = r'{0}(?:\s*(?:{1}))?'.format(
-    SCALAR, _unit_pattern(allUnitsAng))
+    SCALAR, _unit_pattern(allUnitsAng.keys() | {'µrad'}))
 ENERGY = r'{0}(?:\s*(?:{1}))?'.format(
     SCALAR, _unit_pattern(allUnitsEnergy))
 FORMAT_STR = (r'(?=.*%(?!%))'
@@ -364,13 +365,19 @@ def _compound_fields(argName):
     return fields
 
 
+class _MuNormalizedValidator(QRegularExpressionValidator):
+    def validate(self, inputText, pos):
+        state = super().validate(normalize_mu(inputText), pos)[0]
+        return state, inputText, pos
+
+
 def _atomic_validator(inputTypes, parent=None):
     patterns = [VAL_PATTERNS[inputType] for inputType in inputTypes
                 if inputType in VAL_PATTERNS]
     if not patterns:
         return None
     pattern = r'\s*(?:{0})\s*'.format('|'.join(patterns))
-    return QRegularExpressionValidator(QRegularExpression(pattern), parent)
+    return _MuNormalizedValidator(QRegularExpression(pattern), parent)
 
 
 class ParsedSequenceValidator(QValidator):
@@ -1002,6 +1009,13 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
         value = index.data()
         if isinstance(editor, QComboBox):
             idx = editor.findText(value)
+            fieldName = str(index.sibling(index.row(), 0).data())
+            if idx < 0 and fieldName.lower().endswith('unit'):
+                normalized = normalize_mu(value)
+                idx = next(
+                    (i for i in range(editor.count())
+                     if normalize_mu(editor.itemText(i)) == normalized),
+                    -1)
             if idx >= 0:
                 editor.setCurrentIndex(idx)
             elif editor.isEditable():

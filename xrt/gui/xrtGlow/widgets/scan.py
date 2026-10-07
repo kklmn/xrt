@@ -185,7 +185,7 @@ def _split_numeric_unit(value):
                      str(value))
     if match is None:
         return None, None
-    return float(match.group(1)), match.group(2)
+    return float(match.group(1)), raycing.normalize_mu(match.group(2))
 
 
 def _format_scan_display(value):

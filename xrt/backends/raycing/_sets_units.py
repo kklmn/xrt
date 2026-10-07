@@ -187,6 +187,9 @@ lengthUnitParams = {'center': 'mm',
 
 
 def auto_unit(lbl, unit):
+    from ._flow_utils import normalize_mu
+
+    unit = normalize_mu(unit)
     uRet = unit
     fRet = None
     if lbl in ['x', 'y', 'z', 'r', 's']:

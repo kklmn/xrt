@@ -186,7 +186,7 @@ def get_scan_values(start, stop=None, frames=None):
         if match is None:
             raise ValueError(
                 "Cannot interpolate scan value {0!r}".format(value))
-        return float(match.group(1)), match.group(2)
+        return float(match.group(1)), raycing.normalize_mu(match.group(2))
 
     start_value, start_unit = split_numeric_unit(start)
     stop_value, stop_unit = split_numeric_unit(stop)

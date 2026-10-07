@@ -93,8 +93,16 @@ class NameAsString(ast.NodeTransformer):
         return ast.Constant(node.id)
 
 
+def normalize_mu(value):
+    """Normalize Greek mu to U+00B5 micro sign in a string."""
+    if isinstance(value, str):
+        return value.replace('\u03bc', '\u00b5')
+    return value
+
+
 def auto_units_angle(angle, defaultFactor=1., aliases=None):
     if isinstance(angle, basestring):
+        angle = normalize_mu(angle)
         angleText = angle.strip()
         angleLow = angleText.lower()
         if aliases is not None:
@@ -105,8 +113,9 @@ def auto_units_angle(angle, defaultFactor=1., aliases=None):
             return angle
         elif len(re.findall("mrad", angle)) > 0:
             return float(angle.split("m")[0].strip())*1e-3
-        elif len(re.findall("urad", angle)) > 0:
-            return float(angle.split("u")[0].strip())*1e-6
+        elif len(re.findall(r"[uµ]rad", angle)) > 0:
+            magnitude = re.split(r"[uµ]rad", angle, maxsplit=1)[0]
+            return float(magnitude.strip())*1e-6
         elif len(re.findall("nrad", angle)) > 0:
             return float(angle.split("n")[0].strip())*1e-9
         elif len(re.findall("rad", angle)) > 0:

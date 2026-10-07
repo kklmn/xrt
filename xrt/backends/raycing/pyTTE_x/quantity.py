@@ -2,6 +2,7 @@
 
 from __future__ import division, print_function
 import numpy as np
+from .._flow_utils import normalize_mu
 
 UNITS = {'1': ('unitless', 1e0),
 
@@ -261,6 +262,7 @@ class Quantity:
         units = {}
         for u in unit_str_split:
             u2 = u.split('^')
+            u2[0] = normalize_mu(u2[0])
 
             if not u2[0] in UNITS.keys():
                 raise ValueError(
