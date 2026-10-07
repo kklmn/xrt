@@ -245,7 +245,7 @@ argumentInputGroups = {
     'string': {
         'afterScript', 'crossSection', 'extraRotationSequence',
         'name', 'orientation', 'rotationSequence', 'title',
-        'bl', 'customField', 'efficiencyFile', 'fileName',
+        'customField', 'efficiencyFile', 'fileName',
         'persistentName', 'saveName', 'beam',
         },
     'format': {'fwhmFormatStr', 'contourFmt', 'fluxFormatStr'},
