@@ -357,8 +357,14 @@ class InstanceInspector(qt.QDialog):
             if is_screen(oeObj) or is_aperture(oeObj):
                 axHints['yaxis']['label'] = r"z"
             elif is_parametric_oe(oeObj):
-                axHints['xaxis'] = {'label': 'phi', 'unit': 'mrad'}
-                axHints['yaxis']['label'] = r"s"
+            elif is_parametric_oe(oeObj):
+                if is_closed_surface(oeObj):
+                    axHints['xaxis'] = {'label': 'phi', 'unit': 'rad'}
+                    axHints['yaxis'] = {'label': 's', 'unit': 'mm'}
+                else:
+                    axHints['xaxis'] = {'label': 'x', 'unit': 'mm'}
+                    axHints['yaxis'] = {'label': 'y', 'unit': 'mm'}
+                plotProps['aspect'] = 'auto'
             elif defBeam.endswith('lobal'):
                 axHints['yaxis']['label'] = r"z"
             elif len(realBeamKeys) > 1:
