@@ -103,9 +103,11 @@ def is_oe(oe):
 def is_parametric_oe(oe):
     return isinstance(oe, roes.OE) and oe.isParametric
 
+
 def is_closed_surface(oe):
     return (isinstance(oe, roes.SurfaceOfRevolution) or
             getattr(oe, 'isClosed', False))
+
 
 def is_dcm(oe):
     return isinstance(oe, roes.DCM)

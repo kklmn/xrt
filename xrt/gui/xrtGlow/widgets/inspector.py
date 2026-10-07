@@ -15,7 +15,7 @@ from matplotlib.colors import TABLEAU_COLORS
 
 from ...commons import qt, config
 from .._constants import DISPLAY_NUMBER_FORMAT
-from .._utils import is_aperture, is_screen, is_parametric_oe
+from .._utils import is_aperture, is_screen, is_parametric_oe, is_closed_surface
 
 from ....backends import raycing
 from ....backends.raycing._flow_utils import _class_from_string
@@ -356,7 +356,6 @@ class InstanceInspector(qt.QDialog):
 
             if is_screen(oeObj) or is_aperture(oeObj):
                 axHints['yaxis']['label'] = r"z"
-            elif is_parametric_oe(oeObj):
             elif is_parametric_oe(oeObj):
                 if is_closed_surface(oeObj):
                     axHints['xaxis'] = {'label': 'phi', 'unit': 'rad'}
