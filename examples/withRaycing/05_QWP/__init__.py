@@ -3,7 +3,7 @@ r"""
 Quarter wave plates
 -------------------
 
-Files in ``\examples\withRaycing\05_QWP``
+Files in ``examples/withRaycing/05_QWP``
 
 Collimated beam, Bragg transmission case
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

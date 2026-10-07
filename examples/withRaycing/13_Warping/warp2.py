@@ -10,7 +10,7 @@ Defocusing by a distorted mirror
 --------------------------------
 
 The images below are produced by
-``\examples\withRaycing\13_Warping\warp.py``.
+``examples/withRaycing/13_Warping/warp.py``.
 
 This example has two objectives:
 

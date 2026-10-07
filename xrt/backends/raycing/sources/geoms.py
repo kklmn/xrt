@@ -571,7 +571,7 @@ class GaussianBeam(GeometricSource):
 
     With a wave obtained by :meth:`prepare_wave` of a slit, oe or screen, it
     calculates the Gaussian field at the available 3D points. See an example in
-    ``\tests\raycing\laguerre_hermite_gaussian_beam.py``."""
+    ``tests/raycing/laguerre_hermite_gaussian_beam.py``."""
 
     hiddenParams = {
         'distx', 'dx', 'disty', 'dy', 'distz', 'dz',
@@ -786,7 +786,7 @@ class LaguerreGaussianBeam(GaussianBeam):
     r"""Laguerre-Gaussian version of GaussianBeam.
     It must be used for an already available set of 3D points which are
     obtained by :meth:`prepare_wave` of a slit, oe or screen. See a usage
-    example in ``\tests\raycing\laguerre_hermite_gaussian_beam.py``."""
+    example in ``tests/raycing/laguerre_hermite_gaussian_beam.py``."""
 
     def __init__(self, *args, **kwargs):
         """
@@ -807,7 +807,7 @@ class HermiteGaussianBeam(GaussianBeam):
     r"""Hermite-Gaussian version of GaussianBeam.
     It must be used for an already available set of 3D points which are
     obtained by :meth:`prepare_wave` of a slit, oe or screen. See a usage
-    example in ``\tests\raycing\laguerre_hermite_gaussian_beam.py``."""
+    example in ``tests/raycing/laguerre_hermite_gaussian_beam.py``."""
 
     def __init__(self, *args, **kwargs):
         """

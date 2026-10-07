@@ -6,8 +6,8 @@ Synchrotron sources
 -------------------
 
 The images below are produced by
-``\tests\raycing\test_sources.py`` and by
-``\examples\withRaycing\01_SynchrotronSources\synchrotronSources.py``.
+``tests/raycing/test_sources.py`` and by
+``examples/withRaycing/01_SynchrotronSources/synchrotronSources.py``.
 
 Bending magnet
 ~~~~~~~~~~~~~~
@@ -134,7 +134,7 @@ finite electron-beam energy spread, each of which broadens the harmonics.
    :loc: upper-right-corner
 
 The ray traced images of an undulator source (produced by
-``\examples\withRaycing\01_SynchrotronSources\synchrotronSources.py``)
+``examples/withRaycing/01_SynchrotronSources/synchrotronSources.py``)
 are feature-rich. The polarization is primarily horizontal. The off-plane
 radiation has non-zero projection to the vertical polarization plane.
 

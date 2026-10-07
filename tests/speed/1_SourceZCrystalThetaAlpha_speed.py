@@ -3,8 +3,9 @@ r"""
 Multithreading and multiprocessing in ray tracing
 -------------------------------------------------
 
-| Script: ``\tests\speed\1_SourceZCrystalThetaAlpha_speed.py``.
-| The test is based on the example ``\examples\withRaycing\07_AnalyzerBent2D\01BD_SourceZCrystalThetaAlpha.py``.
+| Script: ``tests/speed/1_SourceZCrystalThetaAlpha_speed.py``.
+| The test is based on the example
+``examples/withRaycing/07_AnalyzerBent2D/01BD_SourceZCrystalThetaAlpha.py``.
 
 This script calculates diffraction of a 2D-bent diced crystal anayzer from
 three types of geometric source.

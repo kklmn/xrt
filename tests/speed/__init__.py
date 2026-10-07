@@ -5,7 +5,7 @@ r"""
 Speed tests
 ===========
 
-The scripts used for these tests can be found in ``\tests\speed\``
+The scripts used for these tests can be found in ``tests/speed``
 
 The following computers have been used:
 

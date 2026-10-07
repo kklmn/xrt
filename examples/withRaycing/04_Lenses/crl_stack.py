@@ -3,7 +3,7 @@ r"""
 Compound Refractive Lenses
 --------------------------
 
-Files in ``\examples\withRaycing\04_Lenses``
+Files in ``examples/withRaycing/04_Lenses``
 
 This example demonstrates refraction in the x-ray regime. The surface that
 refracts a collimated beam into a point focus is a paraboloid. The focal

@@ -3,7 +3,7 @@ r"""
 Gratings, FZPs, Bragg-Fresnel optics, cPGM beamline
 ---------------------------------------------------
 
-Files in ``\examples\withRaycing\09_Gratings``
+Files in ``examples/withRaycing/09_Gratings``
 
 Simple gratings
 ~~~~~~~~~~~~~~~

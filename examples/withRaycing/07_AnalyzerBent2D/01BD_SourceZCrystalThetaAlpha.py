@@ -5,7 +5,7 @@ r"""
 Comparison of 2D-bent Bragg crystal analyzers
 ---------------------------------------------
 
-Files in ``\examples\withRaycing\07_AnalyzerBent2D``
+Files in ``examples/withRaycing/07_AnalyzerBent2D``
 
 This study compares simply bent (Johann) and ground-bent (Johansson) analyzers
 in diced and non-diced versions. This time the bending is two-dimensional with

@@ -9,7 +9,7 @@ SoftiMAX at MAX IV
    :align: right
 
 The images below are produced by scripts in
-``\examples\withRaycing\14_SoftiMAX``.
+``examples/withRaycing/14_SoftiMAX``.
 
 The beamline will have two branches:
 - STXM (Scanning Transmission X-ray Microscopy) and

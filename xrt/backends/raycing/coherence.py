@@ -7,7 +7,7 @@ and 2D plotting of eigen modes.
 The input for the analysis functions is a 3D stack of field images. It can be
 obtained directly from the undulator class, or from a plot object after several
 repeats of wave propagation of a filament beam through a beamline. Examples can
-be found in ``...\tests\raycing\test_coherent_fraction_stack.py`` and in
+be found in ``tests/raycing/test_coherent_fraction_stack.py`` and in
 :ref:`SoftiMAX`.
 
 .. autofunction:: calc_1D_coherent_fraction

@@ -3,8 +3,8 @@ r"""
 OpenCL performance with wave propagation
 ----------------------------------------
 
-| Script: ``\tests\speed\3_Softi_CXIw2D_speed.py``.
-| The test is based on the example ``\examples\withRaycing\14_SoftiMAX\Softi_CXIw2D.py``.
+| Script: ``tests/speed/3_Softi_CXIw2D_speed.py``.
+| The test is based on the example ``examples/withRaycing/14_SoftiMAX/Softi_CXIw2D.py``.
 
 This script calculates several consecutive wave propagation integrals from the
 source down to the focus at the sample. Here, each wave is represented by

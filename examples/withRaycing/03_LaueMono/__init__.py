@@ -6,7 +6,7 @@ Laue Monochromator
 Bending of a single crystal Laue Monochromator
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Files in ``\examples\withRaycing\03_LaueMono``
+Files in ``examples/withRaycing/03_LaueMono``
 
 This example shows the reflectivity of a bent 200-µm-thick Si111 Laue crystal
 at various bending radii and energies. Watch how the band width is growing and

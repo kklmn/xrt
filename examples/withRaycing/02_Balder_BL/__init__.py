@@ -5,7 +5,7 @@ Beamline optics
 ---------------
 
 The images below are produced by the scripts in
-``\examples\withRaycing\02_Balder_BL\``.
+``examples/withRaycing/02_Balder_BL``.
 The examples show the scans of various optical elements at Balder@MaxIV
 beamline. The source is a multipole conventional wiggler.
 

@@ -9,7 +9,7 @@ xrt can be used as a library for calculations of synchrotron sources and
 material properties related to x-ray scattering, diffraction and propagation:
 reflectivity, transmittivity, refractive index, absorption coefficient etc.
 
-See the scripts in ``\examples\withRaycing\00_xRayCalculator\``.
+See the scripts in ``examples/withRaycing/00_xRayCalculator``.
 Each script consists of:
 
 1) imports, with possibly defining a path to xrt if it is installed in a
@@ -58,7 +58,7 @@ Example 1b: Undulator, tuning curves
     tunesE, tunesF = source.tuning_curves(energy, theta, psi, harmonics, Ks)
 
 See the script
-``\examples\withRaycing\00_xRayCalculator\calc_undulator_tune.py``.
+``examples/withRaycing/00_xRayCalculator/calc_undulator_tune.py``.
 
 .. raw:: html
 
@@ -99,7 +99,7 @@ Example 2b: Crystal reflectivity: Single and double crystal
 .. imagezoomhover:: _images/calc_crystal_rocking_curve.png
 
 See the script
-``\examples\withRaycing\00_xRayCalculator\calc_crystal_rocking_curve.py``.
+``examples/withRaycing/00_xRayCalculator/calc_crystal_rocking_curve.py``.
 
 .. raw:: html
 

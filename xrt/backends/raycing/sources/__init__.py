@@ -704,7 +704,7 @@ trustful.
 .. [exp_taper] Measured on 27 Nov 2013 on P06 beamline at Petra 3,
    R. Chernikov and O. Müller, unpublished.
 
-The source code is in ``examples\withRaycing\01_SynchrotronSources``
+The source code is in ``examples/withRaycing/01_SynchrotronSources``
 
 Notice that not only the band width is affected by tapering. Also the
 transverse distribution attains inhomogeneity which varies with energy, see the

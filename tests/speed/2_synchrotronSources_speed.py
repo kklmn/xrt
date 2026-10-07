@@ -3,8 +3,8 @@ r"""
 OpenCL performance with Undulator source
 ----------------------------------------
 
-| Script: ``\tests\speed\2_synchrotronSources_speed.py``.
-| The test is based on the example ``\examples\withRaycing\01_SynchrotronSources\synchrotronSources.py``.
+| Script: ``tests/speed/2_synchrotronSources_speed.py``.
+| The test is based on the example ``examples/withRaycing/01_SynchrotronSources/synchrotronSources.py``.
 
 This script calculates characteristics of an undulator source at energies
 around one harmonic.

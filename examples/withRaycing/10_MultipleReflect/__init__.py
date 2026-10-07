@@ -3,7 +3,7 @@ r"""
 Multiple reflections
 --------------------
 
-Files in ``\examples\withRaycing\10_MultipleReflect``
+Files in ``examples/withRaycing/10_MultipleReflect``
 
 .. _montel:
 

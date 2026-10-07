@@ -90,7 +90,7 @@ class Material(object):
             corresponding array index (zero-based) or a column number (also
             zero-based, the 0th column is energy). An example of the efficiency
             calculation can be found in
-            ``\examples\withRaycing\11_Wave\waveGrating.py``.
+            ``examples/withRaycing/11_Wave/waveGrating.py``.
 
         *efficiencyFile*: str or None
             See the definition of *efficiency*.

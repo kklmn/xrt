@@ -6,7 +6,7 @@ Orbital Angular Momentum of helical undulator radiation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The images below are produced by
-``\examples\withRaycing\01_SynchrotronSources\undulatorVortex.py``.
+``examples/withRaycing/01_SynchrotronSources/undulatorVortex.py``.
 
 This example calculates flux and Orbital Angular Momentum (OAM) of helical
 undulator radiation. The calculation is done on a 3D (energy, theta, psi) or 4D

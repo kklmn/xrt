@@ -3,7 +3,7 @@ r"""
 ALBA CLÆSS beamline
 -------------------
 
-Files in ``\examples\withRaycing\08_CLAESS_BL``
+Files in ``examples/withRaycing/08_CLAESS_BL``
 
 This script produces images at various positions along the beamline, see image
 captions in the enlarged figures.
