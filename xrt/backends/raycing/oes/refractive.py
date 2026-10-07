@@ -10,7 +10,12 @@ from .dcm import DCM
 
 class Plate(DCM):
     """Body with two surfaces. Derived from :class:`DCM` because it also has two
-    interfaces but the parameters referring to the 2nd crystal are ignored."""
+    interfaces but the parameters referring to the 2nd crystal are ignored.
+
+    With ``lostAsOver=True`` in :meth:`double_refract`, first-surface misses
+    are treated as over rays. Those that hit the second surface become lost;
+    those missing both surfaces remain over rays with their incident intensity.
+    """
 
     hiddenMethods = DCM.hiddenMethods + ['double_reflect']
     hiddenParams = ['order', 'bragg', 'cryst1roll', 'cryst2roll',
@@ -162,7 +167,7 @@ class Plate(DCM):
 
     @staticmethod
     def _get_surface_footprint(beam):
-        good = beam.state > 0
+        good = (beam.state == 1) | (beam.state == 2)
         if not np.any(good):
             return None
         coordinates = np.vstack((beam.x[good], beam.y[good], beam.z[good]))
@@ -171,7 +176,7 @@ class Plate(DCM):
 
     @raycing.append_to_flow_decorator
     def double_refract(self, beam=None, needLocal=True,
-                       returnLocalAbsorbed=None):
+                       returnLocalAbsorbed=None, lostAsOver=False):
         """
         Returns the refracted beam in global and two local (if *needLocal*
         is true) systems.
@@ -183,6 +188,12 @@ class Plate(DCM):
             not be used as local-coordinate beams. xrtQook does not
             expose this option and ignores its value when importing
             layouts, using the default True.
+
+        *lostAsOver*: bool
+            If True, first-surface losses become over rays. They remain over
+            if they miss the second surface, or become lost if they hit it
+            (entry through a side). False preserves the usual classification.
+            This is a two-surface classification, not side-face propagation.
 
         *returnLocalAbsorbed*: None, int
             --DEPRECATED--
@@ -209,7 +220,8 @@ class Plate(DCM):
 
         gb, lb1, lb2 = self.double_reflect(beam=beam, needLocal=needLocal,
                                            fromVacuum1=True,
-                                           fromVacuum2=False)
+                                           fromVacuum2=False,
+                                           lostAsOver=lostAsOver)
 
         if needLocal:
             footprints = [self._get_surface_footprint(lb)

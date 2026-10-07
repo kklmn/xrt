@@ -265,7 +265,7 @@ class DCM(OE):
     @raycing.append_to_flow_decorator
     def double_reflect(self, beam=None, needLocal=True,
                        fromVacuum1=True, fromVacuum2=True,
-                       returnLocalAbsorbed=None):
+                       returnLocalAbsorbed=None, lostAsOver=False):
         """
         Returns the reflected beam in global and two local (if *needLocal*
         is true) systems.
@@ -313,6 +313,9 @@ class DCM(OE):
             self.roll + self.positionRoll + self.cryst1roll, self.yaw, self.dx,
             local_z=self.local_z1, local_n=self.local_n1,
             fromVacuum=fromVacuum1, material=self.material)
+        if lostAsOver:
+            overAfter1 = good1 & ((gb.state == self.lostNum) | (gb.state == 3))
+            gb.state[overAfter1] = lo1.state[overAfter1] = 3
         goodAfter1 = gb.state > 0  # (gb.state == 1) | (gb.state == 2)
 # not intersected rays remain unchanged except their state:
         notGood = ~goodAfter1
@@ -335,6 +338,9 @@ class DCM(OE):
             gb2.state[~good2] = self.lostNum
         if good2.sum() == 0:
             return gb2, lo1, lo2
+        if lostAsOver and not np.any(lo2.state[good2] == 1):
+            # Bracketing needs candidates even when every ray missed face 1.
+            lo2.state[overAfter1] = 1
         self._reflect_local(
             good2, lo2, gb2,
             -self.pitch - self.bragg + self.cryst2pitch + self.cryst2finePitch,
@@ -342,6 +348,11 @@ class DCM(OE):
             -self.dx, self.cryst2longTransl, -self.cryst2perpTransl,
             local_z=self.local_z2, local_n=self.local_n2,
             fromVacuum=fromVacuum2, material=self.material2, is2ndXtal=True)
+        if lostAsOver:
+            gb2.state[overAfter1] = np.where(
+                (gb2.state[overAfter1] == 1) | (gb2.state[overAfter1] == 2),
+                self.lostNum, 3)
+            lo2.state[overAfter1] = gb2.state[overAfter1]
         goodAfter2 = gb.state > 0  # (gb2.state == 1) | (gb2.state == 2)
 # in global coordinate system:
         raycing.virgin_local_to_global(self.bl, gb2, self.center, goodAfter2)
@@ -351,6 +362,8 @@ class DCM(OE):
             gb2.state[notGood] = self.lostNum
         if notGood.sum() > 0:
             rs.copy_beam(gb2, beam, notGood)
+        if lostAsOver:
+            rs.copy_beam(gb2, beam, overAfter1)
 
 #        if returnLocalAbsorbed is not None:
 #            if returnLocalAbsorbed == 0:
@@ -379,4 +392,5 @@ class DCM(OE):
 
         return gb2, lo1, lo2  # in global and local(lo1 and lo2) coordinates
 
-    double_reflect.hiddenParams = {'needLocal', 'returnLocalAbsorbed'}
+    double_reflect.hiddenParams = {
+        'needLocal', 'returnLocalAbsorbed', 'lostAsOver'}

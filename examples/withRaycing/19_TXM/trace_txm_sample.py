@@ -5,7 +5,10 @@ The Plate geometry is taken from the HDF5 TXM sample limits. The screen is 5 m
 downstream of the sample. Edit the settings below to choose
 the ray count, source energy, scan and viewer mode. Scripted rotation scans
 also save numerical projections and flat/dark references in a Data Exchange
-HDF5 file readable by dxchange.read_aps_32id() for use with TomoPy.
+HDF5 file readable by dxchange.read_aps_32id() for use with TomoPy. Rotation
+scans include unchanged rays that miss both sample surfaces. Rays hitting only
+one surface remain lost under Plate's two-surface model; this does not implement
+propagation through side faces.
 """
 
 from __future__ import print_function
@@ -34,7 +37,7 @@ import xrt.plotter as xrtp
 import xrt.runner as xrtr
 
 
-showIn3D = False
+showIn3D = True
 
 sampleFile = "txm_sample_50um_500.h5"
 outputDir = "."
@@ -126,7 +129,8 @@ def run_process(beamLine):
         }
 
     beamSampleGlobal, beamSampleLocal1, beamSampleLocal2 = \
-        beamLine.sample.double_refract(beamSource)
+        beamLine.sample.double_refract(
+            beamSource, lostAsOver=(scanName == "rotation"))
     beamScreenLocal = beamLine.screen.expose(beamSampleGlobal)
 
     return {
@@ -162,7 +166,7 @@ def define_plots(output_dir, energy=energy, screenOnly=False):
 
     screenPlot = xrtp.XYCPlot(
         "beamScreenLocal",
-        (1,),
+        (1, 3) if scanName == "rotation" else (1,),
         xaxis=xrtp.XYCAxis(
             "x", "mm", limits=[-20, 20], bins=bins, ppb=1),
         yaxis=xrtp.XYCAxis(
@@ -255,6 +259,9 @@ def start_tomopy_export(fileName, plot):
             chunks=(1, rows, columns), compression="gzip")
         data.attrs["axes"] = "theta:y:x"
         data.attrs["units"] = "arbitrary"
+        data.attrs["ray_states"] = "1: transmitted; 3: missed both surfaces"
+        data.attrs["side_faces"] = (
+            "Plate two-surface refraction; side-face losses remain excluded")
         theta = exchange.create_dataset(
             "theta", shape=(0,), maxshape=(None,), dtype="f8")
         theta.attrs["units"] = "degrees"
