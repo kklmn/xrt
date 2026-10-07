@@ -25,7 +25,7 @@ import xrt.backends.raycing as raycing
 import xrt.plotter as xrtplot
 import xrt.runner as xrtrun
 
-showIn3D = True
+showIn3D = False
 
 Si111 = rmats.CrystalSi(
     hkl=[1, 1, 1],
@@ -170,7 +170,7 @@ def main():
              'ro', ls='')
     plt.grid()
     axes = plt.gca()
-    axes.set_xlabel(r"$d\Theta$, $\mu$rad"); axes.set_ylabel("$\Delta$E, eV")
+    axes.set_xlabel(r"$d\Theta$ ($\mu$rad)"); axes.set_ylabel("$\Delta$E (eV)")
     plt.savefig("dE_vs_dTheta.png")
 
     plt.figure('Flux vs dTheta')
@@ -179,7 +179,7 @@ def main():
              'go', ls='')
     plt.grid()
     axes = plt.gca()
-    axes.set_xlabel(r"$d\Theta$, $\mu$rad"); axes.set_ylabel("Flux, photons/s")
+    axes.set_xlabel(r"$d\Theta$ ($\mu$rad)"); axes.set_ylabel("Flux (ph/s)")
     plt.savefig("Flux_vs_dTheta.png")
 
     plt.figure('Convergence')
@@ -187,7 +187,7 @@ def main():
              np.array(minimizationArray)[:, 1],
              '-bo')
     axes = plt.gca()
-    axes.set_xlabel("Iteration Nr."); axes.set_ylabel("$\Delta$E, eV")
+    axes.set_xlabel("Iteration Nr"); axes.set_ylabel("$\Delta$E (eV)")
     plt.savefig("Convergence.png")
     plt.show()
 
