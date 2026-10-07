@@ -345,9 +345,9 @@ def _argument_input_types(argName):
     return ('string',)
 
 
-def argument_input_tooltip(argName, unit=None):
-    """Describe accepted input types and non-default argument units."""
-    argName = str(argName)
+def set_param_tooltip(child0, child1, paramName, unit=None):
+    """Set static input and unit hints on both parameter columns."""
+    argName = str(paramName)
     hints = []
     for inputTypes, argNames in argumentInputGroups.items():
         if argName in argNames:
@@ -355,7 +355,9 @@ def argument_input_tooltip(argName, unit=None):
             break
     if unit is not None:
         hints.append('Unit: ' + unit)
-    return '\n'.join(hints)
+    toolTip = '\n'.join(hints)
+    child0.setToolTip(toolTip)
+    child1.setToolTip(toolTip)
 
 
 def _compound_fields(argName):
@@ -610,6 +612,24 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
                 if rawValue is not None:
                     return rawValue
         return index.data()
+
+    def helpEvent(self, event, view, option, index):
+        if (event.type() != QEvent.ToolTip or
+                not index.isValid() or index.column() != 1):
+            return super().helpEvent(event, view, option, index)
+
+        toolTip = index.data(Qt.ToolTipRole) or ''
+        rawValue = self._indexRawValue(index)
+        if toolTip.startswith(('Input:', 'Unit:')):
+            toolTip += f'\nCurrent value: {rawValue}'
+        elif (not toolTip and rawValue is not None and
+              str(rawValue) != str(index.data(Qt.DisplayRole))):
+            toolTip = str(rawValue)
+        else:
+            return super().helpEvent(event, view, option, index)
+
+        QToolTip.showText(event.globalPos(), toolTip, view)
+        return True
 
     def _beamLine(self):
         if self.bl is not None:

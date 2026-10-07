@@ -1566,13 +1566,12 @@ class XrtQookBase(qt.QMainWindow):
                 str(parent.text()) == 'properties' and
                 parent.parent() is not None):
             obj = self.getVal(self.getClassName(parent.parent()))
-        child0.setToolTip(
-            qt.argument_input_tooltip(paramName, _getArgumentUnit(paramName, obj)))
         child1 = qt.QStandardItem()
+        qt.set_param_tooltip(
+            child0, child1, paramName, _getArgumentUnit(paramName, obj))
         if editorHint is not None:
             child0.setData(editorHint, qt.EDITOR_HINT_ROLE)
             child1.setData(editorHint, qt.EDITOR_HINT_ROLE)
-        self.setParamItemValue(child1, paramName, value)
         if str(paramName) == 'name':
             ch1flag = self.paramFlag
         elif isinstance(parent, qt.QStandardItem) and\
@@ -1595,8 +1594,10 @@ class XrtQookBase(qt.QMainWindow):
         child0.setDropEnabled(False)
         child0.setDragEnabled(False)
         if toolTip is not None:
-            child1.setToolTip(toolTip)
+            child1.setToolTip(
+                '\n'.join(filter(None, (child1.toolTip(), toolTip))))
             # self.setIItalic(child0)
+        self.setParamItemValue(child1, paramName, value)
         row = [child0, child1]
         if unit is not None:
             row.append(child1u)
@@ -1654,10 +1655,6 @@ class XrtQookBase(qt.QMainWindow):
         else:
             displayValue = self.formatParamDisplay(paramName, value)
         item.setText(displayValue)
-        if item.text() != rawValue:
-            item.setToolTip(rawValue)
-        else:
-            item.setToolTip('')
 
     def getParamItemValue(self, item):
         rawValue = item.data(qt.RAW_VALUE_ROLE)

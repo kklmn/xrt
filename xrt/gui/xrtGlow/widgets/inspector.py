@@ -465,15 +465,14 @@ class InstanceInspector(qt.QDialog):
         toolTip = None
         child0 = qt.QStandardItem(str(paramName))
         child0.setFlags(self.paramFlag)
-        child0.setToolTip(
-            qt.argument_input_tooltip(
-                paramName, _getArgumentUnit(paramName, self.editorObject)))
         editorHint = self.getArgumentEditorHint(paramName)
         child1 = qt.QStandardItem()
+        qt.set_param_tooltip(
+            child0, child1, paramName,
+            _getArgumentUnit(paramName, self.editorObject))
         if editorHint is not None:
             child0.setData(editorHint, qt.EDITOR_HINT_ROLE)
             child1.setData(editorHint, qt.EDITOR_HINT_ROLE)
-        self.set_param_item_value(child1, paramName, value)
 
         if str(paramName) == 'name' or paramName.endswith('rbk') or\
                 parent is self.itemGroups.get('Diagnostic'):
@@ -512,8 +511,10 @@ class InstanceInspector(qt.QDialog):
         child0.setDropEnabled(False)
         child0.setDragEnabled(False)
         if toolTip is not None:
-            child1.setToolTip(toolTip)
+            child1.setToolTip(
+                '\n'.join(filter(None, (child1.toolTip(), toolTip))))
             # self.setIItalic(child0)
+        self.set_param_item_value(child1, paramName, value)
         row = [child0, child1]
         if unit is not None:
             row.append(child1u)
@@ -549,10 +550,6 @@ class InstanceInspector(qt.QDialog):
         try:
             item.setData(rawValue, qt.RAW_VALUE_ROLE)
             item.setText(displayValue)
-            if item.text() != rawValue:
-                item.setToolTip(rawValue)
-            else:
-                item.setToolTip('')
         finally:
             if model is not None:
                 model.blockSignals(signalsBlocked)
@@ -1090,9 +1087,9 @@ class ConfigurablePlotWidget(qt.QWidget):
         toolTip = None
         child0 = qt.QStandardItem(str(paramName))
         child0.setFlags(self.paramFlag)
-        child0.setToolTip(
-            qt.argument_input_tooltip(paramName, _getArgumentUnit(paramName)))
         child1 = qt.QStandardItem(str(value))
+        qt.set_param_tooltip(
+            child0, child1, paramName, _getArgumentUnit(paramName))
 
         ch1flag = (self.paramFlag if paramName == 'name'
                    else self.valueFlag)
