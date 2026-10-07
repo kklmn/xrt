@@ -716,17 +716,11 @@ class CoordinateBox():
             right = max(x + w for x, w in zip(axrel, aw))
             bottom = min(ayrel)
             top = max(y + h for y, h in zip(ayrel, ah))
-            dx, dy = alignment[1:]
-            # The tick ray enters the text rectangle at the anchor and goes
-            # through its center. No extra screen-space padding is needed.
-            distances = []
-            if dx != 0:
-                distances.append(0.5 * (right - left) / abs(dx))
-            if dy != 0:
-                distances.append(0.5 * (top - bottom) / abs(dy))
-            distance = min(distances) if distances else 0.
-            coordShift[0] = distance*dx - 0.5 * (left + right)
-            coordShift[1] = distance*dy - 0.5 * (bottom + top)
+            dx = alignment[1]
+            # Start or end the label at the anchor, always using a horizontal
+            # text edge. The projected tick selects the left or right side.
+            coordShift[0] = -right if dx < 0 else -left
+            coordShift[1] = -0.5 * (bottom + top)
         elif alignment is not None:
             if alignment[0] == 'left':
                 coordShift[0] = -(axrel[-1]+2*aw[-1])
