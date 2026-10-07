@@ -627,7 +627,7 @@ class xrtGlow(GlowScanMixin, qt.QWidget):
         for iaxis, axis in enumerate(['Azimuth', 'Elevation']):
             axLabel = qt.QLabel(axis)
             axEdit = qt.QLineEdit("0.")
-            rLim = 89.99 if iaxis else 180.
+            rLim = 90. if iaxis else 180.
             rotValidator = qt.QDoubleValidator()
             rotValidator.setRange(-rLim, rLim, 9)
             axEdit.setValidator(rotValidator)
@@ -651,7 +651,7 @@ class xrtGlow(GlowScanMixin, qt.QWidget):
 
         for axis, angles in zip(
                 ['Side', 'Front', 'Top', 'Isometric'],
-                [(0., 0.), (89.99, 0.), (0., 89.99), (-45., 35.)]):
+                [(0., 0.), (89.99, 0.), (0., 90.), (-45., 35.)]):
             setView = qt.QPushButton(axis)
             setView.clicked.connect(partial(self.updateRotationFromGL, angles))
             fixedViewsLayout.addWidget(setView)

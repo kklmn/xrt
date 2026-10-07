@@ -2043,11 +2043,17 @@ class xrtGlWidget(qt.QOpenGLWidget):
         elevation = np.radians(self.rotations[1])
 
         cosel = np.cos(elevation)
+        sinel = np.sin(elevation)
+        cosaz = np.cos(azimuth)
+        sinaz = np.sin(azimuth)
 
         self.cameraPos = qt.QVector3D(
-                cR * cosel * np.cos(azimuth),
-                cR * cosel * np.sin(azimuth),
-                cR * np.sin(elevation))
+                cR * cosel * cosaz,
+                cR * cosel * sinaz,
+                cR * sinel)
+        # Use the tangent towards increasing elevation as camera up.
+        # This stays perpendicular to the view direction at both poles.
+        self.upVec = qt.QVector3D(-sinel * cosaz, -sinel * sinaz, cosel)
         self.mView.setToIdentity()
         self.mView.lookAt(self.cameraPos, self.cameraTarget,
                           self.upVec)
@@ -3380,10 +3386,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         self.rotations[0] -= 360
 
                     if self.rotations[1] >= 90:
-                        self.rotations[1] = 89.99
+                        self.rotations[1] = 90.
 
                     if self.rotations[1] <= -90:
-                        self.rotations[1] = -89.99
+                        self.rotations[1] = -90.
 
                     self.rotationUpdated.emit(self.rotations)
 
