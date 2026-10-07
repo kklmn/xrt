@@ -536,8 +536,8 @@ class Wiggler(BendingMagnet):
                            'hiddenParams', set()) | {'rho', }
 
     def __init__(self, *args, **kwargs):
-        u"""Parameters are the same as in BendingMagnet except *B0* and *rho*
-        which are not required and additionally:
+        u"""Parameters are the same as in BendingMagnet except *rho*
+        which is not required and additionally:
 
         *K*: float
             Deflection parameter

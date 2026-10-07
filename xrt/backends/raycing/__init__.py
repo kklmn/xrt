@@ -298,6 +298,10 @@ def get_output(plot, beamsReturnedBy_run_process):
         if not plot.fluxKind.startswith('E'):
             flux = intensity
 
+    # Invalid traced values must not enter histogram limits or weights.
+    # Keep the ray-state counters above as diagnostics of the original beam.
+    part &= (np.isfinite(x) & np.isfinite(y) & np.isfinite(cData) &
+             np.isfinite(intensity) & np.isfinite(flux))
     return x[part], y[part], intensity[part], flux[part], cData[part], nrays, \
         locAlive, locGood, locOut, locOver, locDead, \
         locAccepted, locAcceptedE, locSeeded, locSeededI

@@ -292,7 +292,8 @@ class CoordinateBox():
     @staticmethod
     def _grid_values(limits, step):
         low, high = limits
-        if step <= 0 or low >= high:
+        if not np.all(np.isfinite([low, high, step])) or \
+                step <= 0 or low >= high:
             return np.array([], dtype=np.float32)
 
         eps = abs(step) * 1e-9
@@ -329,6 +330,16 @@ class CoordinateBox():
         fineGridArray = []
 
         for iAx in range(3):
+            if not np.all(np.isfinite(allLimits[:, iAx])) or \
+                    not np.isfinite(self.parent.aPos[iAx]) or \
+                    self.parent.aPos[iAx] <= 0 or \
+                    allLimits[0, iAx] >= allLimits[1, iAx]:
+                empty = np.array([], dtype=np.float32)
+                self.gridLabels.append(empty)
+                self.precisionLabels.append(empty)
+                axisGridArray.append(empty)
+                fineGridArray.append(empty)
+                continue
             m2 = self.parent.aPos[iAx] / 0.9
             dx1 = np.abs(allLimits[:, iAx][0] - allLimits[:, iAx][1]) / m2
             order = np.floor(np.log10(dx1))

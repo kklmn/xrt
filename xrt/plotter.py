@@ -2061,6 +2061,13 @@ class XYCPlot(object):
         """
 
         runCardVals = self.runCardVals or runner.runCardVals
+        for axis in (self.xaxis, self.yaxis, self.caxis):
+            if axis.limits is not None and not isinstance(axis.limits, str) and \
+                    not np.all(np.isfinite(axis.limits)):
+                self.textStatus.set_text(
+                    'Non-finite {0} limits; plot update skipped.'.format(
+                        axis.label))
+                return
         self.cx, self.dx = self.plot_hist1d('x')
         self.cy, self.dy = self.plot_hist1d('y')
 

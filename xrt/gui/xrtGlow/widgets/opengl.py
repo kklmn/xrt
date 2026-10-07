@@ -2115,6 +2115,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 for beamkey, beam in self.beamline.beamsDictU[oeid].items():
                     if beamkey.startswith('beamGlo') and beam is not None:
                         good = (beam.state == 1) | (beam.state == 2)
+                        good &= (np.isfinite(beam.x) & np.isfinite(beam.y) &
+                                 np.isfinite(beam.z))
                         bx, by, bz = beam.x[good], beam.y[good], beam.z[good]
                         if len(bx) == 0:
                             continue
