@@ -462,7 +462,6 @@ class InstanceInspector(qt.QDialog):
     def add_param(self, parent, paramName, value, epv=None, source=None,
                   unit=None):
         """Add a pair of Parameter-Value Items"""
-        toolTip = None
         child0 = qt.QStandardItem(str(paramName))
         child0.setFlags(self.paramFlag)
         editorHint = self.getArgumentEditorHint(paramName)
@@ -502,18 +501,8 @@ class InstanceInspector(qt.QDialog):
             child1e.setFlags(self.valueFlag)
             child1e.setEditable(False)
 
-        if str(paramName) == "center":
-            toolTip = '\"x\" and \"z\" can be set to "auto"\
- for automatic alignment if \"y\" is known'
-#        if str(paramName) == "pitch":
-#            toolTip = 'For single OEs \"pitch\" can be set to "auto"\
-# for automatic alignment with known \"roll\", \"yaw\"'
         child0.setDropEnabled(False)
         child0.setDragEnabled(False)
-        if toolTip is not None:
-            child1.setToolTip(
-                '\n'.join(filter(None, (child1.toolTip(), toolTip))))
-            # self.setIItalic(child0)
         self.set_param_item_value(child1, paramName, value)
         row = [child0, child1]
         if unit is not None:

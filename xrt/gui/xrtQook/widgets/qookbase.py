@@ -1558,7 +1558,6 @@ class XrtQookBase(qt.QMainWindow):
     def addParam(self, parent, paramName, value, source=None, unit=None,
                  editorHint=None):
         """Add a pair of Parameter-Value Items"""
-        toolTip = None
         child0 = qt.QStandardItem(str(paramName))
         child0.setFlags(self.paramFlag)
         obj = None
@@ -1585,18 +1584,8 @@ class XrtQookBase(qt.QMainWindow):
         if unit is not None:
             child1u = qt.QStandardItem(str(unit))
             child1u.setFlags(self.valueFlag)
-        if str(paramName) == "center":
-            toolTip = '\"x\" and \"z\" can be set to "auto"\
- for automatic alignment if \"y\" is known'
-#        if str(paramName) == "pitch":
-#            toolTip = 'For single OEs \"pitch\" can be set to "auto"\
-# for automatic alignment with known \"roll\", \"yaw\"'
         child0.setDropEnabled(False)
         child0.setDragEnabled(False)
-        if toolTip is not None:
-            child1.setToolTip(
-                '\n'.join(filter(None, (child1.toolTip(), toolTip))))
-            # self.setIItalic(child0)
         self.setParamItemValue(child1, paramName, value)
         row = [child0, child1]
         if unit is not None:

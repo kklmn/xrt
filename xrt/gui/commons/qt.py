@@ -348,11 +348,20 @@ def _argument_input_types(argName):
 def set_param_tooltip(child0, child1, paramName, unit=None):
     """Set static input and unit hints on both parameter columns."""
     argName = str(paramName)
+    componentTypes = _compound_component_types(argName)
     hints = []
-    for inputTypes, argNames in argumentInputGroups.items():
-        if argName in argNames:
-            hints.append('Input: ' + ', '.join(_as_input_types(inputTypes)))
-            break
+    if componentTypes is not None:
+        hints.append('Input: ' + ', '.join(componentTypes))
+    elif argName == 'center':
+        hints.append('Input: 3-sequence of floats; any 2 can be auto')
+    elif argName == 'lim' or argName.startswith(('limPhys', 'limOpt')):
+        hints.append('Input: sequence, None')
+    else:
+        for inputTypes, argNames in argumentInputGroups.items():
+            if argName in argNames:
+                hints.append(
+                    'Input: ' + ', '.join(_as_input_types(inputTypes)))
+                break
     if unit is not None:
         hints.append('Unit: ' + unit)
     toolTip = '\n'.join(hints)
@@ -365,6 +374,16 @@ def _compound_fields(argName):
     if fields is None and argName.startswith(('limPhys', 'limOpt')):
         fields = compoundArgs.get('lim')
     return fields
+
+
+def _compound_component_types(argName):
+    rootName, separator, component = argName.partition('.')
+    fields = _compound_fields(rootName)
+    if not separator or fields is None or component not in fields:
+        return None
+    if rootName == 'center':
+        return ('scalar', 'auto')
+    return ('scalar',)
 
 
 class _MuNormalizedValidator(QRegularExpressionValidator):
@@ -521,23 +540,12 @@ class ParsedSequenceValidator(QValidator):
 def make_argument_validator(argName, parent=None):
     """Returns the fallback validator for an argument QLineEdit."""
     argName = str(argName)
-    rootName, separator, component = argName.partition('.')
+    rootName = argName.partition('.')[0]
     fields = _compound_fields(rootName)
 
     inputTypes = _argument_input_types(rootName)
-    if separator and fields is not None and component in fields:
-        if rootName == 'center':
-            componentTypes = ('scalar', 'auto')
-        elif rootName in ('x', 'z', 'blades'):
-            componentTypes = ('scalar',)
-        elif rootName == 'lim' or\
-                rootName.startswith(('limPhys', 'limOpt')):
-            componentTypes = ('scalar',)
-        else:
-            componentTypes = ('scalar',)
-        if 'sequence' in componentTypes:
-            return ParsedSequenceValidator(
-                rootName, componentTypes, parent=parent)
+    componentTypes = _compound_component_types(argName)
+    if componentTypes is not None:
         return _atomic_validator(componentTypes, parent)
 
     if 'string' in inputTypes or 'dict' in inputTypes:
