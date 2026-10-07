@@ -121,6 +121,7 @@ crystal analyzer. As expected, the beam is fully polarized at 45° Bragg angle
 
 .. |DPBragg| animation:: _images/1D-DegOfPol_Bragg
 .. |DPLaue| animation:: _images/1D-DegOfPol_Laue
+   :loc: upper-right-corner
 
 .. rubric:: Comments
 

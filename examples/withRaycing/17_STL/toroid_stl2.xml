@@ -683,7 +683,7 @@ To export a more densely sampled STL model, open the **Rendering** panel
 and change **OE tessellation X** and **OE tessellation Y** from 25 to 100
 points along each dimension. Hover over the analytical ``toroidMirror01``
 in the scene and make sure it is highlighted. Right-click and choose
-**File &gt; Export OE shape to STL**, then save the model as an STL file.
+**File / Export OE shape to STL**, then save the model as an STL file.
 The exported model can also be viewed and modified using third-party 3D
 tools.
 

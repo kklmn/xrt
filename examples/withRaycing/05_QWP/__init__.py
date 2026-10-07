@@ -34,14 +34,27 @@ polarization ellipse becomes close to 1 or -1 and with narrow distribution.
 
 *E* ~ 9 keV, crystal thickness = 200 µm.
 
-+------------+------------+------------+------------+
-|  |QWPBTE|  |  |QWPBTC|  |  |QWPBTP|  |  |QWPBTA|  |
-+------------+------------+------------+------------+
++------------+------------+
+|  |QWPTE|   |  |QWPTC|   |
++============+============+
+|  |QWPBTE|  |  |QWPBTC|  |
++------------+------------+
+
++------------+------------+
+|  |QWPTP|   |  |QWPTA|   |
++============+============+
+|  |QWPBTP|  |  |QWPBTA|  |
++------------+------------+
+
+.. |QWPTE| replace:: energy
+.. |QWPTC| replace:: circular polarization rate
+.. |QWPTP| replace:: phase shift between s- and p-components
+.. |QWPTA| replace:: ratio of axes of the polarization ellipse
 
 .. |QWPBTE| animation:: _images/QWP-1BT-E
 .. |QWPBTC| animation:: _images/QWP-1BT-CircPolRate
-.. |QWPBTP| animation:: _images/QWP-1BT-PhaseShift
    :loc: upper-right-corner
+.. |QWPBTP| animation:: _images/QWP-1BT-PhaseShift
 .. |QWPBTA| animation:: _images/QWP-1BT-PolAxesRatio
    :loc: upper-right-corner
 
@@ -54,14 +67,22 @@ case.
 
 *E* ~ 9 keV, crystal thickness = 500 µm.
 
-+------------+------------+------------+------------+
-|  |QWPLTE|  |  |QWPLTC|  |  |QWPLTP|  |  |QWPLTA|  |
-+------------+------------+------------+------------+
++------------+------------+
+|  |QWPTE|   |  |QWPTC|   |
++============+============+
+|  |QWPLTE|  |  |QWPLTC|  |
++------------+------------+
+
++------------+------------+
+|  |QWPTP|   |  |QWPTA|   |
++============+============+
+|  |QWPLTP|  |  |QWPLTA|  |
++------------+------------+
 
 .. |QWPLTE| animation:: _images/QWP-2LT-E
 .. |QWPLTC| animation:: _images/QWP-2LT-CircPolRate
-.. |QWPLTP| animation:: _images/QWP-2LT-PhaseShift
    :loc: upper-right-corner
+.. |QWPLTP| animation:: _images/QWP-2LT-PhaseShift
 .. |QWPLTA| animation:: _images/QWP-2LT-PolAxesRatio
    :loc: upper-right-corner
 

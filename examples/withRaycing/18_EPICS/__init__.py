@@ -118,6 +118,11 @@ and move the screen up by 1 mm:
     caput("VBL:oe01:ENERGY", 10005.0, wait=True)
     caput("VBL:screen01:center:z", screen_z + 1.0, wait=True)
 
+.. imagezoom:: _images/inspector_epics.png
+   :align: right
+   :alt:  &ensp;xrtGlow screen01 inspector showing active PV names in the
+       EPICS PV column.
+
 The ``ENERGY`` control is available only for crystal optics and double crystal
 monochromators (DCMs); it adjusts their Bragg angle. With automatic updates
 enabled, these writes trigger propagation and the result appears in xrtGlow.
@@ -126,13 +131,7 @@ readbacks arrive afterward.
 
 You can use the xrtGlow inspector to check active PVs for an element. The
 ``EPICS PV`` column lists the PV names alongside their corresponding
-properties, as shown below for ``screen01``.
-
-|epicsInspector|
-
-.. |epicsInspector| imagezoom:: _images/inspector_epics.png
-   :width: 600
-   :alt: xrtGlow screen01 inspector showing active PV names in the EPICS PV column.
+properties, as shown on the right for ``screen01``.
 
 .. _EPICS: https://epics-controls.org/
 .. _pythonSoftIOC: https://github.com/DiamondLightSource/pythonSoftIOC

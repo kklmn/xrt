@@ -15,9 +15,8 @@ dispersion effect in parafocusing (cf. Figs. 5 and 6 ibid).
 +----------+----------+
 
 .. |mosA| imagezoom:: _images/MosaicGraphite002-screenA.*
-   :align: center
 .. |mosB| imagezoom:: _images/MosaicGraphite002-screenB.*
-   :align: center
+   :loc: upper-right-corner
 
 The penetration depth distribution should be compared with Fig 7 ibid.
 

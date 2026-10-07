@@ -23,6 +23,7 @@ The ray-traced deviation -106 µrad is close to the calculated refractive shift
 
 .. |asymXtal_before| imagezoom:: _images/0-zzP-source,alpha=-0.350.png
 .. |asymXtal_after| imagezoom:: _images/2-zzP-afterXtal,alpha=-0.350.png
+   :loc: upper-right-corner
 
 """
 __author__ = "Konstantin Klementiev"

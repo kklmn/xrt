@@ -12,16 +12,22 @@ This example shows the reflectivity of a bent 200-µm-thick Si111 Laue crystal
 at various bending radii and energies. Watch how the band width is growing and
 the flux is lowering in going to smaller radii.
 
-+----------------+----------------+----------------+----------------+
-|  *E* = 9 keV   |  *E* = 16 keV  |  *E* = 25 keV  |  *E* = 36 keV  |
-+================+================+================+================+
-|      |E09|     |      |E16|     |      |E25|     |      |E36|     |
-+----------------+----------------+----------------+----------------+
++----------------+----------------+
+|  *E* = 9 keV   |  *E* = 16 keV  |
++================+================+
+|      |E09|     |      |E16|     |
++----------------+----------------+
+
++----------------+----------------+
+|  *E* = 25 keV  |  *E* = 36 keV  |
++================+================+
+|      |E25|     |      |E36|     |
++----------------+----------------+
 
 .. |E09| animation:: _images/BentLaueSCM09keV
 .. |E16| animation:: _images/BentLaueSCM16keV
-.. |E25| animation:: _images/BentLaueSCM25keV
    :loc: upper-right-corner
+.. |E25| animation:: _images/BentLaueSCM25keV
 .. |E36| animation:: _images/BentLaueSCM36keV
    :loc: upper-right-corner
 
@@ -44,16 +50,22 @@ away from the parallel positioning (*dθ* = 0).
 
 Flux vs. detuning angle of the second crystal (rocking curves)
 
-+----------------+----------------+----------------+----------------+
-|  *E* = 9 keV   |  *E* = 16 keV  |  *E* = 25 keV  |  *E* = 36 keV  |
-+================+================+================+================+
-|     |rc09|     |     |rc16|     |     |rc25|     |     |rc36|     |
-+----------------+----------------+----------------+----------------+
++----------------+----------------+
+|  *E* = 9 keV   |  *E* = 16 keV  |
++================+================+
+|     |rc09|     |     |rc16|     |
++----------------+----------------+
+
++----------------+----------------+
+|  *E* = 25 keV  |  *E* = 36 keV  |
++================+================+
+|     |rc25|     |     |rc36|     |
++----------------+----------------+
 
 .. |rc09| animation:: _images/BentLaueDCM_rc09keV
 .. |rc16| animation:: _images/BentLaueDCM_rc16keV
-.. |rc25| animation:: _images/BentLaueDCM_rc25keV
    :loc: upper-right-corner
+.. |rc25| animation:: _images/BentLaueDCM_rc25keV
 .. |rc36| animation:: _images/BentLaueDCM_rc36keV
    :loc: upper-right-corner
 """

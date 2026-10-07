@@ -25,6 +25,7 @@ straight section.
 
 .. |edgefield| imagezoom:: _images/edge-field.png
 .. |edgetraj| imagezoom:: _images/2bm-traj-xyz.png
+   :loc: upper-right-corner
 
 The infrared wavelength in this example is 10 µm. The equatorial gap mimics a
 3 mm gap in the extracting mirror that reflects the beam sideways or upwards.
@@ -59,12 +60,13 @@ field calculation expressions, compare the two columns.
 .. |farhor| imagezoom:: _images/1-far-field-1-hor-pol.png
 .. |farver| imagezoom:: _images/1-far-field-2-ver-pol.png
 .. |farpsi| imagezoom:: _images/1-far-field-3-polPsi.png
+   :loc: lower-left-corner
 .. |nearhor| imagezoom:: _images/2-near-field-1-hor-pol.png
    :loc: upper-right-corner
 .. |nearver| imagezoom:: _images/2-near-field-2-ver-pol.png
    :loc: upper-right-corner
 .. |nearpsi| imagezoom:: _images/2-near-field-3-polPsi.png
-   :loc: upper-right-corner
+   :loc: lower-right-corner
 
 """
 

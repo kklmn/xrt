@@ -23,12 +23,12 @@ reflection with a probability weighted by its intensity.
 +-------------+--------------+
 
 .. |xrd3d| imagezoom:: _images/XRD_3D.png
-   :scale: 80%
+   :scale: 40%
    :alt: Single crystal diffraction geometry and rays in xrtGlow.
 
 .. |lauegram| imagezoom:: _images/Lauegram_Intensity.png
-   :scale: 80%
    :alt: Simulated silicon Laue diffraction intensity on the detector.
+   :loc: upper-right-corner
 
 .. warning::
    These diffraction calculations can use NumPy or OpenCL. Select an available

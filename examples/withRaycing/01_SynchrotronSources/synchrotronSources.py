@@ -61,6 +61,7 @@ parabolic:
 
 .. |bmPhaseSp0| imagezoom:: _images/3bm_xrt1-0-wideE-horPhaseSpace.png
 .. |bmPhaseSpN| imagezoom:: _images/3bm_xrt1-n-wideE-horPhaseSpace.png
+   :loc: upper-right-corner
 
 Multipole wiggler
 ~~~~~~~~~~~~~~~~~
@@ -296,8 +297,9 @@ only ~3% of the total flux.
 .. |CFspeP| imagezoom:: _images/spectra-custom_p.png
    :loc: lower-left-corner
 .. |CFxrtT| imagezoom:: _images/2QEPU_mono3rdHarmonic.png
+   :loc: upper-right-corner
 .. |CFxrtP| imagezoom:: _images/2QEPU_mono3rdHarmonic_p.png
-   :loc: lower-left-corner
+   :loc: lower-right-corner
 
 """
 
@@ -324,6 +326,7 @@ want to modify it in extreme cases (wigglers, near field, wide angles etc.).
    :scale: 50 %
 .. |uTHzV| image:: _images/2THzU_xrt1-n-narrowE-3vertFlux-U_code.png
    :scale: 50 %
+   :loc: upper-right-corner
 """
 __author__ = "Konstantin Klementiev", "Roman Chernikov"
 __date__ = "08 Mar 2016"

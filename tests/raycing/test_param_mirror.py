@@ -3,6 +3,8 @@
 Tests of parametric mirrors
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+See the script: `tests/raycing/test_param_mirror.py`.
+
 The following parametric mirrors are exemplified here:
 
 +---------------+---------------+

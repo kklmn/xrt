@@ -56,6 +56,7 @@ calculated by `xrt` and `xraylib`.
 
 .. |04-Laue1Dbent| imagezoom:: _images/04-Laue1Dbent.png
 .. |05-Laue2Dbent| imagezoom:: _images/05-Laue2Dbent.png
+   :loc: upper-right-corner
 
 Transmittivity of 1D and 2D bent Laue crystals
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -66,6 +67,7 @@ Transmittivity of 1D and 2D bent Laue crystals
 
 .. |06-Laue1Dbent| imagezoom:: _images/06-Laue1Dbent.png
 .. |07-Laue2Dbent| imagezoom:: _images/07-Laue2Dbent.png
+   :loc: upper-right-corner
 
 .. end
 """
