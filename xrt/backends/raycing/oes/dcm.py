@@ -75,8 +75,7 @@ class DCM(OE):
 
     @bragg.setter
     def bragg(self, bragg):
-        if isinstance(bragg, (raycing.basestring, list, tuple)):
-            self._braggInit = copy.deepcopy(bragg)  # For glow auto-recognition
+        self._braggInit = copy.deepcopy(bragg)
         if isinstance(bragg, (list, tuple)):
             raycing.warn_deprecated_list_auto_align('bragg')
         bragg = raycing.auto_units_angle_with_energy(bragg)
@@ -103,6 +102,7 @@ class DCM(OE):
     @braggOffset.setter
     def braggOffset(self, braggOffset):
         self._braggOffset = raycing.auto_units_angle(braggOffset)
+        self._braggOffsetInit = copy.deepcopy(braggOffset)
 
     @property
     def cryst1roll(self):
@@ -111,6 +111,7 @@ class DCM(OE):
     @cryst1roll.setter
     def cryst1roll(self, cryst1roll):
         self._cryst1roll = raycing.auto_units_angle(cryst1roll)
+        self._cryst1rollInit = copy.deepcopy(cryst1roll)
 #        self.update_orientation_quaternion()
 
     @property
@@ -120,6 +121,7 @@ class DCM(OE):
     @cryst2roll.setter
     def cryst2roll(self, cryst2roll):
         self._cryst2roll = raycing.auto_units_angle(cryst2roll)
+        self._cryst2rollInit = copy.deepcopy(cryst2roll)
 #        self.update_orientation_quaternion()
 
     @property
@@ -129,6 +131,7 @@ class DCM(OE):
     @cryst2pitch.setter
     def cryst2pitch(self, cryst2pitch):
         self._cryst2pitch = raycing.auto_units_angle(cryst2pitch)
+        self._cryst2pitchInit = copy.deepcopy(cryst2pitch)
 #        self.update_orientation_quaternion()
 
     @property
@@ -138,6 +141,7 @@ class DCM(OE):
     @cryst2finePitch.setter
     def cryst2finePitch(self, cryst2finePitch):
         self._cryst2finePitch = raycing.auto_units_angle(cryst2finePitch)
+        self._cryst2finePitchInit = copy.deepcopy(cryst2finePitch)
 #        self.update_orientation_quaternion()
 
     @property

@@ -3,6 +3,7 @@ __author__ = "Konstantin Klementiev", "Roman Chernikov"
 __date__ = "12 Aug 2021"
 
 import sys
+import copy
 import numpy as np
 from scipy import special
 from scipy.interpolate import interp1d, UnivariateSpline
@@ -1525,9 +1526,11 @@ class Undulator(IntegratedSource):
 
     @phaseDeg.setter
     def phaseDeg(self, phaseDeg):
+        source = copy.deepcopy(phaseDeg)
         phaseDeg = np.degrees(raycing.auto_units_angle(phaseDeg)) if\
             isinstance(phaseDeg, raycing.basestring) else phaseDeg
         self._phaseDeg = phaseDeg
+        self._phaseDegInit = source
         self.phase = np.radians(phaseDeg)
         self.needReset = True
 

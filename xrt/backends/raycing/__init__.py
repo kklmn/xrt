@@ -51,6 +51,7 @@ from ._beam_props import (
 
 from ._sets_units import (
     allBeamFields, orientationArgSet, shapeArgSet, derivedArgSet,
+    calculatedArgSet,
     renderOnlyArgSet, compoundArgs, dependentArgGroups, diagnosticArgs,
     allUnitsAng, allUnitsAngStr, allUnitsLen, allUnitsLenStr, allUnitsEnergy,
     allUnitsEnergyStr, allUnitsEmittance, allUnitsEmittanceStr,
@@ -135,12 +136,13 @@ def center_property():
             center = list(center)
 
         if any([isinstance(x, str) for x in center]):
-            self._centerInit = centerInit
             self._centerVal = None
 #            self._center = copy.deepcopy(center)
         else:
             self._centerVal = Center(center)
 
+        self._centerInit = centerInit if self._centerVal is None else\
+            self._centerVal
         self._center = copy.deepcopy(center)
 
     return property(getter, setter)

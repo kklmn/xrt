@@ -1,6 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 __author__ = "Konstantin Klementiev", "Roman Chernikov"
 __date__ = "03 Jul 2016"
+import copy
 import numpy as np
 import scipy as sp
 import inspect
@@ -305,9 +306,9 @@ class GeometricSource(object):
         self.distz = distz
         self.dz = dz
         self.distxprime = distxprime
-        self._dxprime = raycing.auto_units_angle(dxprime)
+        self.dxprime = dxprime
         self.distzprime = distzprime
-        self._dzprime = raycing.auto_units_angle(dzprime)
+        self.dzprime = dzprime
         self.distE = distE
         self.energies = energies
         self.energyWeights = energyWeights
@@ -320,9 +321,9 @@ class GeometricSource(object):
         self.polarization = polarization
         self.filamentBeam = filamentBeam
         self.uniformRayDensity = uniformRayDensity
-        self._pitch = raycing.auto_units_angle(pitch)
-        self._roll = raycing.auto_units_angle(roll)
-        self._yaw = raycing.auto_units_angle(yaw)
+        self.pitch = pitch
+        self.roll = roll
+        self.yaw = yaw
         self.totalFlux = totalFlux
 
     center = raycing.center_property()
@@ -334,6 +335,7 @@ class GeometricSource(object):
     @dxprime.setter
     def dxprime(self, dxprime):
         self._dxprime = raycing.auto_units_angle(dxprime)
+        self._dxprimeInit = copy.deepcopy(dxprime)
 
     @property
     def dzprime(self):
@@ -342,6 +344,7 @@ class GeometricSource(object):
     @dzprime.setter
     def dzprime(self, dzprime):
         self._dzprime = raycing.auto_units_angle(dzprime)
+        self._dzprimeInit = copy.deepcopy(dzprime)
 
     @property
     def pitch(self):
@@ -350,6 +353,7 @@ class GeometricSource(object):
     @pitch.setter
     def pitch(self, pitch):
         self._pitch = raycing.auto_units_angle(pitch)
+        self._pitchInit = copy.deepcopy(pitch)
 
     @property
     def roll(self):
@@ -358,6 +362,7 @@ class GeometricSource(object):
     @roll.setter
     def roll(self, roll):
         self._roll = raycing.auto_units_angle(roll)
+        self._rollInit = copy.deepcopy(roll)
 
     @property
     def yaw(self):
@@ -366,6 +371,7 @@ class GeometricSource(object):
     @yaw.setter
     def yaw(self, yaw):
         self._yaw = raycing.auto_units_angle(yaw)
+        self._yawInit = copy.deepcopy(yaw)
 
     def _apply_distribution(self, axis, distaxis, daxis, bo=None):
         if distaxis == 'normal':
@@ -903,10 +909,10 @@ class MeshSource(object):
                 str(raycing.uuid.uuid4())
 
         self.center = center
-        self.minxprime = raycing.auto_units_angle(minxprime)
-        self.maxxprime = raycing.auto_units_angle(maxxprime)
-        self.minzprime = raycing.auto_units_angle(minzprime)
-        self.maxzprime = raycing.auto_units_angle(maxzprime)
+        self.minxprime = minxprime
+        self.maxxprime = maxxprime
+        self.minzprime = minzprime
+        self.maxzprime = maxzprime
         self.nx = nx
         self.nz = nz
 #        self.nrays = self.nx * self.nz + int(self.withCentralRay)
@@ -963,6 +969,7 @@ class MeshSource(object):
     @minxprime.setter
     def minxprime(self, minxprime):
         self._minxprime = raycing.auto_units_angle(minxprime)
+        self._minxprimeInit = copy.deepcopy(minxprime)
 
     @property
     def maxxprime(self):
@@ -971,6 +978,7 @@ class MeshSource(object):
     @maxxprime.setter
     def maxxprime(self, maxxprime):
         self._maxxprime = raycing.auto_units_angle(maxxprime)
+        self._maxxprimeInit = copy.deepcopy(maxxprime)
 
     @property
     def minzprime(self):
@@ -979,6 +987,7 @@ class MeshSource(object):
     @minzprime.setter
     def minzprime(self, minzprime):
         self._minzprime = raycing.auto_units_angle(minzprime)
+        self._minzprimeInit = copy.deepcopy(minzprime)
 
     @property
     def maxzprime(self):
@@ -987,6 +996,7 @@ class MeshSource(object):
     @maxzprime.setter
     def maxzprime(self, maxzprime):
         self._maxzprime = raycing.auto_units_angle(maxzprime)
+        self._maxzprimeInit = copy.deepcopy(maxzprime)
 
     @raycing.append_to_flow_decorator
     def shine(self, toGlobal=True):

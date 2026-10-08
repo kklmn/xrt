@@ -707,7 +707,10 @@ class BeamLine(object):
                 targetPitch += alphaT + lauePitch
                 if autoBragg:
                     if autoPitch:
+                        pitchInit = copy.deepcopy(
+                            getattr(oe, '_pitchInit', oe._pitch))
                         oe.pitch = 0
+                        oe._pitchInit = pitchInit
                     oe._braggVal = targetPitch - oe.pitch
                     oe.get_orientation()
                     if _VERBOSITY_ > 0:
@@ -1903,8 +1906,8 @@ class BeamLine(object):
 
         for objName, objInstance in self.fesDict.items():
             feRecord = OrderedDict()
-            feRecord['properties'] = get_init_kwargs(objInstance,
-                                                     compact=False)
+            feRecord['properties'] = get_init_kwargs(
+                objInstance, compact=False, resolveAuto=False)
             feRecord['_object'] = get_obj_str(objInstance)
 
             if not feRecord['properties']['name']:

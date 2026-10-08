@@ -24,6 +24,7 @@ else:
 from .singletons import is_sequence
 from ._sets_units import (
     allBeamFields, orientationArgSet, shapeArgSet, derivedArgSet,
+    calculatedArgSet,
     renderOnlyArgSet, compoundArgs, dependentArgGroups, diagnosticArgs,
     allUnitsAng,
     allUnitsAngStr, allUnitsLen, allUnitsLenStr, allUnitsEnergy,
@@ -815,8 +816,7 @@ def get_init_kwargs(oeObj, compact=True, needRevG=False, blname=None,
                 if arg == 'data':
                     continue
                 rawValue = getattr(oeObj, f'_{arg}', None)
-                if not resolveAuto and arg in (
-                        'R', 'r', 'Rm', 'Rs', 'focus', 'nCRL') and\
+                if not resolveAuto and arg in calculatedArgSet and\
                         isinstance(rawValue, (list, tuple)):
                     realval = rawValue
                 elif hasattr(oeObj, f'_{arg}Init') and not resolveAuto:
