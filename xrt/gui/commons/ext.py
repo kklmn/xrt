@@ -57,6 +57,7 @@ class PythonTextEdit(qt.QPlainTextEdit):
     COLOR_NUMBER = "#800000"
     COLOR_COMMENT = "#ADADAD"
     COLOR_KEYWORD = "#0000FF"
+    COLOR_BUILTIN = "#A20090"
     COLOR_CLASS = "#000000"
     COLOR_FUNC = "#000000"
     COLOR_SELF = "#924939"
@@ -68,12 +69,14 @@ class PythonTextEdit(qt.QPlainTextEdit):
         super().__init__(parent)
         self.defaultFontSize = None
 
+        self.builtins = list(__builtins__.keys()) + ['True', 'False', 'None']
         self.formats = {}
         self.formats[token.STRING] = self.make_format(self.COLOR_STRING)
         self.formats[token.NUMBER] = self.make_format(self.COLOR_NUMBER)
         self.formats[token.COMMENT] = self.make_format(self.COLOR_COMMENT)
 
         self.keyword_format = self.make_format(self.COLOR_KEYWORD, bold=True)
+        self.builtin_format = self.make_format(self.COLOR_BUILTIN, bold=False)
         self.class_fmt = self.make_format(self.COLOR_CLASS, bold=True)
         # self.class_fmt.setFontUnderline(True)
         self.func_fmt = self.make_format(self.COLOR_FUNC, bold=True)
@@ -197,7 +200,9 @@ class PythonTextEdit(qt.QPlainTextEdit):
 
                 fmt = None
                 if tok_type == token.NAME:
-                    if tok.string in keyword.kwlist:
+                    if tok.string in self.builtins:
+                        fmt = self.builtin_format
+                    elif tok.string in keyword.kwlist:
                         fmt = self.keyword_format
                     elif prev_tok == "class":
                         fmt = self.class_fmt
