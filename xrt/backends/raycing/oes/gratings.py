@@ -1,4 +1,5 @@
 ﻿# -*- coding: utf-8 -*-
+import copy
 import numpy as np
 from scipy import interpolate
 
@@ -234,6 +235,7 @@ class GeneralFZP(OE):  # renamed from GeneralFZPin0YZ
     @grazingAngle.setter
     def grazingAngle(self, grazingAngle):
         self._grazingAngle = raycing.auto_units_angle(grazingAngle)
+        self._grazingAngleInit = copy.deepcopy(grazingAngle)
 
     def __pop_kwargs(self, **kwargs):
         self.f1 = kwargs.pop('f1')  # in local coordinates!!!
@@ -518,7 +520,8 @@ class BlazedGrating(ProfiledGrating):
 
     @blaze.setter
     def blaze(self, blaze):
-        self._blaze = blaze
+        self._blaze = raycing.auto_units_angle(blaze)
+        self._blazeInit = copy.deepcopy(blaze)
         self.reset()
 
     @property
@@ -527,7 +530,8 @@ class BlazedGrating(ProfiledGrating):
 
     @antiblaze.setter
     def antiblaze(self, antiblaze):
-        self._antiblaze = antiblaze
+        self._antiblaze = raycing.auto_units_angle(antiblaze)
+        self._antiblazeInit = copy.deepcopy(antiblaze)
         self.reset()
 
     @property
@@ -547,9 +551,8 @@ class BlazedGrating(ProfiledGrating):
             self.get_diagnostics()
 
     def __pop_kwargs(self, **kwargs):
-        self.blaze = raycing.auto_units_angle(kwargs.pop('blaze', 0.05))
-        self.antiblaze = raycing.auto_units_angle(
-            kwargs.pop('antiblaze', np.pi*0.4999))
+        self.blaze = kwargs.pop('blaze', 0.05)
+        self.antiblaze = kwargs.pop('antiblaze', np.pi*0.4999)
         self.rho0 = kwargs.pop('rho', 500)
         if kwargs.get('gratingDensity') is None:
             kwargs['gratingDensity'] = ['y', self.rho0, 1]

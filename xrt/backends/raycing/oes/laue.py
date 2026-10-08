@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
+import copy
 import numpy as np
 
 from ... import raycing
@@ -118,6 +119,7 @@ class BentLaueCylinder(OE):
         cos(alpha) and sin(alpha) which are then used for rotating the normal
         to the crystal planes."""
         self._alpha = raycing.auto_units_angle(alpha)
+        self._alphaInit = copy.deepcopy(alpha)
         if self.alpha is not None:
             self.cosalpha = np.cos(self.alpha)
             self.sinalpha = np.sin(self.alpha)
@@ -337,6 +339,7 @@ class BentLaue2D(OE):
         cos(alpha) and sin(alpha) which are then used for rotating the normal
         to the crystal planes."""
         self._alpha = raycing.auto_units_angle(alpha)
+        self._alphaInit = copy.deepcopy(alpha)
         if self.alpha is not None:
             self.cosalpha = np.cos(self.alpha)
             self.sinalpha = np.sin(self.alpha)

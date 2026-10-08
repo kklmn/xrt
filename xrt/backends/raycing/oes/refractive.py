@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import copy
 import numpy as np
 import inspect
 
@@ -149,12 +150,12 @@ class Plate(DCM):
     @wedgeAngle.setter
     def wedgeAngle(self, wedgeAngle):
         self._wedgeAngle = raycing.auto_units_angle(wedgeAngle)
+        self._wedgeAngleInit = copy.deepcopy(wedgeAngle)
         self.cryst2pitch = self._wedgeAngle
 
     def __pop_kwargs(self, **kwargs):
         self.t = kwargs.pop('t', 0)  # difference of z zeros in mm
-        self.wedgeAngle = raycing.auto_units_angle(
-                kwargs.pop('wedgeAngle', 0))
+        self.wedgeAngle = kwargs.pop('wedgeAngle', 0)
         return kwargs
 
     def assign_auto_material_kind(self, material):

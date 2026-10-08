@@ -192,6 +192,7 @@ __allSectioned__ = collections.OrderedDict([
 
 import os
 # import gc
+import copy
 import numpy as np
 
 from ... import raycing
@@ -678,6 +679,7 @@ class ConicalMirror(OE):
     @theta.setter
     def theta(self, theta):
         self._theta = raycing.auto_units_angle(theta)
+        self._thetaInit = copy.deepcopy(theta)
         self.tt = np.tan(self._theta)
         self.t2t = np.tan(2*self._theta)
         self.redfocus = np.cos(self._theta)**2 /\

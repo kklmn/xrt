@@ -23,7 +23,8 @@ shapeArgSet = {'limPhysX', 'limPhysY', 'limPhysX2', 'limPhysY2',
                'surfaceHintX', 'surfaceHintY',
                'focus', 'zmax', 't', 'nCRL'}  # TODO: sources
 
-derivedArgSet = {'center', 'pitch', 'bragg', 'R', 'r', 'Rm', 'Rs'}
+calculatedArgSet = {'R', 'r', 'Rm', 'Rs', 'focus', 'nCRL'}
+derivedArgSet = {'center', 'pitch', 'bragg'} | calculatedArgSet
 
 renderOnlyArgSet = {'renderStyle', 'renderSize', 'name'}
 
@@ -245,7 +246,7 @@ argumentInputGroups = {
     'string': {
         'afterScript', 'crossSection', 'extraRotationSequence',
         'name', 'orientation', 'rotationSequence', 'title',
-        'bl', 'customField', 'efficiencyFile', 'fileName',
+        'customField', 'efficiencyFile', 'fileName',
         'persistentName', 'saveName', 'beam',
         },
     'format': {'fwhmFormatStr', 'contourFmt', 'fluxFormatStr'},
