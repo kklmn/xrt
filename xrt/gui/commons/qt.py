@@ -345,7 +345,7 @@ def _argument_input_types(argName):
     return ('string',)
 
 
-def set_param_tooltip(child0, child1, paramName, unit=None):
+def set_param_tooltip(child0, child1, paramName, unit=None, calculated=None):
     """Set static input and unit hints on both parameter columns."""
     argName = str(paramName)
     componentTypes = _compound_component_types(argName)
@@ -364,6 +364,8 @@ def set_param_tooltip(child0, child1, paramName, unit=None):
                 break
     if unit is not None:
         hints.append('Unit: ' + unit)
+    if calculated is not None:
+        hints.append('Calculated: {0}'.format(calculated))
     toolTip = '\n'.join(hints)
     child0.setToolTip(toolTip)
     child1.setToolTip(toolTip)
@@ -1049,7 +1051,7 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
             elif editor.isEditable():
                 editor.setEditText(value)
         elif isinstance(editor, QLineEdit):
-            editor.setText(value)
+            editor.setText(str(self._indexRawValue(index)))
         elif isinstance(editor, QPushButton):
             editor.setText('Edit...')
 #        elif isinstance(editor, QWidget):  # TODO: need better condition

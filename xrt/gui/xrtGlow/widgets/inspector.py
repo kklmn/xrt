@@ -254,10 +254,25 @@ class InstanceInspector(qt.QDialog):
                 self.original_data[key] = str(value)
                 if key in raycing.derivedArgSet:
                     spVal = raycing.parametrize(initDict.get(key))
+                    rawValue = getattr(self.editorObject, f'_{key}', None)
+                    if key in raycing.calculatedArgSet and\
+                            isinstance(rawValue, (list, tuple)):
+                        spVal = copy.deepcopy(rawValue)
                     if spVal is None:
                         spVal = value
+                    self.original_data[key] = str(spVal)
                     self.add_param(parentItem, key, spVal, epv=epv)
                     self.add_param(parentItem, f"{key} rbk", value)
+                elif hasattr(self.editorObject, f'_{key}Init'):
+                    spVal = copy.deepcopy(
+                        getattr(self.editorObject, f'_{key}Init'))
+                    self.original_data[key] = str(spVal)
+                    child0, child1 = self.add_param(
+                        parentItem, key, spVal, epv=epv)
+                    qt.set_param_tooltip(
+                        child0, child1, key,
+                        _getArgumentUnit(key, self.editorObject),
+                        calculated=value)
                 else:
                     self.add_param(parentItem, key, value, epv=epv)
                     if key in ['x', 'z']:
@@ -875,8 +890,15 @@ class InstanceInspector(qt.QDialog):
                     elif str(child0.text()) == f'{pTuple[1]}' and\
                             pTuple[1] not in raycing.derivedArgSet:
                         child1 = parentItem.child(i, 1)
-                        self.set_param_item_value(child1, pTuple[1], pTuple[2])
-                        self.original_data[pTuple[1]] = str(pTuple[2])
+                        value = getattr(
+                            self.editorObject, f'_{pTuple[1]}Init', pTuple[2])
+                        self.set_param_item_value(child1, pTuple[1], value)
+                        self.original_data[pTuple[1]] = str(value)
+                        if hasattr(self.editorObject, f'_{pTuple[1]}Init'):
+                            qt.set_param_tooltip(
+                                child0, child1, pTuple[1],
+                                _getArgumentUnit(pTuple[1], self.editorObject),
+                                calculated=pTuple[2])
                         self.changed_data.pop(pTuple[1], None)
                         self.set_row_highlight(child1, False)
                 self.table.viewport().update()
