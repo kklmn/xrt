@@ -958,11 +958,8 @@ if __name__ == '__main__':
         if self.glowOnly:
             self.glowCode = fullCode
         else:
-            if ext.isSpyderlib:
-                self.codeEdit.set_text(fullCode)
-            else:
-                self.codeEdit.setText(fullCode)
-                self.tabs.setCurrentWidget(self.codeEdit)
+            self.codeEdit.setText(fullCode)
+            self.tabs.setCurrentWidget(self.codeEdit)
             self.progressBar.setValue(100)
             self.progressBar.setFormat(
                 'Python code successfully generated')

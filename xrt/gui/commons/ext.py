@@ -7,34 +7,14 @@ import sys
 import os
 import os.path as osp
 import shutil
+import io, keyword, token, tokenize
 
 import http.server
 import socketserver
 import threading
-from functools import partial
 
-#  Spyderlib modules can reside in either Spyder or Spyderlib, so we check both
-#  It's definitely not the optimal solution, but it works.
-
-try:
-    from spyder.widgets.sourcecode import codeeditor  # analysis:ignore
-    isSpyderlib = True
-except ImportError:
-    try:
-        from spyderlib.widgets.sourcecode import codeeditor  # analysis:ignore
-        isSpyderlib = True
-    except ImportError:
-        isSpyderlib = False
-
-try:
-    from spyder.widgets.externalshell import pythonshell
-    isSpyderConsole = True
-except (ImportError, KeyError):
-    try:
-        from spyderlib.widgets.externalshell import pythonshell  # analysis:ignore
-        isSpyderConsole = True
-    except (ImportError, KeyError):
-        isSpyderConsole = False
+from . import qt
+shouldScaleMath = qt.QtName == "PyQt4" and sys.platform == 'win32'
 
 CONFDIR = osp.dirname(osp.abspath(__file__))
 DOCDIR = osp.expanduser(osp.join('~', '.xrt', 'doc'))
@@ -54,9 +34,105 @@ JS_PATH = CSS_PATH
 
 xrtQookPageName = 'xrtQookPage'
 
-from . import qt
-shouldScaleMath = qt.QtName == "PyQt4" and sys.platform == 'win32'
 
+class PythonTextEdit(qt.QTextEdit):
+    INDENT = " "*4
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.formats = {}
+        self.formats[token.STRING] = self.make_format("#00AA00")
+        self.formats[token.NUMBER] = self.make_format("#800000")
+        self.formats[token.COMMENT] = self.make_format("#ADADAD")
+
+        self.keyword_format = self.make_format("#0000FF", bold=True)
+        self.class_fmt = self.make_format("#000000", bold=True)
+        self.func_fmt = self.make_format("#000000", bold=True)
+        self.self_fmt = self.make_format("#924939")
+        self.self_fmt.setFontItalic(True)
+
+        self.textChanged.connect(self.highlight)
+
+    def make_format(self, color, bold=False):
+        fmt = qt.QTextCharFormat()
+        fmt.setForeground(qt.QColor(color))
+        if bold:
+            fmt.setFontWeight(75)
+
+        return fmt
+
+    def clear_formatting(self):
+        cursor = qt.QTextCursor(self.document())
+        cursor.select(qt.QTextCursor.Document)
+        fmt = qt.QTextCharFormat()
+        fmt.setForeground(qt.QColor("black"))
+        cursor.setCharFormat(fmt)
+
+    def highlight(self):
+        text = self.toPlainText()
+        self.blockSignals(True)
+        cursor = self.textCursor()
+        pos = cursor.position()
+        self.clear_formatting()
+
+        try:
+            line_offsets = [0]
+
+            for line in text.splitlines(True):
+                line_offsets.append(line_offsets[-1] + len(line))
+
+            prev_tok = None
+            for tok in tokenize.generate_tokens(io.StringIO(text).readline):
+                tok_type = tok.type
+
+                start_line, start_col = tok.start
+                end_line, end_col = tok.end
+
+                start = line_offsets[start_line-1] + start_col
+                end = line_offsets[end_line-1] + end_col
+
+                fmt = None
+                if tok_type == token.NAME:
+                    if tok.string in keyword.kwlist:
+                        fmt = self.keyword_format
+                    elif prev_tok == "class":
+                        fmt = self.class_fmt
+                    elif prev_tok == "def":
+                        fmt = self.func_fmt
+                    elif tok.string == "self":
+                        fmt = self.self_fmt
+
+                elif tok_type in self.formats:
+                    fmt = self.formats[tok_type]
+
+                if fmt is not None:
+                    c = qt.QTextCursor(self.document())
+                    c.setPosition(start)
+                    c.setPosition(end, qt.QTextCursor.KeepAnchor)
+                    c.mergeCharFormat(fmt)
+
+                if tok_type == token.NAME:
+                    prev_tok = tok.string
+                else:
+                    prev_tok = None
+
+        except tokenize.TokenError, IndentationError:
+            pass
+
+        cursor.setPosition(pos)
+        self.setTextCursor(cursor)
+
+        self.blockSignals(False)
+
+    def keyPressEvent(self, event):
+        if event.key() == qt.Qt.Key_Tab:
+            self.textCursor().insertText(self.INDENT)
+            return
+        super().keyPressEvent(event)
+
+
+# Sphinx docs
 try:
     from xml.sax.saxutils import escape
     from docutils.utils import SystemMessage
