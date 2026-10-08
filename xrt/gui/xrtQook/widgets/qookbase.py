@@ -1645,11 +1645,38 @@ class XrtQookBase(qt.QMainWindow):
             displayValue = self.formatParamDisplay(paramName, value)
         item.setText(displayValue)
 
+    def setCalculatedParamItemValue(self, item, paramName, obj):
+        calculated = getattr(obj, f'_{paramName}Val', None)
+        if calculated is None:
+            calculated = getattr(obj, paramName)
+        rawValue = getattr(obj, f'_{paramName}', None)
+        if hasattr(obj, f'_{paramName}Init'):
+            sourceValue = getattr(obj, f'_{paramName}Init')
+        elif paramName in raycing.calculatedArgSet and\
+                isinstance(rawValue, (list, tuple)):
+            sourceValue = rawValue
+        else:
+            sourceValue = getattr(obj, paramName)
+        self.setParamItemValue(item, paramName, sourceValue)
+        if isinstance(sourceValue, (list, tuple)):
+            item.setText(str(sourceValue))
+
+        nameItem = item.parent().child(item.row(), 0)
+        qt.set_param_tooltip(
+            nameItem, item, paramName, _getArgumentUnit(paramName, obj),
+            calculated=calculated)
+
     def getParamItemValue(self, item):
         rawValue = item.data(qt.RAW_VALUE_ROLE)
         textValue = str(item.text())
-        if rawValue is not None and str(rawValue) == textValue:
-            return str(rawValue)
+        if rawValue is not None:
+            parent = item.parent()
+            nameItem = parent.child(item.row(), 0) if parent is not None\
+                else item.model().item(item.row(), 0)
+            paramName = str(nameItem.text())
+            if str(rawValue) == textValue or\
+                    self.formatParamDisplay(paramName, rawValue) == textValue:
+                return str(rawValue)
         return textValue
 
     def addProp(self, parent, propName):
@@ -2235,6 +2262,12 @@ class XrtQookBase(qt.QMainWindow):
         self.confText += '\t\t]]></scanDescription>\n'
         self.confText += '\t</xrtGlow>\n'
 
+    def refreshInputValues(self):
+        """Refresh retained inputs before serializing cached tree values."""
+        for objId in list(self.beamLine.oesDict) +\
+                list(self.beamLine.materialsDict) + list(self.beamLine.fesDict):
+            self.updateBeamlineModel((objId, {}))
+
     def exportLayout(self):
         saveStatus = False
         self.beamModel.sort(3)
@@ -2258,6 +2291,7 @@ class XrtQookBase(qt.QMainWindow):
                 config.put(config.configPaths, section, what, layoutFileName)
                 config.write_configs()
         if self.layoutFileName != "":
+            self.refreshInputValues()
             if self.layoutFileName.lower().endswith("json"):
                 _ = self.beamLine.export_to_json()
                 plotsDict = self.treeToDict(self.rootPlotItem)
@@ -3135,6 +3169,8 @@ class XrtQookBase(qt.QMainWindow):
                     self.blViewer.loadTemplateScene(self.layoutFileName)
                 self.blViewer.customGlWidget.updateQookTree.connect(
                     self.updateBeamlineModel)
+                self.blViewer.customGlWidget.oePropsUpdated.connect(
+                    self.updateCalculatedTreeValue)
             except AttributeError:
                 pass
             except Exception as e:

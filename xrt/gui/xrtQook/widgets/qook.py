@@ -74,18 +74,37 @@ class XrtQook(QookScanMixin, XrtQookElements):
             if beamName not in outBeams:
                 self.beamModel.takeRow(ibm)
 
+    def updateCalculatedTreeValue(self, data):
+        oeid, argName, _ = data
+        oeLine = self.beamLine.oesDict.get(oeid)
+        obj = oeLine[0] if oeLine is not None else\
+            self.beamLine.materialsDict.get(
+                oeid, self.beamLine.fesDict.get(oeid))
+        if argName in raycing.calculatedArgSet or\
+                (argName is not None and
+                 hasattr(obj, f'_{argName}Init')):
+            self.updateBeamlineModel((oeid, {}))
+
     def updateBeamlineModel(self, data):
         oeid, kwargs = data
+        oeObj = None
+        kwargs = dict(kwargs)
 
         if oeid in self.beamLine.oesDict:
+            oeObj = self.beamLine.oesDict[oeid][0]
+            for argName in raycing.calculatedArgSet:
+                if hasattr(oeObj, argName):
+                    kwargs[argName] = getattr(oeObj, argName)
             model = self.beamLineModel
             tree = self.tree
             rootItem = self.rootBLItem
         elif oeid in self.beamLine.materialsDict:
+            oeObj = self.beamLine.materialsDict[oeid]
             model = self.materialsModel
             tree = self.matTree
             rootItem = self.rootMatItem
         elif oeid in self.beamLine.fesDict:
+            oeObj = self.beamLine.fesDict[oeid]
             model = self.fesModel
             tree = self.feTree
             rootItem = self.rootFEItem
@@ -105,6 +124,10 @@ class XrtQook(QookScanMixin, XrtQookElements):
                         if str(pItem.text()) == 'properties':
                             for k in range(pItem.rowCount()):
                                 pNItem = pItem.child(k, 0)
+                                paramName = str(pNItem.text())
+                                if hasattr(oeObj, f'_{paramName}Init'):
+                                    kwargs[paramName] = getattr(
+                                        oeObj, paramName)
                                 for argName, argValue in kwargs.items():
                                     if str(pNItem.text()) == argName:
                                         refKind = raycing.ref_kind_for_arg(
@@ -115,8 +138,14 @@ class XrtQook(QookScanMixin, XrtQookElements):
                                                 refKind, target='display')
 
                                         pVItem = pItem.child(k, 1)
-                                        self.setParamItemValue(
-                                            pVItem, argName, argValue)
+                                        if oeObj is not None and\
+                                                (argName in raycing.calculatedArgSet or
+                                                 hasattr(oeObj, f'_{argName}Init')):
+                                            self.setCalculatedParamItemValue(
+                                                pVItem, argName, oeObj)
+                                        else:
+                                            self.setParamItemValue(
+                                                pVItem, argName, argValue)
                                         updatedItems.append(pVItem)
                             break
                     break
@@ -218,6 +247,7 @@ class XrtQook(QookScanMixin, XrtQookElements):
 
             self.paintStatus(paintItem, initStatus)
 
+        self.updateBeamlineModel((matId, {}))
         if self.blViewer is None or not outDict:
             self.refreshFlowPanel()
             return
@@ -302,6 +332,7 @@ class XrtQook(QookScanMixin, XrtQookElements):
 
             self.paintStatus(paintItem, initStatus)
 
+        self.updateBeamlineModel((feId, {}))
         if self.blViewer is None or not outDict:
             self.refreshFlowPanel()
             return
@@ -414,8 +445,7 @@ class XrtQook(QookScanMixin, XrtQookElements):
                 if not outDict and oeLine is not None:
                     dependentValues = raycing.get_dependent_arg_values(
                         oeLine[0], (argName,))
-                    if dependentValues:
-                        self.updateBeamlineModel((oeid, dependentValues))
+                    self.updateBeamlineModel((oeid, dependentValues))
 
                 if outDict:  # updating flow
                     flowRec = self.beamLine.flowU.get(oeid)
@@ -461,6 +491,7 @@ class XrtQook(QookScanMixin, XrtQookElements):
 
                     paintItem = item.parent().child(item.row(), 1)
                     self.paintStatus(paintItem, initStatus)
+                    self.updateBeamlineModel((oeid, {}))
 
             self.refreshFlowPanel()
             if self.blViewer is None or not outDict:
@@ -470,6 +501,7 @@ class XrtQook(QookScanMixin, XrtQookElements):
                     oeid, outDict, sender='Qook')
 
     def generateCode(self):
+        self.refreshInputValues()
         self.progressBar.setValue(0)
         self.progressBar.setFormat("Flattening structure.")
         for tree, item in zip([self.tree, self.matTree, self.feTree,

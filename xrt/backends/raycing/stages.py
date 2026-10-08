@@ -136,10 +136,14 @@ class Tripod(object):
 # A  and B in local system (C is unchanged):
         locA, locB = raycing.rotate_z(
             A, B, self.bl.cosAzimuth, self.bl.sinAzimuth)
+        rollInit = getattr(self, '_rollInit', self.roll)
+        pitchInit = getattr(self, '_pitchInit', self.pitch)
         tanRoll = locA / C
         self.roll = math.atan(tanRoll)
+        self._rollInit = rollInit
         tanPitch = -locB / (locA*math.sin(self.roll) + C*math.cos(self.roll))
         self.pitch = math.atan(tanPitch) * math.cos(self.positionRoll)
+        self._pitchInit = pitchInit
 
 
 class OneXStage(object):
