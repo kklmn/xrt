@@ -1,13 +1,16 @@
 # -*- coding: utf-8 -*-
 __author__ = "Roman Chernikov, Konstantin Klementiev"
-__date__ = "27 Mar 2025"
+__date__ = "8 Oct 2026"
 
 import re
 import sys
 import os
 import os.path as osp
 import shutil
-import io, keyword, token, tokenize
+import io
+import keyword
+import token
+import tokenize
 
 import http.server
 import socketserver
@@ -49,19 +52,32 @@ class LineNumberArea(qt.QWidget):
 
 class PythonTextEdit(qt.QPlainTextEdit):
     INDENT = " "*4
+    LINE_LENGTH = 80
+    COLOR_STRING = "#00AA00"
+    COLOR_NUMBER = "#800000"
+    COLOR_COMMENT = "#ADADAD"
+    COLOR_KEYWORD = "#0000FF"
+    COLOR_CLASS = "#000000"
+    COLOR_FUNC = "#000000"
+    COLOR_SELF = "#924939"
+    COLOR_LINE = "#E8F2FE"
+    COLOR_LINENUM = "#EFEFEF"
+    COLOR_LINELENGTH = "#EEEEEE"
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.defaultFontSize = None
 
         self.formats = {}
-        self.formats[token.STRING] = self.make_format("#00AA00")
-        self.formats[token.NUMBER] = self.make_format("#800000")
-        self.formats[token.COMMENT] = self.make_format("#ADADAD")
+        self.formats[token.STRING] = self.make_format(self.COLOR_STRING)
+        self.formats[token.NUMBER] = self.make_format(self.COLOR_NUMBER)
+        self.formats[token.COMMENT] = self.make_format(self.COLOR_COMMENT)
 
-        self.keyword_format = self.make_format("#0000FF", bold=True)
-        self.class_fmt = self.make_format("#000000", bold=True)
-        self.func_fmt = self.make_format("#000000", bold=True)
-        self.self_fmt = self.make_format("#924939")
+        self.keyword_format = self.make_format(self.COLOR_KEYWORD, bold=True)
+        self.class_fmt = self.make_format(self.COLOR_CLASS, bold=True)
+        # self.class_fmt.setFontUnderline(True)
+        self.func_fmt = self.make_format(self.COLOR_FUNC, bold=True)
+        self.self_fmt = self.make_format(self.COLOR_SELF)
         self.self_fmt.setFontItalic(True)
 
         self.lineNumberArea = LineNumberArea(self)
@@ -74,6 +90,72 @@ class PythonTextEdit(qt.QPlainTextEdit):
         self.highlightCurrentLine()
 
         self.textChanged.connect(self.highlight)
+
+        self._font_size = self.font().pointSizeF()
+
+        self.zoomInAction = qt.QAction("Zoom In", self)
+        self.zoomInAction.setShortcut(qt.QKeySequence.ZoomIn)
+        self.zoomInAction.triggered.connect(self.zoomInEditor)
+
+        self.zoomOutAction = qt.QAction("Zoom Out", self)
+        self.zoomOutAction.setShortcut(qt.QKeySequence.ZoomOut)
+        self.zoomOutAction.triggered.connect(self.zoomOutEditor)
+
+        self.resetZoomAction = qt.QAction("Reset Zoom", self)
+        self.resetZoomAction.setShortcut("Ctrl+0")
+        self.resetZoomAction.triggered.connect(self.resetZoom)
+
+        self.addAction(self.zoomInAction)
+        self.addAction(self.zoomOutAction)
+        self.addAction(self.resetZoomAction)
+
+        self.setContextMenuPolicy(qt.Qt.DefaultContextMenu)
+
+    def contextMenuEvent(self, event):
+        menu = self.createStandardContextMenu()
+        menu.addSeparator()
+        menu.addAction(self.zoomInAction)
+        menu.addAction(self.zoomOutAction)
+        menu.addAction(self.resetZoomAction)
+        menu.exec(event.globalPos())
+
+    def setFont(self, font):
+        if self.defaultFontSize is None:
+            self.defaultFontSize = font.pointSize()
+        super().setFont(font)
+
+    def zoomInEditor(self):
+        self.changeFontSize(+1)
+
+    def zoomOutEditor(self):
+        self.changeFontSize(-1)
+
+    def resetZoom(self):
+        if self.defaultFontSize is None:
+            return
+        font = self.font()
+        font.setPointSize(self.defaultFontSize)
+        self.setFont(font)
+        if hasattr(self, "lineNumberArea"):
+            self.updateLineNumberAreaWidth(0)
+
+    def changeFontSize(self, delta):
+        font = self.font()
+        size = max(6, min(48, font.pointSize() + delta))
+        font.setPointSize(size)
+        self.setFont(font)
+        if hasattr(self, "lineNumberArea"):
+            self.updateLineNumberAreaWidth(0)
+
+    def wheelEvent(self, event):
+        if event.modifiers() & qt.Qt.ControlModifier:
+            if event.angleDelta().y() > 0:
+                self.zoomInEditor()
+            else:
+                self.zoomOutEditor()
+            event.accept()
+            return
+        super().wheelEvent(event)
 
     def make_format(self, color, bold=False):
         fmt = qt.QTextCharFormat()
@@ -164,41 +246,43 @@ class PythonTextEdit(qt.QPlainTextEdit):
             self.lineNumberArea.scroll(0, dy)
         else:
             self.lineNumberArea.update(
-                0, rect.y(),
-                self.lineNumberArea.width(),
-                rect.height()
-            )
-
+                0, rect.y(), self.lineNumberArea.width(), rect.height())
         if rect.contains(self.viewport().rect()):
             self.updateLineNumberAreaWidth(0)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
-
         cr = self.contentsRect()
-        self.lineNumberArea.setGeometry(
-            qt.QRect(cr.left(), cr.top(),
-                     self.lineNumberAreaWidth(), cr.height()))
+        self.lineNumberArea.setGeometry(qt.QRect(
+            cr.left(), cr.top(), self.lineNumberAreaWidth(), cr.height()))
 
     def highlightCurrentLine(self):
         selections = []
-
         if not self.isReadOnly():
             sel = qt.QTextEdit.ExtraSelection()
-            line_color = qt.QColor(232, 242, 254)
-            sel.format.setBackground(line_color)
+            sel.format.setBackground(qt.QColor(self.COLOR_LINE))
             sel.format.setProperty(sel.format.FullWidthSelection, True)
-
             sel.cursor = self.textCursor()
             sel.cursor.clearSelection()
-
             selections.append(sel)
-
         self.setExtraSelections(selections)
+
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        painter = qt.QPainter(self.viewport())
+        fm = self.fontMetrics()
+
+        # Width of one character in the current font
+        char_width = fm.horizontalAdvance('9')
+        x = int(self.LINE_LENGTH * char_width)
+        pen = qt.QPen(qt.QColor(self.COLOR_LINELENGTH))
+        pen.setWidthF(2.5)
+        painter.setPen(pen)
+        painter.drawLine(x, 0, x, self.viewport().height())
 
     def lineNumberAreaPaintEvent(self, event):
         painter = qt.QPainter(self.lineNumberArea)
-        painter.fillRect(event.rect(), qt.QColor(245, 255, 245))
+        painter.fillRect(event.rect(), qt.QColor(self.COLOR_LINENUM))
 
         block = self.firstVisibleBlock()
         block_number = block.blockNumber()
@@ -216,7 +300,6 @@ class PythonTextEdit(qt.QPlainTextEdit):
                     painter.setFont(font)
                 else:
                     painter.setPen(qt.Qt.darkGray)
-
                     font = painter.font()
                     font.setBold(False)
                     painter.setFont(font)

@@ -869,17 +869,6 @@ class XrtQookBase(qt.QMainWindow):
         output = bytes(self.qprocess.readAllStandardOutput()).decode()
         self.codeConsole.append(output.rstrip())
 
-    def zoom(self, factor):
-        """Zoom in/out/reset"""
-        if factor == 0:
-            self.codeEdit.set_font(self.defaultFont)
-        else:
-            font = self.codeEdit.font()
-            size = font.pointSize() + factor
-            if size > 0:
-                font.setPointSize(size)
-                self.codeEdit.set_font(font)
-
     def docMenu(self, position):
         menu = qt.QMenu()
         menu.addAction("Zoom In", partial(self.zoomDoc, 1))
