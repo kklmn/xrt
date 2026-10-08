@@ -1152,7 +1152,8 @@ class XrtQookBase(qt.QMainWindow):
                 self.tabs.setCurrentWidget(self.tree)
 
     def writeCodeBox(self, text):
-        self.codeEdit.setText(text)
+        # self.codeEdit.setText(text)
+        self.codeEdit.setPlainText(text)
 
     def setIBold(self, item):
         eFont = item.font()

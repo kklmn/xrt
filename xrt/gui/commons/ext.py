@@ -35,7 +35,19 @@ JS_PATH = CSS_PATH
 xrtQookPageName = 'xrtQookPage'
 
 
-class PythonTextEdit(qt.QTextEdit):
+class LineNumberArea(qt.QWidget):
+    def __init__(self, editor):
+        super().__init__(editor)
+        self.editor = editor
+
+    def sizeHint(self):
+        return qt.QSize(self.editor.lineNumberAreaWidth(), 0)
+
+    def paintEvent(self, event):
+        self.editor.lineNumberAreaPaintEvent(event)
+
+
+class PythonTextEdit(qt.QPlainTextEdit):
     INDENT = " "*4
 
     def __init__(self, parent=None):
@@ -51,6 +63,15 @@ class PythonTextEdit(qt.QTextEdit):
         self.func_fmt = self.make_format("#000000", bold=True)
         self.self_fmt = self.make_format("#924939")
         self.self_fmt.setFontItalic(True)
+
+        self.lineNumberArea = LineNumberArea(self)
+
+        self.blockCountChanged.connect(self.updateLineNumberAreaWidth)
+        self.updateRequest.connect(self.updateLineNumberArea)
+        self.cursorPositionChanged.connect(self.highlightCurrentLine)
+
+        self.updateLineNumberAreaWidth(0)
+        self.highlightCurrentLine()
 
         self.textChanged.connect(self.highlight)
 
@@ -130,6 +151,84 @@ class PythonTextEdit(qt.QTextEdit):
             self.textCursor().insertText(self.INDENT)
             return
         super().keyPressEvent(event)
+
+    def lineNumberAreaWidth(self):
+        digits = len(str(max(1, self.blockCount())))
+        return 12 + self.fontMetrics().horizontalAdvance("9") * digits
+
+    def updateLineNumberAreaWidth(self, _):
+        self.setViewportMargins(self.lineNumberAreaWidth(), 0, 0, 0)
+
+    def updateLineNumberArea(self, rect, dy):
+        if dy:
+            self.lineNumberArea.scroll(0, dy)
+        else:
+            self.lineNumberArea.update(
+                0, rect.y(),
+                self.lineNumberArea.width(),
+                rect.height()
+            )
+
+        if rect.contains(self.viewport().rect()):
+            self.updateLineNumberAreaWidth(0)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+
+        cr = self.contentsRect()
+        self.lineNumberArea.setGeometry(
+            qt.QRect(cr.left(), cr.top(),
+                     self.lineNumberAreaWidth(), cr.height()))
+
+    def highlightCurrentLine(self):
+        selections = []
+
+        if not self.isReadOnly():
+            sel = qt.QTextEdit.ExtraSelection()
+            line_color = qt.QColor(232, 242, 254)
+            sel.format.setBackground(line_color)
+            sel.format.setProperty(sel.format.FullWidthSelection, True)
+
+            sel.cursor = self.textCursor()
+            sel.cursor.clearSelection()
+
+            selections.append(sel)
+
+        self.setExtraSelections(selections)
+
+    def lineNumberAreaPaintEvent(self, event):
+        painter = qt.QPainter(self.lineNumberArea)
+        painter.fillRect(event.rect(), qt.QColor(245, 255, 245))
+
+        block = self.firstVisibleBlock()
+        block_number = block.blockNumber()
+        top = int(self.blockBoundingGeometry(block).translated(
+            self.contentOffset()).top())
+        bottom = top + int(self.blockBoundingRect(block).height())
+        current_line = self.textCursor().blockNumber()
+
+        while block.isValid() and top <= event.rect().bottom():
+            if block.isVisible() and bottom >= event.rect().top():
+                if block_number == current_line:
+                    painter.setPen(qt.Qt.black)
+                    font = painter.font()
+                    font.setBold(True)
+                    painter.setFont(font)
+                else:
+                    painter.setPen(qt.Qt.darkGray)
+
+                    font = painter.font()
+                    font.setBold(False)
+                    painter.setFont(font)
+
+                painter.drawText(0, top, self.lineNumberArea.width() - 4,
+                                 self.fontMetrics().height(), qt.Qt.AlignRight,
+                                 str(block_number + 1))
+            block = block.next()
+            top = bottom
+            if block.isValid():
+                bottom = top + int(self.blockBoundingRect(block).height())
+            block_number += 1
 
 
 # Sphinx docs
