@@ -662,27 +662,39 @@ class CoordinateBox():
 #        gl.glEnable(gl.GL_POLYGON_SMOOTH)
 #        gl.glHint(gl.GL_POLYGON_SMOOTH_HINT, gl.GL_NICEST)
         vpMat = projection*view*model
+        v0, verticalAxis, v2 = self.parent.visibleAxes[:3]
         for iAx in range(3):
             if not (not self.perspectiveEnabled and
                     iAx == self.parent.visibleAxes[2]):
 
-                for tick, base, end, tText, pcs in zip(
-                        self.axisL[iAx].T, self.axisTickBase[iAx].T,
-                        self.axisTickEnd[iAx].T, self.gridLabels[iAx],
-                        self.precisionLabels[iAx]):
-                    alignment = self.getAlignment(vpMat, base, end)
-                    if alignment is None:
-                        continue
+                labels = self.axisL[iAx]
+                if labels.shape[1] == 0:
+                    continue
+                midp = labels.shape[1] // 2
+                point = labels[:, midp]
+                hDim = v2 if iAx == v0 else v0
+                vAlign = 'middle'
+                if iAx != verticalAxis:
+                    # Select the top/bottom plane using its position and
+                    # the view direction, leaving side labels centered.
+                    planeHeight = (self.axisTickBase[iAx][verticalAxis, midp] *
+                                   self.signs[verticalAxis, 1])
+                    vAlign = 'top' if planeHeight > 0 else 'bottom'
+                alignment = self.getAlignment(vpMat, point, hDim, vAlign)
+
+                for tick, tText, pcs in zip(labels.T, self.gridLabels[iAx],
+                                          self.precisionLabels[iAx]):
                     valueStr = "{0:.{1}f}".format(tText, int(pcs))
                     tickPos = (vpMat*qt.QVector4D(*tick, 1)).toVector3DAffine()
                     self.render_text(
                             tickPos, valueStr, alignment=alignment,
                             scale=0.04*self.fontScale,
-                            textColor=qt.QVector3D(*self.parent.lineColor))
+                            textColor=qt.QVector3D(*self.parent.lineColor),
+                            gridLabel=True)
         self.vaoText.release()
         self.textShader.release()
 
-    def text_bounds(self, pos, text, alignment, scale):
+    def text_bounds(self, pos, text, alignment, scale, gridLabel=False):
         char_x = 0
         pView = gl.glGetIntegerv(gl.GL_VIEWPORT)
         scaleX = scale/float(pView[2])
@@ -711,29 +723,38 @@ class CoordinateBox():
         if not axrel:
             return None
 
-        if alignment is not None and alignment[0] == 'tick':
-            left = min(axrel)
-            right = max(x + w for x, w in zip(axrel, aw))
-            bottom = min(ayrel)
-            top = max(y + h for y, h in zip(ayrel, ah))
-            dx = alignment[1]
-            # Start or end the label at the anchor, always using a horizontal
-            # text edge. The projected tick selects the left or right side.
-            coordShift[0] = -right if dx < 0 else -left
-            coordShift[1] = -0.5 * (bottom + top)
-        elif alignment is not None:
-            if alignment[0] == 'left':
-                coordShift[0] = -(axrel[-1]+2*aw[-1])
+        if alignment is not None:
+            shScale = 2.
+            if alignment[0] == 'tick':
+                left = min(axrel)
+                right = max(x + w for x, w in zip(axrel, aw))
+                dx = alignment[1]
+                coordShift[0] = -right * shScale if dx < 0 else -left * shScale
+                vAlign = alignment[3] if len(alignment) > 3 else 'middle'
             else:
-                coordShift[0] = 2*aw[-1]
+                if alignment[0] == 'left':
+                    coordShift[0] = -(axrel[-1]+2*aw[-1])
+                else:
+                    coordShift[0] = 2*aw[-1]
+                vAlign = alignment[1]
 
-            if alignment[1] == 'top':
-                vOffset = 0.5
-            elif alignment[1] == 'bottom':
-                vOffset = -2
+            if gridLabel or alignment[0] == 'tick':
+                bottom = min(ayrel)
+                top = max(y + h for y, h in zip(ayrel, ah))
+                if vAlign == 'bottom':  # Anchor above the label.
+                    coordShift[1] = -top * shScale
+                elif vAlign == 'top':  # Anchor below the label.
+                    coordShift[1] = -bottom * shScale
+                else:
+                    coordShift[1] = -0.5 * (bottom + top)
             else:
-                vOffset = -1
-            coordShift[1] = vOffset*ah[-1]
+                if vAlign == 'top':
+                    vOffset = 0.5
+                elif vAlign == 'bottom':
+                    vOffset = -2
+                else:
+                    vOffset = -1
+                coordShift[1] = vOffset*ah[-1]
 
         xmin = pos.x() + min(axrel) + coordShift[0]
         xmax = pos.x() + max(
@@ -744,11 +765,12 @@ class CoordinateBox():
 
         return xmin, ymin, xmax, ymax, axrel, ayrel, aw, ah, coordShift
 
-    def render_text(self, pos, text, alignment, scale, textColor=None):
+    def render_text(self, pos, text, alignment, scale, textColor=None,
+                    gridLabel=False):
         tcValue = textColor or qt.QVector3D(1, 1, 1)
         self.textShader.setUniformValue("textColor", tcValue)
         self.textShader.setUniformValue("textOpacity", 0.75)
-        metrics = self.text_bounds(pos, text, alignment, scale)
+        metrics = self.text_bounds(pos, text, alignment, scale, gridLabel)
         if metrics is None:
             return qt.QVector4D(pos.x(), pos.y(), pos.z(), 1.0)
         axrel, ayrel, aw, ah, coordShift = metrics[4:]
@@ -861,11 +883,10 @@ class CoordinateBox():
             texObj.generateMipMaps()
             self.characters.append((texObj, size, bearing, advance))
 
-    def getAlignment(self, pvMatr, tickBase, tickEnd):
-        base = (pvMatr * qt.QVector4D(*tickBase, 1)).toVector3DAffine()
-        end = (pvMatr * qt.QVector4D(*tickEnd, 1)).toVector3DAffine()
-        dx, dy = end.x() - base.x(), end.y() - base.y()
-        length = np.hypot(dx, dy)
-        if length < 1e-10:
-            return None  # The tick projects to a point.
-        return ('tick', dx / length, dy / length)
+    def getAlignment(self, pvMatr, point, hDim, vAlign='middle'):
+        pointH = point.copy()
+        pointH[hDim] *= 1.1
+        sp0 = pvMatr * qt.QVector4D(*point, 1)
+        spH = pvMatr * qt.QVector4D(*pointH, 1)
+        hAlign = 'left' if spH.x() < sp0.x() else 'right'
+        return (hAlign, vAlign)
