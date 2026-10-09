@@ -96,6 +96,7 @@ allArguments = (
     'bl', 'name', 'elements', 'quantities', 'kind', 'rho', 't', 'table',
     'efficiency', 'efficiencyFile', 'refractiveIndex', 'fileName',
     'materialsIndex', 'tLayer', 'tThickness', 'bLayer', 'bThickness',
+    'coating', 'cThickness', 'surfaceRoughness',
     'nPairs', 'substrate', 'tThicknessLow', 'bThicknessLow', 'idThickness',
     'power', 'substRoughness', 'substThickness', 'geom', 'hkl', 'd', 'V',
     'factDW', 'volumetricDiffraction', 'useTT', 'nu', 'mosaicity', 'a', 'b',
