@@ -4,8 +4,7 @@ Multithreading and multiprocessing in ray tracing
 -------------------------------------------------
 
 | Script: ``tests/speed/1_SourceZCrystalThetaAlpha_speed.py``.
-| The test is based on the example
-``examples/withRaycing/07_AnalyzerBent2D/01BD_SourceZCrystalThetaAlpha.py``.
+| The test is based on the example ``examples/withRaycing/07_AnalyzerBent2D/01BD_SourceZCrystalThetaAlpha.py``.
 
 This script calculates diffraction of a 2D-bent diced crystal anayzer from
 three types of geometric source.
@@ -95,7 +94,8 @@ controlled by masks (``crystalsMask``, ``thetaMask``) having zeros or ones to
 switch off/on the corresponding angles or crystals. The source sizes, axis
 limits, number of iterations etc. were determined experimentally and are given
 by lists in the upper part of the script. The outputs are the plots and a text
-file with the resulted energy resolutions."""
+file with the resulted energy resolutions.
+"""
 
 __author__ = "Konstantin Klementiev"
 __date__ = "08 Mar 2016"
