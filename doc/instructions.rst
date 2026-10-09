@@ -58,13 +58,11 @@ xrt and examine its `xrt.__file__`.
 
 .. rubric:: Spyder
 
-Spyder (>=3.0.0) is a cross-platform IDE for python; xrtQook GUI uses some of
-its libraries to provide the editor and the console interface (highly
-recommended for a nicer look). Be aware that starting from version 3.2.0 spyder
-switched to IPython and has no classic python console. The IPython console of
-spyder integrates matplotlib images (can be switched off) and prohibits the use
-of multiprocessing. Therefore, if you run an xrt script from spyder, select to
-run it in an external console.
+Spyder (>=3.0.0) is a cross-platform IDE for python. Be aware that starting from
+version 3.2.0 spyder switched to IPython and has no classic python console. The
+IPython console of spyder integrates matplotlib images (can be switched off) and
+prohibits the use of multiprocessing. Therefore, if you run an xrt script from
+spyder, select to run it in an external console.
 
 .. rubric:: PyOpenCL
 
