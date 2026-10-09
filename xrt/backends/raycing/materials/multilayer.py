@@ -58,6 +58,7 @@ class Multilayer(object):
         *geom*: str
             Either 'transmitted' or 'reflected'.
 
+
         """
         self.tLayer = tLayer
         self.bLayer = bLayer

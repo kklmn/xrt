@@ -308,6 +308,7 @@ class FigureErrorImported(FigureErrorBase):
             Optional multiplicative factors that bring the x and y column to mm
             and the z column to nm.
 
+
         """
         self.surfArrays = {}
         kwargs['name'] = kwargs.get('name', 'NOM surface')
@@ -808,6 +809,7 @@ class PlanarRidge(FigureErrorBase):
             Orientation angle of the ridge line in the (x, y) plane in [rad],
             measured counter-clockwise from the local x axis.
             The slope is applied perpendicular to this direction.
+
 
         """
         self._amplitude = amplitude

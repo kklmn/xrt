@@ -161,6 +161,7 @@ class RectangularAperture(object):
             Per-aperture xrtGlow size overrides. Missing keys and values set
             to None use the corresponding global scene setting.
 
+
         """
         self.bl = bl
         if bl is not None:
@@ -1147,6 +1148,7 @@ class PolygonalAperture(object):
             Allowed fraction of number of rays absorbed at the aperture
             relative to the number of incident rays. If exceeded, an alarm
             output is printed in the console.
+
 
         """
         self.bl = bl

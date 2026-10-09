@@ -61,6 +61,8 @@ class MeshOE(OE):
         (infinite for flat axes). *conicXFit* and *conicYFit* are fitted conic
         constants. *fitRmsError* is the RMS height residual in micrometres,
         evaluated at the selected, unique STL surface vertices.
+
+
         """
 
         fileName = kwargs.pop('fileName', None)

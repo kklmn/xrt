@@ -280,6 +280,7 @@ class GeometricSource(object):
             concatenation. If None, plot values remain relative intensities or
             weighted ray counts.
 
+
         """
         self.bl = bl
         if bl is not None:
@@ -890,6 +891,7 @@ class MeshSource(object):
             concatenation. If None, plot values remain relative intensities or
             weighted ray counts.
 
+
         """
         self.bl = bl
         if autoAppendToBL:
@@ -1078,6 +1080,8 @@ class NESWSource(MeshSource):
             default True.
 
         .. Returned values: beamGlobal
+
+
         """
         bo = Beam(4)  # beam-out
         bo.state[:] = 1

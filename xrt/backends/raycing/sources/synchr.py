@@ -88,6 +88,7 @@ class BendingMagnet(SourceBase):
         *rho*: float
             Curvature radius (m). Alternatively, specify *B0*.
 
+
         """
         B0 = kwargs.pop('B0', 0.)
         rho = kwargs.pop('rho', None)
@@ -677,6 +678,7 @@ class SourceFromField(IntegratedSource):
             table from file.
             If None, a mock undulator will be calculated with K=1, period=50mm,
             n=50.
+
 
         """
         customField = kwargs.pop('customField', None)
