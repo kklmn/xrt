@@ -28,6 +28,10 @@ derivedArgSet = {'center', 'pitch', 'bragg'} | calculatedArgSet
 
 renderOnlyArgSet = {'renderStyle', 'renderSize', 'name'}
 
+# String-valued arguments interpreted as filenames during code generation.
+filenameArgSet = {'fileName', 'efficiencyFile', 'saveName',
+                  'persistentName', 'customField'}
+
 compoundArgs = {'center': ['x', 'y', 'z'],
                 'x': ['x', 'y', 'z'],
                 'z': ['x', 'y', 'z'],

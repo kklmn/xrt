@@ -1269,7 +1269,7 @@ class XrtQookBase(qt.QMainWindow):
                     obj, e))
             objParams = []
         for arg, argVal in objParams:
-            showVal = self.quotize(argVal)
+            showVal = self.quotize(argVal, arg)
             try:
                 showVal = showVal.strip('r') if showVal.startswith('r"') else\
                     showVal
@@ -3058,16 +3058,18 @@ class XrtQookBase(qt.QMainWindow):
         except:  # analysis:ignore
             return str(value)
 
-    def quotize(self, value):
+    def quotize(self, value, argName=None):
         try:
             dummy = unicode  # test for Python3 compatibility analysis:ignore
         except NameError:
             unicode = str
         value = self.getVal(value)
         if isinstance(value, (str, unicode)):
+            if argName in raycing.filenameArgSet:
+                return repr(value)
             if 'np.' not in value and\
                     (str(self.rootBLItem.text())+'.') not in value:
-                value = 'r\"{}\"'.format(value)
+                value = repr(value)
 #        if str(value) == 'round':
 #            value = 'r\"{}\"'.format(value)
         if isinstance(value, tuple):
@@ -3075,7 +3077,7 @@ class XrtQookBase(qt.QMainWindow):
         return str(value)
 
     def quotizeAll(self, value):
-        return str('r\"{}\"'.format(value))
+        return repr(str(value))
 
     def parametrize(self, value):
         try:

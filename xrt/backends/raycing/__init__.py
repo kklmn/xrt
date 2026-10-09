@@ -51,7 +51,7 @@ from ._beam_props import (
 
 from ._sets_units import (
     allBeamFields, orientationArgSet, shapeArgSet, derivedArgSet,
-    calculatedArgSet,
+    calculatedArgSet, filenameArgSet,
     renderOnlyArgSet, compoundArgs, dependentArgGroups, diagnosticArgs,
     allUnitsAng, allUnitsAngStr, allUnitsLen, allUnitsLenStr, allUnitsEnergy,
     allUnitsEnergyStr, allUnitsEmittance, allUnitsEmittanceStr,

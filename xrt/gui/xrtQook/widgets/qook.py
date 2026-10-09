@@ -519,7 +519,7 @@ class XrtQook(QookScanMixin, XrtQookElements):
         codeHeader = """# -*- coding: utf-8 -*-\n\"\"\"\n
 __author__ = \"Konstantin Klementiev\", \"Roman Chernikov\"
 __date__ = \"{0}\"\n\nCreated with xrtQook\n\n\n{2}\n\n"\"\"\n
-import numpy as np\nimport sys\nsys.path.append(r\"{1}\")\n""".format(
+import numpy as np\nimport sys\nsys.path.append({1!r})\n""".format(
             str(date.today()), path_to_xrt, self.fileDescription)
         codeDeclarations = """\n"""
         codeBuildBeamline = "\ndef build_beamline():\n"
@@ -540,7 +540,7 @@ import numpy as np\nimport sys\nsys.path.append(r\"{1}\")\n""".format(
                     paravalue = self.getParamItemValue(
                         blPropItem.child(iep, 1))
                     if paravalue != str(arg_def):
-                        paravalue = self.quotize(paravalue)
+                        paravalue = self.quotize(paravalue, paraname)
                         codeBuildBeamline += '\n{2}{0}={1},'.format(
                             paraname, paravalue, myTab*2)
         codeBuildBeamline = codeBuildBeamline.rstrip(',') + ')\n\n'
@@ -593,7 +593,8 @@ if __name__ == '__main__':
                                                 ['tlayer', 'blayer',
                                                  'coating', 'substrate',
                                                  'materialsindex']:
-                                            paravalue = self.quotize(paravalue)
+                                            paravalue = self.quotize(
+                                                paravalue, paraname)
                                         ieinit += '\n{2}{0}={1},'.format(
                                             paraname, paravalue, myTab)
                     codeDeclarations += '{0} = {1})\n\n'.format(
@@ -628,7 +629,8 @@ if __name__ == '__main__':
                                             paravalue == 'bl':
                                         if paraname.lower() not in\
                                                 ['basefe']:
-                                            paravalue = self.quotize(paravalue)
+                                            paravalue = self.quotize(
+                                                paravalue, paraname)
                                         ieinit += '\n{2}{0}={1},'.format(
                                             paraname, paravalue, myTab)
                     codeDeclarations += '{0} = {1})\n\n'.format(
@@ -695,7 +697,7 @@ if __name__ == '__main__':
                             if paraname.lower() not in\
                                     ['bl', 'center', 'material',
                                      'material2', 'figureerror']:
-                                paravalue = self.quotize(paravalue)
+                                paravalue = self.quotize(paravalue, paraname)
                             ieinit += '\n{2}{0}={1},'.format(
                                 paraname, paravalue, myTab*2)
             for ieph in range(tItem.rowCount()):
@@ -844,7 +846,8 @@ if __name__ == '__main__':
                                                         paravalue)
 
                                 ieinit += u'\n{2}{0}={1},'.format(
-                                    paraname, self.quotize(paravalue), myTab*3)
+                                    paraname, self.quotize(paravalue, paraname),
+                                    myTab*3)
                         ieinit = ieinit.rstrip(",") + "),"
                     else:
                         paraname = str(tItem.child(iep, 0).text())
@@ -927,7 +930,8 @@ if __name__ == '__main__':
                                                                   1).text()),
                                                 paravalue)
                                 ieinit += '\n{2}{0}={1},'.format(
-                                    paraname, self.quotize(paravalue), myTab*2)
+                                    paraname, self.quotize(paravalue, paraname),
+                                    myTab*2)
             codePlots += ieinit.rstrip(",") + ")\n"
             description = self.glowScanDescription()
             if self._has_glow_scan(description):
@@ -963,11 +967,11 @@ if __name__ == '__main__':
                     if paraname == "plots":
                         paravalue = str(self.rootPlotItem.text())
                     if paraname == "backend":
-                        paravalue = 'r\"{0}\"'.format(paravalue)
+                        paravalue = repr(paravalue)
                     argVal = runParams.get(paraname)
                     if str(paravalue) != str(argVal):
                         if paravalue == 'auto':
-                            paravalue = self.quotize(paravalue)
+                            paravalue = self.quotize(paravalue, paraname)
                         ieinit += "{0}{1}={2},\n".format(
                             myTab*2, paraname, paravalue)
             codeMain += ieinit.rstrip(",\n") + ")\n"
