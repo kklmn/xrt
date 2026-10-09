@@ -3219,8 +3219,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 screenX, screenY, screenZ = vScreenAxes
                 screenObj = screenLine[0]
                 oldCenter = copy.copy(screenObj.center)
-                oldX = copy.copy(screenObj.x)
-                oldZ = copy.copy(screenObj.z)
+                oldX = copy.copy(screenObj._xInit)
+                oldZ = copy.copy(screenObj._zInit)
                 screenObj.center = cProj
                 screenObj.set_orientation(screenX, screenZ)
                 screenX = normalized_vector(screenObj.x)

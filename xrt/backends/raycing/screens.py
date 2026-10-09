@@ -82,10 +82,8 @@ class Screen(object):
                 self.ordinalNum = len(bl.screens)
                 self.lostNum = -self.ordinalNum - 2000
         raycing.set_name(self, name)
-        self._x = x
-        self._z = z
         self.footprint = []
-        self._set_orientation()
+        self.set_orientation(x, z)
 
         if not hasattr(self, 'uuid'):  # uuid must not change on re-init
             self.uuid = kwargs['uuid'] if 'uuid' in kwargs else\
@@ -165,6 +163,7 @@ class Screen(object):
 
     @x.setter
     def x(self, x):
+        self._xInit = copy.copy(x)
         self._x = copy.copy(x)
         self._set_orientation()
 #        self.update_orientation_quaternion()
@@ -175,6 +174,7 @@ class Screen(object):
 
     @z.setter
     def z(self, z):
+        self._zInit = copy.copy(z)
         self._z = copy.copy(z)
         self._set_orientation()
 #        self.update_orientation_quaternion()
@@ -188,7 +188,9 @@ class Screen(object):
         self._x, self.y, self._z = raycing.xyz_from_xz(self, self._x, self._z)
 
     def set_orientation(self, x=None, z=None):
-        """Compatibility method. All calculations moved to setters."""
+        """Set both input axes before resolving the screen orientation."""
+        self._xInit = copy.copy(x)
+        self._zInit = copy.copy(z)
         self._x = copy.copy(x)
         self._z = copy.copy(z)
         self._set_orientation()
