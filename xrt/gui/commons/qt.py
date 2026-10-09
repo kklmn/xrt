@@ -5,6 +5,7 @@ __date__ = "16 Nov 2025"
 from ctypes import c_int, sizeof
 from functools import partial
 from math import isfinite
+from numbers import Integral, Real
 import ast
 import os.path as osp
 import re
@@ -36,7 +37,8 @@ from qtpy.QtSql import (QSqlDatabase, QSqlQuery, QSqlTableModel,
                         QSqlQueryModel)
 
 from ...backends.raycing._sets_units import (
-    allUnitsAng, allUnitsEnergy, argumentInputGroups, compoundArgs)
+    allUnitsAng, allUnitsEnergy, argumentInputGroups, compoundArgs,
+    argumentInputTooltips, argumentTooltips)
 from ...backends.raycing._flow_utils import normalize_mu
 
 RAW_VALUE_ROLE = Qt.UserRole + 1
@@ -319,7 +321,8 @@ FORMAT_STR = (r'(?=.*%(?!%))'
               r'(?:[^%]|%%|%[-+# 0]*\d*(?:\.\d+)?[eEfFgGpG])+')
 
 VAL_PATTERNS = {
-    'scalar': SCALAR,
+    'float': SCALAR,
+    'integer': SCALAR,
     'angle': ANGLE,
     'energy': ENERGY,
     'format': FORMAT_STR,
@@ -349,6 +352,7 @@ def set_param_tooltip(child0, child1, paramName, unit=None, calculated=None):
     """Set static input and unit hints on both parameter columns."""
     argName = str(paramName)
     componentTypes = _compound_component_types(argName)
+    inputTypes = componentTypes or _argument_input_types(argName)
     hints = []
     if componentTypes is not None:
         hints.append('Input: ' + ', '.join(componentTypes))
@@ -357,15 +361,22 @@ def set_param_tooltip(child0, child1, paramName, unit=None, calculated=None):
     elif argName == 'lim' or argName.startswith(('limPhys', 'limOpt')):
         hints.append('Input: sequence, None')
     else:
-        for inputTypes, argNames in argumentInputGroups.items():
+        for _, argNames in argumentInputGroups.items():
             if argName in argNames:
-                hints.append(
-                    'Input: ' + ', '.join(_as_input_types(inputTypes)))
+                hints.append('Input: ' + ', '.join(inputTypes))
                 break
     if unit is not None:
         hints.append('Unit: ' + unit)
+    helpText = argumentTooltips.get(argName)
+    instructions = [helpText] if helpText is not None else [
+        argumentInputTooltips[inputType] for inputType in inputTypes
+        if inputType in argumentInputTooltips]
+    for instruction in instructions:
+        hints.append(instruction.format(
+            unit=unit or 'the default unit',
+            angleUnits=', '.join(allUnitsAng)))
     if calculated is not None:
-        hints.append('Calculated: {0}'.format(calculated))
+        hints.append('Readback: {0}'.format(calculated))
     toolTip = '\n'.join(hints)
     child0.setToolTip(toolTip)
     child1.setToolTip(toolTip)
@@ -384,13 +395,29 @@ def _compound_component_types(argName):
     if not separator or fields is None or component not in fields:
         return None
     if rootName == 'center':
-        return ('scalar', 'auto')
-    return ('scalar',)
+        return ('float', 'auto')
+    return ('float',)
 
 
 class _MuNormalizedValidator(QRegularExpressionValidator):
     def validate(self, inputText, pos):
         state = super().validate(normalize_mu(inputText), pos)[0]
+        return state, inputText, pos
+
+
+class _IntegerValidator(_MuNormalizedValidator):
+    def validate(self, inputText, pos):
+        state, _, _ = super().validate(inputText, pos)
+        if state == QValidator.Acceptable:
+            from ...backends import raycing
+            value = raycing.parametrize(str(inputText).strip())
+            if isinstance(value, Integral):
+                pass
+            elif isinstance(value, Real):
+                if not isfinite(value) or not float(value).is_integer():
+                    state = QValidator.Intermediate
+            elif value is not None and str(value) not in ('half', 'all', 'auto'):
+                state = QValidator.Intermediate
         return state, inputText, pos
 
 
@@ -400,7 +427,9 @@ def _atomic_validator(inputTypes, parent=None):
     if not patterns:
         return None
     pattern = r'\s*(?:{0})\s*'.format('|'.join(patterns))
-    return _MuNormalizedValidator(QRegularExpression(pattern), parent)
+    validatorClass = _IntegerValidator if 'integer' in inputTypes else\
+        _MuNormalizedValidator
+    return validatorClass(QRegularExpression(pattern), parent)
 
 
 class ParsedSequenceValidator(QValidator):
@@ -419,7 +448,8 @@ class ParsedSequenceValidator(QValidator):
             self._whole_input_types(), self)
         self.memberValidator = _atomic_validator(
             self._member_input_types(), self)
-        self.scalarValidator = _atomic_validator(('scalar',), self)
+        self.scalarValidator = _atomic_validator(('float',), self)
+        self.angleValidator = _atomic_validator(('angle',), self)
 
     def _whole_input_types(self):
         if self.fields is not None:
@@ -434,21 +464,23 @@ class ParsedSequenceValidator(QValidator):
     def _member_input_types(self):
         if self.fields is not None:
             if self.argName == 'center':
-                return ('scalar', 'auto')
+                return ('float', 'auto')
             if self.isLimit:
-                return ('scalar', 'None')
-            return ('scalar',)
+                return ('float', 'None')
+            return ('float',)
         if self.argName == 'energies':
             return ('energy',)
         if self.argName == 'surface':
             return ('string',)
         if self.argName == 'gratingDensity':
-            return ('scalar', 'string')
+            return ('float', 'string')
         if self.argName == 'targetE':
-            return ('scalar', 'bool')
+            return ('float', 'bool')
         if 'angle' in self.inputTypes:
             return ('angle',)
-        return ('scalar',)
+        if 'integer' in self.inputTypes:
+            return ('integer',)
+        return ('float',)
 
     @staticmethod
     def _validator_state(validator, value):
@@ -491,12 +523,14 @@ class ParsedSequenceValidator(QValidator):
             return state
 
         state = QValidator.Acceptable
-        for item in value:
+        for index, item in enumerate(value):
             if self.isLimit and self._is_sequence(item):
                 itemState = self._validate_scalar_sequence(item)
             else:
-                itemState = self._validator_state(
-                    self.memberValidator, item)
+                validator = self.angleValidator if\
+                    self.argName in ('R', 'r') and index == 2 else\
+                    self.memberValidator
+                itemState = self._validator_state(validator, item)
             if itemState == QValidator.Invalid:
                 return itemState
             if itemState == QValidator.Intermediate:
@@ -630,9 +664,8 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
 
         toolTip = index.data(Qt.ToolTipRole) or ''
         rawValue = self._indexRawValue(index)
-        if toolTip.startswith(('Input:', 'Unit:')):
-            toolTip += f'\nCurrent value: {rawValue}'
-        elif (not toolTip and rawValue is not None and
+
+        if (not toolTip and rawValue is not None and
               str(rawValue) != str(index.data(Qt.DisplayRole))):
             toolTip = str(rawValue)
         else:
@@ -1082,6 +1115,15 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
                     not editor.hasAcceptableInput():
                 return
             value = editor.text()
+            argName = str(index.sibling(index.row(), 0).data())
+            if 'integer' in _argument_input_types(argName):
+                from ...backends import raycing
+                parsed = raycing.parametrize(value)
+                if isinstance(parsed, (list, tuple)):
+                    parsed = type(parsed)(int(item) for item in parsed)
+                elif isinstance(parsed, Real):
+                    parsed = int(parsed)
+                value = str(parsed)
             if editor.property('fieldName') == 'filename' and not value.strip():
                 value = 'None'
             self._setModelValue(model, index, value)
