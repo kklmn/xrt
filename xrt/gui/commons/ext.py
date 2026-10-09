@@ -129,6 +129,7 @@ class PythonTextEdit(qt.QPlainTextEdit):
         if self.defaultFontSize is None:
             self.defaultFontSize = font.pointSize()
         super().setFont(font)
+        self.lineNumberArea.setFont(font)
 
     def zoomInEditor(self):
         self.changeFontSize(+1)
