@@ -351,7 +351,7 @@ def _argument_input_types(argName):
 
 def _tooltip_code(value):
     text = html_escape(str(value)).replace('\n', '<br>')
-    return '<code>{0}</code>'.format(text)
+    return f'<span style="white-space: nowrap;"><code>{text}</code></span>'
 
 
 def set_param_tooltip(child0, child1, paramName, unit=None, calculated=None):
@@ -375,7 +375,7 @@ def set_param_tooltip(child0, child1, paramName, unit=None, calculated=None):
                 inputHint = ', '.join(inputTypes)
                 break
     if inputHint is not None:
-        hints.append('<b>Input:</b> ' + html_escape(inputHint))
+        hints.append('<b>Input:</b> <nobr>'+html_escape(inputHint)+'</nobr>')
     if unit is not None:
         hints.append('<b>Unit:</b> ' + _tooltip_code(unit))
     sections = ['<br>'.join(hints)] if hints else []
@@ -394,6 +394,7 @@ def set_param_tooltip(child0, child1, paramName, unit=None, calculated=None):
             0 if index == 0 else 6, section)
         for index, section in enumerate(sections)]
     toolTip = '<html>' + ''.join(paragraphs) + '</html>' if paragraphs else ''
+    toolTip = toolTip.replace("-", "&#8209;")  # non-breaking hyphen
     child0.setToolTip(toolTip)
     child1.setToolTip(toolTip)
 
