@@ -506,7 +506,7 @@ class XrtQookBase(qt.QMainWindow):
 #        self.plotTree = qt.QTreeView()
         self.runTree = qt.QTreeView()
 
-        self.defaultFont = qt.QFont("Courier New", 9)
+        self.defaultFont = qt.QFont("Consolas", 10, weight=400)
 
         for itree in [self.tree, self.matTree, self.feTree, self.plotTree,
                       self.runTree]:
@@ -522,31 +522,8 @@ class XrtQookBase(qt.QMainWindow):
         self.tree.customContextMenuRequested.connect(self.openMenu)
         self.tree.objDoubleClicked.connect(self.runElementViewer)
 
-        if ext.isSpyderlib:
-            self.codeEdit = ext.codeeditor.CodeEditor(self)
-            self.codeEdit.setup_editor(linenumbers=True, markers=True,
-                                       tab_mode=False, language='py',
-                                       font=self.defaultFont,
-                                       color_scheme='Pydev')
-            if qt.QtName == "PyQt5":
-                self.codeEdit.zoom_in.connect(partial(self.zoom, 1))
-                self.codeEdit.zoom_out.connect(partial(self.zoom, -1))
-                self.codeEdit.zoom_reset.connect(partial(self.zoom, 0))
-            elif qt.QtName == "PyQt4":
-                self.connect(self.codeEdit, qt.Signal('zoom_in()'),
-                             partial(self.zoom, 1))
-                self.connect(self.codeEdit, qt.Signal('zoom_out()'),
-                             partial(self.zoom, -1))
-                self.connect(self.codeEdit, qt.Signal('zoom_reset()'),
-                             partial(self.zoom, 0))
-            qt.QShortcut(qt.QKeySequence.ZoomIn, self, partial(self.zoom, 1))
-            qt.QShortcut(qt.QKeySequence.ZoomOut, self, partial(self.zoom, -1))
-            qt.QShortcut("Ctrl+0", self, partial(self.zoom, 0))
-            for action in self.codeEdit.menu.actions()[-3:]:
-                self.codeEdit.menu.removeAction(action)
-        else:
-            self.codeEdit = qt.QTextEdit()
-            self.codeEdit.setFont(self.defaultFont)
+        self.codeEdit = ext.PythonTextEdit()
+        self.codeEdit.setFont(self.defaultFont)
 
         self.descrEdit = qt.QTextEdit()
         self.descrEdit.setFont(self.defaultFont)
@@ -557,18 +534,13 @@ class XrtQookBase(qt.QMainWindow):
 
         self.setGeometry(100, 100, 1200, 600)
 
-        if ext.isSpyderConsole:
-            self.codeConsole = ext.pythonshell.ExternalPythonShell(
-                wdir=os.path.dirname(__file__))
-
-        else:
-            self.qprocess = qt.QProcess()
-            self.qprocess.setProcessChannelMode(qt.QProcess.MergedChannels)
-            self.qprocess.readyReadStandardOutput.connect(self.readStdOutput)
-            qt.QShortcut("Ctrl+X", self, self.qprocess.kill)
-            self.codeConsole = qt.QTextEdit()
-            self.codeConsole.setFont(self.defaultFont)
-            self.codeConsole.setReadOnly(True)
+        self.qprocess = qt.QProcess()
+        self.qprocess.setProcessChannelMode(qt.QProcess.MergedChannels)
+        self.qprocess.readyReadStandardOutput.connect(self.readStdOutput)
+        qt.QShortcut("Ctrl+X", self, self.qprocess.kill)
+        self.codeConsole = qt.QTextEdit()
+        self.codeConsole.setFont(self.defaultFont)
+        self.codeConsole.setReadOnly(True)
 
         self.hasFlowPanel = HAS_QTPYNODEEDITOR
         if self.hasFlowPanel:
@@ -897,17 +869,6 @@ class XrtQookBase(qt.QMainWindow):
         output = bytes(self.qprocess.readAllStandardOutput()).decode()
         self.codeConsole.append(output.rstrip())
 
-    def zoom(self, factor):
-        """Zoom in/out/reset"""
-        if factor == 0:
-            self.codeEdit.set_font(self.defaultFont)
-        else:
-            font = self.codeEdit.font()
-            size = font.pointSize() + factor
-            if size > 0:
-                font.setPointSize(size)
-                self.codeEdit.set_font(font)
-
     def docMenu(self, position):
         menu = qt.QMenu()
         menu.addAction("Zoom In", partial(self.zoomDoc, 1))
@@ -1180,10 +1141,8 @@ class XrtQookBase(qt.QMainWindow):
                 self.tabs.setCurrentWidget(self.tree)
 
     def writeCodeBox(self, text):
-        if ext.isSpyderlib:
-            self.codeEdit.set_text(text)
-        else:
-            self.codeEdit.setText(text)
+        # self.codeEdit.setText(text)
+        self.codeEdit.setPlainText(text)
 
     def setIBold(self, item):
         eFont = item.font()
@@ -3272,12 +3231,8 @@ class XrtQookBase(qt.QMainWindow):
                 if codeTabIndex >= 0:
                     self.tabs.setTabText(
                         codeTabIndex, os.path.basename(str(self.saveFileName)))
-                if ext.isSpyderConsole:
-                    self.codeConsole.wdir = os.path.dirname(
-                        str(self.saveFileName))
-                else:
-                    self.qprocess.setWorkingDirectory(
-                        os.path.dirname(str(self.saveFileName)))
+                self.qprocess.setWorkingDirectory(
+                    os.path.dirname(str(self.saveFileName)))
             except (OSError, IOError) as errStr:
                 saveMsg = str(errStr)
                 self.progressBar.setFormat(saveMsg)
@@ -3295,15 +3250,12 @@ class XrtQookBase(qt.QMainWindow):
     def execCode(self):
         self.saveCode()
         self.tabs.setCurrentWidget(self.codeConsole)
-        if ext.isSpyderConsole:
-            self.codeConsole.fname = str(self.saveFileName)
-            self.codeConsole.create_process()
-        else:
-            self.codeConsole.clear()
-            self.codeConsole.append('Starting {}\n\n'.format(
-                    os.path.basename(str(self.saveFileName))))
-            self.codeConsole.append('Press Ctrl+X to terminate process\n\n')
-            self.qprocess.start(sys.executable, ['-u', str(self.saveFileName)])
+
+        self.codeConsole.clear()
+        self.codeConsole.append('Starting {}\n\n'.format(
+                os.path.basename(str(self.saveFileName))))
+        self.codeConsole.append('Press Ctrl+X to terminate process\n\n')
+        self.qprocess.start(sys.executable, ['-u', str(self.saveFileName)])
 
     def toggleExperimentalMode(self):
         self.experimentalMode = not self.experimentalMode
