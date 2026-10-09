@@ -4,6 +4,7 @@ __date__ = "16 Nov 2025"
 
 from ctypes import c_int, sizeof
 from functools import partial
+from html import escape as html_escape
 from math import isfinite
 from numbers import Integral, Real
 import ast
@@ -348,36 +349,51 @@ def _argument_input_types(argName):
     return ('string',)
 
 
+def _tooltip_code(value):
+    text = html_escape(str(value)).replace('\n', '<br>')
+    return '<code>{0}</code>'.format(text)
+
+
 def set_param_tooltip(child0, child1, paramName, unit=None, calculated=None):
-    """Set static input and unit hints on both parameter columns."""
+    """Set rich-text readback, input, unit and usage hints on both columns."""
     argName = str(paramName)
     componentTypes = _compound_component_types(argName)
     inputTypes = componentTypes or _argument_input_types(argName)
     hints = []
+    if calculated is not None:
+        hints.append('<b>Readback:</b> ' + _tooltip_code(calculated))
+    inputHint = None
     if componentTypes is not None:
-        hints.append('Input: ' + ', '.join(componentTypes))
+        inputHint = ', '.join(componentTypes)
     elif argName == 'center':
-        hints.append('Input: 3-sequence of floats; any 2 can be auto')
+        inputHint = '3-sequence of floats; any 2 can be auto'
     elif argName == 'lim' or argName.startswith(('limPhys', 'limOpt')):
-        hints.append('Input: sequence, None')
+        inputHint = 'sequence, None'
     else:
         for _, argNames in argumentInputGroups.items():
             if argName in argNames:
-                hints.append('Input: ' + ', '.join(inputTypes))
+                inputHint = ', '.join(inputTypes)
                 break
+    if inputHint is not None:
+        hints.append('<b>Input:</b> ' + html_escape(inputHint))
     if unit is not None:
-        hints.append('Unit: ' + unit)
+        hints.append('<b>Unit:</b> ' + _tooltip_code(unit))
+    sections = ['<br>'.join(hints)] if hints else []
     helpText = argumentTooltips.get(argName)
     instructions = [helpText] if helpText is not None else [
         argumentInputTooltips[inputType] for inputType in inputTypes
         if inputType in argumentInputTooltips]
     for instruction in instructions:
-        hints.append(instruction.format(
-            unit=unit or 'the default unit',
-            angleUnits=', '.join(allUnitsAng)))
-    if calculated is not None:
-        hints.append('Readback: {0}'.format(calculated))
-    toolTip = '\n'.join(hints)
+        text = instruction.format(
+            unit=_tooltip_code(unit or 'the default unit'),
+            angleUnits=', '.join(_tooltip_code(unit) for unit in allUnitsAng))
+        sections.extend(paragraph.replace('\n', '<br>')
+                        for paragraph in text.split('\n\n'))
+    paragraphs = [
+        '<p style="margin-top:{0}px; margin-bottom:0;">{1}</p>'.format(
+            0 if index == 0 else 6, section)
+        for index, section in enumerate(sections)]
+    toolTip = '<html>' + ''.join(paragraphs) + '</html>' if paragraphs else ''
     child0.setToolTip(toolTip)
     child1.setToolTip(toolTip)
 
