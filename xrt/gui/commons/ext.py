@@ -62,14 +62,17 @@ class PythonTextEdit(qt.QPlainTextEdit):
     COLOR_FUNC = "#000000"
     COLOR_SELF = "#924939"
     COLOR_LINE = "#E8F2FE"
-    COLOR_LINENUM = "#EFEFEF"
+    COLOR_LINENUMBKND = "#EFEFEF"
+    COLOR_LINENUMACTIVE = "#000000"
+    COLOR_LINENUM = "#888888"
     COLOR_LINELENGTH = "#EEEEEE"
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.defaultFontSize = None
 
-        self.builtins = list(__builtins__.keys()) + ['True', 'False', 'None']
+        self.builtins = [k for k in __builtins__ if not k.startswith('_')] + \
+            ['True', 'False', 'None']
         self.formats = {}
         self.formats[token.STRING] = self.make_format(self.COLOR_STRING)
         self.formats[token.NUMBER] = self.make_format(self.COLOR_NUMBER)
@@ -165,14 +168,13 @@ class PythonTextEdit(qt.QPlainTextEdit):
         fmt.setForeground(qt.QColor(color))
         if bold:
             fmt.setFontWeight(75)
-
         return fmt
 
     def clear_formatting(self):
         cursor = qt.QTextCursor(self.document())
         cursor.select(qt.QTextCursor.Document)
         fmt = qt.QTextCharFormat()
-        fmt.setForeground(qt.QColor("black"))
+        fmt.setForeground(qt.Qt.black)
         cursor.setCharFormat(fmt)
 
     def highlight(self):
@@ -190,16 +192,13 @@ class PythonTextEdit(qt.QPlainTextEdit):
 
             prev_tok = None
             for tok in tokenize.generate_tokens(io.StringIO(text).readline):
-                tok_type = tok.type
-
                 start_line, start_col = tok.start
-                end_line, end_col = tok.end
-
                 start = line_offsets[start_line-1] + start_col
+                end_line, end_col = tok.end
                 end = line_offsets[end_line-1] + end_col
 
                 fmt = None
-                if tok_type == token.NAME:
+                if tok.type == token.NAME:
                     if tok.string in self.builtins:
                         fmt = self.builtin_format
                     elif tok.string in keyword.kwlist:
@@ -211,8 +210,8 @@ class PythonTextEdit(qt.QPlainTextEdit):
                     elif tok.string == "self":
                         fmt = self.self_fmt
 
-                elif tok_type in self.formats:
-                    fmt = self.formats[tok_type]
+                elif tok.type in self.formats:
+                    fmt = self.formats[tok.type]
 
                 if fmt is not None:
                     c = qt.QTextCursor(self.document())
@@ -220,10 +219,7 @@ class PythonTextEdit(qt.QPlainTextEdit):
                     c.setPosition(end, qt.QTextCursor.KeepAnchor)
                     c.mergeCharFormat(fmt)
 
-                if tok_type == token.NAME:
-                    prev_tok = tok.string
-                else:
-                    prev_tok = None
+                prev_tok = tok.string if tok.type == token.NAME else None
 
         except (tokenize.TokenError, IndentationError):
             pass
@@ -276,10 +272,7 @@ class PythonTextEdit(qt.QPlainTextEdit):
         super().paintEvent(event)
         painter = qt.QPainter(self.viewport())
         fm = self.fontMetrics()
-
-        # Width of one character in the current font
-        char_width = fm.horizontalAdvance('9')
-        x = int(self.LINE_LENGTH * char_width)
+        x = int(self.LINE_LENGTH * fm.horizontalAdvance('9'))
         pen = qt.QPen(qt.QColor(self.COLOR_LINELENGTH))
         pen.setWidthF(2.5)
         painter.setPen(pen)
@@ -287,7 +280,7 @@ class PythonTextEdit(qt.QPlainTextEdit):
 
     def lineNumberAreaPaintEvent(self, event):
         painter = qt.QPainter(self.lineNumberArea)
-        painter.fillRect(event.rect(), qt.QColor(self.COLOR_LINENUM))
+        painter.fillRect(event.rect(), qt.QColor(self.COLOR_LINENUMBKND))
 
         block = self.firstVisibleBlock()
         block_number = block.blockNumber()
@@ -299,12 +292,12 @@ class PythonTextEdit(qt.QPlainTextEdit):
         while block.isValid() and top <= event.rect().bottom():
             if block.isVisible() and bottom >= event.rect().top():
                 if block_number == current_line:
-                    painter.setPen(qt.Qt.black)
+                    painter.setPen(qt.QColor(self.COLOR_LINENUMACTIVE))
                     font = painter.font()
                     font.setBold(True)
                     painter.setFont(font)
                 else:
-                    painter.setPen(qt.Qt.darkGray)
+                    painter.setPen(qt.QColor(self.COLOR_LINENUM))
                     font = painter.font()
                     font.setBold(False)
                     painter.setFont(font)
