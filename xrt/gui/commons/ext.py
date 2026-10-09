@@ -225,7 +225,7 @@ class PythonTextEdit(qt.QPlainTextEdit):
                 else:
                     prev_tok = None
 
-        except tokenize.TokenError, IndentationError:
+        except (tokenize.TokenError, IndentationError):
             pass
 
         cursor.setPosition(pos)
