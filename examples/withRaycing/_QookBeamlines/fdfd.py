@@ -54,7 +54,7 @@ Increase the energy range...
 
 import numpy as np
 import sys
-sys.path.append('C:\\GitHub\\xrt')
+sys.path.append(r"C:\GitHub\xrt")
 import xrt.backends.raycing.sources as rsources
 import xrt.backends.raycing.screens as rscreens
 import xrt.backends.raycing.materials as rmats
@@ -124,7 +124,6 @@ CVDonSi = rmats.multilayer.Coated(
     name='CVDonSi')
 
 Si220harm = rmats.crystals_basic.CrystalHarmonics(
-    Nmax=2,
     name='Si220harm',
     hkl=[2, 2, 0],
     a=5.41949,
@@ -135,18 +134,11 @@ Si220harm = rmats.crystals_basic.CrystalHarmonics(
     quantities=[1, 1, 1, 1, 1, 1, 1, 1],
     rho=2.3439368026411915)
 
-randomRoughness01 = rfe.RandomRoughness(
-    name='randomRoughness01',
-    limPhysX=[-100.0, 100.0],
-    limPhysY=[-100.0, 100.0],
-    seed=309050513322318869414767123371457748157)
-
 
 def build_beamline():
     bl = raycing.BeamLine(
         alignE=8000,
-        name='BioXAS_Main',
-        description=None)
+        name='BioXAS_Main')
 
     bl.Wiggler = rsources.synchr.Wiggler(
         bl=bl,
@@ -159,10 +151,10 @@ def build_beamline():
         eSigmaZ=10.067770358922576,
         eEpsilonX=18.099999999999998,
         eEpsilonZ=0.0362,
-        betaX=9.100000000000001,
-        betaZ=2.8000000000000007,
-        xPrimeMax=0.25,
-        zPrimeMax=0.25,
+        betaX=9.1,
+        betaZ=2.8000000000000003,
+        xPrimeMax=1.0,
+        zPrimeMax=0.375,
         eMin=7998.0,
         eMax=8002.0,
         B0=2.498940853962759,
@@ -174,9 +166,7 @@ def build_beamline():
         bl=bl,
         name='FEMask',
         center=[0.0, 12000.0, 0.0],
-        blades={'left': -12, 'right': 12, 'bottom': -1.75, 'top': 1.75},
-        x=[1.0, -0.0, 0.0],
-        z=[0.0, 0.0, 1.0])
+        blades={'left': -12, 'right': 12, 'bottom': -1.75, 'top': 1.75})
 
     bl.DiamondFilter = roes.refractive.Plate(
         t=0.05,
@@ -195,9 +185,7 @@ def build_beamline():
         bl=bl,
         name='WhiteBeamSlits',
         center=[0.0, 14000.0, 0.0],
-        blades={'left': -10, 'right': 10, 'bottom': -1, 'top': 1},
-        x=[1.0, -0.0, 0.0],
-        z=[0.0, 0.0, 1.0])
+        blades={'left': -10, 'right': 10, 'bottom': -1, 'top': 1})
 
     bl.Mirror1 = roes.ToroidMirror(
         bl=bl,
@@ -212,16 +200,13 @@ def build_beamline():
         order=1,
         R=7120000.0,
         r=69.81,
-        precisionOpenCL='float64',
-        figureError=randomRoughness01)
+        precisionOpenCL='float64')
 
     bl.CM_Slits = rapts.RectangularAperture(
         bl=bl,
         name='CM_Slits',
         center=[0, 15600, "auto"],
-        blades={'left': -5, 'right': 5, 'bottom': -2, 'top': 2},
-        x=[1.0, -0.0, 0.0],
-        z=[0.0, 0.0, 1.0])
+        blades={'left': -5, 'right': 5, 'bottom': -2, 'top': 2})
 
     bl.SSRL_DCM = roes.dcm.DCM(
         bragg='8000 eV',
@@ -246,8 +231,6 @@ def build_beamline():
         bl=bl,
         name='PreM2Screen',
         center=[0, 26000, "auto"],
-        x=[1.0, -0.0, 0.0],
-        z=[0.0, 0.0, 1.0],
         limPhysX=[0.0, 0.0],
         limPhysY=[0.0, 0.0],
         cLimits=[0.0, 0.0])
@@ -270,9 +253,7 @@ def build_beamline():
         bl=bl,
         name='PhotonShutter',
         center=[0, 28300, "auto"],
-        blades={'left': -5, 'right': 5, 'bottom': -2, 'top': 2},
-        x=[1.0, -0.0, 0.0],
-        z=[0.0, 0.0, 1.0])
+        blades={'left': -5, 'right': 5, 'bottom': -2, 'top': 2})
 
     bl.DBHR1 = roes.base.OE(
         bl=bl,
@@ -305,16 +286,12 @@ def build_beamline():
         bl=bl,
         name='JJslits',
         center=[0, 30350, "auto"],
-        blades={'left': -5, 'right': 5, 'bottom': -0.2, 'top': 0.2},
-        x=[1.0, -0.0, 0.0],
-        z=[0.0, 0.0, 1.0])
+        blades={'left': -5, 'right': 5, 'bottom': -0.2, 'top': 0.2})
 
     bl.SampleScreen = rscreens.Screen(
         bl=bl,
         name='SampleScreen',
         center=[0, 30650, "auto"],
-        x=[1.0, -0.0, 0.0],
-        z=[0.0, 0.0, 1.0],
         limPhysX=[0.0, 0.0],
         limPhysY=[0.0, 0.0],
         cLimits=[0.0, 0.0])
@@ -461,6 +438,7 @@ def define_plots(bl):
         title='04 - preM2 Screen Footprint',
         fluxFormatStr='%g',
         contourFactor=1,
+        saveName=r"c:\nsls\data1.png",
         name='plot04')
     plots.append(plot04)
 
@@ -478,6 +456,7 @@ def define_plots(bl):
         title='05 - Sample',
         fluxFormatStr='%g',
         contourFactor=1,
+        saveName=r"c:\blabla\path",
         name='plot05')
     plots.append(plot05)
     return plots

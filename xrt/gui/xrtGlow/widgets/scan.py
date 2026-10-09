@@ -21,6 +21,7 @@ from matplotlib.figure import Figure
 from matplotlib.ticker import FormatStrFormatter
 
 from ...commons import qt, config
+from ...commons.codegen import path_literal
 from ....backends import raycing
 from ....backends.raycing._flow_utils import normalize_string_input
 from .._constants import DEFAULT_SCENE_SETTINGS, DISPLAY_NUMBER_FORMAT
@@ -2699,12 +2700,17 @@ class QookScanMixin:
             return True
         return any(str(key).startswith('frame_') for key in description)
 
-    def _scan_literal(self, value):
+    def _scan_literal(self, value, argName=None):
         if hasattr(value, 'tolist'):
+            if argName in raycing.filenameArgSet:
+                return path_literal(value.tolist())
             return repr(value.tolist())
+        if argName in raycing.filenameArgSet and isinstance(
+                value, (str, list, tuple)):
+            return path_literal(value)
         if isinstance(value, dict):
             items = [
-                f'{self._scan_literal(key)}: {self._scan_literal(val)}'
+                f'{self._scan_literal(key)}: {self._scan_literal(val, argName)}'
                 for key, val in value.items()]
             return '{' + ', '.join(items) + '}'
         if isinstance(value, (list, tuple)):
@@ -2727,27 +2733,27 @@ class QookScanMixin:
         match = re.match(r'^frame_(\d+)$', str(frame_id))
         return int(match.group(1)) if match is not None else None
 
-    def _scan_values_expr(self, values, duration):
+    def _scan_values_expr(self, values, duration, argName=None):
         duration = max(1, int(duration))
         if isinstance(values, dict):
             value_type = values.get('type', 'linspace')
             if value_type == 'linspace':
                 return 'xrtrun.get_scan_values({0}, {1}, {2})'.format(
-                    self._scan_literal(values.get('start', 0.0)),
-                    self._scan_literal(values.get('stop', 0.0)),
+                    self._scan_literal(values.get('start', 0.0), argName),
+                    self._scan_literal(values.get('stop', 0.0), argName),
                     duration)
             if value_type == 'list':
                 return 'xrtrun.get_scan_values({0}, frames={1})'.format(
-                    self._scan_literal(list(values.get('values', []))),
+                    self._scan_literal(list(values.get('values', [])), argName),
                     duration)
             if value_type == 'constant':
                 return 'xrtrun.get_scan_values({0}, frames={1})'.format(
-                    self._scan_literal(values.get('value')), duration)
+                    self._scan_literal(values.get('value'), argName), duration)
         if isinstance(values, (list, tuple)):
             return 'xrtrun.get_scan_values({0}, frames={1})'.format(
-                self._scan_literal(list(values)), duration)
+                self._scan_literal(list(values), argName), duration)
         return 'xrtrun.get_scan_values({0}, frames={1})'.format(
-            self._scan_literal(values), duration)
+            self._scan_literal(values, argName), duration)
 
     def _scan_track_summary(self, target, prop, start, duration, values):
         end = start + max(1, int(duration)) - 1
@@ -2797,7 +2803,7 @@ class QookScanMixin:
                 continue
             for prop, value in patch.items():
                 expr = 'xrtrun.get_scan_values({0}, frames={1})'.format(
-                    self._scan_literal(value), duration)
+                    self._scan_literal(value, prop), duration)
                 summary = f'{target}.{prop}: frame {frame_index}, {value}'
                 tracks.append((target, prop, frame_index, duration, expr,
                                summary))
@@ -2822,7 +2828,7 @@ class QookScanMixin:
                         value
         tracks = []
         for (target, prop), schedule in schedules.items():
-            expr = self._scan_literal(schedule)
+            expr = self._scan_literal(schedule, prop)
             summary = f'{target}.{prop}: explicit frame values'
             tracks.append((target, prop, None, None, expr, summary))
         return tracks
@@ -2847,7 +2853,7 @@ class QookScanMixin:
                 values = item.get('values')
                 self._scan_add_track(
                     tracks, target, prop, start, duration,
-                    self._scan_values_expr(values, duration),
+                    self._scan_values_expr(values, duration, prop),
                     self._scan_track_summary(
                         target, prop, start, duration, values))
             elif item_type == 'event':

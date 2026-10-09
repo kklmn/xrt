@@ -17,6 +17,7 @@ from .._constants import path_to_xrt, myTab, _DEBUG_  # analysis:ignore
 
 from ...commons import qt  # analysis:ignore
 from ...commons import ext  # analysis:ignore
+from ...commons.codegen import path_literal
 import xrt  #analysis:ignore
 from ....backends import raycing  # analysis:ignore
 from ....backends.raycing import sources as rsources  # analysis:ignore
@@ -519,8 +520,8 @@ class XrtQook(QookScanMixin, XrtQookElements):
         codeHeader = """# -*- coding: utf-8 -*-\n\"\"\"\n
 __author__ = \"Konstantin Klementiev\", \"Roman Chernikov\"
 __date__ = \"{0}\"\n\nCreated with xrtQook\n\n\n{2}\n\n"\"\"\n
-import numpy as np\nimport sys\nsys.path.append({1!r})\n""".format(
-            str(date.today()), path_to_xrt, self.fileDescription)
+import numpy as np\nimport sys\nsys.path.append({1})\n""".format(
+            str(date.today()), path_literal(path_to_xrt), self.fileDescription)
         codeDeclarations = """\n"""
         codeBuildBeamline = "\ndef build_beamline():\n"
         codeBuildBeamline += '{2}bl = {1}.BeamLine('.format(

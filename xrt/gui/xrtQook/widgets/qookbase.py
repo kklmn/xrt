@@ -45,6 +45,7 @@ import platform as pythonplatform  # analysis:ignore
 import webbrowser  # analysis:ignore
 
 from ...commons import ext, config  # analysis:ignore
+from ...commons.codegen import path_literal
 
 sys.path.append(os.path.join('..', '..', '..', '..'))
 import xrt  #analysis:ignore
@@ -3064,9 +3065,10 @@ class XrtQookBase(qt.QMainWindow):
         except NameError:
             unicode = str
         value = self.getVal(value)
+        if argName in raycing.filenameArgSet and isinstance(
+                value, (str, unicode, list, tuple)):
+            return path_literal(value)
         if isinstance(value, (str, unicode)):
-            if argName in raycing.filenameArgSet:
-                return repr(value)
             if 'np.' not in value and\
                     (str(self.rootBLItem.text())+'.') not in value:
                 value = repr(value)
