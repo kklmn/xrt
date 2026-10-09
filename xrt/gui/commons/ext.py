@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 __author__ = "Roman Chernikov, Konstantin Klementiev"
-__date__ = "8 Oct 2026"
+__date__ = "9 Oct 2026"
 
 import re
 import sys
@@ -50,6 +50,72 @@ class LineNumberArea(qt.QWidget):
         self.editor.lineNumberAreaPaintEvent(event)
 
 
+class PythonHighlighter(qt.QSyntaxHighlighter):
+    def __init__(self, document, editor):
+        super().__init__(document)
+        self.editor = editor
+        self.block_formats = {}
+        self._retokenizing = False
+        document.contentsChanged.connect(self.retokenize)
+        self.retokenize()
+
+    def addFormat(self, line, start, length, fmt):
+        self.block_formats.setdefault(line, []).append((start, length, fmt))
+
+    def tokenFormat(self, tok, prev_tok):
+        if tok.type == token.NAME:
+            if tok.string in self.editor.builtins:
+                return self.editor.builtin_format
+            if tok.string in keyword.kwlist:
+                return self.editor.keyword_format
+            if tok.string == "self":
+                return self.editor.self_fmt
+            if prev_tok == "class":
+                return self.editor.class_fmt
+            if prev_tok == "def":
+                return self.editor.func_fmt
+        return self.editor.formats.get(tok.type)
+
+    def addToken(self, tok, fmt):
+        sl, sc = tok.start
+        el, ec = tok.end
+        if sl == el:
+            self.addFormat(sl, sc, ec - sc, fmt)
+            return
+        self.addFormat(sl, sc, self.line_lengths[sl-1] - sc, fmt)
+        for line in range(sl + 1, el):
+            self.addFormat(line, 0, self.line_lengths[line - 1], fmt)
+        self.addFormat(el, 0, ec, fmt)
+
+    def retokenize(self):
+        if self._retokenizing:
+            return
+        self._retokenizing = True
+        try:
+            self.block_formats.clear()
+            text = self.document().toPlainText()
+            self.line_lengths = [len(line) for line in text.splitlines()]
+            try:
+                prev_tok = None
+                for tok in tokenize.generate_tokens(io.StringIO(text).readline):
+                    fmt = self.tokenFormat(tok, prev_tok)
+                    if fmt is not None:
+                        self.addToken(tok, fmt)
+                    prev_tok = (tok.string if tok.type == token.NAME else None)
+            except (tokenize.TokenError, IndentationError):
+                pass
+
+            self.rehighlight()
+
+        finally:
+            self._retokenizing = False
+
+    def highlightBlock(self, text):
+        line = self.currentBlock().blockNumber() + 1
+        for start, length, fmt in self.block_formats.get(line, ()):
+            self.setFormat(start, length, fmt)
+
+
 class PythonTextEdit(qt.QPlainTextEdit):
     INDENT = " "*4
     LINE_LENGTH = 80
@@ -95,8 +161,6 @@ class PythonTextEdit(qt.QPlainTextEdit):
         self.updateLineNumberAreaWidth(0)
         self.highlightCurrentLine()
 
-        self.textChanged.connect(self.highlight)
-
         self._font_size = self.font().pointSizeF()
 
         self.zoomInAction = qt.QAction("Zoom In", self)
@@ -116,6 +180,8 @@ class PythonTextEdit(qt.QPlainTextEdit):
         self.addAction(self.resetZoomAction)
 
         self.setContextMenuPolicy(qt.Qt.DefaultContextMenu)
+
+        self.highlighter = PythonHighlighter(self.document(), self)
 
     def contextMenuEvent(self, event):
         menu = self.createStandardContextMenu()
@@ -170,65 +236,6 @@ class PythonTextEdit(qt.QPlainTextEdit):
         if bold:
             fmt.setFontWeight(75)
         return fmt
-
-    def clear_formatting(self):
-        cursor = qt.QTextCursor(self.document())
-        cursor.select(qt.QTextCursor.Document)
-        fmt = qt.QTextCharFormat()
-        fmt.setForeground(qt.Qt.black)
-        cursor.setCharFormat(fmt)
-
-    def highlight(self):
-        text = self.toPlainText()
-        self.blockSignals(True)
-        cursor = self.textCursor()
-        pos = cursor.position()
-        self.clear_formatting()
-
-        try:
-            line_offsets = [0]
-
-            for line in text.splitlines(True):
-                line_offsets.append(line_offsets[-1] + len(line))
-
-            prev_tok = None
-            for tok in tokenize.generate_tokens(io.StringIO(text).readline):
-                start_line, start_col = tok.start
-                start = line_offsets[start_line-1] + start_col
-                end_line, end_col = tok.end
-                end = line_offsets[end_line-1] + end_col
-
-                fmt = None
-                if tok.type == token.NAME:
-                    if tok.string in self.builtins:
-                        fmt = self.builtin_format
-                    elif tok.string in keyword.kwlist:
-                        fmt = self.keyword_format
-                    elif prev_tok == "class":
-                        fmt = self.class_fmt
-                    elif prev_tok == "def":
-                        fmt = self.func_fmt
-                    elif tok.string == "self":
-                        fmt = self.self_fmt
-
-                elif tok.type in self.formats:
-                    fmt = self.formats[tok.type]
-
-                if fmt is not None:
-                    c = qt.QTextCursor(self.document())
-                    c.setPosition(start)
-                    c.setPosition(end, qt.QTextCursor.KeepAnchor)
-                    c.mergeCharFormat(fmt)
-
-                prev_tok = tok.string if tok.type == token.NAME else None
-
-        except (tokenize.TokenError, IndentationError):
-            pass
-
-        cursor.setPosition(pos)
-        self.setTextCursor(cursor)
-
-        self.blockSignals(False)
 
     def keyPressEvent(self, event):
         if event.key() == qt.Qt.Key_Tab:
