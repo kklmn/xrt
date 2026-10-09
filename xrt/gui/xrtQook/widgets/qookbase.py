@@ -1648,7 +1648,9 @@ class XrtQookBase(qt.QMainWindow):
     def getParamItemValue(self, item):
         rawValue = item.data(qt.RAW_VALUE_ROLE)
         textValue = str(item.text())
-        if rawValue is not None and str(rawValue) == textValue:
+        if rawValue is not None and (
+                str(rawValue) == textValue or
+                self.formatParamDisplay('', rawValue) == textValue):
             return str(rawValue)
         return textValue
 
