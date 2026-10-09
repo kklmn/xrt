@@ -17,7 +17,6 @@ autodoc_mock_imports = [
     'OpenGL', 'OpenGL.GL', 'pyopencl',
     'xrt.gui.commons.qt',
     'matplotlib.backends.backend_qt5agg',
-    'spyder.widgets', 'spyderlib.widgets',
     'cv2', 'zmq', 'freetype',
     'multiprocess', 'pyTTE']
 
