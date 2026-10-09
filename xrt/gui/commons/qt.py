@@ -349,6 +349,21 @@ def _argument_input_types(argName):
     return ('string',)
 
 
+def _sequence_member_types(inputTypes):
+    return tuple(inputType.partition(':')[2] for inputType in inputTypes
+                 if inputType.startswith('sequence:'))
+
+
+def _input_type_label(inputType):
+    if inputType.startswith('sequence:'):
+        memberType = inputType.partition(':')[2]
+        labels = {'float': 'floats', 'integer': 'integers',
+                  'angle': 'angles', 'energy': 'energy values',
+                  'string': 'strings'}
+        return 'sequence of ' + labels.get(memberType, memberType)
+    return inputType
+
+
 def _tooltip_code(value):
     text = html_escape(str(value)).replace('\n', '<br>')
     return f'<span style="white-space: nowrap;"><code>{text}</code></span>'
@@ -372,7 +387,8 @@ def set_param_tooltip(child0, child1, paramName, unit=None, calculated=None):
     else:
         for _, argNames in argumentInputGroups.items():
             if argName in argNames:
-                inputHint = ', '.join(inputTypes)
+                inputHint = ', '.join(_input_type_label(inputType)
+                                      for inputType in inputTypes)
                 break
     if inputHint is not None:
         hints.append('<b>Input:</b> <nobr>'+html_escape(inputHint)+'</nobr>')
@@ -380,8 +396,12 @@ def set_param_tooltip(child0, child1, paramName, unit=None, calculated=None):
         hints.append('<b>Unit:</b> ' + _tooltip_code(unit))
     sections = ['<br>'.join(hints)] if hints else []
     helpText = argumentTooltips.get(argName)
+    helpTypes = dict.fromkeys(
+        inputType.partition(':')[2]
+        if inputType.startswith('sequence:') else inputType
+        for inputType in inputTypes)
     instructions = [helpText] if helpText is not None else [
-        argumentInputTooltips[inputType] for inputType in inputTypes
+        argumentInputTooltips[inputType] for inputType in helpTypes
         if inputType in argumentInputTooltips]
     for instruction in instructions:
         text = instruction.format(
@@ -461,10 +481,10 @@ class ParsedSequenceValidator(QValidator):
         self.fields = fields
         self.isLimit = argName == 'lim' or\
             argName.startswith(('limPhys', 'limOpt'))
-        self.wholeValidator = _atomic_validator(
-            self._whole_input_types(), self)
-        self.memberValidator = _atomic_validator(
-            self._member_input_types(), self)
+        self.wholeTypes = self._whole_input_types()
+        self.memberTypes = self._member_input_types()
+        self.wholeValidator = _atomic_validator(self.wholeTypes, self)
+        self.memberValidator = _atomic_validator(self.memberTypes, self)
         self.scalarValidator = _atomic_validator(('float',), self)
         self.angleValidator = _atomic_validator(('angle',), self)
 
@@ -476,9 +496,13 @@ class ParsedSequenceValidator(QValidator):
                 return ('None',)
             return ()
         return tuple(inputType for inputType in self.inputTypes
-                     if inputType != 'sequence')
+                     if inputType != 'sequence' and
+                     not inputType.startswith('sequence:'))
 
     def _member_input_types(self):
+        memberTypes = _sequence_member_types(self.inputTypes)
+        if memberTypes:
+            return memberTypes
         if self.fields is not None:
             if self.argName == 'center':
                 return ('float', 'auto')
@@ -500,8 +524,10 @@ class ParsedSequenceValidator(QValidator):
         return ('float',)
 
     @staticmethod
-    def _validator_state(validator, value):
+    def _validator_state(validator, value, inputTypes=()):
         if validator is None:
+            return QValidator.Invalid
+        if inputTypes == ('string',) and not isinstance(value, (str, bytes)):
             return QValidator.Invalid
         text = str(value)
         return validator.validate(text, len(text))[0]
@@ -547,7 +573,8 @@ class ParsedSequenceValidator(QValidator):
                 validator = self.angleValidator if\
                     self.argName in ('R', 'r') and index == 2 else\
                     self.memberValidator
-                itemState = self._validator_state(validator, item)
+                itemState = self._validator_state(
+                    validator, item, self.memberTypes)
             if itemState == QValidator.Invalid:
                 return itemState
             if itemState == QValidator.Intermediate:
@@ -562,11 +589,15 @@ class ParsedSequenceValidator(QValidator):
 
         value = self.raycing.parametrize(stripped)
         if not self._is_sequence(value):
-            wholeState = self._validator_state(self.wholeValidator, value)
+            wholeState = self._validator_state(
+                self.wholeValidator, value, self.wholeTypes)
+            if 'string' in self.wholeTypes and stripped.startswith(('[', '(')):
+                wholeState = QValidator.Invalid
             if wholeState != QValidator.Invalid:
                 return wholeState, inputText, pos
 
-            memberState = self._validator_state(self.memberValidator, value)
+            memberState = self._validator_state(
+                self.memberValidator, value, self.memberTypes)
             if memberState != QValidator.Invalid or\
                     self._looks_like_sequence_prefix(stripped):
                 return QValidator.Intermediate, inputText, pos
@@ -601,9 +632,10 @@ def make_argument_validator(argName, parent=None):
     if componentTypes is not None:
         return _atomic_validator(componentTypes, parent)
 
-    if 'string' in inputTypes or 'dict' in inputTypes:
+    memberTypes = _sequence_member_types(inputTypes)
+    if 'dict' in inputTypes or ('string' in inputTypes and not memberTypes):
         return None
-    if fields is not None or 'sequence' in inputTypes:
+    if fields is not None or 'sequence' in inputTypes or memberTypes:
         return ParsedSequenceValidator(
             rootName, inputTypes, fields=fields, parent=parent)
     return _atomic_validator(inputTypes, parent)
@@ -1133,12 +1165,14 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
                 return
             value = editor.text()
             argName = str(index.sibling(index.row(), 0).data())
-            if 'integer' in _argument_input_types(argName):
+            inputTypes = _argument_input_types(argName)
+            memberTypes = _sequence_member_types(inputTypes)
+            if 'integer' in inputTypes or 'integer' in memberTypes:
                 from ...backends import raycing
                 parsed = raycing.parametrize(value)
-                if isinstance(parsed, (list, tuple)):
+                if isinstance(parsed, (list, tuple)) and 'integer' in memberTypes:
                     parsed = type(parsed)(int(item) for item in parsed)
-                elif isinstance(parsed, Real):
+                elif isinstance(parsed, Real) and 'integer' in inputTypes:
                     parsed = int(parsed)
                 value = str(parsed)
             if editor.property('fieldName') == 'filename' and not value.strip():

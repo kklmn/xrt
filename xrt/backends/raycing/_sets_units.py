@@ -217,9 +217,10 @@ def auto_unit(lbl, unit):
 
 
 # Input grammars shared by the GUI argument delegates. Tuple keys describe
-# accepted alternatives. Arguments not found here are strings by default. For
-# names present in compoundArgs, the grammar is applied to every component and
-# compoundArgs supplies the required length.
+# accepted alternatives. sequence:<type> declares the member grammar;
+# untyped sequences retain their argument-specific rules. compoundArgs supplies
+# fixed lengths, with component alternatives handled by compound validators.
+# Arguments not found here are strings by default.
 argumentInputGroups = {
     ('float', 'None'): {
         'alarmLevel', 'compressX', 'compressZ', 'eSigmaX', 'eSigmaZ',
@@ -231,11 +232,13 @@ argumentInputGroups = {
     ('integer', 'None'): {'seed', 'pickleEvery', 'repeats', 'updateEvery'},
     ('float', 'inf'): {'substThickness'},
     ('integer', 'half', 'all'): {'processes', 'threads'},
-    ('float', 'auto'): {'center', 'x', 'z'},
-    ('float', 'sequence'): {'dx', 'dy', 'dz', 'focus', 'nCRL', 'rms', 'r',
-                            'R', 'w0'},
-    ('float', 'sequence', 'None'): {'taper', 'Rm', 'Rs'},
-    ('integer', 'sequence', 'None'): {'order'},
+    ('float', 'auto'): {'center'},
+    ('sequence:float', 'auto'): {'x', 'z'},
+    ('float', 'sequence:float'): {'dx', 'dy', 'dz', 'focus', 'nCRL', 'rms',
+                                  'w0'},
+    ('float', 'sequence'): {'r', 'R'},
+    ('float', 'sequence:float', 'None'): {'taper', 'Rm', 'Rs'},
+    ('integer', 'sequence:integer', 'None'): {'order'},
     'angle': {
         'antiblaze', 'blaze', 'braggOffset', 'cryst1roll', 'mosaicity',
         'cryst2finePitch', 'cryst2pitch', 'cryst2roll', 'extraPitch',
@@ -244,7 +247,7 @@ argumentInputGroups = {
         'positionRoll', 'roll', 'slopeAngle', 'theta', 'wedgeAngle', 'yaw'},
     ('angle', 'None'): {'alpha'},
     ('angle', 'energy', 'auto'): {'bragg', 'pitch'},
-    ('angle', 'sequence'): {
+    ('angle', 'sequence:angle'): {
         'dxprime', 'dzprime', 'xPrimeMax', 'zPrimeMax'},
     'energy': {'E', 'eE', 'eMax', 'eMin'},
     'string': {
@@ -262,7 +265,7 @@ argumentInputGroups = {
         'contourLevels', 'efficiency', 'energyRange', 'generatorArgs',
         'gratingDensity', 'limits', 'pAxis', 'parabolaAxis', 'quantities',
         'surface', 'targetE', 'jack1', 'jack2', 'jack3', 'tx1', 'tx2'},
-    ('string', 'sequence'): {'elements'},
+    ('string', 'sequence:string'): {'elements'},
     ('string', 'sequence', 'None'): {'refractiveIndex'},
     'dict': {'afterScriptKWargs', 'blades', 'generatorKWargs', 'renderSize'},
     ('sequence', 'inf', 'None'): {'f1', 'f2'},
