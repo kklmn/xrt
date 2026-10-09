@@ -292,12 +292,13 @@ argumentInputGroups = {
 # Optional instructions for input types. auto and None have no extra help.
 argumentInputTooltips = {
     'angle': (
-        'Angles accept an optional unit, e.g. 3 mrad or 0.2 deg.\n'
-        'Supported units: {angleUnits}.\n'
-        'Bare numbers use {unit}.'),
+        'Enter an angle with an optional unit, e.g. <nobr><code>3 mrad</code></nobr> '
+        'or <nobr><code>0.2 deg</code></nobr>.\n'
+        'Bare numbers use {unit}.\n'
+        '<b>Units:</b> {angleUnits}.'),
     'integer': (
         'Enter a whole number.\n'
-        'Scientific notation and arithmetic are accepted\n'
+        'Scientific notation and arithmetic are accepted '
         'when the result is a whole number.'),
 }
 
@@ -305,44 +306,43 @@ argumentInputTooltips = {
 argumentTooltips = {
     'order': 'Diffraction order, or a sequence of integer diffraction orders.',
     'nCRL': (
-        'Number of lenslets; numeric input is rounded\n'
-        'to the nearest integer (minimum 1).\n'
-        'Alternatively, enter (focalDistance, E) in mm and eV\n'
-        'to calculate the count.\n'
-        'Keep focus numeric.'),
+        '<b>Number:</b> rounded to the nearest integer; minimum 1.\n'
+        '<b>Tuple:</b> <nobr><code>(focalDistance, E)</code></nobr> in mm and eV '
+        'calculates the count.\n\n'
+        'Keep <code>focus</code> numeric.'),
     'focus': (
         'Parabola focal parameter in mm.\n'
-        'For a target lens focal distance,\n'
-        'enter (focalDistance, E) in mm and eV.\n'
-        'Keep nCRL numeric.'),
+        'For a target lens focal distance, enter '
+        '<nobr><code>(focalDistance, E)</code></nobr> in mm and eV.\n\n'
+        'Keep <code>nCRL</code> numeric.'),
     'R': (
-        'Meridional radius in mm, or (p, q)\n'
+        'Meridional radius in mm, or <nobr><code>(p, q)</code></nobr>\n'
         'with object and image distances in mm.\n'
-        'Elements supporting an explicit angle also accept\n'
-        '(p, q, pitch), with an optional angular unit for pitch.'),
+        'Elements supporting an explicit angle also accept '
+        '<nobr><code>(p, q, pitch)</code></nobr>, with an optional angular unit '
+        'for <code>pitch</code>.'),
     'r': (
-        'Sagittal radius in mm, or (p, q)\n'
+        'Sagittal radius in mm, or <nobr><code>(p, q)</code></nobr>\n'
         'with object and image distances in mm.\n'
-        'Elements supporting an explicit angle also accept\n'
-        '(p, q, pitch), with an optional angular unit for pitch.'),
+        'Elements supporting an explicit angle also accept '
+        '<nobr><code>(p, q, pitch)</code></nobr>, with an optional angular unit '
+        'for <code>pitch</code>.'),
     'Rm': (
         'Meridional radius in mm.\n'
-        'On elements supporting automatic focusing,\n'
-        'enter (p, q) with object and image distances in mm.'),
+        'On elements supporting automatic focusing, '
+        'enter <nobr><code>(p, q)</code></nobr> with object and image distances in mm.'),
     'Rs': (
         'Sagittal radius in mm.\n'
-        'On elements supporting automatic focusing,\n'
-        'enter (p, q) with object and image distances in mm.'),
+        'On elements supporting automatic focusing, '
+        'enter <nobr><code>(p, q)</code></nobr> with object and image distances in mm.'),
     'pitch': (
-        'Enter an angle with an optional angular unit,\n'
-        'e.g. 3 mrad, or an alignment energy with a unit,\n'
-        'e.g. 9 keV.\n'
-        'Bare numbers are angles in {unit}.'),
+        'Enter an angle, e.g. <nobr><code>3 mrad</code></nobr> or <nobr><code>0.2 deg</code></nobr>,\n'
+        'or an alignment energy, e.g. <nobr><code>9 keV</code></nobr>.\n\n'
+        'Bare numbers use {unit}.'),
     'bragg': (
-        'Enter an angle with an optional angular unit,\n'
-        'e.g. 3 mrad, or an alignment energy with a unit,\n'
-        'e.g. 9 keV.\n'
-        'Bare numbers are angles in {unit}.'),
+        'Enter an angle, e.g. <nobr><code>3 mrad</code></nobr> or <nobr><code>0.2 deg</code></nobr>,\n'
+        'or an alignment energy, e.g. <nobr><code>9 keV</code></nobr>.\n\n'
+        'Bare numbers use {unit}.'),
 }
 
 
