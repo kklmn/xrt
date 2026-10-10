@@ -2497,6 +2497,10 @@ class GlowScanMixin:
                 self, 'Start scan', f'Cannot prepare scan output: {exc}')
             return
         self.scanAutoUpdateState = self._scan_auto_update_state()
+        self.scanAutoAlignState = self.customGlWidget.beamline.autoAlignEnabled
+        self.customGlWidget.beamline.autoAlignEnabled = (
+            self.scanAutoAlignCheckBox.isChecked())
+        self.scanAutoAlignCheckBox.setEnabled(False)
         self._set_scan_auto_update(False)
         self.scanRunning = True
         self.scanPaused = False
@@ -2553,8 +2557,8 @@ class GlowScanMixin:
             return
 
         self.scanWaitingPropagation = True
-        self.customGlWidget.update_beamline(
-            None, {'Acquire': '1'}, sender='scan')
+        self.customGlWidget.request_propagation_once(
+            auto_align=self.customGlWidget.beamline.autoAlignEnabled)
 
     def onScanPropagationComplete(self, msg):
         if self.scanRestoringInitialState:
@@ -2614,6 +2618,7 @@ class GlowScanMixin:
             qt.QTimer.singleShot(0, self.runScanFrame)
 
     def finishScan(self):
+        self.customGlWidget.beamline.autoAlignEnabled = self.scanAutoAlignState
         self.scanFinishWasStopped = self.scanStopRequested
         self.scanWaitingPropagation = False
         try:
@@ -2639,6 +2644,7 @@ class GlowScanMixin:
         self.scanRestoringInitialState = False
         self.scanWaitingPropagation = False
         self._set_scan_auto_update(self.scanAutoUpdateState)
+        self.scanAutoAlignCheckBox.setEnabled(True)
         self.scanRunning = False
         self.scanPaused = False
         self.scanStopRequested = False

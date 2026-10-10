@@ -32,6 +32,8 @@ from .scan import ScanInstructionDialog, find_catalog_property
 __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "27 Jan 2026"
 
+ACCUMULATION_ENABLED = False
+
 oeDiagnosticArgs = ('incoming from', 'center distance (mm)',
                     'grazing angle (°)', 'incidence angle (°)')
 
@@ -914,6 +916,7 @@ class InstanceInspector(qt.QDialog):
 class ConfigurablePlotWidget(qt.QWidget):
     addToPlotsRequested = qt.Signal(dict)
     plotParamChanged = qt.Signal(tuple)
+    propagationRequested = qt.Signal()
 
     def __init__(self, plotProps, parent=None, viewOnly=False,
                  beamLine=None, plotId=None, hiddenProps={},
@@ -948,6 +951,8 @@ class ConfigurablePlotWidget(qt.QWidget):
         if beamModel is not None:
             self.beamModel = beamModel
         self.dynamicPlot = plotObj[0]
+        self.accumulationEnabled = False
+        self._finishingAccumulation = False
 
         self.set_beam(plotProps.get('beam'))
 
@@ -1056,6 +1061,16 @@ class ConfigurablePlotWidget(qt.QWidget):
         exportLayout = qt.QVBoxLayout(self.exportsPanel)
         exportLayout.setSpacing(0)
         exportLayout.setContentsMargins(0, 0, 0, 0)
+
+        self.accumulateButton = qt.QPushButton('Accumulate')
+        self.accumulateButton.setCheckable(True)
+        self.accumulateButton.setToolTip(
+            'Sum incoming beams into this plot and repeat propagation while '
+            'pressed. Release to finish the current pass and keep the result.')
+        self.accumulateButton.toggled.connect(self.set_accumulation)
+        exportLayout.addWidget(self.accumulateButton)
+        self.accumulateButton.setVisible(ACCUMULATION_ENABLED)
+        self.set_accumulation(False)
 
         butLayout = qt.QHBoxLayout()
         butLayout.setContentsMargins(0, 0, 0, 0)
@@ -1205,6 +1220,8 @@ class ConfigurablePlotWidget(qt.QWidget):
         else:
             setattr(self.dynamicPlot, paramTuple[2], paramTuple[3])
 
+        self.set_accumulation(self.accumulationEnabled)
+
         if paramTuple[2] in ['bins', 'ppb', 'ePos', 'xPos', 'yPos']:
             self.dynamicPlot.reset_bins2D()
             self.dynamicPlot.reset_fig_layout()
@@ -1276,10 +1293,38 @@ class ConfigurablePlotWidget(qt.QWidget):
             if self.yAxisUnitUserSet:
                 plot.yaxis.unit = yAxisUnit
 
+    def set_accumulation(self, enabled):
+        supportsAccumulation = not self.dynamicPlot.fluxKind.lower().endswith(
+            'pca')
+        previous = self.accumulationEnabled
+        self.accumulationEnabled = bool(enabled) and supportsAccumulation
+        if self.accumulationEnabled:
+            self._finishingAccumulation = False
+        elif previous:
+            self._finishingAccumulation = supportsAccumulation
+        button = getattr(self, 'accumulateButton', None)
+        if button is not None:
+            blocked = button.blockSignals(True)
+            button.setChecked(self.accumulationEnabled)
+            button.setEnabled(supportsAccumulation)
+            button.blockSignals(blocked)
+        if self.accumulationEnabled and not previous:
+            self.propagationRequested.emit()
+
+    def stop_accumulation(self):
+        self.set_accumulation(False)
+        self._finishingAccumulation = False
+
+    def on_propagation_complete(self, message):
+        self._finishingAccumulation = False
+        if self.accumulationEnabled and self.liveUpdateEnabled:
+            self.propagationRequested.emit()
+
     def update_beam(self, beamTag):
         currentTag = (getattr(self, 'elementId', None), self.dynamicPlot.beam)
         if self.liveUpdateEnabled and beamTag == currentTag:
-            self.dynamicPlot.clean_plots()
+            if not (self.accumulationEnabled or self._finishingAccumulation):
+                self.dynamicPlot.clean_plots()
             self.set_beam(beamTag)
             self.plot_beam()
 
@@ -1319,20 +1364,24 @@ class ConfigurablePlotWidget(qt.QWidget):
             xbin, zbin = plot.xaxis.bins, plot.yaxis.bins
             plot.total4D = np.concatenate(plot.total4D).reshape(-1, xbin, zbin)
             plot.field3D = plot.total4D
-        plot.textStatus.set_text('')
+        plot.textStatus.set_text(
+            f'{iteration + 1} passes' if (
+                self.accumulationEnabled or self._finishingAccumulation) else '')
         plot.plot_plots()
         self.resizeEvent()
         plot.plot_plots()
 
     def plot_beam(self, key=None):
-        locCard = RunCardVals(threads=0,
-                              processes=1,
-                              repeats=1,
-                              updateEvery=1,
-                              pickleEvery=0,
-                              backend='raycing',
-                              globalNorm=False,
-                              runfile=None)
+        locCard = self.dynamicPlot.runCardVals
+        if locCard is None:
+            locCard = RunCardVals(threads=0,
+                                  processes=1,
+                                  repeats=1,
+                                  updateEvery=1,
+                                  pickleEvery=0,
+                                  backend='raycing',
+                                  globalNorm=False,
+                                  runfile=None)
 
         locCard.beamLine = self.beamLine
 
@@ -1345,7 +1394,8 @@ class ConfigurablePlotWidget(qt.QWidget):
                    beamDict=self.beamDict)
         try:
             outList = sproc.run()
-            self.update_plot(outList)
+            self.update_plot(outList, iteration=locCard.iteration)
+            locCard.iteration += 1
         except Exception as e:
             print(e)
 
