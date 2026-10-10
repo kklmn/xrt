@@ -32,6 +32,8 @@ from .scan import ScanInstructionDialog, find_catalog_property
 __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "27 Jan 2026"
 
+ACCUMULATION_ENABLED = False
+
 oeDiagnosticArgs = ('incoming from', 'center distance (mm)',
                     'grazing angle (°)', 'incidence angle (°)')
 
@@ -1067,6 +1069,7 @@ class ConfigurablePlotWidget(qt.QWidget):
             'pressed. Release to finish the current pass and keep the result.')
         self.accumulateButton.toggled.connect(self.set_accumulation)
         exportLayout.addWidget(self.accumulateButton)
+        self.accumulateButton.setVisible(ACCUMULATION_ENABLED)
         self.set_accumulation(False)
 
         butLayout = qt.QHBoxLayout()
