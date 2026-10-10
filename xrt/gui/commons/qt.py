@@ -365,7 +365,15 @@ def _input_type_label(inputType):
 
 
 def _tooltip_code(value):
-    text = html_escape(str(value)).replace('\n', '<br>')
+    if isinstance(value, float):
+        return f"{value:g}"  # avoids outputs like '0.060000000000000005'
+    if isinstance(value, (list, tuple)):
+        text = [f"{v:g}" if isinstance(v, float) else str(v) for v in value]
+        outer = '[]' if isinstance(value, list) else '()'
+        text = f"{outer[0]}{', '.join(text)}{outer[1]}"
+        text = html_escape(text).replace('\n', '<br>')
+    else:
+        text = html_escape(str(value)).replace('\n', '<br>')
     return f'<span style="white-space: nowrap;">{text}</span>'
 
 
