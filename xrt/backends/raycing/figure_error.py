@@ -43,6 +43,7 @@ allArguments = ('bl', 'name', 'baseFE', 'limPhysX', 'limPhysY', 'gridStep',
                 'cX', 'cY', 'amplitude', 'xWaveLength', 'yWaveLength',
                 'slopeAngle', 'orientationAngle', 'rmsKind')
 
+import copy
 import numpy as np
 from scipy import interpolate
 from pathlib import Path
@@ -306,6 +307,7 @@ class FigureErrorImported(FigureErrorBase):
         *columnFactors*: 3-list
             Optional multiplicative factors that bring the x and y column to mm
             and the z column to nm.
+
 
         """
         self.surfArrays = {}
@@ -808,10 +810,13 @@ class PlanarRidge(FigureErrorBase):
             measured counter-clockwise from the local x axis.
             The slope is applied perpendicular to this direction.
 
+
         """
         self._amplitude = amplitude
-        self._slopeAngle = slopeAngle
-        self._orientationAngle = orientationAngle
+        self._slopeAngle = raycing.auto_units_angle(slopeAngle)
+        self._slopeAngleInit = copy.deepcopy(slopeAngle)
+        self._orientationAngle = raycing.auto_units_angle(orientationAngle)
+        self._orientationAngleInit = copy.deepcopy(orientationAngle)
         kwargs['name'] = kwargs.get('name', 'ridge')
         super().__init__(**kwargs)
 
@@ -831,6 +836,7 @@ class PlanarRidge(FigureErrorBase):
     @slopeAngle.setter
     def slopeAngle(self, slopeAngle):
         self._slopeAngle = raycing.auto_units_angle(slopeAngle)
+        self._slopeAngleInit = copy.deepcopy(slopeAngle)
         self.build_spline()
 
     @property
@@ -840,6 +846,7 @@ class PlanarRidge(FigureErrorBase):
     @orientationAngle.setter
     def orientationAngle(self, orientationAngle):
         self._orientationAngle = raycing.auto_units_angle(orientationAngle)
+        self._orientationAngleInit = copy.deepcopy(orientationAngle)
         self.build_spline()
 
     def generate_profile(self):

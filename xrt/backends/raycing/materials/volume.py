@@ -85,6 +85,8 @@ class TXMMaterial(Material):
 
         *name*: str
             User-specified name.
+
+
         """
         kind = kwargs.pop('kind', 'plate')
         if kind != 'plate':

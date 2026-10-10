@@ -153,6 +153,7 @@ class Crystal(Material):
             .. [BaconLowde] G. E. Bacon and R. D. Lowde,
                Acta Crystallogr. 1, (1948) 303.
 
+
         """
         super().__init__(elements, quantities, rho=rho, table=table, name=name,
                          **kwargs)

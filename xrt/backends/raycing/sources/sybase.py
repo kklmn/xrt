@@ -3,6 +3,7 @@ __author__ = "Konstantin Klementiev", "Roman Chernikov"
 __date__ = "12 Aug 2021"
 import os
 import sys
+import copy
 import numpy as np
 from scipy import special
 import inspect
@@ -143,8 +144,8 @@ class SourceBase:
                 bl.oenamesToUUIDs[self.name] = self.uuid
 
         self.center = center
-        self._pitch = raycing.auto_units_angle(pitch)
-        self._yaw = raycing.auto_units_angle(yaw)
+        self.pitch = pitch
+        self.yaw = yaw
         self.nrays = np.int64(nrays)
 
         self.R0 = R0
@@ -206,6 +207,7 @@ class SourceBase:
     @pitch.setter
     def pitch(self, pitch):
         self._pitch = raycing.auto_units_angle(pitch)
+        self._pitchInit = copy.deepcopy(pitch)
 
     @property
     def yaw(self):
@@ -214,6 +216,7 @@ class SourceBase:
     @yaw.setter
     def yaw(self, yaw):
         self._yaw = raycing.auto_units_angle(yaw)
+        self._yawInit = copy.deepcopy(yaw)
 
     @property
     def eSigmaX(self):
@@ -391,6 +394,7 @@ class SourceBase:
 
     @xPrimeMax.setter
     def xPrimeMax(self, xPrimeMax):
+        source = copy.deepcopy(xPrimeMax)
         if isinstance(xPrimeMax, (tuple, list)):
             # if units are not provided, we expect mrad here
             xPrimeMax = [raycing.auto_units_angle(xPrimeMax[0],
@@ -404,6 +408,7 @@ class SourceBase:
         else:
             self._xPrimeMax = abs(xPrimeMax) * 1e-3
             self._xPrimeMin = -self._xPrimeMax
+        self._xPrimeMaxInit = source
         self.needReset = True
 
     @property
@@ -432,6 +437,7 @@ class SourceBase:
 
     @zPrimeMax.setter
     def zPrimeMax(self, zPrimeMax):
+        source = copy.deepcopy(zPrimeMax)
         if isinstance(zPrimeMax, (tuple, list)):
             # if units are not provided, we expect mrad here
             zPrimeMax = [raycing.auto_units_angle(zPrimeMax[0],
@@ -445,6 +451,7 @@ class SourceBase:
         else:
             self._zPrimeMax = abs(zPrimeMax) * 1e-3
             self._zPrimeMin = -self._zPrimeMax
+        self._zPrimeMaxInit = source
         self.needReset = True
 
     @property

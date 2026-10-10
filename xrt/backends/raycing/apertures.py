@@ -161,6 +161,7 @@ class RectangularAperture(object):
             Per-aperture xrtGlow size overrides. Missing keys and values set
             to None use the corresponding global scene setting.
 
+
         """
         self.bl = bl
         if bl is not None:
@@ -186,9 +187,7 @@ class RectangularAperture(object):
         self.center = center
 #        if any([xc == 'auto' for xc in self.center]):
 #            self._center = copy.copy(self.center)
-        self._x = x
-        self._z = z
-        self._set_orientation()
+        self.set_orientation(x, z)
 
         self.limOptX = kwargs.get('limOptX', [-500, 500])
         self.limOptY = kwargs.get('limOptY', [-500, 500])
@@ -233,6 +232,7 @@ class RectangularAperture(object):
 
     @x.setter
     def x(self, x):
+        self._xInit = copy.copy(x)
         self._x = copy.copy(x)
         self._set_orientation()
 
@@ -303,6 +303,7 @@ class RectangularAperture(object):
 
     @z.setter
     def z(self, z):
+        self._zInit = copy.copy(z)
         self._z = copy.copy(z)
         self._set_orientation()
 
@@ -318,9 +319,11 @@ class RectangularAperture(object):
         self._x, self.y, self._z = self.xyz
 
     def set_orientation(self, x=None, z=None):
-        """Compatibility method. All calculations moved to setters."""
-        self._x = x
-        self._z = z
+        """Set both input axes before resolving the aperture orientation."""
+        self._xInit = copy.copy(x)
+        self._zInit = copy.copy(z)
+        self._x = copy.copy(x)
+        self._z = copy.copy(z)
         self._set_orientation()
 
     def _sync_blades_from_legacy(self):
@@ -658,9 +661,7 @@ class SetOfRectangularAperturesOnZActuator(RectangularAperture):
         self.center = center
 #        if any([xc == 'auto' for xc in self.center]):
 #            self._center = copy.copy(self.center)
-        self._x = x
-        self._z = z
-        self._set_orientation()
+        self.set_orientation(x, z)
 
         self.zActuator = center[2] if zActuator is None else zActuator
         self.z0 = center[2]
@@ -780,9 +781,7 @@ class RoundAperture(object):
         self.center = center
 #        if any([xc == 'auto' for xc in self.center]):
 #            self._center = copy.copy(self.center)
-        self._x = x
-        self._z = z
-        self._set_orientation()
+        self.set_orientation(x, z)
 
         self.r = r
         self.alarmLevel = alarmLevel
@@ -804,6 +803,7 @@ class RoundAperture(object):
 
     @x.setter
     def x(self, x):
+        self._xInit = copy.copy(x)
         self._x = copy.copy(x)
         self._set_orientation()
 #        self.update_orientation_quaternion()
@@ -814,6 +814,7 @@ class RoundAperture(object):
 
     @z.setter
     def z(self, z):
+        self._zInit = copy.copy(z)
         self._z = copy.copy(z)
         self._set_orientation()
 #        self.update_orientation_quaternion()
@@ -830,9 +831,11 @@ class RoundAperture(object):
         self._x, self.y, self._z = self.xyz
 
     def set_orientation(self, x=None, z=None):
-        """Compatibility method. All calculations moved to setters."""
-        self._x = x
-        self._z = z
+        """Set both input axes before resolving the aperture orientation."""
+        self._xInit = copy.copy(x)
+        self._zInit = copy.copy(z)
+        self._x = copy.copy(x)
+        self._z = copy.copy(z)
         self._set_orientation()
 
     def get_divergence(self, source):
@@ -1148,6 +1151,7 @@ class PolygonalAperture(object):
             relative to the number of incident rays. If exceeded, an alarm
             output is printed in the console.
 
+
         """
         self.bl = bl
         if bl is not None:
@@ -1173,9 +1177,7 @@ class PolygonalAperture(object):
         self.center = center
 #        if any([xc == 'auto' for xc in self.center]):
 #            self._center = self.center
-        self._x = x
-        self._z = z
-        self._set_orientation()
+        self.set_orientation(x, z)
 
         self._vertices = None
         self.vertices = opening if opening is not None else vertices
@@ -1200,6 +1202,7 @@ class PolygonalAperture(object):
 
     @x.setter
     def x(self, x):
+        self._xInit = copy.copy(x)
         self._x = copy.copy(x)
         self._set_orientation()
 #        self.update_orientation_quaternion()
@@ -1210,6 +1213,7 @@ class PolygonalAperture(object):
 
     @z.setter
     def z(self, z):
+        self._zInit = copy.copy(z)
         self._z = copy.copy(z)
         self._set_orientation()
 #        self.update_orientation_quaternion()
@@ -1246,9 +1250,11 @@ class PolygonalAperture(object):
         self._x, self.y, self._z = self.xyz
 
     def set_orientation(self, x=None, z=None):
-        """Compatibility method. All calculations moved to setters."""
-        self._x = x
-        self._z = z
+        """Set both input axes before resolving the aperture orientation."""
+        self._xInit = copy.copy(x)
+        self._zInit = copy.copy(z)
+        self._x = copy.copy(x)
+        self._z = copy.copy(z)
         self._set_orientation()
 
     def set_optical_limits(self):

@@ -17,6 +17,7 @@ from .._constants import path_to_xrt, myTab, _DEBUG_  # analysis:ignore
 
 from ...commons import qt  # analysis:ignore
 from ...commons import ext  # analysis:ignore
+from ...commons.codegen import path_literal
 import xrt  #analysis:ignore
 from ....backends import raycing  # analysis:ignore
 from ....backends.raycing import sources as rsources  # analysis:ignore
@@ -74,18 +75,37 @@ class XrtQook(QookScanMixin, XrtQookElements):
             if beamName not in outBeams:
                 self.beamModel.takeRow(ibm)
 
+    def updateCalculatedTreeValue(self, data):
+        oeid, argName, _ = data
+        oeLine = self.beamLine.oesDict.get(oeid)
+        obj = oeLine[0] if oeLine is not None else\
+            self.beamLine.materialsDict.get(
+                oeid, self.beamLine.fesDict.get(oeid))
+        if argName in raycing.calculatedArgSet or\
+                (argName is not None and
+                 hasattr(obj, f'_{argName}Init')):
+            self.updateBeamlineModel((oeid, {}))
+
     def updateBeamlineModel(self, data):
         oeid, kwargs = data
+        oeObj = None
+        kwargs = dict(kwargs)
 
         if oeid in self.beamLine.oesDict:
+            oeObj = self.beamLine.oesDict[oeid][0]
+            for argName in raycing.calculatedArgSet:
+                if hasattr(oeObj, argName):
+                    kwargs[argName] = getattr(oeObj, argName)
             model = self.beamLineModel
             tree = self.tree
             rootItem = self.rootBLItem
         elif oeid in self.beamLine.materialsDict:
+            oeObj = self.beamLine.materialsDict[oeid]
             model = self.materialsModel
             tree = self.matTree
             rootItem = self.rootMatItem
         elif oeid in self.beamLine.fesDict:
+            oeObj = self.beamLine.fesDict[oeid]
             model = self.fesModel
             tree = self.feTree
             rootItem = self.rootFEItem
@@ -105,6 +125,10 @@ class XrtQook(QookScanMixin, XrtQookElements):
                         if str(pItem.text()) == 'properties':
                             for k in range(pItem.rowCount()):
                                 pNItem = pItem.child(k, 0)
+                                paramName = str(pNItem.text())
+                                if hasattr(oeObj, f'_{paramName}Init'):
+                                    kwargs[paramName] = getattr(
+                                        oeObj, paramName)
                                 for argName, argValue in kwargs.items():
                                     if str(pNItem.text()) == argName:
                                         refKind = raycing.ref_kind_for_arg(
@@ -115,8 +139,14 @@ class XrtQook(QookScanMixin, XrtQookElements):
                                                 refKind, target='display')
 
                                         pVItem = pItem.child(k, 1)
-                                        self.setParamItemValue(
-                                            pVItem, argName, argValue)
+                                        if oeObj is not None and\
+                                                (argName in raycing.calculatedArgSet or
+                                                 hasattr(oeObj, f'_{argName}Init')):
+                                            self.setCalculatedParamItemValue(
+                                                pVItem, argName, oeObj)
+                                        else:
+                                            self.setParamItemValue(
+                                                pVItem, argName, argValue)
                                         updatedItems.append(pVItem)
                             break
                     break
@@ -218,6 +248,7 @@ class XrtQook(QookScanMixin, XrtQookElements):
 
             self.paintStatus(paintItem, initStatus)
 
+        self.updateBeamlineModel((matId, {}))
         if self.blViewer is None or not outDict:
             self.refreshFlowPanel()
             return
@@ -302,6 +333,7 @@ class XrtQook(QookScanMixin, XrtQookElements):
 
             self.paintStatus(paintItem, initStatus)
 
+        self.updateBeamlineModel((feId, {}))
         if self.blViewer is None or not outDict:
             self.refreshFlowPanel()
             return
@@ -414,8 +446,7 @@ class XrtQook(QookScanMixin, XrtQookElements):
                 if not outDict and oeLine is not None:
                     dependentValues = raycing.get_dependent_arg_values(
                         oeLine[0], (argName,))
-                    if dependentValues:
-                        self.updateBeamlineModel((oeid, dependentValues))
+                    self.updateBeamlineModel((oeid, dependentValues))
 
                 if outDict:  # updating flow
                     flowRec = self.beamLine.flowU.get(oeid)
@@ -461,6 +492,7 @@ class XrtQook(QookScanMixin, XrtQookElements):
 
                     paintItem = item.parent().child(item.row(), 1)
                     self.paintStatus(paintItem, initStatus)
+                    self.updateBeamlineModel((oeid, {}))
 
             self.refreshFlowPanel()
             if self.blViewer is None or not outDict:
@@ -470,6 +502,7 @@ class XrtQook(QookScanMixin, XrtQookElements):
                     oeid, outDict, sender='Qook')
 
     def generateCode(self):
+        self.refreshInputValues()
         self.progressBar.setValue(0)
         self.progressBar.setFormat("Flattening structure.")
         for tree, item in zip([self.tree, self.matTree, self.feTree,
@@ -487,8 +520,8 @@ class XrtQook(QookScanMixin, XrtQookElements):
         codeHeader = """# -*- coding: utf-8 -*-\n\"\"\"\n
 __author__ = \"Konstantin Klementiev\", \"Roman Chernikov\"
 __date__ = \"{0}\"\n\nCreated with xrtQook\n\n\n{2}\n\n"\"\"\n
-import numpy as np\nimport sys\nsys.path.append(r\"{1}\")\n""".format(
-            str(date.today()), path_to_xrt, self.fileDescription)
+import numpy as np\nimport sys\nsys.path.append({1})\n""".format(
+            str(date.today()), path_literal(path_to_xrt), self.fileDescription)
         codeDeclarations = """\n"""
         codeBuildBeamline = "\ndef build_beamline():\n"
         codeBuildBeamline += '{2}bl = {1}.BeamLine('.format(
@@ -508,7 +541,7 @@ import numpy as np\nimport sys\nsys.path.append(r\"{1}\")\n""".format(
                     paravalue = self.getParamItemValue(
                         blPropItem.child(iep, 1))
                     if paravalue != str(arg_def):
-                        paravalue = self.quotize(paravalue)
+                        paravalue = self.quotize(paravalue, paraname)
                         codeBuildBeamline += '\n{2}{0}={1},'.format(
                             paraname, paravalue, myTab*2)
         codeBuildBeamline = codeBuildBeamline.rstrip(',') + ')\n\n'
@@ -561,7 +594,8 @@ if __name__ == '__main__':
                                                 ['tlayer', 'blayer',
                                                  'coating', 'substrate',
                                                  'materialsindex']:
-                                            paravalue = self.quotize(paravalue)
+                                            paravalue = self.quotize(
+                                                paravalue, paraname)
                                         ieinit += '\n{2}{0}={1},'.format(
                                             paraname, paravalue, myTab)
                     codeDeclarations += '{0} = {1})\n\n'.format(
@@ -596,7 +630,8 @@ if __name__ == '__main__':
                                             paravalue == 'bl':
                                         if paraname.lower() not in\
                                                 ['basefe']:
-                                            paravalue = self.quotize(paravalue)
+                                            paravalue = self.quotize(
+                                                paravalue, paraname)
                                         ieinit += '\n{2}{0}={1},'.format(
                                             paraname, paravalue, myTab)
                     codeDeclarations += '{0} = {1})\n\n'.format(
@@ -663,7 +698,7 @@ if __name__ == '__main__':
                             if paraname.lower() not in\
                                     ['bl', 'center', 'material',
                                      'material2', 'figureerror']:
-                                paravalue = self.quotize(paravalue)
+                                paravalue = self.quotize(paravalue, paraname)
                             ieinit += '\n{2}{0}={1},'.format(
                                 paraname, paravalue, myTab*2)
             for ieph in range(tItem.rowCount()):
@@ -812,7 +847,8 @@ if __name__ == '__main__':
                                                         paravalue)
 
                                 ieinit += u'\n{2}{0}={1},'.format(
-                                    paraname, self.quotize(paravalue), myTab*3)
+                                    paraname, self.quotize(paravalue, paraname),
+                                    myTab*3)
                         ieinit = ieinit.rstrip(",") + "),"
                     else:
                         paraname = str(tItem.child(iep, 0).text())
@@ -895,7 +931,8 @@ if __name__ == '__main__':
                                                                   1).text()),
                                                 paravalue)
                                 ieinit += '\n{2}{0}={1},'.format(
-                                    paraname, self.quotize(paravalue), myTab*2)
+                                    paraname, self.quotize(paravalue, paraname),
+                                    myTab*2)
             codePlots += ieinit.rstrip(",") + ")\n"
             description = self.glowScanDescription()
             if self._has_glow_scan(description):
@@ -931,11 +968,11 @@ if __name__ == '__main__':
                     if paraname == "plots":
                         paravalue = str(self.rootPlotItem.text())
                     if paraname == "backend":
-                        paravalue = 'r\"{0}\"'.format(paravalue)
+                        paravalue = repr(paravalue)
                     argVal = runParams.get(paraname)
                     if str(paravalue) != str(argVal):
                         if paravalue == 'auto':
-                            paravalue = self.quotize(paravalue)
+                            paravalue = self.quotize(paravalue, paraname)
                         ieinit += "{0}{1}={2},\n".format(
                             myTab*2, paraname, paravalue)
             codeMain += ieinit.rstrip(",\n") + ")\n"

@@ -45,6 +45,7 @@ import platform as pythonplatform  # analysis:ignore
 import webbrowser  # analysis:ignore
 
 from ...commons import ext, config  # analysis:ignore
+from ...commons.codegen import path_literal
 
 sys.path.append(os.path.join('..', '..', '..', '..'))
 import xrt  #analysis:ignore
@@ -1228,7 +1229,7 @@ class XrtQookBase(qt.QMainWindow):
                     obj, e))
             objParams = []
         for arg, argVal in objParams:
-            showVal = self.quotize(argVal)
+            showVal = self.quotize(argVal, arg)
             try:
                 showVal = showVal.strip('r') if showVal.startswith('r"') else\
                     showVal
@@ -1604,13 +1605,38 @@ class XrtQookBase(qt.QMainWindow):
             displayValue = self.formatParamDisplay(paramName, value)
         item.setText(displayValue)
 
+    def setCalculatedParamItemValue(self, item, paramName, obj):
+        calculated = getattr(obj, f'_{paramName}Val', None)
+        if calculated is None:
+            calculated = getattr(obj, paramName)
+        rawValue = getattr(obj, f'_{paramName}', None)
+        if hasattr(obj, f'_{paramName}Init'):
+            sourceValue = getattr(obj, f'_{paramName}Init')
+        elif paramName in raycing.calculatedArgSet and\
+                isinstance(rawValue, (list, tuple)):
+            sourceValue = rawValue
+        else:
+            sourceValue = getattr(obj, paramName)
+        self.setParamItemValue(item, paramName, sourceValue)
+        if isinstance(sourceValue, (list, tuple)):
+            item.setText(str(sourceValue))
+
+        nameItem = item.parent().child(item.row(), 0)
+        qt.set_param_tooltip(
+            nameItem, item, paramName, _getArgumentUnit(paramName, obj),
+            calculated=calculated)
+
     def getParamItemValue(self, item):
         rawValue = item.data(qt.RAW_VALUE_ROLE)
         textValue = str(item.text())
-        if rawValue is not None and (
-                str(rawValue) == textValue or
-                self.formatParamDisplay('', rawValue) == textValue):
-            return str(rawValue)
+        if rawValue is not None:
+            parent = item.parent()
+            nameItem = parent.child(item.row(), 0) if parent is not None\
+                else item.model().item(item.row(), 0)
+            paramName = str(nameItem.text())
+            if str(rawValue) == textValue or\
+                    self.formatParamDisplay(paramName, rawValue) == textValue:
+                return str(rawValue)
         return textValue
 
     def addProp(self, parent, propName):
@@ -2196,6 +2222,12 @@ class XrtQookBase(qt.QMainWindow):
         self.confText += '\t\t]]></scanDescription>\n'
         self.confText += '\t</xrtGlow>\n'
 
+    def refreshInputValues(self):
+        """Refresh retained inputs before serializing cached tree values."""
+        for objId in list(self.beamLine.oesDict) +\
+                list(self.beamLine.materialsDict) + list(self.beamLine.fesDict):
+            self.updateBeamlineModel((objId, {}))
+
     def exportLayout(self):
         saveStatus = False
         self.beamModel.sort(3)
@@ -2219,6 +2251,7 @@ class XrtQookBase(qt.QMainWindow):
                 config.put(config.configPaths, section, what, layoutFileName)
                 config.write_configs()
         if self.layoutFileName != "":
+            self.refreshInputValues()
             if self.layoutFileName.lower().endswith("json"):
                 _ = self.beamLine.export_to_json()
                 plotsDict = self.treeToDict(self.rootPlotItem)
@@ -2985,16 +3018,19 @@ class XrtQookBase(qt.QMainWindow):
         except:  # analysis:ignore
             return str(value)
 
-    def quotize(self, value):
+    def quotize(self, value, argName=None):
         try:
             dummy = unicode  # test for Python3 compatibility analysis:ignore
         except NameError:
             unicode = str
         value = self.getVal(value)
+        if argName in raycing.filenameArgSet and isinstance(
+                value, (str, unicode, list, tuple)):
+            return path_literal(value)
         if isinstance(value, (str, unicode)):
             if 'np.' not in value and\
                     (str(self.rootBLItem.text())+'.') not in value:
-                value = 'r\"{}\"'.format(value)
+                value = repr(value)
 #        if str(value) == 'round':
 #            value = 'r\"{}\"'.format(value)
         if isinstance(value, tuple):
@@ -3002,7 +3038,7 @@ class XrtQookBase(qt.QMainWindow):
         return str(value)
 
     def quotizeAll(self, value):
-        return str('r\"{}\"'.format(value))
+        return repr(str(value))
 
     def parametrize(self, value):
         try:
@@ -3096,6 +3132,8 @@ class XrtQookBase(qt.QMainWindow):
                     self.blViewer.loadTemplateScene(self.layoutFileName)
                 self.blViewer.customGlWidget.updateQookTree.connect(
                     self.updateBeamlineModel)
+                self.blViewer.customGlWidget.oePropsUpdated.connect(
+                    self.updateCalculatedTreeValue)
             except AttributeError:
                 pass
             except Exception as e:

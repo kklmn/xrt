@@ -24,6 +24,7 @@ else:
 from .singletons import is_sequence
 from ._sets_units import (
     allBeamFields, orientationArgSet, shapeArgSet, derivedArgSet,
+    calculatedArgSet,
     renderOnlyArgSet, compoundArgs, dependentArgGroups, diagnosticArgs,
     allUnitsAng,
     allUnitsAngStr, allUnitsLen, allUnitsLenStr, allUnitsEnergy,
@@ -111,23 +112,18 @@ def auto_units_angle(angle, defaultFactor=1., aliases=None):
                     return aliasValue
         if len(re.findall("auto", angle)) > 0:
             return angle
-        elif len(re.findall("mrad", angle)) > 0:
-            return float(angle.split("m")[0].strip())*1e-3
-        elif len(re.findall(r"[uµ]rad", angle)) > 0:
-            magnitude = re.split(r"[uµ]rad", angle, maxsplit=1)[0]
-            return float(magnitude.strip())*1e-6
-        elif len(re.findall("nrad", angle)) > 0:
-            return float(angle.split("n")[0].strip())*1e-9
-        elif len(re.findall("rad", angle)) > 0:
-            return float(angle.split("r")[0].strip())
-        elif len(re.findall("deg", angle)) > 0:
-            return np.radians(float(angle.split("d")[0].strip()))
-        else:
-            try:
-                return float(angleText)*defaultFactor
-            except ValueError:
-                print("Could not identify the units")
-                return angle
+        unitText = angleText.replace('\u00b5rad', 'urad')
+        unitText = re.sub(r'degrees?$', 'deg', unitText)
+        unitText = re.sub(r'radians?$', 'rad', unitText)
+        for unit in sorted(allUnitsAng, key=len, reverse=True):
+            if unitText.endswith(unit):
+                magnitude = unitText[:-len(unit)].strip()
+                return float(magnitude) * allUnitsAng[unit]
+        try:
+            return float(angleText) * defaultFactor
+        except ValueError:
+            print("Could not identify the units")
+            return angle
     elif angle is None or isinstance(angle, (list, tuple)):
         return angle
     else:
@@ -815,8 +811,7 @@ def get_init_kwargs(oeObj, compact=True, needRevG=False, blname=None,
                 if arg == 'data':
                     continue
                 rawValue = getattr(oeObj, f'_{arg}', None)
-                if not resolveAuto and arg in (
-                        'R', 'r', 'Rm', 'Rs', 'focus', 'nCRL') and\
+                if not resolveAuto and arg in calculatedArgSet and\
                         isinstance(rawValue, (list, tuple)):
                     realval = rawValue
                 elif hasattr(oeObj, f'_{arg}Init') and not resolveAuto:

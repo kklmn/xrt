@@ -120,7 +120,7 @@ class Element(object):
             :class:`Material`.
 
 
-           """
+        """
 
         self.table = table
         self.elem = elem  # For compatibility and dynamic update

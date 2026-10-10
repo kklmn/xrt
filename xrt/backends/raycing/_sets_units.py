@@ -23,9 +23,14 @@ shapeArgSet = {'limPhysX', 'limPhysY', 'limPhysX2', 'limPhysY2',
                'surfaceHintX', 'surfaceHintY',
                'focus', 'zmax', 't', 'nCRL'}  # TODO: sources
 
-derivedArgSet = {'center', 'pitch', 'bragg', 'R', 'r', 'Rm', 'Rs'}
+calculatedArgSet = {'R', 'r', 'Rm', 'Rs', 'focus', 'nCRL'}
+derivedArgSet = {'center', 'pitch', 'bragg'} | calculatedArgSet
 
 renderOnlyArgSet = {'renderStyle', 'renderSize', 'name'}
+
+# String-valued arguments interpreted as filenames during code generation.
+filenameArgSet = {'fileName', 'efficiencyFile', 'saveName',
+                  'persistentName', 'customField'}
 
 compoundArgs = {'center': ['x', 'y', 'z'],
                 'x': ['x', 'y', 'z'],
@@ -66,6 +71,7 @@ diagnosticArgs = ('gamma', 'E1', 'eSigmaXprime', 'eSigmaZprime',
 allUnitsAng = {'rad': 1.,
                'mrad': 1e-3,
                'urad': 1e-6,
+               'nrad': 1e-9,
                'deg': np.pi/180.,
                'mdeg': 1e-3*np.pi/180.,
                'arcsec': np.pi/180./3600.}
@@ -73,6 +79,7 @@ allUnitsAng = {'rad': 1.,
 allUnitsAngStr = {'rad': u'rad',
                   'mrad': u'mrad',
                   'urad': u'µrad',
+                  'nrad': u'nrad',
                   'deg': u'°',
                   'mdeg': u'm°',
                   'arcsec': r'arcsec'}
@@ -214,23 +221,28 @@ def auto_unit(lbl, unit):
 
 
 # Input grammars shared by the GUI argument delegates. Tuple keys describe
-# accepted alternatives. Arguments not found here are strings by default. For
-# names present in compoundArgs, the grammar is applied to every component and
-# compoundArgs supplies the required length.
+# accepted alternatives. sequence:<type> declares the member grammar;
+# untyped sequences retain their argument-specific rules. compoundArgs supplies
+# fixed lengths, with component alternatives handled by compound validators.
+# Arguments not found here are strings by default.
 argumentInputGroups = {
-    ('scalar', 'None'): {
+    ('float', 'None'): {
         'alarmLevel', 'compressX', 'compressZ', 'eSigmaX', 'eSigmaZ',
         'fixedOffset', 'limOptX', 'limOptX2', 'limOptY', 'limOptY2',
         'limPhysX', 'limPhysX2', 'limPhysY', 'limPhysY2', 'p', 'q', 'R0',
-        'Rm', 'RmBragg', 'rho', 'Rs', 'RsBragg', 'seed', 't', 'thinnestZone',
-        'totalFlux', 'zmax', 'pickleEvery', 'repeats', 'updateEvery',
+        'RmBragg', 'rho', 'RsBragg', 't', 'thinnestZone',
+        'totalFlux', 'zmax',
         'factor', 'a', 'V', 'fixedEnergy'},
-    ('scalar', 'inf'): {'substThickness'},
-    ('scalar', 'half', 'all'): {'processes', 'threads'},
-    ('scalar', 'auto'): {'center', 'x', 'z'},
-    ('scalar', 'sequence'): {'dx', 'dy', 'dz', 'focus', 'nCRL', 'rms', 'r',
-                             'R', 'w0'},
-    ('scalar', 'sequence', 'None'): {'order', 'taper'},
+    ('integer', 'None'): {'seed', 'pickleEvery', 'repeats', 'updateEvery'},
+    ('float', 'inf'): {'substThickness'},
+    ('integer', 'half', 'all'): {'processes', 'threads'},
+    ('float', 'auto'): {'center'},
+    ('sequence:float', 'auto'): {'x', 'z'},
+    ('float', 'sequence:float'): {'dx', 'dy', 'dz', 'focus', 'nCRL', 'rms',
+                                  'w0'},
+    ('float', 'sequence'): {'r', 'R'},
+    ('float', 'sequence:float', 'None'): {'taper', 'Rm', 'Rs'},
+    ('integer', 'sequence:integer', 'None'): {'order'},
     'angle': {
         'antiblaze', 'blaze', 'braggOffset', 'cryst1roll', 'mosaicity',
         'cryst2finePitch', 'cryst2pitch', 'cryst2roll', 'extraPitch',
@@ -239,13 +251,13 @@ argumentInputGroups = {
         'positionRoll', 'roll', 'slopeAngle', 'theta', 'wedgeAngle', 'yaw'},
     ('angle', 'None'): {'alpha'},
     ('angle', 'energy', 'auto'): {'bragg', 'pitch'},
-    ('angle', 'sequence'): {
+    ('angle', 'sequence:angle'): {
         'dxprime', 'dzprime', 'xPrimeMax', 'zPrimeMax'},
     'energy': {'E', 'eE', 'eMax', 'eMin'},
     'string': {
         'afterScript', 'crossSection', 'extraRotationSequence',
         'name', 'orientation', 'rotationSequence', 'title',
-        'bl', 'customField', 'efficiencyFile', 'fileName',
+        'customField', 'efficiencyFile', 'fileName',
         'persistentName', 'saveName', 'beam',
         },
     'format': {'fwhmFormatStr', 'contourFmt', 'fluxFormatStr'},
@@ -257,29 +269,88 @@ argumentInputGroups = {
         'contourLevels', 'efficiency', 'energyRange', 'generatorArgs',
         'gratingDensity', 'limits', 'pAxis', 'parabolaAxis', 'quantities',
         'surface', 'targetE', 'jack1', 'jack2', 'jack3', 'tx1', 'tx2'},
-    ('string', 'sequence'): {'elements'},
+    ('string', 'sequence:string'): {'elements'},
     ('string', 'sequence', 'None'): {'refractiveIndex'},
     'dict': {'afterScriptKWargs', 'blades', 'generatorKWargs', 'renderSize'},
     ('sequence', 'inf', 'None'): {'f1', 'f2'},
-    'scalar': {
+    'integer': {
+        'eN', 'gIntervals', 'N', 'nPairs', 'nRK', 'nSpokes', 'nx', 'nz',
+        'nrays', 'ppb', 'bins', 'vortexNradial', 'ePos', 'xPos', 'yPos'},
+    'float': {
         'amplitude', 'B0', 'B0x', 'B0y', 'betaX', 'betaZ', 'bumpHeight',
         'b', 'bThickness', 'bThicknessLow', 'c', 'cameraAngle',
         'cameraDistance', 'coordOffset', 'azimuth', 'height',
         'corrLength', 'cryst2longTransl', 'cryst2perpTransl', 'cX', 'cY',
         'd', 'depth', 'dxFacet', 'dxGap', 'dyFacet', 'dyGap', 'eEpsilonX',
-        'eEpsilonZ', 'eEspread', 'eI', 'eN', 'ellipseA', 'ellipseB', 'f',
-        'factDW', 'gIntervals', 'gp', 'gridStep', 'idThickness', 'K', 'Kx',
-        'Ky', 'L0', 'materialsIndex', 'n', 'N', 'nPairs', 'nRK', 'nSpokes',
-        'nx', 'nz', 'period', 'phaseShift', 'phi0',
-        'contourFactor', 'ePos', 'offset', 'phiOffset', 'ppb', 'px', 'pz',
-        'r0', 'raycingParam', 'rx', 'rz', 'nrays',
+        'eEpsilonZ', 'eEspread', 'eI', 'ellipseA', 'ellipseB', 'f',
+        'factDW', 'gp', 'gridStep', 'idThickness', 'K', 'Kx',
+        'Ky', 'L0', 'materialsIndex', 'n', 'period', 'phaseShift', 'phi0',
+        'contourFactor', 'offset', 'phiOffset', 'px', 'pz',
+        'r0', 'raycingParam', 'rx', 'rz',
         'nu', 'power', 'rotations', 'scaleVec', 'shadeFraction', 'sigmaX',
         'sigmaY', 'substRoughness',
         'tK', 'tThickness', 'tThicknessLow', 'thetaOffset', 'vortex',
-        'vortexNradial', 'vorticity', 'workingDistance', 'xPos', 'yPos',
-        'xWaveLength', 'yWaveLength', 'tVec', 'bins', 'outline', 'beta',
+        'vorticity', 'workingDistance',
+        'xWaveLength', 'yWaveLength', 'tVec', 'outline', 'beta',
         'gamma', 'xCylinder1', 'hCylinder1', 'xCylinder2', 'hCylinder2'},
     }
+
+
+# Optional instructions for input types. auto and None have no extra help.
+argumentInputTooltips = {
+    'angle': (
+        'Enter an angle with an optional unit, e.g. <nobr><code>3 mrad</code></nobr> '
+        'or <nobr><code>0.2 deg</code></nobr>.\n'
+        'Bare numbers use {unit}.\n'
+        '<b>Units:</b> {angleUnits}.'),
+    'integer': (
+        'Enter a whole number.\n'
+        'Scientific notation and arithmetic are accepted '
+        'when the result is a whole number.'),
+}
+
+# Parameter-specific instructions override generic input-type instructions.
+argumentTooltips = {
+    'order': 'Diffraction order, or a sequence of integer diffraction orders.',
+    'nCRL': (
+        '<b>Number:</b> rounded to the nearest integer; minimum 1.\n'
+        '<b>Tuple:</b> <nobr><code>(focalDistance, E)</code></nobr> in mm and eV '
+        'calculates the count.\n\n'
+        'Keep <code>focus</code> numeric.'),
+    'focus': (
+        'Parabola focal parameter in mm.\n'
+        'For a target lens focal distance, enter '
+        '<nobr><code>(focalDistance, E)</code></nobr> in mm and eV.\n\n'
+        'Keep <code>nCRL</code> numeric.'),
+    'R': (
+        'Meridional radius in mm, or <nobr><code>(p, q)</code></nobr>\n'
+        'with object and image distances in mm.\n'
+        'Elements supporting an explicit angle also accept '
+        '<nobr><code>(p, q, pitch)</code></nobr>, with an optional angular unit '
+        'for <code>pitch</code>.'),
+    'r': (
+        'Sagittal radius in mm, or <nobr><code>(p, q)</code></nobr>\n'
+        'with object and image distances in mm.\n'
+        'Elements supporting an explicit angle also accept '
+        '<nobr><code>(p, q, pitch)</code></nobr>, with an optional angular unit '
+        'for <code>pitch</code>.'),
+    'Rm': (
+        'Meridional radius in mm.\n'
+        'On elements supporting automatic focusing, '
+        'enter <nobr><code>(p, q)</code></nobr> with object and image distances in mm.'),
+    'Rs': (
+        'Sagittal radius in mm.\n'
+        'On elements supporting automatic focusing, '
+        'enter <nobr><code>(p, q)</code></nobr> with object and image distances in mm.'),
+    'pitch': (
+        'Enter an angle, e.g. <nobr><code>3 mrad</code></nobr> or <nobr><code>0.2 deg</code></nobr>,\n'
+        'or an alignment energy, e.g. <nobr><code>9 keV</code></nobr>.\n\n'
+        'Bare numbers use {unit}.'),
+    'bragg': (
+        'Enter an angle, e.g. <nobr><code>3 mrad</code></nobr> or <nobr><code>0.2 deg</code></nobr>,\n'
+        'or an alignment energy, e.g. <nobr><code>9 keV</code></nobr>.\n\n'
+        'Bare numbers use {unit}.'),
+}
 
 
 # No unresolved argument input types at present.

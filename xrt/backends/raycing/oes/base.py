@@ -346,8 +346,7 @@ class OE(OEMainMethods):
 
     @pitch.setter
     def pitch(self, pitch):
-        if isinstance(pitch, (raycing.basestring, list, tuple)):
-            self._pitchInit = copy.deepcopy(pitch)  # For glow auto-recognition
+        self._pitchInit = copy.deepcopy(pitch)
         if isinstance(pitch, (list, tuple)):
             raycing.warn_deprecated_list_auto_align('pitch')
 
@@ -405,6 +404,7 @@ class OE(OEMainMethods):
     @roll.setter
     def roll(self, roll):
         self._roll = raycing.auto_units_angle(roll)
+        self._rollInit = copy.deepcopy(roll)
         if hasattr(self, '_reset_pq'):
             self._reset_pq()
 
@@ -415,6 +415,7 @@ class OE(OEMainMethods):
     @yaw.setter
     def yaw(self, yaw):
         self._yaw = raycing.auto_units_angle(yaw)
+        self._yawInit = copy.deepcopy(yaw)
         if hasattr(self, '_reset_pq'):
             self._reset_pq()
 
@@ -425,6 +426,7 @@ class OE(OEMainMethods):
     @extraPitch.setter
     def extraPitch(self, extraPitch):
         self._extraPitch = raycing.auto_units_angle(extraPitch)
+        self._extraPitchInit = copy.deepcopy(extraPitch)
 
     @property
     def extraRoll(self):
@@ -433,6 +435,7 @@ class OE(OEMainMethods):
     @extraRoll.setter
     def extraRoll(self, extraRoll):
         self._extraRoll = raycing.auto_units_angle(extraRoll)
+        self._extraRollInit = copy.deepcopy(extraRoll)
 
     @property
     def extraYaw(self):
@@ -441,6 +444,7 @@ class OE(OEMainMethods):
     @extraYaw.setter
     def extraYaw(self, extraYaw):
         self._extraYaw = raycing.auto_units_angle(extraYaw)
+        self._extraYawInit = copy.deepcopy(extraYaw)
 
     @property
     def positionRoll(self):
@@ -449,6 +453,7 @@ class OE(OEMainMethods):
     @positionRoll.setter
     def positionRoll(self, positionRoll):
         self._positionRoll = raycing.auto_units_angle(positionRoll)
+        self._positionRollInit = copy.deepcopy(positionRoll)
         if hasattr(self, '_reset_pq'):
             self._reset_pq()
 
@@ -548,6 +553,7 @@ class OE(OEMainMethods):
         cos(alpha) and sin(alpha) which are then used for rotating the normal
         to the crystal planes."""
         self._alpha = raycing.auto_units_angle(alpha)
+        self._alphaInit = copy.deepcopy(alpha)
         if self._alpha is not None:
             self.cosalpha = np.cos(self._alpha)
             self.sinalpha = np.sin(self._alpha)
