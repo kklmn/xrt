@@ -130,7 +130,6 @@
 				<parameters type="prop">
 					<beam type="param">geometricSource01_global</beam>
 					<onlyPositivePath type="param">False</onlyPositivePath>
-					<withHistogram type="param">False</withHistogram>
 				</parameters>
 				<_object type="param">xrt.backends.raycing.screens.Screen.expose</_object>
 				<output type="prop">

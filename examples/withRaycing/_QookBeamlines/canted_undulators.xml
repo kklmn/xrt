@@ -107,7 +107,6 @@
 				<parameters type="prop">
 					<beam type="param">bendingMagnet01_global</beam>
 					<onlyPositivePath type="param">False</onlyPositivePath>
-					<withHistogram type="param">False</withHistogram>
 				</parameters>
 				<_object type="param">xrt.backends.raycing.screens.Screen.expose</_object>
 				<output type="prop">
@@ -190,7 +189,6 @@
 				<parameters type="prop">
 					<beam type="param">undulator02_global</beam>
 					<onlyPositivePath type="param">False</onlyPositivePath>
-					<withHistogram type="param">False</withHistogram>
 				</parameters>
 				<_object type="param">xrt.backends.raycing.screens.Screen.expose</_object>
 				<output type="prop">
@@ -273,7 +271,6 @@
 				<parameters type="prop">
 					<beam type="param">undulator01_global</beam>
 					<onlyPositivePath type="param">False</onlyPositivePath>
-					<withHistogram type="param">False</withHistogram>
 				</parameters>
 				<_object type="param">xrt.backends.raycing.screens.Screen.expose</_object>
 				<output type="prop">
