@@ -60,10 +60,10 @@
 		<Si type="value">
 			<properties type="prop">
 				<tK type="param">102.15</tK>
-				<a type="param">5.4294018</a>
+				<a type="param">None</a>
 				<hkl type="param">[1, 1, 1]</hkl>
 				<d type="param">3.1346665907686386</d>
-				<V type="param">160.0501</V>
+				<V type="param">None</V>
 				<elements type="param">['Si']</elements>
 				<quantities type="param">[1]</quantities>
 				<rho type="param">0</rho>
@@ -85,10 +85,10 @@
 		<Si_2 type="value">
 			<properties type="prop">
 				<tK type="param">133.15</tK>
-				<a type="param">5.4293852</a>
+				<a type="param">None</a>
 				<hkl type="param">[1, 1, 1]</hkl>
 				<d type="param">3.13465700675417</d>
-				<V type="param">160.04863</V>
+				<V type="param">None</V>
 				<elements type="param">['Si']</elements>
 				<quantities type="param">[1]</quantities>
 				<rho type="param">0</rho>
@@ -186,10 +186,6 @@
 				<z type="param">auto</z>
 				<compressX type="param">None</compressX>
 				<compressZ type="param">None</compressZ>
-				<limPhysX type="param">None</limPhysX>
-				<limPhysY type="param">[0.0, 0.0]</limPhysY>
-				<cLimits type="param">[0.0, 0.0]</cLimits>
-				<histShape type="param">[256, 256]</histShape>
 			</properties>
 			<_object type="param">xrt.backends.raycing.screens.Screen</_object>
 			<expose type="prop">
@@ -235,10 +231,6 @@
 				<z type="param">auto</z>
 				<compressX type="param">None</compressX>
 				<compressZ type="param">None</compressZ>
-				<limPhysX type="param">[0.0, 0.0]</limPhysX>
-				<limPhysY type="param">[0.0, 0.0]</limPhysY>
-				<cLimits type="param">[0.0, 0.0]</cLimits>
-				<histShape type="param">[256, 256]</histShape>
 			</properties>
 			<_object type="param">xrt.backends.raycing.screens.Screen</_object>
 			<expose type="prop">
@@ -346,14 +338,10 @@
 				<bl type="param">beamLine</bl>
 				<name type="param">FSM_VCM</name>
 				<center type="param">[0.0, 26300.0, 0.0]</center>
-				<x type="param">[1, 0, 0]</x>
-				<z type="param">[0, 0, 1]</z>
+				<x type="param">auto</x>
+				<z type="param">auto</z>
 				<compressX type="param">None</compressX>
 				<compressZ type="param">None</compressZ>
-				<limPhysX type="param">[0.0, 0.0]</limPhysX>
-				<limPhysY type="param">[0.0, 0.0]</limPhysY>
-				<cLimits type="param">[0.0, 0.0]</cLimits>
-				<histShape type="param">[256, 256]</histShape>
 			</properties>
 			<_object type="param">xrt.backends.raycing.screens.Screen</_object>
 			<expose type="prop">
@@ -433,8 +421,8 @@
 				<name type="param">BSBlock</name>
 				<center type="param">[0.0, 29100.0, 0.0]</center>
 				<blades type="param">{'bottom': 22}</blades>
-				<x type="param">[1, 0, 0]</x>
-				<z type="param">[0, 0, 1]</z>
+				<x type="param">auto</x>
+				<z type="param">auto</z>
 				<alarmLevel type="param">0</alarmLevel>
 				<renderStyle type="param">mask</renderStyle>
 				<renderSize type="param">{'slitThicknessFraction': None, 'apertureBladeWidth': None, 'apertureDefaultSpan': None, 'apertureThickness': None}</renderSize>
@@ -456,8 +444,8 @@
 				<name type="param">SlitAfterDCM</name>
 				<center type="param">[0.0, 29200.0, 0.0]</center>
 				<blades type="param">{'left': -7, 'right': 7, 'bottom': 34.73996095703098, 'top': 38.73996095703098}</blades>
-				<x type="param">[1, 0, 0]</x>
-				<z type="param">[0, 0, 1]</z>
+				<x type="param">auto</x>
+				<z type="param">auto</z>
 				<alarmLevel type="param">0.5</alarmLevel>
 				<renderStyle type="param">mask</renderStyle>
 				<renderSize type="param">{'slitThicknessFraction': None, 'apertureBladeWidth': None, 'apertureDefaultSpan': None, 'apertureThickness': None}</renderSize>
@@ -478,14 +466,10 @@
 				<bl type="param">beamLine</bl>
 				<name type="param">FSM_DCM</name>
 				<center type="param">[0.0, 29400.0, 42.79]</center>
-				<x type="param">[1, 0, 0]</x>
-				<z type="param">[0, 0, 1]</z>
+				<x type="param">auto</x>
+				<z type="param">auto</z>
 				<compressX type="param">None</compressX>
 				<compressZ type="param">None</compressZ>
-				<limPhysX type="param">[0.0, 0.0]</limPhysX>
-				<limPhysY type="param">[0.0, 0.0]</limPhysY>
-				<cLimits type="param">[0.0, 0.0]</cLimits>
-				<histShape type="param">[256, 256]</histShape>
 			</properties>
 			<_object type="param">xrt.backends.raycing.screens.Screen</_object>
 			<expose type="prop">
@@ -551,8 +535,8 @@
 				<name type="param">SlitAfterVFM</name>
 				<center type="param">[0.0, 31720.0, 0.0]</center>
 				<blades type="param">{'left': -7, 'right': 7, 'bottom': 40.79, 'top': 44.79}</blades>
-				<x type="param">[1, 0, 0]</x>
-				<z type="param">[0, 0, 1]</z>
+				<x type="param">auto</x>
+				<z type="param">auto</z>
 				<alarmLevel type="param">0.5</alarmLevel>
 				<renderStyle type="param">mask</renderStyle>
 				<renderSize type="param">{'slitThicknessFraction': None, 'apertureBladeWidth': None, 'apertureDefaultSpan': None, 'apertureThickness': None}</renderSize>
@@ -573,14 +557,10 @@
 				<bl type="param">beamLine</bl>
 				<name type="param">FSM_VFM</name>
 				<center type="param">[0.0, 32000.0, 42.79]</center>
-				<x type="param">[1, 0, 0]</x>
-				<z type="param">[0, 0, 1]</z>
+				<x type="param">auto</x>
+				<z type="param">auto</z>
 				<compressX type="param">None</compressX>
 				<compressZ type="param">None</compressZ>
-				<limPhysX type="param">[0.0, 0.0]</limPhysX>
-				<limPhysY type="param">[0.0, 0.0]</limPhysY>
-				<cLimits type="param">[0.0, 0.0]</cLimits>
-				<histShape type="param">[256, 256]</histShape>
 			</properties>
 			<_object type="param">xrt.backends.raycing.screens.Screen</_object>
 			<expose type="prop">
@@ -600,8 +580,8 @@
 				<name type="param">OH_PS</name>
 				<center type="param">[0.0, 32070.0, 0.0]</center>
 				<blades type="param">{'left': -20, 'right': 20, 'bottom': 25, 'top': 55}</blades>
-				<x type="param">[1, 0, 0]</x>
-				<z type="param">[0, 0, 1]</z>
+				<x type="param">auto</x>
+				<z type="param">auto</z>
 				<alarmLevel type="param">0.2</alarmLevel>
 				<renderStyle type="param">mask</renderStyle>
 				<renderSize type="param">{'slitThicknessFraction': None, 'apertureBladeWidth': None, 'apertureDefaultSpan': None, 'apertureThickness': None}</renderSize>
@@ -623,8 +603,8 @@
 				<name type="param">slitEH</name>
 				<center type="param">[0.0, 43000.0, 0.0]</center>
 				<blades type="param">{'left': -0.4802124996111384, 'right': 0.4802124996111384, 'bottom': 35.79, 'top': 49.79}</blades>
-				<x type="param">[1, 0, 0]</x>
-				<z type="param">[0, 0, 1]</z>
+				<x type="param">auto</x>
+				<z type="param">auto</z>
 				<alarmLevel type="param">0.5</alarmLevel>
 				<renderStyle type="param">mask</renderStyle>
 				<renderSize type="param">{'slitThicknessFraction': None, 'apertureBladeWidth': None, 'apertureDefaultSpan': None, 'apertureThickness': None}</renderSize>
@@ -645,14 +625,10 @@
 				<bl type="param">beamLine</bl>
 				<name type="param">FSM_Sample</name>
 				<center type="param">[0.0, 45863.0, 42.79]</center>
-				<x type="param">[1, 0, 0]</x>
-				<z type="param">[0, 0, 1]</z>
+				<x type="param">auto</x>
+				<z type="param">auto</z>
 				<compressX type="param">None</compressX>
 				<compressZ type="param">None</compressZ>
-				<limPhysX type="param">[0.0, 0.0]</limPhysX>
-				<limPhysY type="param">[0.0, 0.0]</limPhysY>
-				<cLimits type="param">[0.0, 0.0]</cLimits>
-				<histShape type="param">[256, 256]</histShape>
 			</properties>
 			<_object type="param">xrt.backends.raycing.screens.Screen</_object>
 			<expose type="prop">
