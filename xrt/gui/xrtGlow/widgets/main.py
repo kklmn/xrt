@@ -223,6 +223,7 @@ class xrtGlow(GlowScanMixin, qt.QWidget):
         self.scanFrameIndex = 0
         self.scanInitialState = None
         self.scanAutoUpdateState = True
+        self.scanAutoAlignState = True
         self.scanRestoringInitialState = False
         self.scanFinishWasStopped = False
 
@@ -532,6 +533,10 @@ class xrtGlow(GlowScanMixin, qt.QWidget):
     def makeScanPanel(self):
         layout = qt.QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
+        self.scanAutoAlignCheckBox = qt.QCheckBox('Enable Auto Align', self)
+        self.scanAutoAlignCheckBox.setChecked(
+            self.customGlWidget.beamline.autoAlignEnabled)
+        layout.addWidget(self.scanAutoAlignCheckBox)
         self.scanWidget = TimelineFrameListWidget(self)
         self.scanWidget.scanStarted.connect(self.startScan)
         self.scanWidget.scanPaused.connect(self.pauseScan)
