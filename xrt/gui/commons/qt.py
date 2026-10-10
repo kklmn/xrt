@@ -366,7 +366,7 @@ def _input_type_label(inputType):
 
 def _tooltip_code(value):
     text = html_escape(str(value)).replace('\n', '<br>')
-    return f'<span style="white-space: nowrap;"><code>{text}</code></span>'
+    return f'<span style="white-space: nowrap;">{text}</span>'
 
 
 def set_param_tooltip(child0, child1, paramName, unit=None, calculated=None):

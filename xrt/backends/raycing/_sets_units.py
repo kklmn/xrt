@@ -274,8 +274,8 @@ argumentInputGroups = {
     'dict': {'afterScriptKWargs', 'blades', 'generatorKWargs', 'renderSize'},
     ('sequence', 'inf', 'None'): {'f1', 'f2'},
     'integer': {
-        'eN', 'gIntervals', 'N', 'nPairs', 'nRK', 'nSpokes',
-        'nx', 'nz', 'nrays', 'ppb', 'bins', 'vortexNradial'},
+        'eN', 'gIntervals', 'N', 'nPairs', 'nRK', 'nSpokes', 'nx', 'nz',
+        'nrays', 'ppb', 'bins', 'vortexNradial', 'ePos', 'xPos', 'yPos'},
     'float': {
         'amplitude', 'B0', 'B0x', 'B0y', 'betaX', 'betaZ', 'bumpHeight',
         'b', 'bThickness', 'bThicknessLow', 'c', 'cameraAngle',
@@ -285,12 +285,12 @@ argumentInputGroups = {
         'eEpsilonZ', 'eEspread', 'eI', 'ellipseA', 'ellipseB', 'f',
         'factDW', 'gp', 'gridStep', 'idThickness', 'K', 'Kx',
         'Ky', 'L0', 'materialsIndex', 'n', 'period', 'phaseShift', 'phi0',
-        'contourFactor', 'ePos', 'offset', 'phiOffset', 'px', 'pz',
+        'contourFactor', 'offset', 'phiOffset', 'px', 'pz',
         'r0', 'raycingParam', 'rx', 'rz',
         'nu', 'power', 'rotations', 'scaleVec', 'shadeFraction', 'sigmaX',
         'sigmaY', 'substRoughness',
         'tK', 'tThickness', 'tThicknessLow', 'thetaOffset', 'vortex',
-        'vorticity', 'workingDistance', 'xPos', 'yPos',
+        'vorticity', 'workingDistance',
         'xWaveLength', 'yWaveLength', 'tVec', 'outline', 'beta',
         'gamma', 'xCylinder1', 'hCylinder1', 'xCylinder2', 'hCylinder2'},
     }
