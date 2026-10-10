@@ -500,7 +500,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         """Update from EPICS interface """
         self.update_beamline(oeid, {argName: argValue}, sender="epics")
 
-    def request_propagation_once(self, accumulating=False):
+    def request_propagation_once(self, accumulating=False, auto_align=None):
         if self.propagationPending:
             return
         process = getattr(self, 'calc_process', None)
@@ -515,11 +515,14 @@ class xrtGlWidget(qt.QOpenGLWidget):
         if self.epicsPrefix is not None:
             self.epicsInterface.pv_records['AcquireStatus'].set(1)
         if hasattr(self, 'input_queue'):
-            self.input_queue.put({
-                        "command": "run_once",
-                        "object_type": "beamline",
-                        "mode": "accumulate" if accumulating else "update"
-                        })
+            message = {
+                "command": "run_once",
+                "object_type": "beamline",
+                "mode": "accumulate" if accumulating else "update",
+            }
+            if auto_align is not None:
+                message.update(mode="scan", auto_align=bool(auto_align))
+            self.input_queue.put(message)
 
     def set_auto_update(self, value, clear_beams=False):
         self.autoUpdate = bool(value)

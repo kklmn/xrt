@@ -50,8 +50,9 @@ def propagationProcess(q_in, q_out, with_epics_histograms=False,
             time.sleep(0.01)
 #            continue
         elif handler.needUpdate:
-            handler.bl.autoAlignEnabled = (
-                handler.mode != 'accumulate' or repeats == 0)
+            if handler.mode != 'scan':
+                handler.bl.autoAlignEnabled = (
+                    handler.mode != 'accumulate' or repeats == 0)
             started = True if handler.startEl is None else False
             flowLen = len(handler.bl.flowU)
             flowCounter = 0
@@ -452,6 +453,8 @@ class MessageHandler:
         self.stop = False
         self.needUpdate = True
         self.mode = message.get('mode', 'update')
+        if self.mode == 'scan':
+            self.bl.autoAlignEnabled = bool(message.get('auto_align', True))
         if self.mode == 'accumulate':
             self.startEl = None
         startEl = message.get('start_el')
