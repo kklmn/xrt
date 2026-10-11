@@ -914,7 +914,7 @@ class InstanceInspector(qt.QDialog):
         model.blockSignals(True)
         try:  # use the the item delegate to get combobox texts
             opt = qt.QStyleOptionViewItem()
-            ed = self.comboDelegate.createEditor(self, opt, c1.index())
+            ed = self.comboDelegate.createEditor(None, opt, c1.index())
             if isinstance(ed, qt.QComboBox):
                 items = [ed.itemText(i) for i in range(ed.count())]
                 if items:
@@ -922,8 +922,8 @@ class InstanceInspector(qt.QDialog):
                         '\n'.join(ext.reorder(items)))
                     c0.setToolTip(tt)
                     c1.setToolTip(tt)
+            ed.deleteLater()
         except Exception as err:
-            print(err)
             pass  # no tooltip for this combobox
         model.blockSignals(False)
 
@@ -1479,7 +1479,7 @@ class ConfigurablePlotWidget(qt.QWidget):
         model.blockSignals(True)
         try:  # use the the item delegate to get combobox texts
             opt = qt.QStyleOptionViewItem()
-            ed = self.comboDelegate.createEditor(self, opt, c1.index())
+            ed = self.comboDelegate.createEditor(None, opt, c1.index())
             if isinstance(ed, qt.QComboBox):
                 items = [ed.itemText(i) for i in range(ed.count())]
                 if items:
@@ -1487,8 +1487,8 @@ class ConfigurablePlotWidget(qt.QWidget):
                         '\n'.join(ext.reorder(items)))
                     c0.setToolTip(tt)
                     c1.setToolTip(tt)
+            ed.deleteLater()
         except Exception as err:
-            print(err)
             pass  # no tooltip for this combobox
         model.blockSignals(False)
 

@@ -430,7 +430,7 @@ class XrtQookElements(XrtQookBase):
             delegate = self.tree.itemDelegateForColumn(1)
             if delegate:
                 opt = qt.QStyleOptionViewItem()
-                ed = delegate.createEditor(self, opt, c1.index())
+                ed = delegate.createEditor(None, opt, c1.index())
                 if isinstance(ed, qt.QComboBox):
                     items = [ed.itemText(i) for i in range(ed.count())]
                     if items:
@@ -438,6 +438,6 @@ class XrtQookElements(XrtQookBase):
                             '\n'.join(ext.reorder(items)))
                         c0.setToolTip(tt)
                         c1.setToolTip(tt)
+                ed.deleteLater()
         except Exception as err:
-            print(err)
             pass  # no tooltip for this combobox
