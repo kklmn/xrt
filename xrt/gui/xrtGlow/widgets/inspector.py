@@ -13,7 +13,7 @@ from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
 from matplotlib.colors import TABLEAU_COLORS
 
-from ...commons import qt, config
+from ...commons import qt, config, ext
 from .._constants import DISPLAY_NUMBER_FORMAT
 from .._utils import is_aperture, is_screen, is_parametric_oe, is_closed_surface
 
@@ -143,7 +143,8 @@ class InstanceInspector(qt.QDialog):
         if viewOnly:
             self.windowTitleStr += ' - Static Mode - View Only'
         self.setWindowTitle(self.windowTitleStr)
-
+        self.comboDelegate = qt.DynamicArgumentDelegate(bl=beamLine,
+                                                        mainWidget=self)
         self.model = qt.QStandardItemModel()
         self.modelRoot = self.model.invisibleRootItem()
         self.original_data = raycing.OrderedDict()
@@ -274,7 +275,8 @@ class InstanceInspector(qt.QDialog):
                         _getArgumentUnit(key, self.editorObject),
                         calculated=value)
                 else:
-                    self.add_param(parentItem, key, value, epv=epv)
+                    c0, c1 = self.add_param(parentItem, key, value, epv=epv)
+                    self.add_combobox_tolltip(self.model, key, c0, c1)
                     if key in ['x', 'z']:
                         self.add_param(parentItem, f"{key} rbk", value)
 
@@ -301,9 +303,7 @@ class InstanceInspector(qt.QDialog):
 #            }
 #            """)
         self.openClDevList = list(ALL_CL_DEVICES.keys())
-        comboDelegate = qt.DynamicArgumentDelegate(bl=beamLine,
-                                                   mainWidget=self)
-        self.table.setItemDelegateForColumn(1, comboDelegate)
+        self.table.setItemDelegateForColumn(1, self.comboDelegate)
 #        self.table.expanded.connect(
 #            lambda _index: self.table.resizeColumnToContents(0))
 #        self.table.expandToDepth(2)  # or restore expansion state
@@ -396,7 +396,7 @@ class InstanceInspector(qt.QDialog):
                            'saveName', 'persistentName', 'oe',
                            'raycingParam',
                            'beamState', 'beamC', 'useQtWidget', 'title',
-#                           'rayFlag',
+                           # 'rayFlag',
                            'density', 'outline', 'fluxUnit',
                            'beamAbsorb', 'name'}
 
@@ -910,6 +910,23 @@ class InstanceInspector(qt.QDialog):
         if updateBeam is not None:
             updateBeam(beamTag)
 
+    def add_combobox_tolltip(self, model, arg, c0, c1):
+        model.blockSignals(True)
+        try:  # use the the item delegate to get combobox texts
+            opt = qt.QStyleOptionViewItem()
+            ed = self.comboDelegate.createEditor(self, opt, c1.index())
+            if isinstance(ed, qt.QComboBox):
+                items = [ed.itemText(i) for i in range(ed.count())]
+                if items:
+                    tt = '<b>Input:</b><br>'+qt._tooltip_code(
+                        '\n'.join(ext.reorder(items)))
+                    c0.setToolTip(tt)
+                    c1.setToolTip(tt)
+        except Exception as err:
+            print(err)
+            pass  # no tooltip for this combobox
+        model.blockSignals(False)
+
 
 class ConfigurablePlotWidget(qt.QWidget):
     addToPlotsRequested = qt.Signal(dict)
@@ -944,6 +961,8 @@ class ConfigurablePlotWidget(qt.QWidget):
         self.yAxisUserSet = False
         self.yAxisUnitUserSet = False
         self.beamLine = beamLine
+        self.comboDelegate = qt.DynamicArgumentDelegate(bl=beamLine,
+                                                        mainWidget=self)
         beamModel = getattr(parent, 'beamModel', None)
         if beamModel is not None:
             self.beamModel = beamModel
@@ -1000,9 +1019,6 @@ class ConfigurablePlotWidget(qt.QWidget):
 
     def init_tabs(self):
         headerLine = ["Property", "Value"]
-
-        comboDelegate = qt.DynamicArgumentDelegate(bl=self.beamLine,
-                                                   mainWidget=self)
         self.models = {}
         self.trees = {}
         for mLabel in ['top', 'xaxis', 'yaxis', 'caxis']:
@@ -1013,9 +1029,9 @@ class ConfigurablePlotWidget(qt.QWidget):
             self.models[mLabel] = model
 
             table = qt.QTreeView()
+            table.setItemDelegateForColumn(1, self.comboDelegate)
             table.setModel(model)
             table.setAlternatingRowColors(True)
-            table.setItemDelegateForColumn(1, comboDelegate)
             table.expandAll()
             table.setUniformRowHeights(False)
 #            table.setStyleSheet("""
@@ -1032,7 +1048,8 @@ class ConfigurablePlotWidget(qt.QWidget):
                 parentItem = model.invisibleRootItem()
                 for axkey, axval in value.items():
                     if axkey not in self.hiddenProps:
-                        self.add_param(parentItem, axkey, axval)
+                        c0, c1 = self.add_param(parentItem, axkey, axval)
+                        self.add_combobox_tolltip(model, axkey, c0, c1)
             else:
                 model = self.models['top']
                 parentItem = model.invisibleRootItem()
@@ -1046,7 +1063,8 @@ class ConfigurablePlotWidget(qt.QWidget):
                             or value[-1]
 
                 if key not in self.hiddenProps:
-                    self.add_param(parentItem, key, value)
+                    c0, c1 = self.add_param(parentItem, key, value)
+                    self.add_combobox_tolltip(model, key, c0, c1)
 
         self.exportsPanel = qt.QGroupBox(self)
         self.exportsPanel.setSizePolicy(qt.QSizePolicy.Minimum,
@@ -1456,6 +1474,23 @@ class ConfigurablePlotWidget(qt.QWidget):
         elif plot.ePos == 2:
             plot.ax1dHistE.set_position([b2[0], e1[1], b2[2]*ep/xp, e1[3]])
             plot.ax1dHistEbar.set_position([b2[0], b1[1], b2[2]*ep/xp, b1[3]])
+
+    def add_combobox_tolltip(self, model, arg, c0, c1):
+        model.blockSignals(True)
+        try:  # use the the item delegate to get combobox texts
+            opt = qt.QStyleOptionViewItem()
+            ed = self.comboDelegate.createEditor(self, opt, c1.index())
+            if isinstance(ed, qt.QComboBox):
+                items = [ed.itemText(i) for i in range(ed.count())]
+                if items:
+                    tt = '<b>Input:</b><br>'+qt._tooltip_code(
+                        '\n'.join(ext.reorder(items)))
+                    c0.setToolTip(tt)
+                    c1.setToolTip(tt)
+        except Exception as err:
+            print(err)
+            pass  # no tooltip for this combobox
+        model.blockSignals(False)
 
 
 class Curve1dWidget(qt.QWidget):

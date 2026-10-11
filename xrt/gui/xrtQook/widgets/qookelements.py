@@ -11,7 +11,7 @@ import copy  # analysis:ignore
 from collections import OrderedDict  # analysis:ignore
 from .qookbase import XrtQookBase  # analysis:ignore
 from .._constants import _DEBUG_  # analysis:ignore
-from ...commons import qt  # analysis:ignore
+from ...commons import qt, ext  # analysis:ignore
 from ...xrtGlow import is_screen, is_aperture  # analysis:ignore
 from ...xrtGlow.widgets.inspector import _getBeamName  # analysis:ignore
 from ....backends import raycing  # analysis:ignore
@@ -132,8 +132,9 @@ class XrtQookElements(XrtQookBase):
                 argVal = raycing.normalize_ref(
                     argVal, self.beamLine, refKind, target='display')
             editorHint = raycing.get_argument_editor_hint(obj, arg)
-            self.addParam(elprops, arg, argVal, editorHint=editorHint)
-
+            c0, c1 = self.addParam(elprops, arg, argVal, editorHint=editorHint)
+            # tooltips of c0 and c1 have been already set except for comboboxes
+            self.addComboboxTollTip(arg, c0, c1)
         if not isRoot:
             self.showDoc(elementItem.index())
 
@@ -278,11 +279,13 @@ class XrtQookElements(XrtQookBase):
 
         for arg, argVal in methodInputDict.items():
             child0, child1 = self.addParam(methodProps, arg, argVal)
+            self.addComboboxTollTip(arg, child0, child1)
 
         methodOut = self.addProp(methodItem, 'output')
 
         for outval, beamName in methodOutputDict.items():
             child0, child1 = self.addParam(methodOut, outval, beamName)
+            # self.addComboboxTollTip(outval, child0, child1)  # not needed
 
             self.beamModel.appendRow([qt.QStandardItem(beamName),
                                       qt.QStandardItem(outval),
@@ -391,10 +394,12 @@ class XrtQookElements(XrtQookBase):
                             self.addObject(self.plotTree, child0,
                                            "xrt.plotter.XYCAxis")
                             continue
-                        self.addParam(child0, axname, axval)
+                        c0, c1 = self.addParam(child0, axname, axval)
+                        self.addComboboxTollTip(axname, c0, c1)
                 else:
                     arg_value = pval
-                    self.addParam(plotItem, pname, arg_value)
+                    c0, c1 = self.addParam(plotItem, pname, arg_value)
+                    self.addComboboxTollTip(pname, c0, c1)
 
         self.setPlotItemName(plotItem, plotName)
 
@@ -419,3 +424,20 @@ class XrtQookElements(XrtQookBase):
 
     def addPlotBeam(self, beamName):
         self.addPlot(beamName=beamName)
+
+    def addComboboxTollTip(self, arg, c0, c1):
+        try:  # use the the item delegate to get combobox texts
+            delegate = self.tree.itemDelegateForColumn(1)
+            if delegate:
+                opt = qt.QStyleOptionViewItem()
+                ed = delegate.createEditor(self, opt, c1.index())
+                if isinstance(ed, qt.QComboBox):
+                    items = [ed.itemText(i) for i in range(ed.count())]
+                    if items:
+                        tt = '<b>Input:</b><br>'+qt._tooltip_code(
+                            '\n'.join(ext.reorder(items)))
+                        c0.setToolTip(tt)
+                        c1.setToolTip(tt)
+        except Exception as err:
+            print(err)
+            pass  # no tooltip for this combobox

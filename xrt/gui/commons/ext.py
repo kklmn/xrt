@@ -38,6 +38,21 @@ JS_PATH = CSS_PATH
 xrtQookPageName = 'xrtQookPage'
 
 
+def reorder(words):
+    priority = ['auto', 'None', 'True', 'False']
+    specials = [w for w in priority if w in words]
+    remaining = [w for w in words if w not in priority]
+    letters = [w for w in remaining if len(w) == 1]
+    others = [w for w in remaining if len(w) != 1]
+
+    result = specials
+    if letters:
+        result.append(', '.join(letters))
+    result.extend(others)
+
+    return result
+
+
 class LineNumberArea(qt.QWidget):
     def __init__(self, editor):
         super().__init__(editor)
