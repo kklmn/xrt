@@ -60,10 +60,10 @@
 		<Si type="value">
 			<properties type="prop">
 				<tK type="param">102.15</tK>
-				<a type="param">None</a>
+				<a type="param">5.429401790029894</a>
 				<hkl type="param">[1, 1, 1]</hkl>
-				<d type="param">3.1346665907686386</d>
-				<V type="param">None</V>
+				<d type="param">3.1346665850123956</d>
+				<V type="param">160.05009834580392</V>
 				<elements type="param">['Si']</elements>
 				<quantities type="param">[1]</quantities>
 				<rho type="param">0</rho>
@@ -85,10 +85,10 @@
 		<Si_2 type="value">
 			<properties type="prop">
 				<tK type="param">133.15</tK>
-				<a type="param">None</a>
+				<a type="param">5.429385154169608</a>
 				<hkl type="param">[1, 1, 1]</hkl>
-				<d type="param">3.13465700675417</d>
-				<V type="param">None</V>
+				<d type="param">3.1346569802939808</d>
+				<V type="param">160.04862715449056</V>
 				<elements type="param">['Si']</elements>
 				<quantities type="param">[1]</quantities>
 				<rho type="param">0</rho>
@@ -443,7 +443,7 @@
 				<bl type="param">beamLine</bl>
 				<name type="param">SlitAfterDCM</name>
 				<center type="param">[0.0, 29200.0, 0.0]</center>
-				<blades type="param">{'left': -7, 'right': 7, 'bottom': 34.73996095703098, 'top': 38.73996095703098}</blades>
+				<blades type="param">{'left': -7, 'right': 7, 'bottom': 34.74, 'top': 38.74}</blades>
 				<x type="param">auto</x>
 				<z type="param">auto</z>
 				<alarmLevel type="param">0.5</alarmLevel>
@@ -602,7 +602,7 @@
 				<bl type="param">beamLine</bl>
 				<name type="param">slitEH</name>
 				<center type="param">[0.0, 43000.0, 0.0]</center>
-				<blades type="param">{'left': -0.4802124996111384, 'right': 0.4802124996111384, 'bottom': 35.79, 'top': 49.79}</blades>
+				<blades type="param">{'left': -0.48, 'right': 0.48, 'bottom': 35.79, 'top': 49.79}</blades>
 				<x type="param">auto</x>
 				<z type="param">auto</z>
 				<alarmLevel type="param">0.5</alarmLevel>
