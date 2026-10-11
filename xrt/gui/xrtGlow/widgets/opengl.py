@@ -37,6 +37,21 @@ __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "27 Jan 2026"
 
 
+import builtins
+import inspect
+
+_real_print = builtins.print
+
+def debug_print(*args, **kwargs):
+    frame = inspect.currentframe().f_back
+    _real_print(
+        f"[{frame.f_code.co_filename}:{frame.f_lineno}]",
+        *args, **kwargs
+    )
+
+builtins.print = debug_print
+
+
 def _grid_cells(oe):
     if hasattr(oe, 'get_render_cells'):
         return oe.get_render_cells()
@@ -2003,7 +2018,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     print("Update failed, disabling mesh for", oeuuid)
                     self.meshDict[oeuuid].isEnabled = False
 
-
 #    def eulerToQ(self, rotMatrXYZ):
 #        hPitch = np.radians(rotMatrXYZ[0][0]) * 0.5
 #        hRoll = np.radians(rotMatrXYZ[1][0]) * 0.5
@@ -2308,8 +2322,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
             gl.glEnable(gl.GL_DEPTH_TEST)
             gl.glDepthMask(gl.GL_FALSE)
             widthRange = gl.glGetFloatv(gl.GL_SMOOTH_LINE_WIDTH_RANGE
-                                       if gl.glIsEnabled(gl.GL_LINE_SMOOTH)
-                                       else gl.GL_ALIASED_LINE_WIDTH_RANGE)
+                                        if gl.glIsEnabled(gl.GL_LINE_SMOOTH)
+                                        else gl.GL_ALIASED_LINE_WIDTH_RANGE)
             gl.glLineWidth(float(np.clip(self.contourWidth, *widthRange)))
             for mesh, kind, index in contours:
                 isSelected = self.selectedOE > 0 and\
@@ -2454,8 +2468,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                 if self.showContours:
                                     visibleContours.append((
                                         mesh3D, 'surface', int(is2ndXtal)))
-                            except Exception as e:
-                                print(e)
+                            except Exception as err:
+                                print(type(err).__name__, err)
                 elif is_aperture(oeToPlot):
                     for blade in _aperture_surfaces(oeToPlot):
                         if mesh3D.isEnabled:
@@ -2473,8 +2487,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                 if self.showContours:
                                     visibleContours.append((
                                         mesh3D, 'surface', blade))
-                            except Exception as e:
-                                print(e)
+                            except Exception as err:
+                                print(type(err).__name__, err)
                 elif is_source(oeToPlot):
                     if mesh3D.isEnabled:
                         isSelected = False
@@ -2503,8 +2517,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                 if self.showContours:
                                     visibleContours.append((
                                         mesh3D, 'magnet', 0))
-                        except Exception as e:
-                            print(e)
+                        except Exception as err:
+                            print(type(err).__name__, err)
 
             if not self.linesDepthTest:
                 gl.glDepthMask(gl.GL_FALSE)
@@ -2537,8 +2551,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             if self.showContours:
                                 visibleContours.append((
                                     mesh3D, 'surface', int(is2ndXtal)))
-                        except Exception as e:
-                            print(e)
+                        except Exception as err:
+                            print(type(err).__name__, err)
 
             gl.glStencilFunc(gl.GL_ALWAYS, 0, 0xff)
             gl.glDisable(gl.GL_STENCIL_TEST)
@@ -2570,8 +2584,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     try:
                         self.render_beam(beamTag, mMMLoc,
                                          self.mView, self.mProj, target=None)
-                    except Exception as e:
-                        print(e)
+                    except Exception as err:
+                        print(type(err).__name__, err)
 
             gl.glEnable(gl.GL_DEPTH_TEST)
 
@@ -2616,8 +2630,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                 self.render_beam(beamStart, mMMLoc,
                                                  self.mView, self.mProj,
                                                  target=beamEnd)
-                            except Exception as e:
-                                print(e)
+                            except Exception as err:
+                                print(type(err).__name__, err)
 
                             if self.showInternalBeam and\
                                     'beamLocal2' in beamStartDict:
@@ -2626,8 +2640,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                             (sourceuuid, 'beamLocal1'),
                                             mMMLoc, self.mView, self.mProj,
                                             target=(sourceuuid, 'beamLocal2'))
-                                except Exception as e:
-                                    print(e)
+                                except Exception as err:
+                                    print(type(err).__name__, err)
 
             else:
                 for flowLine in self.beamline.flow:
@@ -2652,8 +2666,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             self.render_beam(beamStart, mMMLoc,
                                              self.mView, self.mProj,
                                              target=beamEnd)
-                        except Exception as e:
-                            print(e)
+                        except Exception as err:
+                            print(type(err).__name__, err)
 
             if self.showElectronTrajectory:
                 if self.lineWidth > 0:
@@ -2673,8 +2687,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             envelopeRadii=envelopeRadii,
                             envelopeStep=self.electronEnvelopeStep,
                             shader=self.shaderTrajectory)
-                    except Exception as e:
-                        print(e)
+                    except Exception as err:
+                        print(type(err).__name__, err)
 
             self.cBox.textShader.bind()
             self.cBox.vaoText.bind()
@@ -2777,8 +2791,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         [xmin, underlineY, 0.0],
                         [xmax, underlineY, 0.0]))
                     labelBounds.append(labelBox)
-                except Exception as e:
-                    print(e)
+                except Exception as err:
+                    print(type(err).__name__, err)
             self.cBox.textShader.release()
             self.cBox.vaoText.release()
 
@@ -2850,8 +2864,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                 alphas.append((ltr, alpha,
                                               ''.join(map(str, hkl))))
 
-                        except Exception as e:
-                            print(e)
+                        except Exception as err:
+                            print(type(err).__name__, err)
                 self.cBox.vao_arrow.release()
                 self.cBox.origShader.release()
 
@@ -3403,8 +3417,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         depth = np.cross(mouse_h, mouse_v)
                         length = np.linalg.norm(depth)
                         depth_sign = -1 if el > 0 else 1
-                        shifts = depth_sign * ym * depth / length if length else\
-                            np.zeros(3)
+                        shifts = depth_sign * ym * depth / length if length \
+                            else np.zeros(3)
                     else:
                         shifts = xm * mouse_h + ym * mouse_v
 
@@ -3463,7 +3477,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         if objid is None:
             self.selectedOE = 0
         else:
-            res = {k:v for k, v in self.selectableOEs.items() if v == objid}
+            res = {k: v for k, v in self.selectableOEs.items() if v == objid}
             if len(res) == 0:
                 return
             self.selectedOE = int(list(res.keys())[0])
