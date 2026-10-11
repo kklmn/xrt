@@ -79,6 +79,7 @@ def main():
                            ppb=1, limits=[0.5, dy+0.5]),
         caxis=xrtp.XYCAxis('', '', fwhmFormatStr=None, bins=dy//2, ppb=2,
                            limits=[10, cDatamax*0.8], outline=1),
+        showCornerLabels=False,
         negative=True, invertColorMap=True, xPos=0,
         saveName=['logo-xrt.png', 'logo-xrt.pdf'],
         # negative=False, invertColorMap=False, xPos=0,
@@ -108,11 +109,7 @@ def main():
         ha='center', va='center', fontproperties=fontProp, alpha=1,
         path_effects=letterEffects)
 
-    # with no labels:
-    plot1.textNrays = None
-    plot1.textGoodrays = None
-    plot1.textI = None
-    # ... and no tick labels:
+    # no tick labels:
     plt.setp(
         plot1.ax1dHistEbar.get_yticklabels() +
         plot1.ax2dHist.get_xticklabels() + plot1.ax2dHist.get_yticklabels(),

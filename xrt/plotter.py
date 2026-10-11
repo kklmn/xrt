@@ -844,7 +844,7 @@ class XYCPlot(object):
             on that of Journal of Synchrotron Radiation ;) )
 
         *showCornerLabels*: bool
-            Controls the display of "corneк labels" -- flux label, number of
+            Controls the display of "corner labels" -- flux label, number of
             rays etc., displayed in the corner between the two 1D positional
             histograms.
 
@@ -1173,6 +1173,7 @@ class XYCPlot(object):
                     self.textAlive = mplTxtX(
                         xTextPos, yTextPosGoodraysR, ' ', transform=transform,
                         ha='left', va='top')
+
                 if not self.caxis.useCategory:
                     self.textI = mplTxtX(
                         xTextPos, yTextPosNrays4, ' ', transform=transform,
@@ -1552,9 +1553,9 @@ class XYCPlot(object):
     @showCornerLabels.setter
     def showCornerLabels(self, value):
         self._showCornerLabels = bool(value)
-        for textPanel in [
-                self.textGood, self.textOut, self.textOver, self.textI,
-                self.textAlive, self.textDead, self.textNrays]:
+        for textPanelName in ['textGood', 'textOut', 'textOver', 'textGoodrays',
+                              'textAlive', 'textDead', 'textNrays', 'textI']:
+            textPanel = getattr(self, textPanelName, None)
             if textPanel is None:
                 continue
             textPanel.set_visible(bool(value))

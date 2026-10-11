@@ -61,6 +61,7 @@ def main():
                            ppb=1, limits=[0.5, logo.shape[0]+0.5]),
         caxis=xrtp.XYCAxis('', '', fwhmFormatStr=None, bins=logo.shape[0]//2,
                            ppb=2, limits=[15, cDatamax*0.8]),
+        showCornerLabels=False,
         # negative=True, invertColorMap=True,
         # saveName=['logo1-xrt.png', 'logo1-xrt.pdf'],
         negative=False, invertColorMap=False,
@@ -69,11 +70,8 @@ def main():
     plot1.textPanel = plot1.fig.text(
         0.75, 0.74, 'xrt', transform=plot1.fig.transFigure, size=70, color='r',
         ha='center', fontname='times new roman', weight=660)
-    # with no labels:
-    plot1.textNrays = None
-    plot1.textGoodrays = None
-    plot1.textI = None
-    # ... and no tick labels:
+
+    # no tick labels:
     plt.setp(
         plot1.ax2dHist.get_xticklabels() + plot1.ax2dHist.get_yticklabels() +
         plot1.ax1dHistX.get_xticklabels() + plot1.ax1dHistX.get_yticklabels() +
