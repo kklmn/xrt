@@ -395,7 +395,9 @@ def _set_tooltip_html(child0, child1, body):
     if SHOW_DOCS_IN_TOOLTIPS:
         description = child1.data(TOOLTIP_DOC_ROLE)
         if description:
-            body += '<p><b>Description:</b></p>' + description
+            body += '<p style="margin-bottom:0;"><b>Description:</b></p>'
+            body += description.replace(
+                '<p>', '<p style="margin-top:0;">', 1)
     toolTip = '<html>' + body + '</html>' if body else ''
     child0.setToolTip(toolTip)
     child1.setToolTip(toolTip)
@@ -442,7 +444,7 @@ def set_param_tooltip(child0, child1, paramName, unit=None, calculated=None,
     instructions = [helpText] if helpText is not None and not description else [
         argumentInputTooltips[inputType] for inputType in helpTypes
         if inputType in argumentInputTooltips and
-        (not description or inputType in ('combo', 'editableCombo'))]
+        (not description or inputType in ('angle', 'combo', 'editableCombo'))]
     for instruction in instructions:
         text = instruction.format(
             unit=_tooltip_code(unit or 'the default unit'),
@@ -747,7 +749,9 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
 
         argValue = child1.text()
         if argValue.lower() in ('false', 'true'):
-            inputType = 'combo'
+            _set_tooltip_html(
+                child0, child1, '<p><b>Input:</b> bool</p>')
+            return
         elif argName.lower() == 'kind' and argValue not in (
                 'mirror', 'thin mirror', 'plate', 'lens',
                 'grating', 'FZP', 'auto'):

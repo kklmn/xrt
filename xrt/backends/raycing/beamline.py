@@ -201,7 +201,7 @@ from ._flow_utils import (
     get_params, create_paramdict_oe, is_valid_uuid, parametrize,
     create_paramdict_mat, get_init_val, get_init_kwargs, get_obj_str,
     create_paramdict_fe, is_auto_align_value, get_auto_align_energy,
-    normalize_string_input, normalize_ref,
+    normalize_string_input, normalize_ref, auto_units_angle,
     limited_source_rays)
 from ._rotate import rotate_z, rotate_beam
 from ._named_arrays import Center
@@ -499,9 +499,10 @@ class BeamLine(object):
 
     @azimuth.setter
     def azimuth(self, value):
-        self._azimuth = value
-        self.sinAzimuth = float(np.sin(value))
-        self.cosAzimuth = float(np.cos(value))
+        self._azimuth = auto_units_angle(value)
+        self._azimuthInit = copy.deepcopy(value)
+        self.sinAzimuth = float(np.sin(self._azimuth))
+        self.cosAzimuth = float(np.cos(self._azimuth))
 
     def orient_along_global_Y(self, center='auto'):
         if center == 'auto':

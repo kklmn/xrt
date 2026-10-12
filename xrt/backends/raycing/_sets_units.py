@@ -227,6 +227,9 @@ def auto_unit(lbl, unit):
 # combo and editableCombo mark editors, independently of the value grammar.
 # Arguments not found here are strings by default.
 argumentInputGroups = {
+    'bool': {
+        'fromVacuum1', 'fromVacuum2', 'needElevationMap',
+        'noIntersectionSearch', 'onlyPositivePath', 'withAmplitudes'},
     ('float', 'None'): {
         'alarmLevel', 'compressX', 'compressZ', 'eSigmaX', 'eSigmaZ',
         'fixedOffset', 'limOptX', 'limOptX2', 'limOptY', 'limOptY2',
@@ -245,7 +248,8 @@ argumentInputGroups = {
     ('float', 'sequence:float', 'None'): {'taper', 'Rm', 'Rs'},
     ('integer', 'sequence:integer', 'None'): {'order'},
     'angle': {
-        'antiblaze', 'blaze', 'braggOffset', 'cryst1roll', 'mosaicity',
+        'antiblaze', 'azimuth', 'blaze', 'braggOffset', 'cryst1roll',
+        'mosaicity',
         'cryst2finePitch', 'cryst2pitch', 'cryst2roll', 'extraPitch',
         'extraRoll', 'extraYaw', 'grazingAngle', 'maxxprime', 'maxzprime',
         'minxprime', 'minzprime', 'orientationAngle', 'phaseDeg',
@@ -287,11 +291,11 @@ argumentInputGroups = {
     ('sequence', 'inf', 'None'): {'f1', 'f2'},
     'integer': {
         'eN', 'gIntervals', 'N', 'nPairs', 'nRK', 'nSpokes', 'nx', 'nz',
-        'nrays', 'ppb', 'bins', 'vortexNradial'},
+        'nrays', 'ppb', 'bins', 'maxReflections', 'vortexNradial'},
     'float': {
         'amplitude', 'B0', 'B0x', 'B0y', 'betaX', 'betaZ', 'bumpHeight',
         'b', 'bThickness', 'bThicknessLow', 'c', 'cameraAngle',
-        'cameraDistance', 'coordOffset', 'azimuth', 'height',
+        'cameraDistance', 'coordOffset', 'height',
         'corrLength', 'cryst2longTransl', 'cryst2perpTransl', 'cX', 'cY',
         'd', 'depth', 'dxFacet', 'dxGap', 'dyFacet', 'dyGap', 'eEpsilonX',
         'eEpsilonZ', 'eEspread', 'eI', 'ellipseA', 'ellipseB', 'f',
