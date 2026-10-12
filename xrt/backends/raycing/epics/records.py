@@ -9,6 +9,7 @@ from typing import Any, Dict, Iterable, List, Optional
 import numpy as np
 
 from .device import resolve_epics_readback, resolve_epics_record
+from ..detectors import DetectorScreen
 from .._flow_utils import to_valid_var_name
 from .._named_arrays import Center, Limits
 from .._sets_units import (
@@ -193,6 +194,8 @@ def iter_element_specs(bl: Any,
 def categorize_element(bl: Any, oe_obj: Any, oeline: Any = None) -> str:
     """Return the BOB output folder for *oe_obj*."""
 
+    if isinstance(oe_obj, DetectorScreen):
+        return "detectors"
     if oe_obj in getattr(bl, "sources", []):
         return "sources"
     if oe_obj in getattr(bl, "slits", []):
@@ -207,6 +210,8 @@ def categorize_element(bl: Any, oe_obj: Any, oeline: Any = None) -> str:
     module = getattr(oe_obj.__class__, "__module__", "")
     if ".apertures" in module:
         return "apertures"
+    if ".detectors" in module:
+        return "detectors"
     if ".screens" in module:
         return "screens"
     if ".sources" in module:
@@ -252,6 +257,8 @@ def template_records(category: str) -> List[PvSpec]:
                    "rw", 100000, "Source"),
         ] + orient
     if category == "screens":
+        return common + limits
+    if category == "detectors":
         return common + [
             PvSpec("$(E):image", "Image", "image", "image", "ro",
                    None, "Image", {"width": 256, "height": 256}),
@@ -332,7 +339,7 @@ def _add_energy_record(oe_obj: Any, oename: str, add) -> None:
 
 
 def _add_image_records(oe_obj: Any, oename: str, add) -> None:
-    if not hasattr(oe_obj, "expose") or getattr(oe_obj, "limPhysX", None) is None:
+    if not isinstance(oe_obj, DetectorScreen):
         return
 
     hist_shape = getattr(oe_obj, "histShape", [256, 256])

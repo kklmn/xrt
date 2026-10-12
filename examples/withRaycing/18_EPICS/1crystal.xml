@@ -135,12 +135,13 @@
 			<limPhysY type="param">[-10, 10]</limPhysY>
 			<histShape type="param">[512, 256]</histShape>
 		</properties>
-		<_object type="object">xrt.backends.raycing.screens.Screen</_object>
+		<_object type="object">xrt.backends.raycing.detectors.DetectorScreen</_object>
 		<expose type="prop">
 			<parameters type="prop">
 				<beam type="param">oe01beamGlobal01</beam>
+				<withHistogram type="param">False</withHistogram>
 			</parameters>
-			<_object type="object">xrt.backends.raycing.screens.Screen.expose</_object>
+			<_object type="object">xrt.backends.raycing.detectors.DetectorScreen.expose</_object>
 			<output type="prop">
 				<beamLocal type="param">screen01beamLocal01</beamLocal>
 			</output>

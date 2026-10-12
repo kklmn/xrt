@@ -343,11 +343,11 @@ class EpicsDevice:
             where ``argName`` is an internal xrt property path.
 
         *imageMaxLength*: int or None
-            Maximum number of pixels allocated for screen image waveform
+            Maximum number of pixels allocated for detector image waveform
             records. The EPICS waveform length is fixed at IOC startup, while
-            screen ``histShape`` can change at runtime. If omitted, image
+            detector ``histShape`` can change at runtime. If omitted, image
             waveform records reserve space for at least a 1024 x 1024 image,
-            or the initial screen ``histShape`` if it is larger.
+            or the initial detector ``histShape`` if it is larger.
 
         Notes
         -----
@@ -357,6 +357,8 @@ class EpicsDevice:
 
 
         """
+
+        from ..detectors import DetectorScreen
 
         self.bl = bl
         self.epicsPrefix = epicsPrefix + ":" if epicsPrefix else ""
@@ -440,7 +442,7 @@ class EpicsDevice:
                                 on_update=partial(callback, oeid, e_field))
                         self.pv_map[oeid]['bragg'] = pv_records[pvname]
 
-            if hasattr(oeObj, 'expose') and oeObj.limPhysX is not None:
+            if isinstance(oeObj, DetectorScreen):
                 default_pvname = f'{oename}:image'
                 histShape = getattr(oeObj, 'histShape')
                 imageLength = int(histShape[0]*histShape[1])

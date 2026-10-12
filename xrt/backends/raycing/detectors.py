@@ -76,6 +76,14 @@ class DetectorScreen(Screen):
 
     @raycing.append_to_flow_decorator
     def expose(self, beam=None, onlyPositivePath=False, withHistogram=False):
+        """Expose a global beam and return it in detector-local coordinates.
+
+        *withHistogram*: bool
+            If True, calculate the histogram over the physical detector
+            surface and store it in ``self.image``.
+
+        .. Returned values: beamLocal
+        """
         blo = super().expose(beam, onlyPositivePath)
 
         if withHistogram:

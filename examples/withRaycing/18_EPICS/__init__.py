@@ -21,10 +21,10 @@ is controllable through EPICS. The complete list of available PVs is printed
 in the terminal at script startup. In the xrtGlow inspector widget, active PV
 names are also displayed alongside their corresponding properties.
 
-xrt :class:`~xrt.backends.raycing.screens.Screen` objects publish a histogram
-to a waveform PV, ``BL:screen01:image``. This adds histogramming to the EPICS
-propagation workflow: normally a Screen returns a beam and the plots
-perform the histogramming. The waveform contains the flattened two-dimensional
+xrt :class:`~xrt.backends.raycing.detectors.DetectorScreen` objects calculate
+histograms during ``expose()`` when ``withHistogram=True``. EPICS propagation
+enables this option and publishes the detector image to a waveform PV,
+``BL:screen01:image``. The waveform contains the flattened two-dimensional
 histogram; its dimensions can be read or edited through
 ``BL:screen01:histShape:width`` and ``BL:screen01:histShape:height``.
 

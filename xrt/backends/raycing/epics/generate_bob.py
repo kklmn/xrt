@@ -27,7 +27,7 @@ except ImportError:  # Allow running this file directly from a checkout.
 
 
 DEFAULT_OUTPUT = Path(__file__).resolve().parent
-ELEMENT_CATEGORIES = ("sources", "oes", "apertures", "screens")
+ELEMENT_CATEGORIES = ("sources", "oes", "apertures", "screens", "detectors")
 
 
 class BobWriter:

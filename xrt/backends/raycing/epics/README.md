@@ -25,34 +25,40 @@ sources/
 oes/
 apertures/
 screens/
+detectors/
 propagation/
 ```
 
 Generic template files are named `source_template.bob`, `oe_template.bob`,
-`aperture_template.bob`, `screen_template.bob` and
+`aperture_template.bob`, `screen_template.bob`, `detector_template.bob` and
 `propagation_control.bob`. Per-element files use the sanitized element name,
-for example `screens/screen01.bob`.
+for example `detectors/screen01.bob` for a `DetectorScreen`.
 
 Source screens include `nrays` in addition to name, center and orientation
 records when the source object exposes an `nrays` attribute.
 
-Screen image EPICS records are fixed-length waveforms. `EpicsDevice` reserves
-space for at least `1024 * 1024` pixels by default, or the initial screen
-`histShape` if it is larger. Pass `imageMaxLength` to `EpicsDevice` if larger
+`DetectorScreen` image EPICS records are fixed-length waveforms. `EpicsDevice`
+reserves space for at least `1024 * 1024` pixels by default, or the initial
+detector `histShape` if it is larger. Pass `imageMaxLength` to `EpicsDevice` if larger
 runtime histograms are expected.
+
+Plain `Screen` objects expose position and physical limits, but do not provide
+image or `histShape` records. Generic screen and detector templates reflect
+this distinction.
 
 ## EPICS propagation behavior
 
-When xrtGlow is started with `epicsPrefix`, the dynamic propagation worker
+When xrtGlow is started with `epicsPrefix`, or a headless `DynamicBeamline` is
+started with its default `with_epics_histograms=True`, the propagation worker
 enables histogram generation for recorded propagation calls that already have a
 `withHistogram` argument in the beamline flow. In practice, this changes
-recorded `Screen.expose(..., withHistogram=False)` calls to
+recorded `DetectorScreen.expose(..., withHistogram=False)` calls to
 `withHistogram=True` during EPICS-driven dynamic propagation.
 
-This is intentional: screen image PVs are only updated when screen histograms
-are built. The change is limited to xrtGlow runs with EPICS enabled. It does
-not change the Python default of `Screen.expose()`, non-EPICS scripts, or
-propagation methods whose recorded flow kwargs do not include `withHistogram`.
+This is intentional: detector image PVs are only updated when histograms are
+built. It does not change the Python default of `DetectorScreen.expose()`,
+non-EPICS scripts, or propagation methods whose recorded flow kwargs do not
+include `withHistogram`.
 
 ## Command options
 
