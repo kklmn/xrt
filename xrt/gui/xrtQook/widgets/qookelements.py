@@ -122,10 +122,14 @@ class XrtQookElements(XrtQookBase):
         self.addObject(tree, elementItem, obj)
 
         propsDict['name'] = elementName
+        hiddenParams = set(getattr(
+            self.getVal(obj), 'hiddenParams', ()))
 
         for arg, argVal in propsDict.items():
             if arg == 'uuid':
                 elementItem.setData(argVal, qt.Qt.UserRole)
+                continue
+            if arg in hiddenParams:
                 continue
             refKind = raycing.ref_kind_for_arg(arg)
             if refKind is not None:

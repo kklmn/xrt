@@ -413,7 +413,7 @@ class BeamLine(object):
     Container class for beamline components. It also defines the beam line
     direction and height."""
 
-    hiddenParams = {'serializationRays'}
+    hiddenParams = {'serializationRays', 'fileName'}
 
     def __init__(self, azimuth=0., height=0., alignE='auto', fileName=None,
                  name='beamLine', description='', **kwargs):
@@ -430,6 +430,24 @@ class BeamLine(object):
             is defined as the middle of the Source energy range.
             Plays a role if the *pitch* or *bragg* parameters of the energy
             dispersive optical elements were set to 'auto'.
+
+        *fileName*: str, path-like or None
+            Path to an XML or JSON beamline layout. The format is selected
+            by the filename extension. Both formats restore beamline
+            parameters, materials, figure errors, elements and the saved
+            propagation flow using the same initialization logic.
+
+            The loaded beamline is ready for propagation with
+            :func:`~xrt.backends.raycing.run_process_from_file`.
+            :meth:`glow` uses the loaded flow automatically. Loading itself
+            does not trace rays; plots and the ray-tracing runner require
+            separate setup.
+
+            Relative paths are resolved against the current working directory.
+
+        .. note::
+            *fileName* is for scripted beamline construction only. In
+            xrtQook, use **Load Beamline Layout** (Ctrl+L) to load a layout.
 
 
         """
