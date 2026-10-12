@@ -32,7 +32,7 @@ from .physconsts import CHBAR
 
 allArguments = ('bl', 'name', 'center', 'x', 'z', 'compressX',
                 'compressZ', 'R', 'phiOffset', 'thetaOffset', 'limPhysX',
-                'limPhysY', 'cLimits', 'histShape')
+                'limPhysY')
 
 _DEBUG = 20
 
@@ -66,6 +66,10 @@ class Screen(object):
             camera magnification or when the camera sees the screen at an
             angle.
 
+        *limPhysX* and *limPhysY*: [*min*, *max*] where *min*, *max* are floats
+            Physical dimensions in mm along the local x and z axes. Used for
+            the visible screen size in Glow.
+
 
         """
         self.bl = bl
@@ -91,10 +95,32 @@ class Screen(object):
         self.compressX = compressX
         self.compressZ = compressZ
 
-        self.limPhysX = raycing.Limits([0, 0])
-        self.limPhysY = raycing.Limits([0, 0])
+        self.limPhysX = kwargs.pop('limPhysX', None)
+        self.limPhysY = kwargs.pop('limPhysY', None)
 
     center = raycing.center_property()
+
+    @property
+    def limPhysX(self):
+        return self._limPhysX
+
+    @limPhysX.setter
+    def limPhysX(self, limPhysX):
+        if limPhysX is None:
+            self._limPhysX = raycing.Limits([0, 0])
+        else:
+            self._limPhysX = raycing.Limits(limPhysX)
+
+    @property
+    def limPhysY(self):
+        return self._limPhysY
+
+    @limPhysY.setter
+    def limPhysY(self, limPhysY):
+        if limPhysY is None:
+            self._limPhysY = raycing.Limits([0, 0])
+        else:
+            self._limPhysY = raycing.Limits(limPhysY)
 
     @property
     def x(self):
@@ -475,102 +501,5 @@ class HemisphericScreen(Screen):
             blo.Ep *= propPhase
         raycing.append_to_flow(self.expose, [blo],
                                inspect.currentframe())
-
-        return blo
-
-
-class Detector(Screen):
-    """Flat detector for beam histogramming. Similar to Screen but with physical
-    sizes and mesh sizes. The histogramming is done within `expose()` and saved
-    in `self.image`."""
-
-    def __init__(self, bl=None, name='', center=[0, 0, 0], x='auto', z='auto',
-                 **kwargs):
-        """
-        *limPhysX* and *limPhysY*: [*min*, *max*] where *min*, *max* are floats
-            Physical dimensions.
-
-        *histShape* [*rows*, *columns*]
-            Mesh size.
-
-
-        """
-        super().__init__(bl, name, center, x, z, **kwargs)
-        self.__pop_kwargs(**kwargs)
-        if np.sum(self.limPhysX) > 0:
-            self.image = np.zeros(np.int32(self.histShape))
-
-    def __pop_kwargs(self, **kwargs):
-        self.limPhysX = kwargs.pop('limPhysX', None)
-        self.limPhysY = kwargs.pop('limPhysY', None)
-        self.cLimits = kwargs.pop('cLimits', None)
-        self.histShape = kwargs.pop('histShape', [256, 256])
-
-    @property
-    def limPhysX(self):
-        return self._limPhysX
-
-    @limPhysX.setter
-    def limPhysX(self, limPhysX):
-        if limPhysX is None:
-            self._limPhysX = raycing.Limits([0, 0])
-        else:
-            self._limPhysX = raycing.Limits(limPhysX)
-
-    @property
-    def limPhysY(self):
-        return self._limPhysY
-
-    @limPhysY.setter
-    def limPhysY(self, limPhysY):
-        if limPhysY is None:
-            self._limPhysY = raycing.Limits([0, 0])
-        else:
-            self._limPhysY = raycing.Limits(limPhysY)
-
-    @property
-    def cLimits(self):
-        return self._cLimits
-
-    @cLimits.setter
-    def cLimits(self, cLimits):
-        if cLimits is None:
-            self._cLimits = raycing.Limits([0, 0])
-        else:
-            self._cLimits = raycing.Limits(cLimits)
-
-    @property
-    def histShape(self):
-        return self._histShape
-
-    @histShape.setter
-    def histShape(self, histShape):
-        if histShape is None:
-            self._histShape = raycing.Image2D([256, 256])
-        else:
-            self._histShape = raycing.Image2D(histShape)
-
-    @raycing.append_to_flow_decorator
-    def expose(self, beam=None, onlyPositivePath=False, withHistogram=False):
-        blo = super().expose(beam, onlyPositivePath)
-
-        if withHistogram:
-            if any([np.sum(np.abs(x)) == 0 for x in
-                    [self.limPhysX, self.limPhysY]]):
-                print("Using auto limits for histogramming")
-                self.limPhysX = raycing.Limits(
-                    self.footprint[-1][:, 0].tolist())
-                self.limPhysY = raycing.Limits(
-                    self.footprint[-1][:, 2].tolist())
-
-            limitsIn = [self.limPhysX if isinstance(self.limPhysX, list) else
-                        self.limPhysX.tolist(),
-                        self.limPhysY if isinstance(self.limPhysY, list) else
-                        self.limPhysY.tolist()]
-            # print(limitsIn, self.histShape)
-            hist2d, hist2dRGB, limitsOut = raycing.build_hist(
-                    blo, limits=limitsIn, isScreen=True, shape=self.histShape,
-                    cDataFunc=None, cLimits=None)
-            self.image = hist2d
 
         return blo
