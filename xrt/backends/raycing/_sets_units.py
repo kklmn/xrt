@@ -309,6 +309,9 @@ argumentInputGroups = {
 
 
 # Optional instructions for input types. auto and None have no extra help.
+SHOW_DOCS_IN_TOOLTIPS = True
+TOOLTIP_DOC_MAX_LENGTH = 600
+
 argumentInputTooltips = {
     'combo': 'Double-click to see available options.',
     'editableCombo': 'Double-click to select or enter a new value.',

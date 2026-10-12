@@ -39,11 +39,21 @@ from qtpy.QtSql import (QSqlDatabase, QSqlQuery, QSqlTableModel,
 
 from ...backends.raycing._sets_units import (
     allUnitsAng, allUnitsEnergy, argumentInputGroups, compoundArgs,
-    argumentInputTooltips, argumentTooltips)
+    argumentInputTooltips, argumentTooltips, SHOW_DOCS_IN_TOOLTIPS)
 from ...backends.raycing._flow_utils import normalize_mu
 
 RAW_VALUE_ROLE = Qt.UserRole + 1
 EDITOR_HINT_ROLE = Qt.UserRole + 2
+TOOLTIP_DOC_ROLE = Qt.UserRole + 3
+
+TOOLTIP_STYLE = """
+QToolTip {
+    background-color: #fff8dc;
+    color: #202020;
+    border: 1px solid #a88b3a;
+    padding: 6px;
+}
+"""
 
 
 def _qt_attr(name, *modules):
@@ -381,9 +391,24 @@ def _tooltip_code(value):
     return f'<span style="white-space: nowrap;">{text}</span>'
 
 
-def set_param_tooltip(child0, child1, paramName, unit=None, calculated=None):
-    """Set rich-text readback, input, unit and usage hints on both columns."""
+def _set_tooltip_html(child0, child1, body):
+    if SHOW_DOCS_IN_TOOLTIPS:
+        description = child1.data(TOOLTIP_DOC_ROLE)
+        if description:
+            body += '<p><b>Description:</b></p>' + description
+    toolTip = '<html>' + body + '</html>' if body else ''
+    child0.setToolTip(toolTip)
+    child1.setToolTip(toolTip)
+
+
+def set_param_tooltip(child0, child1, paramName, unit=None, calculated=None,
+                      obj=None):
+    """Set rich-text readback, input, unit, usage and documentation hints."""
     argName = str(paramName)
+    if SHOW_DOCS_IN_TOOLTIPS and obj is not None:
+        from . import ext
+        child1.setData(
+            ext.get_tooltip_description(obj, argName), TOOLTIP_DOC_ROLE)
     componentTypes = _compound_component_types(argName)
     inputTypes = componentTypes or _argument_input_types(argName)
     hints = []
@@ -407,14 +432,17 @@ def set_param_tooltip(child0, child1, paramName, unit=None, calculated=None):
     if unit is not None:
         hints.append('<b>Unit:</b> ' + _tooltip_code(unit))
     sections = ['<br>'.join(hints)] if hints else []
+    description = (child1.data(TOOLTIP_DOC_ROLE)
+                   if SHOW_DOCS_IN_TOOLTIPS else None)
     helpText = argumentTooltips.get(argName)
     helpTypes = dict.fromkeys(
         inputType.partition(':')[2]
         if inputType.startswith('sequence:') else inputType
         for inputType in inputTypes)
-    instructions = [helpText] if helpText is not None else [
+    instructions = [helpText] if helpText is not None and not description else [
         argumentInputTooltips[inputType] for inputType in helpTypes
-        if inputType in argumentInputTooltips]
+        if inputType in argumentInputTooltips and
+        (not description or inputType in ('combo', 'editableCombo'))]
     for instruction in instructions:
         text = instruction.format(
             unit=_tooltip_code(unit or 'the default unit'),
@@ -425,10 +453,9 @@ def set_param_tooltip(child0, child1, paramName, unit=None, calculated=None):
         '<p style="margin-top:{0}px; margin-bottom:0;">{1}</p>'.format(
             0 if index == 0 else 6, section)
         for index, section in enumerate(sections)]
-    toolTip = '<html>' + ''.join(paragraphs) + '</html>' if paragraphs else ''
-    toolTip = toolTip.replace("-", "&#8209;")  # non-breaking hyphen
-    child0.setToolTip(toolTip)
-    child1.setToolTip(toolTip)
+    body = ''.join(paragraphs)
+    body = body.replace("-", "&#8209;")  # non-breaking hyphen
+    _set_tooltip_html(child0, child1, body)
 
 
 def _compound_fields(argName):
@@ -679,6 +706,10 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
         self.mainWidget = mainWidget
         self.bl = bl
 
+        app = QApplication.instance()
+        if TOOLTIP_STYLE not in app.styleSheet():
+            app.setStyleSheet(app.styleSheet() + TOOLTIP_STYLE)
+
     @staticmethod
     def _createLineEditor(parent, argName):
         editor = QLineEdit(parent)
@@ -730,9 +761,8 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
             else:
                 return
 
-        toolTip = argumentInputTooltips[inputType]
-        child0.setToolTip(toolTip)
-        child1.setToolTip(toolTip)
+        _set_tooltip_html(
+            child0, child1, '<p>' + argumentInputTooltips[inputType] + '</p>')
 
     def _indexRawValue(self, index):
         model = index.model()

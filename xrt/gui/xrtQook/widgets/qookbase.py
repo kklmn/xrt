@@ -1516,18 +1516,20 @@ class XrtQookBase(qt.QMainWindow):
         return child0, child1
 
     def addParam(self, parent, paramName, value, source=None, unit=None,
-                 editorHint=None):
+                 editorHint=None, obj=None):
         """Add a pair of Parameter-Value Items"""
         child0 = qt.QStandardItem(str(paramName))
         child0.setFlags(self.paramFlag)
-        obj = None
-        if (isinstance(parent, qt.QStandardItem) and
-                str(parent.text()) == 'properties' and
-                parent.parent() is not None):
-            obj = self.getVal(self.getClassName(parent.parent()))
+        if obj is None and isinstance(parent, qt.QStandardItem):
+            if str(parent.text()) in ('properties', 'parameters') and\
+                    parent.parent() is not None:
+                obj = self.getVal(self.getClassName(parent.parent()))
+            elif parent.model() is self.runModel:
+                obj = xrtrun.run_ray_tracing
         child1 = qt.QStandardItem()
         qt.set_param_tooltip(
-            child0, child1, paramName, _getArgumentUnit(paramName, obj))
+            child0, child1, paramName, _getArgumentUnit(paramName, obj),
+            obj=obj)
         if editorHint is not None:
             child0.setData(editorHint, qt.EDITOR_HINT_ROLE)
             child1.setData(editorHint, qt.EDITOR_HINT_ROLE)
@@ -2094,24 +2096,7 @@ class XrtQookBase(qt.QMainWindow):
             model.blockSignals(signalsBlocked)
 
     def getArgDescr(self, obj):
-        argDesc = dict()
-        objRef = eval(obj)
-
-        def parseDescr(obji):
-            fdoc = obji.__doc__
-            if fdoc is not None:
-                fdocRec = re.findall(
-                    r"\*.*?\n\n(?= *\*|\n)", fdoc, re.S | re.U)
-                if len(fdocRec) > 0:
-                    descs = [re.split(
-                        r"\*\:",
-                        fdc.rstrip("\n")) for fdc in fdocRec]
-                    for desc in descs:
-                        if len(desc) == 2:
-                            descName = desc[0].strip(r"\*")
-                            descBody = desc[1].strip(r"\* ")
-                            if descName not in argDesc.keys():
-                                argDesc[descName] = descBody
+        argDesc = ext.get_argument_descriptions(eval(obj))
 
         def sortDescr():
             retArgDescs = []
@@ -2134,15 +2119,6 @@ class XrtQookBase(qt.QMainWindow):
             return retArgDescs, retArgDescVals
 
         argZip = OrderedDict(self.getParams(obj)).keys()
-
-        if inspect.isclass(objRef):
-            for parent in inspect.getmro(objRef)[:-1]:
-                for namef, objf in inspect.getmembers(parent):
-                    if (inspect.ismethod(objf) or inspect.isfunction(objf)):
-                        if namef == "__init__" or namef.endswith("pop_kwargs"):
-                            parseDescr(objf)
-        else:
-            parseDescr(objRef)
 
         return sortDescr()
 

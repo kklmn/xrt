@@ -15,6 +15,7 @@ from ...commons import qt, ext  # analysis:ignore
 from ...xrtGlow import is_screen, is_aperture  # analysis:ignore
 from ...xrtGlow.widgets.inspector import _getBeamName  # analysis:ignore
 from ....backends import raycing  # analysis:ignore
+from .... import plotter as xrtplot
 
 
 class XrtQookElements(XrtQookBase):
@@ -398,11 +399,13 @@ class XrtQookElements(XrtQookBase):
                             self.addObject(self.plotTree, child0,
                                            "xrt.plotter.XYCAxis")
                             continue
-                        c0, c1 = self.addParam(child0, axname, axval)
+                        c0, c1 = self.addParam(
+                            child0, axname, axval, obj=xrtplot.XYCAxis)
                         self.addComboboxToolTip(axname, c0, c1)
                 else:
                     arg_value = pval
-                    c0, c1 = self.addParam(plotItem, pname, arg_value)
+                    c0, c1 = self.addParam(
+                        plotItem, pname, arg_value, obj=xrtplot.XYCPlot)
                     self.addComboboxToolTip(pname, c0, c1)
 
         self.setPlotItemName(plotItem, plotName)

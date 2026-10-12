@@ -11,12 +11,17 @@ import io
 import keyword
 import token
 import tokenize
+import inspect
+import tempfile
+import textwrap
+from functools import lru_cache
 
 import http.server
 import socketserver
 import threading
 
 from . import qt
+from ...backends.raycing._sets_units import TOOLTIP_DOC_MAX_LENGTH
 shouldScaleMath = qt.QtName == "PyQt4" and sys.platform == 'win32'
 
 CONFDIR = osp.dirname(osp.abspath(__file__))
@@ -339,12 +344,98 @@ class PythonTextEdit(qt.QPlainTextEdit):
 try:
     from xml.sax.saxutils import escape
     from docutils.utils import SystemMessage
+    from docutils import nodes
     from sphinx.application import Sphinx
     import sphinx  # analysis:ignore
     import codecs
     isSphinx = True
 except Exception:
     isSphinx = False
+
+
+@lru_cache(maxsize=None)
+def get_argument_descriptions(obj):
+    """Extract the parameter sections used by Live Doc and tooltips."""
+    argDesc = {}
+
+    def parseDescr(obji):
+        fdoc = obji.__doc__
+        if fdoc is not None:
+            for entry in re.findall(
+                    r"\*.*?\n\n(?= *\*|\n)", fdoc, re.S | re.U):
+                desc = re.split(r"\*\:", entry.rstrip("\n"))
+                if len(desc) == 2:
+                    name = desc[0].strip(r"\*")
+                    argDesc.setdefault(name, desc[1].strip(r"\* "))
+
+    if inspect.isclass(obj):
+        for parent in inspect.getmro(obj)[:-1]:
+            for name, method in inspect.getmembers(parent):
+                if inspect.ismethod(method) or inspect.isfunction(method):
+                    if name == "__init__" or name.endswith("pop_kwargs"):
+                        parseDescr(method)
+    else:
+        parseDescr(obj)
+    return argDesc
+
+
+@lru_cache(maxsize=None)
+def _tooltip_descriptions(obj):
+    """Render all field descriptions in one cached Sphinx build."""
+    if not isSphinx:
+        return {}
+    descriptions = get_argument_descriptions(obj)
+    if not descriptions:
+        return {}
+
+    sections = {}
+    rst = []
+    for index, (names, description) in enumerate(descriptions.items()):
+        declaration, _, description = description.partition('\n')
+        # Some declaration lines also contain prose after the type.
+        _, separator, inlineDescription = declaration.partition('. ')
+        if separator:
+            description = inlineDescription + '\n' + description
+        description = inspect.cleandoc(description)
+        if not description:
+            continue
+        if len(' '.join(description.split())) > TOOLTIP_DOC_MAX_LENGTH:
+            description = (
+                'Description is too long for a tooltip. Refer to Live Doc.')
+        marker = 'tooltip-doc-' + str(index)
+        sections[marker] = re.split(
+            r',\s*|\s+and\s+', names.replace('*', ''))
+        rst.append('.. container:: {0}\n\n{1}\n'.format(
+            marker, textwrap.indent(inspect.cleandoc(description), '   ')))
+
+    imagePath = osp.join(CONFDIR, '_images').replace('\\', '/')
+    result = {}
+    with tempfile.TemporaryDirectory(prefix='xrt-tooltip-') as docdir:
+        app = sphinxify(
+            '\n'.join(rst).replace('imagezoom::', 'image::'),
+            generate_context(), img_path=imagePath, docdir=docdir)
+        tree = app.env.get_and_resolve_doctree(xrtQookPageName, app.builder)
+        for paragraph in list(tree.traverse(nodes.paragraph)):
+            if list(paragraph.traverse(nodes.math)):
+                paragraph.parent.remove(paragraph)
+        for formula in list(tree.traverse(nodes.math_block)):
+            formula.parent.remove(formula)
+        for container in list(tree.traverse(nodes.container)):
+            marker = container['classes'][0] if container['classes'] else ''
+            if marker in sections and container.astext().strip():
+                fragment = app.builder.render_partial(container)['fragment']
+                fragment = fragment.replace(
+                    'src="_images/', 'src="' + imagePath + '/')
+                for name in sections[marker]:
+                    result.setdefault(name, fragment)
+    return result
+
+
+def get_tooltip_description(obj, paramName):
+    if not (inspect.isclass(obj) or inspect.isroutine(obj)):
+        obj = type(obj)
+    name = str(paramName).removesuffix(' rbk').split('.')[0]
+    return _tooltip_descriptions(obj).get(name, '')
 
 
 def generate_context(name='', argspec='', note=''):
@@ -358,7 +449,7 @@ def generate_context(name='', argspec='', note=''):
 
 
 def sphinxify(docstring, context, buildername='html', img_path='',
-              wantMessages=False):
+              wantMessages=False, docdir=None):
     """
     Largely modified Spyder's sphinxify.
     """
@@ -368,7 +459,8 @@ def sphinxify(docstring, context, buildername='html', img_path='',
         leading = '/' if os.name.startswith('posix') else ''
         docstring = docstring.replace('_images', leading+img_path)
 
-    srcdir = osp.join(DOCDIR, '_sources')
+    docdir = DOCDIR if docdir is None else docdir
+    srcdir = osp.join(docdir, '_sources')
     if not osp.exists(srcdir):
         os.makedirs(srcdir)
     base_name = osp.join(srcdir, xrtQookPageName)
@@ -396,9 +488,9 @@ def sphinxify(docstring, context, buildername='html', img_path='',
     # confoverrides['extensions'] = [
     #     'sphinx.ext.mathjax', 'sphinxcontrib.jquery']
 
-    doctreedir = osp.join(DOCDIR, 'doctrees')
+    doctreedir = osp.join(docdir, 'doctrees')
     status, warning = [sys.stderr]*2 if wantMessages else [None]*2
-    sphinx_app = Sphinx(srcdir, DOCDIR, DOCDIR, doctreedir, buildername,
+    sphinx_app = Sphinx(srcdir, DOCDIR, docdir, doctreedir, buildername,
                         confoverrides, status=status, warning=warning,
                         freshenv=True, warningiserror=False, tags=None)
 
@@ -406,6 +498,7 @@ def sphinxify(docstring, context, buildername='html', img_path='',
         sphinx_app.build(None, [rst_name])
     except SystemMessage:
         pass
+    return sphinx_app
 #        output = ("It was not possible to generate rich text help for this "
 #                  "object.</br>Please see it in plain text.")
 

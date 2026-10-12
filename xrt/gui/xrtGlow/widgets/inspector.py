@@ -488,7 +488,8 @@ class InstanceInspector(qt.QDialog):
         child1 = qt.QStandardItem()
         qt.set_param_tooltip(
             child0, child1, paramName,
-            _getArgumentUnit(paramName, self.editorObject))
+            _getArgumentUnit(paramName, self.editorObject),
+            obj=self.editorObject)
         if editorHint is not None:
             child0.setData(editorHint, qt.EDITOR_HINT_ROLE)
             child1.setData(editorHint, qt.EDITOR_HINT_ROLE)
@@ -1112,8 +1113,11 @@ class ConfigurablePlotWidget(qt.QWidget):
         child0 = qt.QStandardItem(str(paramName))
         child0.setFlags(self.paramFlag)
         child1 = qt.QStandardItem(str(value))
+        group = parent.data(qt.Qt.UserRole)
+        obj = (self.dynamicPlot if group == 'top' else
+               getattr(self.dynamicPlot, group))
         qt.set_param_tooltip(
-            child0, child1, paramName, _getArgumentUnit(paramName))
+            child0, child1, paramName, _getArgumentUnit(paramName), obj=obj)
 
         ch1flag = (self.paramFlag if paramName == 'name'
                    else self.valueFlag)
