@@ -276,7 +276,7 @@ class InstanceInspector(qt.QDialog):
                         calculated=value)
                 else:
                     c0, c1 = self.add_param(parentItem, key, value, epv=epv)
-                    self.add_combobox_tolltip(self.model, key, c0, c1)
+                    self.add_combobox_tooltip(self.model, key, c0, c1)
                     if key in ['x', 'z']:
                         self.add_param(parentItem, f"{key} rbk", value)
 
@@ -910,22 +910,12 @@ class InstanceInspector(qt.QDialog):
         if updateBeam is not None:
             updateBeam(beamTag)
 
-    def add_combobox_tolltip(self, model, arg, c0, c1):
-        model.blockSignals(True)
-        try:  # use the the item delegate to get combobox texts
-            opt = qt.QStyleOptionViewItem()
-            ed = self.comboDelegate.createEditor(None, opt, c1.index())
-            if isinstance(ed, qt.QComboBox):
-                items = [ed.itemText(i) for i in range(ed.count())]
-                if items:
-                    tt = '<b>Input:</b><br>'+qt._tooltip_code(
-                        '\n'.join(ext.reorder(items)))
-                    c0.setToolTip(tt)
-                    c1.setToolTip(tt)
-            ed.deleteLater()
-        except Exception as err:
-            pass  # no tooltip for this combobox
-        model.blockSignals(False)
+    def add_combobox_tooltip(self, model, arg, c0, c1):
+        signalsBlocked = model.blockSignals(True)
+        try:
+            self.comboDelegate.setComboTooltip(c0, c1)
+        finally:
+            model.blockSignals(signalsBlocked)
 
 
 class ConfigurablePlotWidget(qt.QWidget):
@@ -1049,7 +1039,7 @@ class ConfigurablePlotWidget(qt.QWidget):
                 for axkey, axval in value.items():
                     if axkey not in self.hiddenProps:
                         c0, c1 = self.add_param(parentItem, axkey, axval)
-                        self.add_combobox_tolltip(model, axkey, c0, c1)
+                        self.add_combobox_tooltip(model, axkey, c0, c1)
             else:
                 model = self.models['top']
                 parentItem = model.invisibleRootItem()
@@ -1064,7 +1054,7 @@ class ConfigurablePlotWidget(qt.QWidget):
 
                 if key not in self.hiddenProps:
                     c0, c1 = self.add_param(parentItem, key, value)
-                    self.add_combobox_tolltip(model, key, c0, c1)
+                    self.add_combobox_tooltip(model, key, c0, c1)
 
         self.exportsPanel = qt.QGroupBox(self)
         self.exportsPanel.setSizePolicy(qt.QSizePolicy.Minimum,
@@ -1475,22 +1465,12 @@ class ConfigurablePlotWidget(qt.QWidget):
             plot.ax1dHistE.set_position([b2[0], e1[1], b2[2]*ep/xp, e1[3]])
             plot.ax1dHistEbar.set_position([b2[0], b1[1], b2[2]*ep/xp, b1[3]])
 
-    def add_combobox_tolltip(self, model, arg, c0, c1):
-        model.blockSignals(True)
-        try:  # use the the item delegate to get combobox texts
-            opt = qt.QStyleOptionViewItem()
-            ed = self.comboDelegate.createEditor(None, opt, c1.index())
-            if isinstance(ed, qt.QComboBox):
-                items = [ed.itemText(i) for i in range(ed.count())]
-                if items:
-                    tt = '<b>Input:</b><br>'+qt._tooltip_code(
-                        '\n'.join(ext.reorder(items)))
-                    c0.setToolTip(tt)
-                    c1.setToolTip(tt)
-            ed.deleteLater()
-        except Exception as err:
-            pass  # no tooltip for this combobox
-        model.blockSignals(False)
+    def add_combobox_tooltip(self, model, arg, c0, c1):
+        signalsBlocked = model.blockSignals(True)
+        try:
+            self.comboDelegate.setComboTooltip(c0, c1)
+        finally:
+            model.blockSignals(signalsBlocked)
 
 
 class Curve1dWidget(qt.QWidget):

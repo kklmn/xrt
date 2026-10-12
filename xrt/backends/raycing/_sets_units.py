@@ -224,6 +224,7 @@ def auto_unit(lbl, unit):
 # accepted alternatives. sequence:<type> declares the member grammar;
 # untyped sequences retain their argument-specific rules. compoundArgs supplies
 # fixed lengths, with component alternatives handled by compound validators.
+# combo and editableCombo mark editors, independently of the value grammar.
 # Arguments not found here are strings by default.
 argumentInputGroups = {
     ('float', 'None'): {
@@ -254,11 +255,22 @@ argumentInputGroups = {
     ('angle', 'sequence:angle'): {
         'dxprime', 'dzprime', 'xPrimeMax', 'zPrimeMax'},
     'energy': {'E', 'eE', 'eMax', 'eMin'},
+    ('string', 'combo'): {
+        'aspect', 'baseFE', 'beam', 'beamAbsorb', 'beamC', 'beamState',
+        'bLayer', 'coating', 'coefficientConvention', 'data', 'density',
+        'distE', 'distx', 'distxprime', 'disty', 'distz', 'distzprime',
+        'figureError', 'fluxKind', 'fluxUnit', 'generator', 'geom', 'kind',
+        'material', 'material2', 'polarization', 'precisionOpenCL',
+        'propagationMode', 'renderStyle', 'rmsKind', 'shape', 'substrate',
+        'surfaceHintX', 'surfaceHintY', 'tLayer', 'table', 'wave', 'waveFar',
+        'E from Source', 'θ from OE'},
+    ('string', 'editableCombo'): {'label', 'targetOpenCL', 'unit'},
+    ('integer', 'combo'): {'ePos', 'xPos', 'yPos'},
     'string': {
         'afterScript', 'crossSection', 'extraRotationSequence',
         'name', 'orientation', 'rotationSequence', 'title',
         'customField', 'efficiencyFile', 'fileName',
-        'persistentName', 'saveName', 'beam',
+        'persistentName', 'saveName',
         },
     'format': {'fwhmFormatStr', 'contourFmt', 'fluxFormatStr'},
     'sequence': {
@@ -275,7 +287,7 @@ argumentInputGroups = {
     ('sequence', 'inf', 'None'): {'f1', 'f2'},
     'integer': {
         'eN', 'gIntervals', 'N', 'nPairs', 'nRK', 'nSpokes', 'nx', 'nz',
-        'nrays', 'ppb', 'bins', 'vortexNradial', 'ePos', 'xPos', 'yPos'},
+        'nrays', 'ppb', 'bins', 'vortexNradial'},
     'float': {
         'amplitude', 'B0', 'B0x', 'B0y', 'betaX', 'betaZ', 'bumpHeight',
         'b', 'bThickness', 'bThicknessLow', 'c', 'cameraAngle',
@@ -298,6 +310,8 @@ argumentInputGroups = {
 
 # Optional instructions for input types. auto and None have no extra help.
 argumentInputTooltips = {
+    'combo': 'Double-click to see available options.',
+    'editableCombo': 'Double-click to select or enter a new value.',
     'angle': (
         'Enter an angle with an optional unit, e.g. <nobr><code>3 mrad</code></nobr> '
         'or <nobr><code>0.2 deg</code></nobr>.\n'
@@ -355,19 +369,3 @@ argumentTooltips = {
 
 # No unresolved argument input types at present.
 # unknownType = set()
-
-
-# Arguments for which DynamicArgumentDelegate creates a populated QComboBox.
-# comboBoxType = {
-#    'aspect', 'autoAppendToBL', 'baseFE', 'distE', 'distx', 'distxprime',
-#    'disty', 'distz', 'distzprime', 'figureError', 'filamentBeam',
-#    'isCentralZoneBlack', 'isClosed', 'isCylindrical', 'isParametric',
-#    'material', 'material2', 'polarization', 'precisionOpenCL', 'recenter',
-#    'renderStyle', 'rmsKind', 'shape', 'shouldCheckCenter', 'surfaceHint',
-#    'targetOpenCL', 'uniformRayDensity', 'withCentralRay',
-#    'xPrimeMaxAutoReduce', 'zPrimeMaxAutoReduce', 'generator', 'beamAbsorb',
-#    'beamC', 'beamState', 'bLayer', 'geom', 'kind', 'substrate', 'tLayer',
-#    'table',
-#    # Plot and axis delegates provide populated selectors for these fields.
-#    'beam', 'data', 'density', 'fluxKind', 'fluxUnit', 'label',
-#    'rayFlag', 'unit'}

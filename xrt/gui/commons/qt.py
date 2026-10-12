@@ -342,10 +342,14 @@ def _as_input_types(inputTypes):
     return (inputTypes,)
 
 
-def _argument_input_types(argName):
+def _argument_input_types(argName, includeEditor=False):
     for inputTypes, argNames in argumentInputGroups.items():
         if argName in argNames:
-            return _as_input_types(inputTypes)
+            inputTypes = _as_input_types(inputTypes)
+            if not includeEditor:
+                inputTypes = tuple(inputType for inputType in inputTypes
+                                   if inputType not in ('combo', 'editableCombo'))
+            return inputTypes
     return ('string',)
 
 
@@ -704,6 +708,32 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
                 return hint
         return None
 
+    def setComboTooltip(self, child0, child1):
+        argName = child0.text()
+        editorHint = self.argumentEditorHint(child1.index(), argName)
+        if editorHint is not None and editorHint.get('editor') == 'dict':
+            return
+
+        argValue = child1.text()
+        if argValue.lower() in ('false', 'true'):
+            inputType = 'combo'
+        elif argName.lower() == 'kind' and argValue not in (
+                'mirror', 'thin mirror', 'plate', 'lens',
+                'grating', 'FZP', 'auto'):
+            return
+        else:
+            inputTypes = _argument_input_types(argName, includeEditor=True)
+            if 'editableCombo' in inputTypes:
+                inputType = 'editableCombo'
+            elif 'combo' in inputTypes:
+                inputType = 'combo'
+            else:
+                return
+
+        toolTip = argumentInputTooltips[inputType]
+        child0.setToolTip(toolTip)
+        child1.setToolTip(toolTip)
+
     def _indexRawValue(self, index):
         model = index.model()
         if hasattr(model, 'itemFromIndex'):
@@ -997,6 +1027,7 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
             else:
                 return self._createLineEditor(parent, argName)
         elif argNameL.endswith('label'):  # plot only
+            combo.setEditable(True)
             if parentIndexName.lower() in ['xaxis', 'yaxis']:
                 combo.addItems(['x', 'y', 'z', 'x\'', 'z\'', 'energy', 'theta',
                                 'phi', 'r', 's'])
@@ -1008,22 +1039,21 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
         elif 'rayflag' in argNameL:  # plot only
             return make_ray_flag_editor(parent)
         elif argNameL.endswith('unit'):
+            combo.setEditable(True)
             if parentIndexName.lower() in ['xaxis', 'yaxis', 'caxis']:
                 for i in range(model.rowCount(parentIndex)):
                     fieldName = str(model.index(i, 0, parentIndex).data())
                     fieldVal = str(model.index(i, 1, parentIndex).data())
                     if fieldName == 'label':
-                        if fieldVal in ['x', 'y', 'z']:
+                        if fieldVal in ['x', 'y', 'z', 'r', 's']:
                             combo.addItems(self.mainWidget.lengthUnitList)
 #                            combo.setModel(self.mainWidget.lengthUnitModel)
-                        elif fieldVal in ['x\'', 'z\'']:
+                        elif fieldVal in ['x\'', 'z\'', 'theta', 'phi']:
                             combo.addItems(self.mainWidget.angleUnitList)
 #                            combo.setModel(self.mainWidget.angleUnitModel)
                         elif fieldVal in ['energy']:
                             combo.addItems(self.mainWidget.energyUnitList)
 #                            combo.setModel(self.mainWidget.energyUnitModel)
-                        else:
-                            return self._createLineEditor(parent, argName)
                         break
                 return combo
             else:
