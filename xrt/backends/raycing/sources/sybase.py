@@ -1512,6 +1512,9 @@ class IntegratedSource(SourceBase):
         contains arrays Es and Ep with the *s* and *p* components of the
         electric field.
 
+        .. note::
+            ``toGlobal`` is script-only and unavailable in the GUI.
+
         *fixedEnergy* is either None or a value in eV. If *fixedEnergy* is
         specified, the energy band is not 0.1%BW relative to *fixedEnergy*, as
         probably expected but is given by (eMax - eMin) of the constructor.

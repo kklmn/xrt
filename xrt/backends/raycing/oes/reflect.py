@@ -24,6 +24,10 @@ class OEMainMethods(object):
         Returns the reflected or transmitted beam as :math:`\vec{out}` in
         global and local (if *needLocal* is true) systems.
 
+        .. note::
+            ``needLocal`` is script-only and unavailable in the GUI.
+            ``returnLocalAbsorbed`` is deprecated and unavailable in the GUI.
+
         .. rubric:: Mirror [wikiSnell]_:
 
         .. math::
@@ -181,6 +185,9 @@ class OEMainMethods(object):
         """
         Does the same as :meth:`reflect` but with up to *maxReflections*
         reflection on the same surface.
+
+        .. note::
+            ``returnLocalAbsorbed`` is deprecated and unavailable in the GUI.
 
         The returned beam has additional fields: *nRefl* for the number of
         reflections, *elevationD* for the maximum elevation distance between

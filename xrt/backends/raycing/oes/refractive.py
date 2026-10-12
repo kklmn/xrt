@@ -177,6 +177,10 @@ class Plate(DCM):
         Returns the refracted beam in global and two local (if *needLocal*
         is true) systems.
 
+        .. note::
+            ``needLocal`` is script-only and unavailable in the GUI.
+            ``returnLocalAbsorbed`` is deprecated and unavailable in the GUI.
+
         *needLocal*: bool
             Script-only option. If False, avoids separate local-beam
             copies when only the global output is needed. The return
@@ -494,6 +498,10 @@ class ParaboloidFlatLens(Plate):
         Returned global beam emerges from the exit surface of the last lens,
         returned local beams correspond to the entrance surface of the first
         lens and the exit surface of the last lens.
+
+        .. note::
+            ``needLocal`` is script-only and unavailable in the GUI.
+            ``returnLocalAbsorbed`` is deprecated and unavailable in the GUI.
 
         *needLocal*: bool
             Script-only option. If False, avoids separate local-beam

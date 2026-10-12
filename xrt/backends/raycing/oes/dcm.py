@@ -274,6 +274,10 @@ class DCM(OE):
         Returns the reflected beam in global and two local (if *needLocal*
         is true) systems.
 
+        .. note::
+            ``needLocal`` is script-only and unavailable in the GUI.
+            ``returnLocalAbsorbed`` is deprecated and unavailable in the GUI.
+
         *needLocal*: bool
             Script-only option. If False, avoids separate local-beam
             copies when only the global output is needed. The return

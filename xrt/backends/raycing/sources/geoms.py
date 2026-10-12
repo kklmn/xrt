@@ -433,6 +433,9 @@ class GeometricSource(object):
         electric field. If *wave* is provided, wave generation is delegated
         to the source implementation.
 
+        .. note::
+            ``toGlobal`` is script-only and unavailable in the GUI.
+
 
         *toGlobal*: bool
             Script-only option. If False, skips the final transformation
@@ -1006,6 +1009,9 @@ class MeshSource(object):
         Returns the source. If *toGlobal* is True, the output is in the global
         system.
 
+        .. note::
+            ``toGlobal`` is script-only and unavailable in the GUI.
+
 
         *toGlobal*: bool
             Script-only option. If False, skips the final transformation
@@ -1071,6 +1077,9 @@ class NESWSource(MeshSource):
         u"""
         Returns the source. If *toGlobal* is True, the output is in the global
         system.
+
+        .. note::
+            ``toGlobal`` is script-only and unavailable in the GUI.
 
 
         *toGlobal*: bool
@@ -1194,6 +1203,9 @@ class CollimatedMeshSource(object):
         u"""
         Returns the source beam. If *toGlobal* is True, the output is in the
         global system.
+
+        .. note::
+            ``toGlobal`` is script-only and unavailable in the GUI.
 
 
         *toGlobal*: bool

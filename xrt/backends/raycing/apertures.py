@@ -383,6 +383,9 @@ class RectangularAperture(object):
         intercepted by the aperture. The "lost" value is
         ``-self.ordinalNum - 1000.``
 
+        .. note::
+            ``needNewGlobal`` is script-only and unavailable in the GUI.
+
         *needNewGlobal*: bool
             Script-only option. If True, returns
             ``(beamGlobal, beamLocal)`` instead of ``beamLocal``.
@@ -849,6 +852,9 @@ class RoundAperture(object):
         intercepted by the aperture. The "lost" value is
         ``-self.ordinalNum - 1000.``
 
+        .. note::
+            ``needNewGlobal`` is script-only and unavailable in the GUI.
+
         *needNewGlobal*: bool
             Script-only option. If True, returns
             ``(beamGlobal, beamLocal)`` instead of ``beamLocal``.
@@ -1012,6 +1018,9 @@ class DoubleSlit(RectangularAperture):
         """Assigns the "lost" value to *beam.state* array for the rays
         intercepted by the aperture. The "lost" value is
         ``-self.ordinalNum - 1000.``
+
+        .. note::
+            ``needNewGlobal`` is script-only and unavailable in the GUI.
 
         *needNewGlobal*: bool
             Script-only option. If True, returns
@@ -1271,6 +1280,9 @@ class PolygonalAperture(object):
         """Assigns the "lost" value to *beam.state* array for the rays
         intercepted by the aperture. The "lost" value is
         ``-self.ordinalNum - 1000.``
+
+        .. note::
+            ``needNewGlobal`` is script-only and unavailable in the GUI.
 
         *needNewGlobal*: bool
             Script-only option. If True, returns
