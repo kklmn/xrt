@@ -1294,6 +1294,8 @@ class XrtQookBase(qt.QMainWindow):
             self.webHelp.setReadOnly(True)
 
     def renderLiveDoc(self, doc, docName, docArgspec, docNote, img_path=""):
+        # Ordinary images do not support imagezoom popup positioning.
+        doc = re.sub(r'(?m)^[ \t]*:loc:[^\r\n]*(?:\r?\n|$)', '', doc)
         renderArgs = (doc, docName, docArgspec, docNote, img_path)
         if self.sphinxThread.isRunning():
             self._pendingSphinxRender = renderArgs
