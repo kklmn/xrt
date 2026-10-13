@@ -57,24 +57,24 @@ class Material(object):
             *total* absorption cross-sections. This option is enabled by
             *table* = 'Chantler total'.
 
-        .. [Henke] http://henke.lbl.gov/optical_constants/asf.html
-           B.L. Henke, E.M. Gullikson, and J.C. Davis, *X-ray interactions:
-           photoabsorption, scattering, transmission, and reflection at
-           E=50-30000 eV, Z=1-92*, Atomic Data and Nuclear Data Tables
-           **54** (no.2) (1993) 181-342.
+            .. [Henke] http://henke.lbl.gov/optical_constants/asf.html
+               B.L. Henke, E.M. Gullikson, and J.C. Davis, *X-ray interactions:
+               photoabsorption, scattering, transmission, and reflection at
+               E=50-30000 eV, Z=1-92*, Atomic Data and Nuclear Data Tables
+               **54** (no.2) (1993) 181-342.
 
-        .. [Chantler] http://physics.nist.gov/PhysRefData/FFast/Text/cover.html
-           http://physics.nist.gov/PhysRefData/FFast/html/form.html
-           C. T. Chantler, *Theoretical Form Factor, Attenuation, and
-           Scattering Tabulation for Z = 1 - 92 from E = 1 - 10 eV to E = 0.4 -
-           1.0 MeV*, J. Phys. Chem. Ref. Data **24** (1995) 71-643.
+            .. [Chantler] http://physics.nist.gov/PhysRefData/FFast/Text/cover.html
+               http://physics.nist.gov/PhysRefData/FFast/html/form.html
+               C. T. Chantler, *Theoretical Form Factor, Attenuation, and
+               Scattering Tabulation for Z = 1 - 92 from E = 1 - 10 eV to E = 0.4 -
+               1.0 MeV*, J. Phys. Chem. Ref. Data **24** (1995) 71-643.
 
-        .. [BrCo] http://www.bmsc.washington.edu/scatter/periodic-table.html
-           ftp://ftpa.aps.anl.gov/pub/cross-section_codes/
-           S. Brennan and P.L. Cowan, *A suite of programs for calculating
-           x-ray absorption, reflection and diffraction performance for a
-           variety of materials at arbitrary wavelengths*, Rev. Sci. Instrum.
-           **63** (1992) 850-853.
+            .. [BrCo] http://www.bmsc.washington.edu/scatter/periodic-table.html
+               ftp://ftpa.aps.anl.gov/pub/cross-section_codes/
+               S. Brennan and P.L. Cowan, *A suite of programs for calculating
+               x-ray absorption, reflection and diffraction performance for a
+               variety of materials at arbitrary wavelengths*, Rev. Sci. Instrum.
+               **63** (1992) 850-853.
 
         *efficiency*: sequence of pairs [*order*, *value*]
             Can be given for *kind* = 'grating' and *kind* = 'FZP'. It must

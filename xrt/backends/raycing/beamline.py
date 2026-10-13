@@ -445,9 +445,9 @@ class BeamLine(object):
 
             Relative paths are resolved against the current working directory.
 
-        .. note::
-            *fileName* is for scripted beamline construction only. In
-            xrtQook, use **Load Beamline Layout** (Ctrl+L) to load a layout.
+            .. note::
+                *fileName* is for scripted beamline construction only. In
+                xrtQook, use **Load Beamline Layout** (Ctrl+L) to load a layout.
 
 
         """

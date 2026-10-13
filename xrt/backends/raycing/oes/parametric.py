@@ -903,7 +903,12 @@ class ParaboloidCapillaryMirror(SurfaceOfRevolution):
 
 class EllipsoidCapillaryMirror(SurfaceOfRevolution):
     """Ellipsoid of revolution or `Mirror Lens`. Do not forget to set
-    reasonable limPhysY."""
+    reasonable limPhysY.
+
+    The usage is exemplified in `test_ellipsoid_tube_mirror.py`. There, one
+    can find expressions of ellipse semi-axes based on focal lengths and
+    capillary radius.
+    """
 
     def __init__(self, *args, **kwargs):
         r"""
@@ -920,10 +925,6 @@ class EllipsoidCapillaryMirror(SurfaceOfRevolution):
             Distance between the end face of the capillary tube and the focal
             point. Mind the length of the optical element for proper
             positioning.
-
-        The usage is exemplified in `test_ellipsoid_tube_mirror.py`. There, one
-        can find expressions of ellipse semi-axes based on focal lengths and
-        capillary radius.
 
 
         """
@@ -1003,7 +1004,12 @@ class EllipsoidCapillaryMirror(SurfaceOfRevolution):
 class HyperboloidCapillaryMirror(SurfaceOfRevolution):
     """Hyperboloid of revolution or `Mirror Lens`. Unlike
     EllipsoidCapillaryMirror, reflective is the *outer* surface. Do not
-    forget to set reasonable limPhysY."""
+    forget to set reasonable limPhysY.
+
+    The usage is exemplified in `test_hyperboloid_tube_mirror.py`. There,
+    one can find expressions of hyperbola semi-axes based on focal lengths
+    and capillary radius.
+    """
 
     def __init__(self, *args, **kwargs):
         r"""
@@ -1020,10 +1026,6 @@ class HyperboloidCapillaryMirror(SurfaceOfRevolution):
             Distance between the imaginary focus and the front face of the
             capillary tube. Mind the length of the optical element for proper
             positioning.
-
-        The usage is exemplified in `test_hyperboloid_tube_mirror.py`. There,
-        one can find expressions of hyperbola semi-axes based on focal lengths
-        and capillary radius.
 
 
         """

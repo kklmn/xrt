@@ -362,7 +362,7 @@ def get_argument_descriptions(obj):
         fdoc = obji.__doc__
         if fdoc is not None:
             for entry in re.findall(
-                    r"\*.*?\n\n(?= *\*|\n)", fdoc, re.S | re.U):
+                    r"\*.*?\n\n(?= *\*| *\.\. _|\n)", fdoc, re.S | re.U):
                 desc = re.split(r"\*\:", entry.rstrip("\n"))
                 if len(desc) == 2:
                     name = desc[0].strip(r"\*")

@@ -1010,14 +1010,14 @@ class IntegratedSource(SourceBase):
             9) 'SERVER_ADRESS:PORT' - calculations will be run on remote
                server. See ``tests/raycing/RemoteOpenCLCalculation``.
 
-        .. warning::
-           A good graphics or dedicated accelerator card is highly
-           recommended! Special cases as wigglers by the undulator code,
-           near field, wide angles and tapering are hardly doable on CPU.
+            .. warning::
+               A good graphics or dedicated accelerator card is highly
+               recommended! Special cases as wigglers by the undulator code,
+               near field, wide angles and tapering are hardly doable on CPU.
 
-        .. note::
-           Consider the :ref:`warnings and tips <usage_GPU_warnings>` on
-           using xrt with GPUs.
+            .. note::
+               Consider the :ref:`warnings and tips <usage_GPU_warnings>` on
+               using xrt with GPUs.
 
         *precisionOpenCL*: 'float32' or 'float64', only for GPU.
             Single precision (float32) should be enough in most cases. The

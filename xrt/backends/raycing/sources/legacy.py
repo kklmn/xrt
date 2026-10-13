@@ -833,6 +833,8 @@ class BendingMagnetWS(WigglerWS):
     :ref:`comparison-synchrotron-sources`, but nonetheless can be used for
     comparison purposes. If you are going to use it, the code is freely
     available as parts of XOP package.
+
+    The other parameters are the same as in UndulatorUrgent.
     """
 
     def __init__(self, *args, **kwargs):
@@ -843,8 +845,6 @@ class BendingMagnetWS(WigglerWS):
 
         *K*, *n*, *period* and *nx*:
             Are set internally.
-
-        The other parameters are the same as in UndulatorUrgent.
 
 
         """

@@ -286,12 +286,20 @@ def resolve_epics_readback(default_record, epics_map):
 
 
 class EpicsDevice:
+    u"""
+    Create SoftIOC records for a beamline and connect writable PVs to xrt
+    property updates.
+
+    Notes
+    -----
+    Records are created once during IOC initialization and cannot be added,
+    removed or renamed after ``builder.LoadDatabase()`` and
+    ``softioc.iocInit()`` have been called.
+    """
+
     def __init__(self, bl, epicsPrefix, epicsMap, callback,
                  imageMaxLength=None):
         u"""
-        Create SoftIOC records for a beamline and connect writable PVs to xrt
-        property updates.
-
 
         *bl*: raycing.BeamLine
             Beamline instance whose elements are exposed through EPICS records.
@@ -348,12 +356,6 @@ class EpicsDevice:
             detector ``histShape`` can change at runtime. If omitted, image
             waveform records reserve space for at least a 1024 x 1024 image,
             or the initial detector ``histShape`` if it is larger.
-
-        Notes
-        -----
-        Records are created once during IOC initialization and cannot be added,
-        removed or renamed after ``builder.LoadDatabase()`` and
-        ``softioc.iocInit()`` have been called.
 
 
         """

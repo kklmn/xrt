@@ -127,12 +127,12 @@ class OE(OEMainMethods):
             single element list syntax [energy] is still accepted but
             deprecated.
 
-        *positionRoll*: float
-            A global roll used for putting the OE upside down (=np.pi) or
-            at horizontal deflection (=[-]np.pi/2). This parameter does the
-            same rotation as *roll*. It is introduced for holding large angles,
-            as π or π/2 whereas *roll* is meant for smaller [mis]alignment
-            angles.
+        *positionRoll*: float or str
+            A global roll used for putting the OE upside down (``'180 deg'``)
+            or at horizontal deflection (``'90 deg'`` or ``'-90 deg'``).
+            This parameter does the same rotation as *roll*. It is introduced
+            for holding large angles, whereas *roll* is meant for smaller
+            [mis]alignment angles. Bare numbers are in radians.
 
         *rotationSequence*: str, any combination of 'Rx', 'Ry' and 'Rz'
             Gives the sequence of rotations of the OE around the local axes.
@@ -254,18 +254,23 @@ class OE(OEMainMethods):
             should override this method for OEs of horizontal deflection.
 
         *targetOpenCL*: None, str, 2-tuple or tuple of 2-tuples
-            pyopencl can accelerate the search for the intersections of rays
-            with the OE. If pyopencl is used, *targetOpenCL* is a tuple
-            (iPlatform, iDevice) of indices in the lists cl.get_platforms() and
-            platform.get_devices(), see the section :ref:`calculations_on_GPU`.
-            None, if pyopencl is not wanted. Ignored if pyopencl is not
-            installed.
+            Selects OpenCL devices for supported crystal diffraction and
+            multilayer reflection/transmission calculations. Ray-surface
+            intersection searches run on the CPU.
 
-        *precisionOpenCL*: 'float32' or 'float64', only for GPU.
-            Single precision (float32) should be enough. So far, we do not see
-            any example where double precision is required. The calculations
-            with double precision are much slower. Double precision may be
-            unavailable on your system.
+            Use ``None`` to disable OpenCL; ``'auto'`` for automatic selection;
+            ``'CPU'``, ``'GPU'`` or ``'ALL'`` for device groups; or
+            ``(iPlatform, iDevice)`` for one device (a tuple of pairs for
+            multiple devices). ``'host:port'`` selects a remote OpenCL server.
+            Local execution requires pyopencl; remote execution requires
+            pyzmq. See :ref:`calculations_on_GPU`.
+
+        *precisionOpenCL*: 'float32', 'float64' or 'auto'
+            Precision for these OpenCL calculations; default is ``'float32'``.
+            Some crystal and multilayer calculations may require ``'float64'``
+            for sufficient accuracy or numerical stability. Double-precision
+            support and performance depend on the selected device.
+            ``'auto'`` selects precision automatically.
 
 
         """

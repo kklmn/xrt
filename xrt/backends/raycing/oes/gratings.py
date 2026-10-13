@@ -814,9 +814,10 @@ class VLSLaminarGrating(ProfiledGrating):
         *depth*: float
             Depth of the groove in mm.
 
-        An explicit *gratingDensity* is also accepted in the normalized :class:`OE`
-        format ``['y', rho, P0, ...]``. It takes precedence over *rho* and
-        *coeffs* at initialization.
+        *gratingDensity*: None or list
+            An explicit *gratingDensity* is also accepted in the normalized
+            :class:`OE` format ``['y', rho, P0, ...]``. It takes precedence
+            over *rho* and *coeffs* at initialization.
 
         *propagationMode*: 'wave' or 'rays'
             Selects the physical groove profile used for wave propagation or
