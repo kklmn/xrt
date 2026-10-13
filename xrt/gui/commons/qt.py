@@ -5,7 +5,7 @@ __date__ = "16 Nov 2025"
 from ctypes import c_int, sizeof
 from functools import partial
 from html import escape as html_escape
-from math import isfinite
+from math import isclose, isfinite
 from numbers import Integral, Real
 import ast
 import os.path as osp
@@ -445,6 +445,9 @@ def set_param_tooltip(child0, child1, paramName, unit=None, calculated=None,
         argumentInputTooltips[inputType] for inputType in helpTypes
         if inputType in argumentInputTooltips and
         (not description or inputType in ('angle', 'combo', 'editableCombo'))]
+    if 'angle' in inputTypes and 'editableCombo' in _argument_input_types(
+            argName, includeEditor=True):
+        instructions.append(argumentInputTooltips['editableCombo'])
     for instruction in instructions:
         text = instruction.format(
             unit=_tooltip_code(unit or 'the default unit'),
@@ -758,6 +761,8 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
             return
         else:
             inputTypes = _argument_input_types(argName, includeEditor=True)
+            if 'angle' in inputTypes:
+                return  # Keep angular input, readback and unit instructions.
             if 'editableCombo' in inputTypes:
                 inputType = 'editableCombo'
             elif 'combo' in inputTypes:
@@ -868,6 +873,24 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
 #        if isinstance(self.mainWidget.getVal(argValue), bool):
         if str(argValue).lower() in ['false', 'true']:
             combo.addItems(['False', 'True'])
+            return combo
+        elif argName == 'positionRoll':
+#            combo.setEditable(True)
+            combo.setInsertPolicy(QComboBox.NoInsert)
+            combo.setProperty('fieldName', argName)
+            for label, value in (
+                    ('face up (0)', '0'),
+                    ('face right (90 deg)', '90 deg'),
+                    ('face down (180 deg)', '180 deg'),
+                    ('face left (-90 deg)', '-90 deg')):
+                combo.addItem(label, value)
+            validator = make_argument_validator(argName, combo)
+            labels = '|'.join(re.escape(combo.itemText(i))
+                              for i in range(combo.count()))
+            validator.setRegularExpression(QRegularExpression(
+                '(?:{0}|{1})'.format(
+                    validator.regularExpression().pattern(), labels)))
+            combo.setValidator(validator)
             return combo
         elif argNameL == 'generator':
             combo.addItems(['None'])
@@ -1192,6 +1215,21 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
     def setEditorData(self, editor, index):
         value = index.data()
         if isinstance(editor, QComboBox):
+            if editor.property('fieldName') == 'positionRoll':
+                from ...backends import raycing
+                rawValue = self._indexRawValue(index)
+                angle = raycing.auto_units_angle(raycing.parametrize(rawValue))
+                idx = next(
+                    (i for i in range(editor.count())
+                     if isinstance(angle, Real) and isclose(
+                         angle, raycing.auto_units_angle(editor.itemData(i)),
+                         rel_tol=0, abs_tol=1e-9)),
+                    -1)
+                editor.setCurrentIndex(idx)
+                if idx < 0:
+                    editor.setEditText(str(rawValue))
+                editor.setProperty('initialText', editor.currentText())
+                return
             idx = editor.findText(value)
             fieldName = str(index.sibling(index.row(), 0).data())
             if idx < 0 and fieldName.lower().endswith('unit'):
@@ -1230,7 +1268,20 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
 
     def setModelData(self, editor, model, index):
         if isinstance(editor, QComboBox):
-            self._setModelValue(model, index, editor.currentText())
+            value = editor.currentText()
+            if editor.property('fieldName') == 'positionRoll':
+                if value == editor.property('initialText'):
+                    return
+                if (editor.isEditable() and
+                        not editor.lineEdit().hasAcceptableInput()):
+                    return
+                idx = editor.findText(value)
+                if idx >= 0:
+                    value = editor.itemData(idx)
+                self._setModelValue(model, index, value)
+                editor.setProperty('initialText', editor.currentText())
+            else:
+                self._setModelValue(model, index, value)
         elif isinstance(editor, QLineEdit):
             if editor.validator() is not None and\
                     not editor.hasAcceptableInput():

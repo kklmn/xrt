@@ -253,7 +253,8 @@ argumentInputGroups = {
         'cryst2finePitch', 'cryst2pitch', 'cryst2roll', 'extraPitch',
         'extraRoll', 'extraYaw', 'grazingAngle', 'maxxprime', 'maxzprime',
         'minxprime', 'minzprime', 'orientationAngle', 'phaseDeg',
-        'positionRoll', 'roll', 'slopeAngle', 'theta', 'wedgeAngle', 'yaw'},
+        'roll', 'slopeAngle', 'theta', 'wedgeAngle', 'yaw'},
+    ('angle', 'editableCombo'): {'positionRoll'},
     ('angle', 'None'): {'alpha'},
     ('angle', 'energy', 'auto'): {'bragg', 'pitch'},
     ('angle', 'sequence:angle'): {
