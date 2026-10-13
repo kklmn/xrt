@@ -525,6 +525,7 @@ class XrtQookBase(qt.QMainWindow):
 
         self.codeEdit = ext.PythonTextEdit()
         self.codeEdit.setFont(self.defaultFont)
+        self.codeEdit.classClicked.connect(self.showObjHelp)
 
         self.descrEdit = qt.QTextEdit()
         self.descrEdit.setFont(self.defaultFont)
@@ -1223,7 +1224,7 @@ class XrtQookBase(qt.QMainWindow):
         try:
             objParams = list(self.getParams(obj))
         except (OSError, IOError, TypeError, UnicodeError,
-                AttributeError) as e:
+                AttributeError, NameError) as e:
             if _DEBUG_:
                 print("Cannot inspect parameters for {0}: {1}".format(
                     obj, e))
@@ -1243,7 +1244,10 @@ class XrtQookBase(qt.QMainWindow):
             argSpecStr += '{0}={1}, '.format(arg, showVal)
         argSpecStr = argSpecStr.rstrip(', ') + ')'
         objP = self.getVal(obj)
-        nameStr = objP.__name__
+        try:
+            nameStr = objP.__name__
+        except AttributeError:
+            return
         noteStr = obj
         headerDoc = objP.__doc__
 

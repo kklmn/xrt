@@ -15,6 +15,7 @@ import inspect
 import tempfile
 import textwrap
 from functools import lru_cache
+import ast
 
 import http.server
 import socketserver
@@ -136,6 +137,49 @@ class PythonHighlighter(qt.QSyntaxHighlighter):
             self.setFormat(start, length, fmt)
 
 
+def build_import_table(tree):
+    imports = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                imports[alias.asname or alias.name] = alias.name
+        elif isinstance(node, ast.ImportFrom):
+            module = node.module or ""
+            for alias in node.names:
+                imports[alias.asname or alias.name] = (
+                    f"{module}.{alias.name}"
+                )
+    return imports
+
+
+def dotted_name(node):
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        left = dotted_name(node.value)
+        if left:
+            return f"{left}.{node.attr}"
+    return None
+
+
+def constructor_at_line(source, lineno):
+    tree = ast.parse(source)
+    imports = build_import_table(tree)
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        if node.lineno != lineno:
+            continue
+        name = dotted_name(node.func)
+        if not name:
+            continue
+        first, *rest = name.split('.')
+        if first in imports:
+            name = '.'.join([imports[first], *rest])
+        return name
+    return None
+
+
 class PythonTextEdit(qt.QPlainTextEdit):
     INDENT = " "*4
     LINE_LENGTH = 80
@@ -152,6 +196,8 @@ class PythonTextEdit(qt.QPlainTextEdit):
     COLOR_LINENUMACTIVE = "#000000"
     COLOR_LINENUM = "#888888"
     COLOR_LINELENGTH = "#EEEEEE"
+
+    classClicked = qt.Signal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -177,6 +223,7 @@ class PythonTextEdit(qt.QPlainTextEdit):
         self.blockCountChanged.connect(self.updateLineNumberAreaWidth)
         self.updateRequest.connect(self.updateLineNumberArea)
         self.cursorPositionChanged.connect(self.highlightCurrentLine)
+        self.cursorPositionChanged.connect(self.onCursorLineChanged)
 
         self.updateLineNumberAreaWidth(0)
         self.highlightCurrentLine()
@@ -338,6 +385,20 @@ class PythonTextEdit(qt.QPlainTextEdit):
             if block.isValid():
                 bottom = top + int(self.blockBoundingRect(block).height())
             block_number += 1
+
+    def mousePressEvent(self, event):
+        super().mousePressEvent(event)
+        line = self.textCursor().blockNumber() + 1
+        path = constructor_at_line(self.toPlainText(), line)
+        if path:
+            # print(path)
+            self.classClicked.emit(path)
+
+    def onCursorLineChanged(self):
+        line = self.textCursor().blockNumber() + 1
+        path = constructor_at_line(self.toPlainText(), line)
+        if path:
+            self.classClicked.emit(path)
 
 
 # Sphinx docs

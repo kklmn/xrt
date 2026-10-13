@@ -65,7 +65,7 @@ class XrtQookElements(XrtQookBase):
             rootItem = self.rootBLItem
 
         nameScope = ('global' if isRoot or tree in (self.matTree,
-                                                  self.feTree) else 'oe')
+                                                    self.feTree) else 'oe')
         if isinstance(copyFrom, dict):
             elementName = self.validObjectName(elementName, nameScope)
             copyFrom['properties']['name'] = elementName
