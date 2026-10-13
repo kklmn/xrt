@@ -804,11 +804,11 @@ class XYCPlot(object):
             Useful for printing in order to save black inks.
             See also *invertColorMap*.
 
-            * =False: black bknd for on-screen presentation
-            * =True: white bknd for paper printing
+            - =False: black bknd for on-screen presentation
+            - =True: white bknd for paper printing
 
             The following table demonstrates the combinations of
-            *invertColorMap* and *negative*:
+            *invertColorMap* and *negative*.
 
             +-------------+-------------------------+-------------------------+
             |             |    *invertColorMap*     |     *invertColorMap*    |
@@ -834,7 +834,7 @@ class XYCPlot(object):
 
             Note that *negative* inverts only the colors of the graphs, not
             the white global background. Use a common graphical editor to
-            invert the whole picture after doing *negative=True*:
+            invert the whole picture after doing *negative=True*.
 
             .. imagezoom:: _images/negative=1+fullNegative.png
                :scale: 50 %

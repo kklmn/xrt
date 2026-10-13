@@ -492,8 +492,8 @@ class RandomRoughness(FigureErrorBase):
             - For ``rmsKind="slope"``, specifies RMS angular slope in [μrad].
               May be:
 
-              * scalar → isotropic slope RMS
-              * (pitch, roll) → directional RMS slopes
+              - scalar → isotropic slope RMS
+              - (pitch, roll) → directional RMS slopes
 
             Surface height and slope RMS are coupled through the spatial
             spectrum of the surface; only one can be enforced at a time.

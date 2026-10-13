@@ -1459,6 +1459,7 @@ class Undulator(IntegratedSource):
             values in order to improve efficiency. It is highly recommended to
             keep them True.
 
+
         """
         period = kwargs.pop('period', 50)
         n = kwargs.pop('n', 50)

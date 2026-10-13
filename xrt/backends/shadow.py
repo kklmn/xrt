@@ -430,6 +430,8 @@ def run_process(args, _fWiggler, runDir):
     ----------
     *args*: str
         What to run: 'source' or 'trace'
+
+
     """
     if args == 'source':
         # np.random.seed(0)

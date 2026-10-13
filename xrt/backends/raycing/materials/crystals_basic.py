@@ -224,7 +224,7 @@ class CrystalFromCell(Crystal):
 
             .. note::
 
-                *atoms* and *atomsXYZ* must contain *all* the atoms, not only
+                Both *atoms* and *atomsXYZ* must contain *all* the atoms, not only
                 the unique ones for a given symmetry group (we do not consider
                 symmetry here). For example, the unit cell of magnetite (Fe3O4)
                 has 3 unique atomic positions and 56 in total; here, all 56 are

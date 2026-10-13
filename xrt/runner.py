@@ -537,7 +537,8 @@ def run_ray_tracing(
             Saving rate. Applicable to plots with a defined *persistentName*.
             If None, the pickling will happen once at the end.
 
-        *energyRange*: [*eMin*: float, *eMax*: float]
+        *energyRange*: sequence of two floats or None
+            Minimum and maximum photon energies, ``(eMin, eMax)``.
             Only in `shadow` backend: If not None, sets the energy range of
             shadow source. Alternatively, this can be done directly inside
             the *generator*.

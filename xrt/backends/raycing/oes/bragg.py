@@ -341,6 +341,7 @@ class GeneralBraggToroid(JohannToroid):
         *RsBragg*: float or None
             Sagittal radius of the atomic planes. If None, follows *Rs*.
 
+
         """
         RmBragg = kwargs.pop('RmBragg', None)
         RsBragg = kwargs.pop('RsBragg', None)
