@@ -83,6 +83,8 @@ class CrystalSi(CrystalDiamond):
     Si crystal with d-spacing as a function of temperature.
     """
 
+    hiddenParams = CrystalDiamond.hiddenParams | {'a', 'V'}
+
     def __init__(self, *args, **kwargs):
         """
         *tK*: float
