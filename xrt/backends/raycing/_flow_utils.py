@@ -207,6 +207,12 @@ def append_to_flow_decorator(func):
         methStr = func.__name__
 
         sig = inspect.signature(func)
+        # Older screen layouts may contain this now detector-only option.
+        if ('withHistogram' in kwargsIn and
+                'withHistogram' not in sig.parameters and
+                not any(p.kind == inspect.Parameter.VAR_KEYWORD
+                        for p in sig.parameters.values())):
+            kwargsIn.pop('withHistogram')
         bound_args = sig.bind(self, *args, **kwargsIn)
         bound_args.apply_defaults()
 
