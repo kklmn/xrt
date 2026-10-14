@@ -415,7 +415,23 @@ def set_param_tooltip(child0, child1, paramName, unit=None, calculated=None,
     inputTypes = componentTypes or _argument_input_types(argName)
     hints = []
     if calculated is not None:
-        hints.append('<b>Readback:</b> ' + _tooltip_code(calculated))
+        readback = _tooltip_code(calculated)
+        readbackUnit = unit or 'rad'
+        if 'angle' in inputTypes and readbackUnit in allUnitsAng and \
+                readbackUnit != 'deg':
+            factor = allUnitsAng[readbackUnit] / allUnitsAng['deg']
+            degreeValue = None
+            if isinstance(calculated, Real) and calculated != 0:
+                degreeValue = calculated * factor
+            elif isinstance(calculated, (list, tuple)) and all(
+                    isinstance(value, Real) for value in calculated) and \
+                    any(calculated):
+                degreeValue = type(calculated)(
+                    value * factor for value in calculated)
+            if degreeValue is not None:
+                readback += ' {0} ({1} °)'.format(
+                    _tooltip_code(readbackUnit), _tooltip_code(degreeValue))
+        hints.append('<b>Readback:</b> ' + readback)
     inputHint = None
     if componentTypes is not None:
         inputHint = ', '.join(componentTypes)
