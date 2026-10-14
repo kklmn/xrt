@@ -1079,6 +1079,13 @@ class ConfigurablePlotWidget(qt.QWidget):
         self.accumulateButton.toggled.connect(self.set_accumulation)
         exportLayout.addWidget(self.accumulateButton)
         self.accumulateButton.setVisible(ACCUMULATION_ENABLED)
+        self.accumulationVisibilityShortcut = qt.QShortcut(self)
+        self.accumulationVisibilityShortcut.setKey('Ctrl+Shift+A')
+        self.accumulationVisibilityShortcut.setContext(qt.Qt.WindowShortcut)
+        self.accumulationVisibilityShortcut.activated.connect(
+            lambda: self.accumulateButton.setVisible(
+                self.accumulateButton.isHidden()))
+
         self.set_accumulation(False)
 
         butLayout = qt.QHBoxLayout()
