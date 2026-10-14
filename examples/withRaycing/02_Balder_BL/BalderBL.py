@@ -211,7 +211,7 @@ aceptanceV = 1e-4
 
 
 def align_beamline(beamLine, pitch=None, bragg=None, energy=9000.,
-                   fixedExit=None, heightVFM=42.79, vfmR='auto'):
+                   fixedOffset=None, heightVFM=42.79, vfmR='auto'):
     p = raycing.distance_xy(beamLine.vfm.center, beamLine.sources[0].center)
     if pitch is None:
         sinPitch = beamLine.vfm.r * 1.5 / p
@@ -256,21 +256,21 @@ def align_beamline(beamLine, pitch=None, bragg=None, energy=9000.,
     beamLine.dcm.bragg = bragg
     p = raycing.distance_xy(beamLine.vfm.center, beamLine.vcm.center)
     if heightVFM is not None:
-        fixedExit = (heightVFM - beamLine.height - p * math.tan(2 * pitch)) * \
+        fixedOffset = (heightVFM - beamLine.height - p * math.tan(2 * pitch)) * \
             math.cos(2 * pitch)
     else:
-        heightVFM = fixedExit / math.cos(2 * pitch) + \
+        heightVFM = fixedOffset / math.cos(2 * pitch) + \
             beamLine.height + p * math.tan(2 * pitch) + 0.2
 
     beamLine.heightVFM = heightVFM
-    beamLine.dcm.fixedExit = fixedExit
+    beamLine.dcm.fixedOffset = fixedOffset
     beamLine.dcm.cryst2perpTransl =\
-        beamLine.dcm.fixedExit/2./math.cos(beamLine.dcm.bragg)
+        beamLine.dcm.fixedOffset/2./math.cos(beamLine.dcm.bragg)
     print('DCM.pitch = {0:.6f} mrad'.format(beamLine.dcm.pitch*1e3))
     print('DCM.roll = {0:.6f} mrad'.format(beamLine.dcm.roll*1e3))
     print('DCM.yaw = {0:.6f} mrad'.format(beamLine.dcm.yaw*1e3))
     print('DCM.z = {0:.3f}'.format(beamLine.dcm.center[2]))
-    print('DCM.fixedExit = {0:.3f}'.format(fixedExit))
+    print('DCM.fixedOffset = {0:.3f}'.format(fixedOffset))
     print('DCM.cryst2perpTransl = {0:.3f}'.format(
           beamLine.dcm.cryst2perpTransl))
 
@@ -327,5 +327,5 @@ def align_beamline(beamLine, pitch=None, bragg=None, energy=9000.,
 
 if __name__ == '__main__':
     myBalder = build_beamline(nrays=25000)
-    align_beamline(myBalder, pitch=2e-3, energy=9000., fixedExit=20.86)
+    align_beamline(myBalder, pitch=2e-3, energy=9000., fixedOffset=20.86)
     print('finished')

@@ -233,11 +233,11 @@ def define_plots(beamLine, prefix, suffix):
     return plots
 
 
-def main(pitch, fixedExit, hkl, stripe, eMinRays, eMaxRays, eTune, vfmR,
+def main(pitch, fixedOffset, hkl, stripe, eMinRays, eMaxRays, eTune, vfmR,
          prefix):
     myBalder = BalderBL.build_beamline(100000, hkl, stripe, eMinRays, eMaxRays)
     BalderBL.align_beamline(
-        myBalder, pitch=pitch, energy=eTune, fixedExit=fixedExit, vfmR=vfmR)
+        myBalder, pitch=pitch, energy=eTune, fixedOffset=fixedOffset, vfmR=vfmR)
     suffix = ''
 #= touch the beam with the EH slit: ===========================================
 # note that for using `touch_beam` the beams must exist, therefore you should
@@ -255,13 +255,13 @@ def main(pitch, fixedExit, hkl, stripe, eMinRays, eMaxRays, eTune, vfmR,
 
 if __name__ == '__main__':
 
-#    pitchNo = '00'; pitch = 2.0e-3; fixedExit = 20.86
-#    pitchNo = '02'; pitch = 1.0e-3; fixedExit = 31.43
-#    pitchNo = '03'; pitch = 1.5e-3; fixedExit = 26.14
-#    pitchNo = '04'; pitch = 3.0e-3; fixedExit = 10.2
+#    pitchNo = '00'; pitch = 2.0e-3; fixedOffset = 20.86
+#    pitchNo = '02'; pitch = 1.0e-3; fixedOffset = 31.43
+#    pitchNo = '03'; pitch = 1.5e-3; fixedOffset = 26.14
+#    pitchNo = '04'; pitch = 3.0e-3; fixedOffset = 10.2
     pitchNo = '05'
     pitch = 2.2e-3
-    fixedExit = 18.6
+    fixedOffset = 18.6
 
     vfmR = 'auto'
     case = 7, 1
@@ -414,5 +414,5 @@ if __name__ == '__main__':
         raise
 
     prefix = '{0}-{1}mrad-{2}-'.format(pitchNo, pitch*1e3, estr)
-    main(pitch, fixedExit, hkl, stripe, eMinRays, eMaxRays, eTune, vfmR,
+    main(pitch, fixedOffset, hkl, stripe, eMinRays, eMaxRays, eTune, vfmR,
          prefix)
