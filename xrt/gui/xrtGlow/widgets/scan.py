@@ -34,7 +34,8 @@ __date__ = "7 May 2026"
 SCENE_TARGETS = {'Scene', 'scene', 'xrtGlow', 'xrtglow'}
 FRAME_SECTIONS = {'id', 'objects', 'scene', 'actions', 'output', 'vars'}
 SCENE_PROPERTY_NAMES = {
-    'scaleVec', 'rotations', 'coordOffset', 'offsetCoord', 'tVec'}
+    'scaleVec', 'rotations', 'coordOffset', 'offsetCoord', 'tVec',
+    'colorMin', 'colorMax', 'selColorMin', 'selColorMax'}
 DEFAULT_OUTPUT = {'glowFrameName': 'frame{index:04d}.jpg'}
 FRAMES_CLEAN_KEY = 'framesClean'
 SCAN_SCALAR_SOURCES = ('intensity', 'flux', 'power')
@@ -2038,6 +2039,10 @@ class GlowScanMixin:
                     'name': f'{name}.{field}',
                     'value': self._scan_format_value(field_value),
                     })
+        props.extend({'name': name,
+                      'value': getattr(self.customGlWidget, name)}
+                     for name in ('colorMin', 'colorMax',
+                                  'selColorMin', 'selColorMax'))
         return props
 
     def _scan_angle_value(self, value):
