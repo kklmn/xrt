@@ -223,6 +223,7 @@ class xrtGlow(GlowScanMixin, qt.QWidget):
         self.scanFrameIndex = 0
         self.scanInitialState = None
         self.scanAutoUpdateState = True
+        self.scanAutoAlignState = True
         self.scanRestoringInitialState = False
         self.scanFinishWasStopped = False
 
@@ -512,6 +513,15 @@ class xrtGlow(GlowScanMixin, qt.QWidget):
                 elViewer.plotConfigCreated.connect(addInspectorPlot)
 
             self.customGlWidget.beamUpdated.connect(elViewer.update_beam)
+            plotWidget = elViewer.dynamicPlotWidget
+            if hasattr(plotWidget, 'propagationRequested'):
+                plotWidget.propagationRequested.connect(partial(
+                    self.customGlWidget.request_propagation_once,
+                    accumulating=True))
+                self.customGlWidget.propagationComplete.connect(
+                    plotWidget.on_propagation_complete)
+                self.customGlWidget.accumulationStopped.connect(
+                    plotWidget.stop_accumulation)
             self.customGlWidget.oePropsUpdated.connect(elViewer.update_param)
             elViewer.propertiesChanged.connect(
                 partial(self.customGlWidget.update_beamline, oeuuid,
@@ -523,6 +533,10 @@ class xrtGlow(GlowScanMixin, qt.QWidget):
     def makeScanPanel(self):
         layout = qt.QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
+        self.scanAutoAlignCheckBox = qt.QCheckBox('Enable Auto Align', self)
+        self.scanAutoAlignCheckBox.setChecked(
+            self.customGlWidget.beamline.autoAlignEnabled)
+        layout.addWidget(self.scanAutoAlignCheckBox)
         self.scanWidget = TimelineFrameListWidget(self)
         self.scanWidget.scanStarted.connect(self.startScan)
         self.scanWidget.scanPaused.connect(self.pauseScan)

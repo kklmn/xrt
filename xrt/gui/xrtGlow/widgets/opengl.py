@@ -128,6 +128,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
     histogramUpdated = qt.Signal(tuple)
     openElViewer = qt.Signal(str)
     propagationComplete = qt.Signal(dict)
+    accumulationStopped = qt.Signal()
 
     def __init__(self,
                  parent=None,
@@ -149,6 +150,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.autoUpdate = True
         self.input_queue = Queue()
         self.output_queue = Queue()
+        self.propagationPending = False
 
         self.needMeshUpdate = deque()
         self.needBeamUpdate = deque()
@@ -498,14 +500,29 @@ class xrtGlWidget(qt.QOpenGLWidget):
         """Update from EPICS interface """
         self.update_beamline(oeid, {argName: argValue}, sender="epics")
 
-    def request_propagation_once(self):
+    def request_propagation_once(self, accumulating=False, auto_align=None):
+        if self.propagationPending:
+            return
+        process = getattr(self, 'calc_process', None)
+        if process is None or not process.is_alive() or (
+                accumulating and getattr(self.parent, 'scanRunning', False)):
+            self.accumulationStopped.emit()
+            return
+        self.propagationPending = True
+        if not self.loopRunning:
+            self.input_queue.put(dict(msg_start, run=False))
+            self.loopRunning = True
         if self.epicsPrefix is not None:
             self.epicsInterface.pv_records['AcquireStatus'].set(1)
         if hasattr(self, 'input_queue'):
-            self.input_queue.put({
-                        "command": "run_once",
-                        "object_type": "beamline"
-                        })
+            message = {
+                "command": "run_once",
+                "object_type": "beamline",
+                "mode": "accumulate" if accumulating else "update",
+            }
+            if auto_align is not None:
+                message.update(mode="scan", auto_align=bool(auto_align))
+            self.input_queue.put(message)
 
     def set_auto_update(self, value, clear_beams=False):
         self.autoUpdate = bool(value)
@@ -556,6 +573,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                             record.set(val)
 
     def update_beamline(self, oeid, kwargs, sender="gui"):  # one OE at a time
+        if oeid is not None or '_object' in kwargs:
+            self.accumulationStopped.emit()
         if '_object' in kwargs:  # only Qook can create new elements for now
             # new element
             if 'material' in kwargs['_object']:
@@ -1133,6 +1152,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
     def toggleLoop(self):
         if self.loopRunning:
+            self.accumulationStopped.emit()
             self.input_queue.put(msg_stop)
             self.loopRunning = False
         else:
@@ -1146,6 +1166,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
             if 'error' in msg:
                 print("Propagation stopped:", msg['error'])
                 self.loopRunning = False
+                self.propagationPending = False
+                self.accumulationStopped.emit()
                 if self.QookSignal is not None:
                     self.QookSignal.emit((
                         1., f"Propagation failed: {msg['error']}"))
@@ -1153,6 +1175,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     self.parent.scanWaitingPropagation = False
                     self.parent.scanPaused = True
                 continue
+            if 'beam' in msg or 'progress' in msg:
+                self.propagationPending = True
             if 'beam' in msg:
                 for beamKey, beam in msg['beam'].items():
                     beamTag = (msg['sender_id'], beamKey)
@@ -1188,6 +1212,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         record.set(flatHist)
 
             elif 'repeat' in msg:
+                self.propagationPending = False
                 print("Total repeats:", msg['repeat'])
                 if self.epicsPrefix is not None:
                     self.epicsInterface.pv_records['AcquireStatus'].set(0)
@@ -1235,6 +1260,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         msg['progress'], "Running propagation"))
 
     def close_calc_process(self):
+        self.accumulationStopped.emit()
         timer = getattr(self, 'timer', None)
         if timer is not None:
             timer.stop()
@@ -1482,6 +1508,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
 #            del self.meshDict[oeid]  # what about mesh.oe?
 
     def delete_object(self, objuuid):  # TODO: to be triggered by a signal after deleting the buffers
+        self.accumulationStopped.emit()
         try:
             objType = None
             if objuuid in self.beamline.oesDict:
