@@ -23,8 +23,8 @@ si311_1 = rm.CrystalSi(hkl=(3, 1, 1), tK=-171+273.15)
 si311_2 = rm.CrystalSi(hkl=(3, 1, 1), tK=-140+273.15)
 
 
-def make_glow_scan():
-    """Calculate each alignment, then capture its settings as a Glow frame."""
+def make_glow_scan(beamLine):
+    """Align beamLine in place, then capture its settings as Glow frames."""
     # 1. Choose the energies (eV) and crystal pairs.
     energies = np.linspace(E0 - dE*0.66, E0 + dE*0.66, 7)
     crystals = [
@@ -32,9 +32,6 @@ def make_glow_scan():
         # ('Si311', si311_1, si311_2),
         ]
 
-    # Preparing frames on a separate beamline preserves the initial Glow view.
-    beamLine = BalderBL.build_beamline(
-        stripe=stripe, eMinRays=E0-dE, eMaxRays=E0+dE)
     frames = {}
     for crystal, material1, material2 in crystals:
         beamLine.dcm.surface = (crystal,)
@@ -51,25 +48,26 @@ def make_glow_scan():
             # material UUIDs refer to the crystal objects defined above.
             frames['frame_{0:04d}'.format(len(frames))] = {
                 'objects': {
-                    'FEFixedMask': {
+                    beamLine.feFixedMask.name: {  # 'FEFixedMask'
                         'opening': list(beamLine.feFixedMask.opening)},
-                    'VCM': {
+                    beamLine.vcm.name: {  # 'VCM'
                         'pitch': beamLine.vcm.pitch, 'R': beamLine.vcm.R},
-                    'DCM': {
+                    beamLine.dcm.name: {  # 'DCM'
                         'surface': [crystal],
                         'material': material1.uuid,
                         'material2': material2.uuid,
                         'center': list(beamLine.dcm.center),
                         'bragg': beamLine.dcm.bragg,
                         'cryst2perpTransl': beamLine.dcm.cryst2perpTransl},
-                    'SlitAfterDCM': {
+                    beamLine.slitAfterDCM.name: {  # 'SlitAfterDCM'
                         'opening': list(beamLine.slitAfterDCM.opening)},
-                    'VFM': {
+                    beamLine.vfm.name: {  # 'VFM'
                         'center': list(beamLine.vfm.center),
                         'pitch': beamLine.vfm.pitch, 'R': beamLine.vfm.R},
-                    'SlitAfterVFM': {
+                    beamLine.slitAfterVFM.name: {  # 'SlitAfterVFM'
                         'opening': list(beamLine.slitAfterVFM.opening)},
-                    'slitEH': {'opening': list(beamLine.slitEH.opening)},
+                    beamLine.slitEH.name: {  # 'slitEH'
+                        'opening': list(beamLine.slitEH.opening)},
                     },
                 'output': {'glowFrameName': frameName},
                 }
@@ -102,8 +100,8 @@ def plot_generator(plots, beamLine):
 
     For normal ray tracing this generator remains convenient because it can
     update plot labels and filenames around each ``yield``. For xrtGlow the
-    helper ``make_glow_scan()`` performs the same nested loop up front and
-    returns explicit frame dictionaries. We use frames, not a single
+    helper ``make_glow_scan(beamLine)`` performs the same nested loop up front
+    and returns explicit frame dictionaries. We use frames, not a single
     ``linspace`` track, because every energy is accompanied by alignment
     changes across several elements.
     """
@@ -140,8 +138,7 @@ def main():
     myBalder = BalderBL.build_beamline(
         stripe=stripe, eMinRays=E0-dE, eMaxRays=E0+dE)
     if showIn3D:
-        BalderBL.align_beamline(myBalder, energy=E0)
-        scan = make_glow_scan()
+        scan = make_glow_scan(myBalder)
         myBalder.glow(centerAt='VFM', startFrom=7,
                       scan=scan)
         return

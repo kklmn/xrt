@@ -19,14 +19,11 @@ E0 = 9000
 dE = 2
 
 
-def make_glow_scan():
-    """Calculate each alignment, then capture its settings as a Glow frame."""
+def make_glow_scan(beamLine):
+    """Align beamLine in place, then capture its settings as Glow frames."""
     # 1. Choose the scan inputs (mrad).
     pitchesMrad = np.linspace(1., 3., 21)
 
-    # Preparing frames on a separate beamline preserves the initial Glow view.
-    beamLine = BalderBL.build_beamline(
-        stripe=stripe, eMinRays=E0-dE, eMaxRays=E0+dE)
     frames = {}
     for index, pitchMrad in enumerate(pitchesMrad):
         # 2. Calculate all dependent element settings.
@@ -37,22 +34,23 @@ def make_glow_scan():
         # 3. Capture the aligned values; copy mutable lists for this frame.
         frames['frame_{0:04d}'.format(index)] = {
             'objects': {
-                'FEFixedMask': {
+                beamLine.feFixedMask.name: {  # 'FEFixedMask'
                     'opening': list(beamLine.feFixedMask.opening)},
-                'VCM': {
+                beamLine.vcm.name: {  # 'VCM'
                     'pitch': beamLine.vcm.pitch, 'R': beamLine.vcm.R},
-                'DCM': {
+                beamLine.dcm.name: {  # 'DCM'
                     'center': list(beamLine.dcm.center),
                     'bragg': beamLine.dcm.bragg,
                     'cryst2perpTransl': beamLine.dcm.cryst2perpTransl},
-                'SlitAfterDCM': {
+                beamLine.slitAfterDCM.name: {  # 'SlitAfterDCM'
                     'opening': list(beamLine.slitAfterDCM.opening)},
-                'VFM': {
+                beamLine.vfm.name: {  # 'VFM'
                     'center': list(beamLine.vfm.center),
                     'pitch': beamLine.vfm.pitch, 'R': beamLine.vfm.R},
-                'SlitAfterVFM': {
+                beamLine.slitAfterVFM.name: {  # 'SlitAfterVFM'
                     'opening': list(beamLine.slitAfterVFM.opening)},
-                'slitEH': {'opening': list(beamLine.slitEH.opening)},
+                beamLine.slitEH.name: {  # 'slitEH'
+                    'opening': list(beamLine.slitEH.opening)},
                 },
             'output': {'glowFrameName': frameName},
             }
@@ -90,10 +88,11 @@ def plot_generator(plots, beamLine):
 
     The generator is still used by ``run_ray_tracing()`` because it can update
     plots after each ``yield``. In xrtGlow the same idea is represented by
-    ``make_glow_scan()``: every pitch value is first passed through the normal
-    alignment routine, then the dependent beamline properties are written into
-    explicit JSON-like frames. This is more verbose than ``linspace`` but it
-    records the coupled geometry, not just the scanned pitch value.
+    ``make_glow_scan(beamLine)``: every pitch value is first passed through the
+    normal alignment routine, then the dependent beamline properties are
+    written into explicit JSON-like frames. This is more verbose than
+    ``linspace`` but it records the coupled geometry, not just the scanned
+    pitch value.
     """
     pitches = np.linspace(1., 3., 21)
     for pitch in pitches:
@@ -113,8 +112,7 @@ def main():
     myBalder = BalderBL.build_beamline(
         stripe=stripe, eMinRays=E0-dE, eMaxRays=E0+dE)
     if showIn3D:
-        BalderBL.align_beamline(myBalder, energy=E0, pitch=2.5e-3)
-        scan = make_glow_scan()
+        scan = make_glow_scan(myBalder)
         myBalder.glow(centerAt='VFM', startFrom=2, scan=scan)
         return
     plots = define_plots()

@@ -107,7 +107,7 @@ def define_plots(beamLine):
     return plots
 
 
-def make_glow_scan():
+def make_glow_scan(beamLine):
     """Calculate the selected Laue SCM cases and capture their Glow frames."""
     # 1. Choose radius/bandwidth pairs and energy/bandwidth-scale pairs.
     # Radii are in mm, energies in eV, asymmetry angles in radians.
@@ -160,12 +160,12 @@ def make_glow_scan():
                         # 3. Capture the calculated source and crystal settings.
                         frames['frame_{0:04d}'.format(frameIndex)] = {
                             'objects': {
-                                'GeometricSource': {
+                                beamLine.sources[0].name: {  # 'GeometricSource'
                                     'polarization': polar,
                                     'energies': energiesValue,
                                     'distE': distE,
                                     },
-                                'LaueSCM': {
+                                beamLine.laueSCM.name: {  # 'LaueSCM'
                                     'R': radius,
                                     'pitch': pitch,
                                     'alpha': alpha,
@@ -182,10 +182,11 @@ def plot_generator(plots, beamLine):
     """Classic runner generator for the Laue SCM study.
 
     ``run_ray_tracing()`` keeps this generator because plot limits, labels and
-    filenames are tied to each ``yield``. For xrtGlow, ``make_glow_scan()``
-    converts the same nested parameter grid into explicit frames. We use
-    frames here because radius, energy bandwidth, pitch and alpha change
-    together; a single ``linspace`` track would hide that relationship.
+    filenames are tied to each ``yield``. For xrtGlow,
+    ``make_glow_scan(beamLine)`` converts the same nested parameter grid into
+    explicit frames. We use frames here because radius, energy bandwidth, pitch
+    and alpha change together; a single ``linspace`` track would hide that
+    relationship.
     """
     for polar in polarization:
         beamLine.sources[0].polarization = polar
@@ -252,7 +253,7 @@ def plot_generator(plots, beamLine):
 def main():
     beamLine = build_beamline()
     if showIn3D:
-        scan = make_glow_scan()
+        scan = make_glow_scan(beamLine)
         beamLine.glow(scale=[30, 3, 30], centerAt='LaueSCM', startFrom=1,
                       scan=scan)
         return

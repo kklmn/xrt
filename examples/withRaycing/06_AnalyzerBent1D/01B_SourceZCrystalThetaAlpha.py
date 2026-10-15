@@ -272,7 +272,7 @@ def define_plots(beamLine):
     return plots, plotsAnalyzer, plotsDetector, plotsE, plotAnE, plotDetE
 
 
-def make_glow_scan():
+def make_glow_scan(beamLine):
     """Prepare Glow frames from explicit crystal, angle and bandwidth cases."""
     # 1. Choose cases: angles in degrees, source sigma in mm, bandwidth as dE/E.
     # These inputs select the Glow scan; the masks above select ordinary tracing.
@@ -332,21 +332,21 @@ def make_glow_scan():
                 sourcename)
             frames['frame_{0:04d}'.format(frameIndex)] = {
                 'objects': {
-                    'GeometricSource': {
+                    beamLine.sources[0].name: {  # 'GeometricSource'
                         'dz': bvs,
                         'dxprime': dxprime,
                         'dzprime': dzprime,
                         'distE': distE,
                         'energies': energies,
                         },
-                    analyzerName: {
+                    beamLine.analyzer.name: {  # analyzerName
                         'surface': [crystalLabel],
                         'material': crystal.uuid,
                         'alpha': alpha,
                         'center': [0, p, 0],
                         'pitch': theta + alpha,
                         },
-                    'Detector': {
+                    beamLine.detector.name: {  # 'Detector'
                         'center': [0, yDet, zDet],
                         'z': [0, -sin2Theta, cos2Theta],
                         },
@@ -363,10 +363,11 @@ def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
     """Classic runner generator for the 1D Bragg analyzer table.
 
     The runner version needs ``yield`` because the line-source result is used
-    to estimate the 7-line spacing. The glow version uses ``make_glow_scan()``
-    to prepare explicit crystal, angle and bandwidth cases. We use frame
-    dictionaries and value lists, not ``linspace``, because the selected
-    crystals, angles and source modes are discrete table entries.
+    to estimate the 7-line spacing. The glow version uses
+    ``make_glow_scan(beamLine)`` to prepare explicit crystal, angle and
+    bandwidth cases. We use frame dictionaries and value lists, not
+    ``linspace``, because the selected crystals, angles and source modes are
+    discrete table entries.
     """
     if not showIn3D:
         fOut1 = open(crystalMaterial + bentName + '_long.txt', 'w')
@@ -549,7 +550,7 @@ def main():
     if showIn3D:
         while beamLine.analyzer.center == [0, 0, 0]:
             next(plot_generator(beamLine))  # make initial alignment
-        scan = make_glow_scan()
+        scan = make_glow_scan(beamLine)
         beamLine.glow(scale=4, centerAt=analyzerName, scan=scan,
                       sceneSettings=dict(rayFlag=[1,],
                                          geomSrcParam={'minSize': 10.}))

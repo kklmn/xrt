@@ -479,7 +479,7 @@ def define_plots(beamLine):
     return plots, plotsAnalyzer, plotsDetector, plotsE, plotAnE, plotDetE
 
 
-def make_glow_scan():
+def make_glow_scan(beamLine):
     """Prepare Glow frames from explicit crystal, angle and bandwidth cases."""
     # 1. Choose cases: angles in degrees, source sigma in mm, bandwidth as dE/E.
     # These inputs select the Glow scan; the masks above select ordinary tracing.
@@ -540,14 +540,14 @@ def make_glow_scan():
                 sourcename)
             frames['frame_{0:04d}'.format(frameIndex)] = {
                 'objects': {
-                    'GeometricSource': {
+                    beamLine.sources[0].name: {  # 'GeometricSource'
                         'dz': bvs,
                         'dxprime': dxprime,
                         'dzprime': dzprime,
                         'distE': distE,
                         'energies': energies,
                         },
-                    analyzerName: {
+                    beamLine.analyzer.name: {  # analyzerName
                         'surface': [crystalLabel],
                         'material': crystal.uuid,
                         'alpha': alpha,
@@ -555,7 +555,7 @@ def make_glow_scan():
                         'pitch': theta + alpha,
                         'Rs': Rs,
                         },
-                    'Detector': {
+                    beamLine.detector.name: {  # 'Detector'
                         'center': [0, yDet, zDet],
                         'z': [0, -sin2Theta, cos2Theta],
                         },
@@ -572,7 +572,7 @@ def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
     """Classic runner generator for the 2D analyzer source table.
 
     The runner needs ``yield`` to compute the resolution from earlier frames.
-    xrtGlow uses ``make_glow_scan()`` to prepare the selected cases as
+    xrtGlow uses ``make_glow_scan(beamLine)`` to prepare the selected cases as
     frame dictionaries. This keeps the scan scriptable while making clear that
     the values are selected lists and derived geometry, not a single linear
     property scan.
@@ -748,7 +748,7 @@ def main():
     if showIn3D:
         while beamLine.analyzer.center == [0, 0, 0]:
             next(plot_generator(beamLine))  # make initial alignment
-        scan = make_glow_scan()
+        scan = make_glow_scan(beamLine)
         beamLine.glow(scale=4, centerAt=analyzerName,
                       scan=scan, sceneSettings=dict(rayFlag=[1,]))
         return

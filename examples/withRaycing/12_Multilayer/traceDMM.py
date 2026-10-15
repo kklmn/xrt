@@ -15,14 +15,11 @@ E0 = 8000
 dE = 1200
 
 
-def make_glow_scan():
-    """Calculate each alignment, then capture its settings as a Glow frame."""
+def make_glow_scan(beamLine):
+    """Align beamLine in place, then capture its settings as Glow frames."""
     # 1. Choose the scan inputs (eV).
     energies = np.linspace(E0 - 500, E0 + 500, 7)
 
-    # Preparing frames on a separate beamline preserves the initial Glow view.
-    beamLine = BalderDMM.build_beamline(
-        stripe=stripe, eMinRays=E0-dE, eMaxRays=E0+dE)
     frames = {}
     for index, energy in enumerate(energies):
         # 2. Calculate all dependent element settings.
@@ -34,22 +31,23 @@ def make_glow_scan():
         # 3. Capture the aligned values; copy mutable lists for this frame.
         frames['frame_{0:04d}'.format(index)] = {
             'objects': {
-                'FEFixedMask': {
+                beamLine.feFixedMask.name: {  # 'FEFixedMask'
                     'opening': list(beamLine.feFixedMask.opening)},
-                'VCM': {
+                beamLine.vcm.name: {  # 'VCM'
                     'pitch': beamLine.vcm.pitch, 'R': beamLine.vcm.R},
-                'DMM': {
+                beamLine.dmm.name: {  # 'DMM'
                     'center': list(beamLine.dmm.center),
                     'bragg': beamLine.dmm.bragg,
                     'cryst2perpTransl': beamLine.dmm.cryst2perpTransl},
-                'SlitAfterDCM': {
+                beamLine.slitAfterDCM.name: {  # 'SlitAfterDCM'
                     'opening': list(beamLine.slitAfterDCM.opening)},
-                'VFM': {
+                beamLine.vfm.name: {  # 'VFM'
                     'center': list(beamLine.vfm.center),
                     'pitch': beamLine.vfm.pitch, 'R': beamLine.vfm.R},
-                'SlitAfterVFM': {
+                beamLine.slitAfterVFM.name: {  # 'SlitAfterVFM'
                     'opening': list(beamLine.slitAfterVFM.opening)},
-                'slitEH': {'opening': list(beamLine.slitEH.opening)},
+                beamLine.slitEH.name: {  # 'slitEH'
+                    'opening': list(beamLine.slitEH.opening)},
                 },
             'output': {'glowFrameName': frameName},
             }
@@ -130,9 +128,9 @@ def plot_generator(plots, beamLine):
 
     ``run_ray_tracing()`` still uses this yielding generator for plot labels
     and normalization. In xrtGlow the same energy loop is converted by
-    ``make_glow_scan()`` into explicit frames. We choose frames over compact
-    loops here because each energy frame contains alignment side effects, not
-    just the energy value itself.
+    ``make_glow_scan(beamLine)`` into explicit frames. We choose frames over
+    compact loops here because each energy frame contains alignment side
+    effects, not just the energy value itself.
     """
     # energies = np.linspace(E0 - 500, E0 + 500, 7)
     energies = E0,
@@ -156,8 +154,7 @@ def main():
     myBalder = BalderDMM.build_beamline(
         stripe=stripe, eMinRays=E0-dE, eMaxRays=E0+dE)
     if BalderDMM.showIn3D:
-        BalderDMM.align_beamline(myBalder, energy=E0)
-        scan = make_glow_scan()
+        scan = make_glow_scan(myBalder)
         myBalder.glow(scale=[500, 10, 500], centerAt='VCM', startFrom=1,
                       scan=scan)
         return

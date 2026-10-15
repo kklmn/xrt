@@ -129,7 +129,7 @@ def define_plots(beamLine):
     return plots
 
 
-def make_glow_scan():
+def make_glow_scan(beamLine):
     """Calculate one selected Laue DCM rocking curve as Glow frames."""
     # 1. Select one radius/energy combination, as in the original Glow scan.
     polar = polarization[0]
@@ -168,17 +168,17 @@ def make_glow_scan():
                 sourcename, dtheta)
         frames['frame_{0:04d}'.format(frameIndex)] = {
             'objects': {
-                'GeometricSource': {
+                beamLine.sources[0].name: {  # 'GeometricSource'
                     'polarization': polar,
                     'energies': energiesValue,
                     'distE': distE,
                     },
-                'LaueDCM1': {
+                beamLine.laueDCM1.name: {  # 'LaueDCM1'
                     'R': radius,
                     'pitch': pitch,
                     'alpha': alpha,
                     },
-                'LaueDCM2': {
+                beamLine.laueDCM2.name: {  # 'LaueDCM2'
                     'R': radius,
                     'pitch': pitch + dtheta * 1e-3,
                     'alpha': alpha,
@@ -196,7 +196,7 @@ def plot_generator(plots, beamLine):
 
     The non-glow runner uses this generator to collect rocking-curve
     intensities after each ``yield``. xrtGlow cannot run that feedback loop in
-    the standalone process, so ``make_glow_scan()`` emits the first
+    the standalone process, so ``make_glow_scan(beamLine)`` emits the first
     rocking-curve sweep as explicit frames with precomputed source energies,
     DCM geometry and 2nd-crystal pitch offsets.
     """
@@ -295,7 +295,7 @@ def plot_generator(plots, beamLine):
 def main():
     beamLine = build_beamline()
     if showIn3D:
-        scan = make_glow_scan()
+        scan = make_glow_scan(beamLine)
         beamLine.glow(scale=[30, 3, 30], centerAt='LaueDCM1', startFrom=1,
                       scan=scan)
         return

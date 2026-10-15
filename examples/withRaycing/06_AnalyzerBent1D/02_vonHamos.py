@@ -283,7 +283,7 @@ def define_plots(beamLine):
     return plots, plotsAnalyzer, plotsDetector, plotsE, plotDetE
 
 
-def make_glow_scan():
+def make_glow_scan(beamLine):
     """Creates explicit xrtGlow frames for the von Hamos source modes.
 
     The spectrometer geometry is computed from ``thetaDegree`` and ``Rs`` in
@@ -322,19 +322,19 @@ def make_glow_scan():
     for isource, (sourcename, distE, energies) in enumerate(sourceModes):
         frames['frame_{0:04d}'.format(isource)] = {
             'objects': {
-                'GeometricSource': {
+                beamLine.sources[0].name: {  # 'GeometricSource'
                     'dxprime': dxprime,
                     'dzprime': dzprime,
                     'distE': distE,
                     'energies': energies,
                     },
-                analyzerName: {
+                beamLine.analyzer.name: {  # analyzerName
                     'surface': [crystalLabel],
                     'material': crystal.uuid,
                     'center': [0, p, 0],
                     'pitch': theta,
                     },
-                'Detector': {
+                beamLine.detector.name: {  # 'Detector'
                     'center': [0, yDet, zDet],
                     'z': [0, cosTheta, sinTheta],
                     },
@@ -351,9 +351,10 @@ def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
     """Classic runner generator for the von Hamos source sequence.
 
     The runner version keeps the ``yield`` workflow so it can estimate energy
-    resolution from previous plots. xrtGlow receives ``make_glow_scan()``
-    frames: the aligned geometry plus a list of source modes. Lists fit these
-    discrete energy states better than ``linspace``.
+    resolution from previous plots. xrtGlow receives
+    ``make_glow_scan(beamLine)`` frames: the aligned geometry plus a list of
+    source modes. Lists fit these discrete energy states better than
+    ``linspace``.
     """
     hklSeparator = ',' if np.any(np.array(crystal.hkl) > 10) else ''
     crystalLabel = '{0}{1[0]}{2}{1[1]}{2}{1[2]}'.format(
@@ -456,7 +457,7 @@ def main():
     if showIn3D:
         while beamLine.analyzer.center == [0, 0, 0]:
             next(plot_generator(beamLine))  # make initial alignment
-        scan = make_glow_scan()
+        scan = make_glow_scan(beamLine)
         beamLine.glow(scale=4, centerAt=analyzerName, scan=scan,
                       sceneSettings=dict(rayFlag=[1,],
                                          geomSrcParam={'minSize': 3.}))

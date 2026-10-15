@@ -445,7 +445,7 @@ def define_plots(beamLine):
     return plots, plotsAnalyzer, plotsDetector, plotsE, plotDetE
 
 
-def make_glow_scan():
+def make_glow_scan(beamLine):
     """Creates explicit xrtGlow frames for the elliptical von Hamos scan.
 
     The scan is compiled from the same geometry formulas as the generator:
@@ -484,19 +484,19 @@ def make_glow_scan():
     for isource, (sourcename, distE, energies) in enumerate(sourceModes):
         frames['frame_{0:04d}'.format(isource)] = {
             'objects': {
-                'GeometricSource': {
+                beamLine.sources[0].name: {  # 'GeometricSource'
                     'dxprime': dxprime,
                     'dzprime': dzprime,
                     'distE': distE,
                     'energies': energies,
                     },
-                analyzerName: {
+                beamLine.analyzer.name: {  # analyzerName
                     'surface': [crystalLabel],
                     'material': crystal.uuid,
                     'center': [0, p, 0],
                     'pitch': theta,
                     },
-                'Detector': {
+                beamLine.detector.name: {  # 'Detector'
                     'center': [0, yDet, zDet],
                     'z': [0, -sin2Theta, cos2Theta],
                     },
@@ -513,9 +513,9 @@ def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
     """Classic runner generator for the elliptical von Hamos source sequence.
 
     The yielding version remains for ``run_ray_tracing()`` because it can use
-    plot results between frames. Glow uses ``make_glow_scan()`` instead: a
-    precomputed frame list with source-energy lists and derived spectrometer
-    geometry.
+    plot results between frames. Glow uses ``make_glow_scan(beamLine)``
+    instead: a precomputed frame list with source-energy lists and derived
+    spectrometer geometry.
     """
     hklSeparator = ',' if np.any(np.array(crystal.hkl) > 10) else ''
     crystalLabel = '{0}{1[0]}{2}{1[1]}{2}{1[2]}'.format(
@@ -624,7 +624,7 @@ def main():
     if showIn3D:
         while beamLine.analyzer.center == [0, 0, 0]:
             next(plot_generator(beamLine))  # make initial alignment
-        scan = make_glow_scan()
+        scan = make_glow_scan(beamLine)
         beamLine.glow(scale=4, centerAt=analyzerName, scan=scan,
                       sceneSettings=dict(rayFlag=[1,],
                                          geomSrcParam={'minSize': 3.}))

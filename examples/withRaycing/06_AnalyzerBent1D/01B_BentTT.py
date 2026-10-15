@@ -149,7 +149,7 @@ def define_plots(beamLine):
     return plots, plotsAnalyzer, plotsDetector, plotsE, plotAnE, plotDetE
 
 
-def make_glow_scan():
+def make_glow_scan(beamLine):
     """Creates the three source-state frames used by xrtGlow.
 
     The plotting generator estimates the 7-line spacing from previous frames,
@@ -191,21 +191,21 @@ def make_glow_scan():
     for index, (sourcename, distE, energies) in enumerate(sourceModes):
         frames['frame_{0:04d}'.format(index)] = {
             'objects': {
-                'GeometricSource': {
+                beamLine.sources[0].name: {  # 'GeometricSource'
                     'dz': beamV,
                     'dxprime': dxprime,
                     'dzprime': dzprime,
                     'distE': distE,
                     'energies': energies,
                     },
-                analyzerName: {
+                beamLine.analyzer.name: {  # analyzerName
                     'surface': [crystalLabel],
                     'material': crystal.uuid,
                     'alpha': alpha,
                     'center': [0, p, 0],
                     'pitch': theta + alpha,
                     },
-                'Detector': {
+                beamLine.detector.name: {  # 'Detector'
                     'center': [0, yDet, zDet],
                     'z': [0, -sin2Theta, cos2Theta],
                     },
@@ -224,9 +224,9 @@ def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
 
     ``run_ray_tracing()`` keeps this yielding generator because it measures the
     flat and line-source widths after each ``yield``. xrtGlow receives the
-    precompiled ``make_glow_scan()`` frames instead: fixed analyzer geometry
-    plus a list of source energy modes. Lists are used for the source energies
-    because the values are discrete states, not a linear scan axis.
+    precompiled ``make_glow_scan(beamLine)`` frames instead: fixed analyzer
+    geometry plus a list of source energy modes. Lists are used for the source
+    energies because the values are discrete states, not a linear scan axis.
     """
     beamLine.source.dz = beamV
     bsname = 'h={0:03.0f}mum'.format(beamV*1e3)
@@ -362,7 +362,7 @@ def main():
     if showIn3D:
         while beamLine.analyzer.center == [0, 0, 0]:
             next(plot_generator(beamLine))  # make initial alignment
-        scan = make_glow_scan()
+        scan = make_glow_scan(beamLine)
         beamLine.glow(scale=4, centerAt=analyzerName, scan=scan,
                       sceneSettings=dict(rayFlag=[1,],
                                          geomSrcParam={'minSize': 10.}))
