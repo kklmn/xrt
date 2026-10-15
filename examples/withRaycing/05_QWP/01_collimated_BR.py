@@ -176,73 +176,52 @@ def define_plots(beamLine):
     return plots
 
 
+# Shared scan inputs for Glow and ordinary ray tracing.
+scanPolarizations = ('+45',)
+
+
+def make_glow_scan(beamLine):
+    """Capture the chosen source and QWP settings as Glow frames."""
+    sourceName = beamLine.sources[0].name
+    frames = {}
+    for iFrame, polar in enumerate(scanPolarizations):
+        suffix = polar
+        if suffix is None:
+            suffix = 'none'
+        frames['frame_{0:04d}'.format(iFrame)] = {
+            'objects': {
+                sourceName: {'polarization': polar}},
+            'output': {
+                'glowFrameName': '{0}_{1}.jpg'.format(prefix, suffix)}}
+    return {
+        'version': 1,
+        'kind': 'expanded_frames',
+        'frames': frames}
+
+
 def plot_generator(plots=None, beamLine=None):
-    """Prepare the QWP polarization scan for ray tracing or xrtGlow.
-
-    In ordinary ray tracing this function returns the classic yielding
-    generator. In xrtGlow mode it returns a scan dictionary with explicit
-    frames. The simplest equivalent JSON recipe would be a single list track::
-
-        {
-          "version": 1,
-          "kind": "timeline_recipe",
-          "output": {"glowFrameName": "polarization{index:04d}.jpg"},
-          "items": [{
-            "type": "track",
-            "target": "GeometricSource",
-            "property": "polarization",
-            "values": {"type": "list", "values": ["+45"]}
-          }]
-        }
-
-    We use a list for polarization because the values are named states rather
-    than a numeric interval. For numeric scans with uniform spacing, use the
-    shorter ``linspace`` form.
-    """
-#    polarization = ['horizontal', 'vertical', '+45', '-45', 'right', 'left',
-#                    None]
-    polarization = '+45',
-    if showIn3D:
-        sourceName = beamLine.sources[0].name
-        frames = {}
-        for iFrame, polar in enumerate(polarization):
-            suffix = polar
-            if suffix is None:
-                suffix = 'none'
-            frames['frame_{0:04d}'.format(iFrame)] = {
-                'objects': {
-                    sourceName: {'polarization': polar}},
-                'output': {
-                    'glowFrameName': '{0}_{1}.jpg'.format(prefix, suffix)}}
-        return {
-            'version': 1,
-            'kind': 'expanded_frames',
-            'frames': frames}
-
-    def _run_generator():
-        for polar in polarization:
-            beamLine.sources[0].polarization = polar
-            suffix = polar
-            if suffix is None:
-                suffix = 'none'
-            for plot in plots:
-                plot.xaxis.fwhmFormatStr = '%.1f'
-                plot.yaxis.fwhmFormatStr = '%.1f'
-                fileName = '{0}{1}_{2}'.format(prefix, plot.title, suffix)
-                plot.saveName = fileName + '.png'
-#                plot.persistentName = fileName + '.pickle'
-                try:
-                    plot.textPanel.set_text('{0}'.format(suffix))
-                except AttributeError:
-                    pass
-            yield
-    return _run_generator()
+    """Apply the same scan inputs and yield for ordinary ray tracing."""
+    for polar in scanPolarizations:
+        beamLine.sources[0].polarization = polar
+        suffix = polar
+        if suffix is None:
+            suffix = 'none'
+        for plot in plots:
+            plot.xaxis.fwhmFormatStr = '%.1f'
+            plot.yaxis.fwhmFormatStr = '%.1f'
+            fileName = '{0}{1}_{2}'.format(prefix, plot.title, suffix)
+            plot.saveName = fileName + '.png'
+            try:
+                plot.textPanel.set_text('{0}'.format(suffix))
+            except AttributeError:
+                pass
+        yield
 
 
 def main():
     beamLine = build_beamline()
     if showIn3D:
-        scan = plot_generator(beamLine=beamLine)
+        scan = make_glow_scan(beamLine)
         beamLine.glow(scale=3e2, centerAt='QWP', startFrom=1,
                       scan=scan,
                       colorAxis='circular_polarization_rate',

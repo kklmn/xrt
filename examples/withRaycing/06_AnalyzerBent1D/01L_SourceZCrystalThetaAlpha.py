@@ -266,76 +266,83 @@ def define_plots(beamLine):
 
 
 def make_glow_scan():
-    """Creates xrtGlow frames from the active Laue analyzer table rows.
-
-    The active masks select discrete crystal/theta/source combinations. Glow
-    gets explicit frames because every selected row derives source divergence,
-    analyzer position, pitch and detector orientation from the same geometry.
-    """
+    """Prepare Glow frames from explicit crystal, angle and bandwidth cases."""
+    # 1. Choose cases: angles in degrees, source sigma in mm, bandwidth as dE/E.
+    # These inputs select the Glow scan; the masks above select ordinary tracing.
+    cases = [
+        {
+            'hkl': (1, 1, 1),
+            'thetaDeg': 10.0,
+            'alphaDeg': 0.0,
+            'sourceSigmaZ': 0.07 / 2.35,
+            'relativeHalfBandwidth': 0.001,
+        },
+        ]
+    crystalByHKL = {tuple(c.hkl): c for c in crystals}
     frames = {}
     frameIndex = 0
-    for bvs in beamV:
-        for icrystal, crystal in enumerate(crystals):
-            if not crystalsMask[icrystal]:
-                continue
-            hklSeparator = ',' if np.any(np.array(crystal.hkl) > 10) else ''
-            crystalLabel = '{0}{1[0]}{2}{1[1]}{2}{1[2]}'.format(
-                crystalMaterial, crystal.hkl, hklSeparator)
-            for ithetaDegree, thetaDegree in enumerate(thetasDegree):
-                if not thetaMask[ithetaDegree]:
-                    continue
-                theta = np.radians(thetaDegree)
-                E0 = rm.ch / (2 * crystal.d * math.sin(theta))
-                for alphaDegree in alphasDegree:
-                    alpha = np.radians(alphaDegree)
-                    p = 2. * R * math.cos(theta + alpha)
-                    sin2Theta = math.sin(2 * theta)
-                    cos2Theta = math.cos(2 * theta)
-                    yDet = p + lCrystDet * cos2Theta
-                    zDet = -lCrystDet * sin2Theta
-                    pdp = 2. * R * math.cos(
-                        theta + alpha + dyCrystal/6/R)
-                    dxprime = dxCrystal / pdp
-                    dzprime = dyCrystal * math.cos(theta - alpha) / pdp
-                    eAxisFlat = eAxesFlat[ithetaDegree][icrystal]
-                    eAxisMin = E0 * (1. - eAxisFlat)
-                    eAxisMax = E0 * (1. + eAxisFlat)
-                    dELine = E0 * eAxisFlat/3.
-                    sourceModes = [
-                        ('flat', 'flat', [eAxisMin, eAxisMax]),
-                        ('line', 'lines', [E0]),
-                        ('7lin', 'lines',
-                         [E0 + dELine*i for i in range(-3, 4)]),
-                        ]
-                    for isource, (sourcename, distE, energies) in enumerate(
-                            sourceModes):
-                        frameName = '{0}-{1}-{2:.0f}-{3}-{4}.jpg'.format(
-                            bentName, crystalLabel, thetaDegree, isource,
-                            sourcename)
-                        frames['frame_{0:04d}'.format(frameIndex)] = {
-                            'objects': {
-                                'GeometricSource': {
-                                    'dz': bvs,
-                                    'dxprime': dxprime,
-                                    'dzprime': dzprime,
-                                    'distE': distE,
-                                    'energies': energies,
-                                    },
-                                analyzerName: {
-                                    'surface': [crystalLabel],
-                                    'material': crystal.uuid,
-                                    'alpha': alpha,
-                                    'center': [0, p, 0],
-                                    'pitch': math.pi/2 - theta - alpha,
-                                    },
-                                'Detector': {
-                                    'center': [0, yDet, zDet],
-                                    'z': [0, sin2Theta, cos2Theta],
-                                    },
-                                },
-                            'output': {'glowFrameName': frameName},
-                            }
-                        frameIndex += 1
+    for case in cases:
+        crystal = crystalByHKL[case['hkl']]
+        thetaDegree = case['thetaDeg']
+        alphaDegree = case['alphaDeg']
+        bvs = case['sourceSigmaZ']
+        eAxisFlat = case['relativeHalfBandwidth']
+
+        # 2. Calculate Bragg energy, source divergence and detector geometry.
+        hklSeparator = ',' if np.any(np.array(crystal.hkl) > 10) else ''
+        crystalLabel = '{0}{1[0]}{2}{1[1]}{2}{1[2]}'.format(
+            crystalMaterial, crystal.hkl, hklSeparator)
+        theta = np.radians(thetaDegree)
+        E0 = rm.ch / (2 * crystal.d * math.sin(theta))
+        alpha = np.radians(alphaDegree)
+        p = 2. * R * math.cos(theta + alpha)
+        sin2Theta = math.sin(2 * theta)
+        cos2Theta = math.cos(2 * theta)
+        yDet = p + lCrystDet * cos2Theta
+        zDet = -lCrystDet * sin2Theta
+        pdp = 2. * R * math.cos(
+            theta + alpha + dyCrystal/6/R)
+        dxprime = dxCrystal / pdp
+        dzprime = dyCrystal * math.cos(theta - alpha) / pdp
+        eAxisMin = E0 * (1. - eAxisFlat)
+        eAxisMax = E0 * (1. + eAxisFlat)
+        dELine = E0 * eAxisFlat/3.
+        # 3. Prepare source modes and capture the calculated geometry.
+        sourceModes = [
+            ('flat', 'flat', [eAxisMin, eAxisMax]),
+            ('line', 'lines', [E0]),
+            ('7lin', 'lines',
+             [E0 + dELine*i for i in range(-3, 4)]),
+            ]
+        for isource, (sourcename, distE, energies) in enumerate(
+                sourceModes):
+            frameName = '{0}-{1}-{2:.0f}-{3}-{4}.jpg'.format(
+                bentName, crystalLabel, thetaDegree, isource,
+                sourcename)
+            frames['frame_{0:04d}'.format(frameIndex)] = {
+                'objects': {
+                    'GeometricSource': {
+                        'dz': bvs,
+                        'dxprime': dxprime,
+                        'dzprime': dzprime,
+                        'distE': distE,
+                        'energies': energies,
+                        },
+                    analyzerName: {
+                        'surface': [crystalLabel],
+                        'material': crystal.uuid,
+                        'alpha': alpha,
+                        'center': [0, p, 0],
+                        'pitch': math.pi/2 - theta - alpha,
+                        },
+                    'Detector': {
+                        'center': [0, yDet, zDet],
+                        'z': [0, sin2Theta, cos2Theta],
+                        },
+                    },
+                'output': {'glowFrameName': frameName},
+                }
+            frameIndex += 1
     return {'version': 1, 'kind': 'timeline_recipe',
             'expandedFrames': frames}
 
@@ -346,7 +353,7 @@ def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
 
     The runner keeps the generator because it uses measured plot widths after
     each ``yield``. xrtGlow uses ``make_glow_scan()`` instead, expanding the
-    active masks into explicit frame dictionaries. Lists are used for the
+    selected cases into explicit frame dictionaries. Lists are used for the
     source energies because each frame is a discrete source mode.
     """
     if not showIn3D:

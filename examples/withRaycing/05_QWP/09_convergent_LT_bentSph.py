@@ -247,110 +247,100 @@ def define_plots(beamLine):
     return plots
 
 
+# Shared scan inputs: dimensions in mm, pitch offsets in arcseconds.
+scanPolarizations = ('horiz',)
+if useTT:
+    positiveOffsetsArcsec = np.logspace(0, 10, 11, base=2)
+else:
+    positiveOffsetsArcsec = np.logspace(0, 13, 14, base=2)
+scanOffsetsArcsec = np.hstack(
+    (-positiveOffsetsArcsec[::-1], 0, positiveOffsetsArcsec))
+nominalRadiusMm = ySample - yQWP
+scanRadiusFactors = (-1,)
+
+scanThicknessMm = 0.3
+
+
+def make_glow_scan(beamLine):
+    """Capture the chosen source and QWP settings as Glow frames."""
+    sourceName = beamLine.sources[0].name
+    frames = {}
+    iFrame = 0
+    for polar in scanPolarizations:
+        suffix = polar
+        if suffix is None:
+            suffix = 'none'
+        for radiusFactor in scanRadiusFactors:
+            radius = radiusFactor * nominalRadiusMm
+            for iTheta, dTheta in enumerate(scanOffsetsArcsec):
+                pitch = theta0 + math.pi/2 + \
+                    math.radians(dTheta / 3600.)
+                if radiusFactor is np.inf:
+                    glowFrameName = '{0}_{1}_R=inf_{3:02d}.jpg'.\
+                        format(prefix, suffix, radius, iTheta)
+                else:
+                    glowFrameName = \
+                        '{0}_{1}_R={2:05.0f}mm_{3:02d}.jpg'.\
+                        format(prefix, suffix, radius, iTheta)
+                frames['frame_{0:04d}'.format(iFrame)] = {
+                    'objects': {
+                        sourceName: {'polarization': polar},
+                        'Diamond': {'t': scanThicknessMm},
+                        'QWP': {'R': radius, 'pitch': pitch}},
+                    'output': {'glowFrameName': glowFrameName}}
+                iFrame += 1
+    return {
+        'version': 1,
+        'kind': 'expanded_frames',
+        'frames': frames}
+
+
 def plot_generator(plots=None, beamLine=None):
-    """Prepare spherically bent QWP radius and pitch frames.
-
-    ``run_ray_tracing()`` uses the generator form for plot labels. xrtGlow
-    receives explicit frame patches because the radius factors and pitch
-    offsets are selected lists with derived values. This by-frame form is the
-    right example for non-uniform scans; a JSON ``linspace`` is better for
-    simple min/max/steps sweeps.
-    """
-#    polarization = ['horiz', 'vert', '+45', '-45', 'right', 'left', None]
-    polarization = 'horiz',
-
-    if useTT:
-        posTheta = np.logspace(0, 10, 11, base=2)
-    else:
-        posTheta = np.logspace(0, 13, 14, base=2)
-    departureTheta = np.hstack((-posTheta[::-1], 0, posTheta))
-    Rnominal = ySample - yQWP
-
-    if showIn3D:
-        sourceName = beamLine.sources[0].name
-        frames = {}
-        iFrame = 0
-        for polar in polarization:
-            suffix = polar
-            if suffix is None:
-                suffix = 'none'
-#            sq2 = math.sqrt(2)
-#            for radiusFactor in [2, sq2, 1, 1/sq2, 0.5, np.inf]:
-#            for radiusFactor in (-1, 1, np.inf):
-            for radiusFactor in -1, :
-                radius = radiusFactor * Rnominal
-                for iTheta, dTheta in enumerate(departureTheta):
-                    pitch = theta0 + math.pi/2 + \
-                        math.radians(dTheta / 3600.)
+    """Apply the same scan inputs and yield for ordinary ray tracing."""
+    crystalDiamond.t = scanThicknessMm  # in mm
+    for polar in scanPolarizations:
+        beamLine.sources[0].polarization = polar
+        suffix = polar
+        if suffix is None:
+            suffix = 'none'
+        for radiusFactor in scanRadiusFactors:
+            radius = radiusFactor * nominalRadiusMm
+            beamLine.qwp.R = radius
+            for iTheta, dTheta in enumerate(scanOffsetsArcsec):
+                beamLine.qwp.pitch = theta0 + math.pi/2 + \
+                    math.radians(dTheta / 3600.)
+                for plot in plots:
+                    plot.xaxis.fwhmFormatStr = '%.1f'
+                    plot.yaxis.fwhmFormatStr = '%.1f'
                     if radiusFactor is np.inf:
-                        glowFrameName = '{0}_{1}_R=inf_{3:02d}.jpg'.\
-                            format(prefix, suffix, radius, iTheta)
+                        fileName = '{0}_{1}_{2}_R=inf_{4:02d}.png'.\
+                            format(prefix, plot.title, suffix, radius,
+                                   iTheta)
                     else:
-                        glowFrameName = \
-                            '{0}_{1}_R={2:05.0f}mm_{3:02d}.jpg'.\
-                            format(prefix, suffix, radius, iTheta)
-                    frames['frame_{0:04d}'.format(iFrame)] = {
-                        'objects': {
-                            sourceName: {'polarization': polar},
-                            'Diamond': {'t': 0.3},
-                            'QWP': {'R': radius, 'pitch': pitch}},
-                        'output': {'glowFrameName': glowFrameName}}
-                    iFrame += 1
-        return {
-            'version': 1,
-            'kind': 'expanded_frames',
-            'frames': frames}
-
-    def _run_generator():
-        crystalDiamond.t = 0.3  # in mm
-        for polar in polarization:
-            beamLine.sources[0].polarization = polar
-            suffix = polar
-            if suffix is None:
-                suffix = 'none'
-#            sq2 = math.sqrt(2)
-#            for radiusFactor in [2, sq2, 1, 1/sq2, 0.5, np.inf]:
-#            for radiusFactor in (-1, 1, np.inf):
-            for radiusFactor in -1, :
-                radius = radiusFactor * Rnominal
-                beamLine.qwp.R = radius
-                for iTheta, dTheta in enumerate(departureTheta):
-                    beamLine.qwp.pitch = theta0 + math.pi/2 + \
-                        math.radians(dTheta / 3600.)
-                    for plot in plots:
-                        plot.xaxis.fwhmFormatStr = '%.1f'
-                        plot.yaxis.fwhmFormatStr = '%.1f'
+                        fileName = \
+                            '{0}_{1}_{2}_R={3:05.0f}mm_{4:02d}.png'.\
+                            format(prefix, plot.title, suffix, radius,
+                                   iTheta)
+                    plot.saveName = fileName
+                    try:
                         if radiusFactor is np.inf:
-                            fileName = '{0}_{1}_{2}_R=inf_{4:02d}.png'.\
-                                format(prefix, plot.title, suffix, radius,
-                                       iTheta)
+                            plot.textPanel.set_text(
+                                u'{0}\nR = {1}\n{2:+4.0f} arcsec'.
+                                format(suffix, r'$\infty$', dTheta))
                         else:
-                            fileName = \
-                                '{0}_{1}_{2}_R={3:05.0f}mm_{4:02d}.png'.\
-                                format(prefix, plot.title, suffix, radius,
-                                       iTheta)
-                        plot.saveName = fileName
-#                    plot.persistentName = fileName + '.pickle'
-                        try:
-                            if radiusFactor is np.inf:
-                                plot.textPanel.set_text(
-                                    u'{0}\nR = {1}\n{2:+4.0f} arcsec'.
-                                    format(suffix, r'$\infty$', dTheta))
-                            else:
-                                plot.textPanel.set_text(
-                                    u'{0}\nR = {1:5.0f} mm\n'
-                                    u'{2:+4.0f} arcsec'.
-                                    format(suffix, radius, dTheta))
-                        except AttributeError:
-                            pass
-                    yield
-    return _run_generator()
+                            plot.textPanel.set_text(
+                                u'{0}\nR = {1:5.0f} mm\n'
+                                u'{2:+4.0f} arcsec'.
+                                format(suffix, radius, dTheta))
+                    except AttributeError:
+                        pass
+                yield
 
 
 def main():
     beamLine = build_beamline()
     if showIn3D:
-        scan = plot_generator(beamLine=beamLine)
+        scan = make_glow_scan(beamLine)
         beamLine.glow(scale=[3e2, 3, 3e2], centerAt='QWP', startFrom=-2,
                       scan=scan,
                       colorAxis='circular_polarization_rate',

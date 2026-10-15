@@ -158,6 +158,7 @@ def make_glow_scan():
     geometry once and uses a deterministic fallback spacing derived from the
     flat-source energy window.
     """
+    # 1. Calculate the analyzer and detector geometry from the inputs above.
     hklSeparator = ',' if np.any(np.array(crystal.hkl) > 9) else ''
     crystalLabel = '{0}{1[0]}{2}{1[1]}{2}{1[2]}'.format(
         crystalMaterial, crystal.hkl, hklSeparator)
@@ -173,16 +174,19 @@ def make_glow_scan():
     pdp = 2. * R * np.sin(theta + alpha - dyCrystal/6/R)
     dxprime = dxCrystal / pdp
     dzprime = dyCrystal * np.sin(theta - alpha) / pdp
+    # 2. Calculate the source energy window and fixed seven-line spacing.
     offsetE = round(E0, 2)
     eAxisMin = offsetE + eAxisFlatLimits[0]
     eAxisMax = offsetE + eAxisFlatLimits[1]
     dELine = (eAxisMax - eAxisMin) / 6.
 
+    # 3. Choose flat, single-line and seven-line source states.
     sourceModes = [
         ('flat', 'flat', [eAxisMin, eAxisMax]),
         ('line', 'lines', [E0]),
         ('7lin', 'lines', [E0 + dELine*i for i in range(-3, 4)]),
         ]
+    # 4. Capture each source state with the calculated geometry.
     frames = {}
     for index, (sourcename, distE, energies) in enumerate(sourceModes):
         frames['frame_{0:04d}'.format(index)] = {
