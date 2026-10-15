@@ -1793,7 +1793,11 @@ class GlowScanMixin:
         return filename
 
     def _scan_set_dialog_directory(self, dialog):
-        directory = getattr(self, 'scanOutputDirectory', None)
+        section, what = 'Glow', 'scan'
+        if config.configPaths.has_option(section, what):
+            directory = config.path(section, what)
+        else:
+            directory = getattr(self, 'scanOutputDirectory', None)
         if directory:
             dialog.setDirectory(directory)
 
