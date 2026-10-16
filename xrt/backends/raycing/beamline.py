@@ -1378,8 +1378,58 @@ class BeamLine(object):
                                                              eluuid)
             self.blViewer.show()
 
-    def explore(self, plots=None, block=None, closePlots=True, *,
+    def explore(self, plots=None, block=True, closePlots=True, *,
                 scanDescription=None, sceneSettings=None):
+        r"""
+        Open the beamline in xrtQook with its embedded xrtGlow viewer.
+
+        The explorer attempts to reconstruct the beamline structure created by
+        ``build_beamline()``, derive its propagation flow from ``run_process()``,
+        and index materials and figure errors from the Python context. Success
+        is not guaranteed for highly customized scripts, particularly when
+        user-defined classes or variables cannot be resolved by the explorer.
+
+        *plots*: dict or None
+            Serialized plot definitions from
+            :func:`xrt.plotter.serialize_plots`. Used when creating an explorer
+            if the layout has no plots.
+
+        *block*: bool
+            Whether to wait until the Qook session ends. Defaults to ``True``,
+            which is recommended for standalone scripts, especially when
+            Matplotlib uses a Qt backend. With ``closePlots=True``, existing
+            Matplotlib figures are closed before entering the Qook event loop.
+
+            For example::
+
+                beamLine.explore(block=True)
+                print("Qook session finished")
+
+            With ``False``, return after opening Qook. Use this when integrating
+            into an application whose Qt event loop is already running.
+
+        *closePlots*: bool
+            Close Matplotlib figures before entering a blocking event loop.
+            Defaults to ``True``.
+
+        *scanDescription*: dict or None
+            Keyword-only Glow scan recipe or explicit frame dictionary, using
+            the same format as ``glow(scanDescription=...)``. With ``None``,
+            keep the imported or current scan.
+
+        *sceneSettings*: dict or None
+            Keyword-only Glow scene properties, for example ``scaleVec``,
+            ``rotations`` and ``rayFlag``. Only supplied properties change;
+            omitted properties retain their current values.
+
+        Explicit Glow settings are applied after the layout and template scene
+        are imported. Subsequent calls update the existing explorer's viewer.
+
+        Returns the Qt event-loop exit code when blocking, otherwise ``None``.
+        """
+        if not isinstance(block, bool):
+            block = True
+
         def caller_docstring():
             frame = inspect.currentframe()
             try:
@@ -1463,13 +1513,7 @@ class BeamLine(object):
             glow.applySceneProperties(sceneSettings)
         self.blExplorer.show()
 
-        try:
-            loopLevel = app.thread().loopLevel()
-        except AttributeError:
-            loopLevel = 0
-
-        doBlock = block if block is not None else loopLevel == 0
-        if doBlock:
+        if block:
             if closePlots:
                 try:
                     import matplotlib.pyplot as plt
