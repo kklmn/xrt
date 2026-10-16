@@ -210,9 +210,8 @@ class xrtGlow(GlowScanMixin, qt.QWidget):
             scanDescription)
         self._scanDisabledItems = set()
 
-        section, what = 'Glow', 'scan'
-        if config.configPaths.has_option(section, what):
-            self.scanOutputDirectory = config.path(section, what)
+        # Resolve script scan outputs from the launch working directory.
+        self.scanOutputDirectory = os.getcwd()
 
         self.scanRunning = False
         self.scanPaused = False

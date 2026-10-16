@@ -2,7 +2,6 @@
 __author__ = "Konstantin Klementiev"
 __date__ = "08 Mar 2016"
 
-import copy
 import os, sys; sys.path.append(os.path.join('..', '..', '..'))  # analysis:ignore
 import numpy as np
 
@@ -23,16 +22,57 @@ si111_2 = rm.CrystalSi(hkl=(1, 1, 1), tK=-140+273.15)
 si311_1 = rm.CrystalSi(hkl=(3, 1, 1), tK=-171+273.15)
 si311_2 = rm.CrystalSi(hkl=(3, 1, 1), tK=-140+273.15)
 
-GLOW_ALIGNMENT_PROPS = [
-    ('FEFixedMask', 'feFixedMask', ('opening',)),
-    ('VCM', 'vcm', ('pitch', 'R')),
-    ('DCM', 'dcm', ('surface', 'material', 'material2', 'center',
-                    'bragg', 'cryst2perpTransl')),
-    ('SlitAfterDCM', 'slitAfterDCM', ('opening',)),
-    ('VFM', 'vfm', ('center', 'pitch', 'R')),
-    ('SlitAfterVFM', 'slitAfterVFM', ('opening',)),
-    ('slitEH', 'slitEH', ('opening',)),
-    ]
+
+def make_glow_scan(beamLine):
+    """Align beamLine in place, then capture its settings as Glow frames."""
+    # 1. Choose the energies (eV) and crystal pairs.
+    energies = np.linspace(E0 - dE*0.66, E0 + dE*0.66, 7)
+    crystals = [
+        ('Si111', si111_1, si111_2),
+        # ('Si311', si311_1, si311_2),
+        ]
+
+    frames = {}
+    for crystal, material1, material2 in crystals:
+        beamLine.dcm.surface = (crystal,)
+        beamLine.dcm.material = (material1,)
+        beamLine.dcm.material2 = (material2,)
+        for energy in energies:
+            # 2. Calculate all dependent element settings.
+            BalderBL.align_beamline(beamLine, energy=energy)
+            thetaDeg = np.degrees(
+                beamLine.dcm.bragg - 2*beamLine.vcm.pitch)
+            frameName = '{0}_{1:.0f}.jpg'.format(crystal, thetaDeg*1e4)
+
+            # 3. Capture the aligned values. Copy lists changed by alignment;
+            # material UUIDs refer to the crystal objects defined above.
+            frames['frame_{0:04d}'.format(len(frames))] = {
+                'objects': {
+                    beamLine.feFixedMask.name: {  # 'FEFixedMask'
+                        'opening': list(beamLine.feFixedMask.opening)},
+                    beamLine.vcm.name: {  # 'VCM'
+                        'pitch': beamLine.vcm.pitch, 'R': beamLine.vcm.R},
+                    beamLine.dcm.name: {  # 'DCM'
+                        'surface': [crystal],
+                        'material': material1.uuid,
+                        'material2': material2.uuid,
+                        'center': list(beamLine.dcm.center),
+                        'bragg': beamLine.dcm.bragg,
+                        'cryst2perpTransl': beamLine.dcm.cryst2perpTransl},
+                    beamLine.slitAfterDCM.name: {  # 'SlitAfterDCM'
+                        'opening': list(beamLine.slitAfterDCM.opening)},
+                    beamLine.vfm.name: {  # 'VFM'
+                        'center': list(beamLine.vfm.center),
+                        'pitch': beamLine.vfm.pitch, 'R': beamLine.vfm.R},
+                    beamLine.slitAfterVFM.name: {  # 'SlitAfterVFM'
+                        'opening': list(beamLine.slitAfterVFM.opening)},
+                    beamLine.slitEH.name: {  # 'slitEH'
+                        'opening': list(beamLine.slitEH.opening)},
+                    },
+                'output': {'glowFrameName': frameName},
+                }
+    return {'version': 1, 'kind': 'timeline_recipe',
+            'expandedFrames': frames}
 
 
 def define_plots():
@@ -55,111 +95,13 @@ def define_plots():
     return plots
 
 
-def _copy_scan_value(value):
-    if hasattr(value, 'uuid'):
-        return value
-    if hasattr(value, 'tolist'):
-        return value.tolist()
-    if isinstance(value, tuple):
-        return tuple(_copy_scan_value(v) for v in value)
-    if isinstance(value, list):
-        return [_copy_scan_value(v) for v in value]
-    return copy.deepcopy(value)
-
-
-def _material_ref(value):
-    if isinstance(value, (list, tuple)):
-        value = value[0] if value else None
-    return getattr(value, 'uuid', value)
-
-
-def _scan_value(prop, value):
-    if prop.startswith('material'):
-        return _material_ref(value)
-    if hasattr(value, 'tolist'):
-        return value.tolist()
-    if isinstance(value, tuple):
-        return list(value)
-    if isinstance(value, list):
-        return [_scan_value(prop, v) for v in value]
-    return copy.deepcopy(value)
-
-
-def _scan_state(beamLine):
-    state = {}
-    for _target, attr, props in GLOW_ALIGNMENT_PROPS:
-        obj = getattr(beamLine, attr)
-        state[attr] = {
-            prop: _copy_scan_value(getattr(obj, prop)) for prop in props}
-    return state
-
-
-def _restore_scan_state(beamLine, state):
-    for attr, props in state.items():
-        obj = getattr(beamLine, attr)
-        for prop, value in props.items():
-            setattr(obj, prop, _copy_scan_value(value))
-
-
-def _alignment_patch(beamLine):
-    patch = {}
-    for target, attr, props in GLOW_ALIGNMENT_PROPS:
-        obj = getattr(beamLine, attr)
-        patch[target] = {
-            prop: _scan_value(prop, getattr(obj, prop)) for prop in props}
-    return patch
-
-
-def make_glow_scan(beamLine):
-    """Builds explicit xrtGlow frames for the DCM energy scan.
-
-    The DCM frame values are calculated by the same alignment code as the
-    runner generator. We store frame patches rather than a compact ``linspace``
-    because each energy changes several dependent properties: DCM Bragg angle,
-    crystal translation, mirror positions and slit openings. Material
-    references are kept as runtime UUIDs in this Python scan so the process
-    updates the exact crystal objects created by the example.
-    """
-    frames = {}
-    energies = np.linspace(E0 - dE*0.66, E0 + dE*0.66, 7)
-#    crystals = 'Si111', 'Si311'
-    crystals = 'Si111',
-    state = _scan_state(beamLine)
-    try:
-        frameIndex = 0
-        for crystal in crystals:
-            if crystal == 'Si111':
-                beamLine.dcm.surface = crystal,
-                beamLine.dcm.material = si111_1,
-                beamLine.dcm.material2 = si111_2,
-            elif crystal == 'Si311':
-                beamLine.dcm.surface = crystal,
-                beamLine.dcm.material = si311_1,
-                beamLine.dcm.material2 = si311_2,
-            for energy in energies:
-                BalderBL.align_beamline(beamLine, energy=energy)
-                thetaDeg = np.degrees(
-                    beamLine.dcm.bragg - 2*beamLine.vcm.pitch)
-                frameName = '{0}_{1:.0f}.jpg'.format(
-                    crystal, thetaDeg*1e4)
-                frames['frame_{0:04d}'.format(frameIndex)] = {
-                    'objects': _alignment_patch(beamLine),
-                    'output': {'glowFrameName': frameName},
-                    }
-                frameIndex += 1
-    finally:
-        _restore_scan_state(beamLine, state)
-    return {'version': 1, 'kind': 'timeline_recipe',
-            'expandedFrames': frames}
-
-
 def plot_generator(plots, beamLine):
     """Classic runner generator for DCM material/energy frames.
 
     For normal ray tracing this generator remains convenient because it can
     update plot labels and filenames around each ``yield``. For xrtGlow the
-    helper ``make_glow_scan()`` performs the same nested loop up front and
-    returns explicit frame dictionaries. We use frames, not a single
+    helper ``make_glow_scan(beamLine)`` performs the same nested loop up front
+    and returns explicit frame dictionaries. We use frames, not a single
     ``linspace`` track, because every energy is accompanied by alignment
     changes across several elements.
     """
@@ -196,7 +138,6 @@ def main():
     myBalder = BalderBL.build_beamline(
         stripe=stripe, eMinRays=E0-dE, eMaxRays=E0+dE)
     if showIn3D:
-        BalderBL.align_beamline(myBalder, energy=E0)
         scan = make_glow_scan(myBalder)
         myBalder.glow(centerAt='VFM', startFrom=7,
                       scan=scan)

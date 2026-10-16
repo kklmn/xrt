@@ -129,75 +129,64 @@ def define_plots(beamLine):
     return plots
 
 
-def make_glow_scan():
-    """Returns the xrtGlow rocking-curve frames for the Laue DCM.
+def make_glow_scan(beamLine):
+    """Calculate one selected Laue DCM rocking curve as Glow frames."""
+    # 1. Select one radius/energy combination, as in the original Glow scan.
+    polar = polarization[0]
+    radius = radii[0]
+    energy = energies[0]
+    relativeBandwidth = dEOverE[0] * ddEOverE[0]
+    maxOffsetMrad = dthetaMax[0] * ddthetaMax[0]
+    distE = 'flat'
+    sourcename = 'flat'
+    suffix = 'none' if polar is None else polar
+    if radius == np.inf:
+        radiusStr = 'inf'
+    elif radius == -np.inf:
+        radiusStr = '-inf'
+    else:
+        radiusStr = '{0:03.0f}m'.format(radius * 1e-3)
 
-    The old glow generator intentionally stopped after the first
-    radius/energy combination and rendered only the 2nd-crystal pitch sweep.
-    This helper preserves that workflow as explicit frames. The frame list is
-    clearer than a nested JSON loop here because the pitch offsets depend on
-    radius- and energy-specific rocking-curve limits.
-    """
+    # 2. Calculate the source band, crystal pitch and fixed-exit position.
+    theta0 = math.asin(rm.ch / (2 * si111.d * energy))
+    eAxisMin = energy * (1 - relativeBandwidth / 2.)
+    eAxisMax = energy * (1 + relativeBandwidth / 2.)
+    alpha = 0
+    pitch = math.pi/2 + theta0 + alpha
+    center2Y = pLaueDCM + fixedExit * \
+        math.cos(theta0 - alpha) / math.tan(2. * theta0)
+    energiesValue = [eAxisMin, eAxisMax]
+
+    # 3. Sweep the second crystal's pitch offset and capture each frame.
     frames = {}
-    frameIndex = 0
-    for polar in polarization:
-        suffix = 'none' if polar is None else polar
-        for iradius in [0, 1]:
-            # for iradius in [2, 3, 4]:  # range(5):
-            radius = radii[iradius]
-            if radius == np.inf:
-                radiusStr = 'inf'
-            elif radius == -np.inf:
-                radiusStr = '-inf'
-            else:
-                radiusStr = '{0:03.0f}m'.format(radius * 1e-3)
-            for ienergy, energy in enumerate(energies):
-                theta0 = math.asin(rm.ch / (2 * si111.d * energy))
-                dEE = dEOverE[iradius] * ddEOverE[ienergy]
-                eAxisMin = energy * (1 - dEE / 2.)
-                eAxisMax = energy * (1 + dEE / 2.)
-                alpha = 0
-                pitch = math.pi/2 + theta0 + alpha
-                center2Y = pLaueDCM + fixedExit * \
-                    math.cos(theta0 - alpha) / math.tan(2. * theta0)
-                for distE in 'flat', :  # 'lines':
-                    if distE == 'flat':
-                        energiesValue = [eAxisMin, eAxisMax]
-                        sourcename = 'flat'
-                    else:
-                        energiesValue = [energy]
-                        sourcename = 'line'
-                    dtM = dthetaMax[iradius] * ddthetaMax[ienergy]
-                    for dtheta in np.linspace(-dtM, dtM, nThetas):
-                        frameName = (
-                            '{0}_{1}_R={2}_{3:02.0f}keV_{4}{5:.3f}'
-                            'mrad.jpg').format(
-                                prefix, suffix, radiusStr, energy*1e-3,
-                                sourcename, dtheta)
-                        frames['frame_{0:04d}'.format(frameIndex)] = {
-                            'objects': {
-                                'GeometricSource': {
-                                    'polarization': polar,
-                                    'energies': energiesValue,
-                                    'distE': distE,
-                                    },
-                                'LaueDCM1': {
-                                    'R': radius,
-                                    'pitch': pitch,
-                                    'alpha': alpha,
-                                    },
-                                'LaueDCM2': {
-                                    'R': radius,
-                                    'pitch': pitch + dtheta * 1e-3,
-                                    'alpha': alpha,
-                                    'center': [0, center2Y, fixedExit],
-                                    },
-                                },
-                            'output': {'glowFrameName': frameName},
-                            }
-                        frameIndex += 1
-                    return {'version': 1, 'kind': 'timeline_recipe',
-                            'expandedFrames': frames}
+    for frameIndex, dtheta in enumerate(
+            np.linspace(-maxOffsetMrad, maxOffsetMrad, nThetas)):
+        frameName = (
+            '{0}_{1}_R={2}_{3:02.0f}keV_{4}{5:.3f}'
+            'mrad.jpg').format(
+                prefix, suffix, radiusStr, energy*1e-3,
+                sourcename, dtheta)
+        frames['frame_{0:04d}'.format(frameIndex)] = {
+            'objects': {
+                beamLine.sources[0].name: {  # 'GeometricSource'
+                    'polarization': polar,
+                    'energies': energiesValue,
+                    'distE': distE,
+                    },
+                beamLine.laueDCM1.name: {  # 'LaueDCM1'
+                    'R': radius,
+                    'pitch': pitch,
+                    'alpha': alpha,
+                    },
+                beamLine.laueDCM2.name: {  # 'LaueDCM2'
+                    'R': radius,
+                    'pitch': pitch + dtheta * 1e-3,
+                    'alpha': alpha,
+                    'center': [0, center2Y, fixedExit],
+                    },
+                },
+            'output': {'glowFrameName': frameName},
+            }
     return {'version': 1, 'kind': 'timeline_recipe',
             'expandedFrames': frames}
 
@@ -207,7 +196,7 @@ def plot_generator(plots, beamLine):
 
     The non-glow runner uses this generator to collect rocking-curve
     intensities after each ``yield``. xrtGlow cannot run that feedback loop in
-    the standalone process, so ``make_glow_scan()`` emits the first
+    the standalone process, so ``make_glow_scan(beamLine)`` emits the first
     rocking-curve sweep as explicit frames with precomputed source energies,
     DCM geometry and 2nd-crystal pitch offsets.
     """
@@ -306,7 +295,7 @@ def plot_generator(plots, beamLine):
 def main():
     beamLine = build_beamline()
     if showIn3D:
-        scan = make_glow_scan()
+        scan = make_glow_scan(beamLine)
         beamLine.glow(scale=[30, 3, 30], centerAt='LaueDCM1', startFrom=1,
                       scan=scan)
         return

@@ -149,7 +149,7 @@ def define_plots(beamLine):
     return plots, plotsAnalyzer, plotsDetector, plotsE, plotAnE, plotDetE
 
 
-def make_glow_scan():
+def make_glow_scan(beamLine):
     """Creates the three source-state frames used by xrtGlow.
 
     The plotting generator estimates the 7-line spacing from previous frames,
@@ -158,6 +158,7 @@ def make_glow_scan():
     geometry once and uses a deterministic fallback spacing derived from the
     flat-source energy window.
     """
+    # 1. Calculate the analyzer and detector geometry from the inputs above.
     hklSeparator = ',' if np.any(np.array(crystal.hkl) > 9) else ''
     crystalLabel = '{0}{1[0]}{2}{1[1]}{2}{1[2]}'.format(
         crystalMaterial, crystal.hkl, hklSeparator)
@@ -173,35 +174,38 @@ def make_glow_scan():
     pdp = 2. * R * np.sin(theta + alpha - dyCrystal/6/R)
     dxprime = dxCrystal / pdp
     dzprime = dyCrystal * np.sin(theta - alpha) / pdp
+    # 2. Calculate the source energy window and fixed seven-line spacing.
     offsetE = round(E0, 2)
     eAxisMin = offsetE + eAxisFlatLimits[0]
     eAxisMax = offsetE + eAxisFlatLimits[1]
     dELine = (eAxisMax - eAxisMin) / 6.
 
+    # 3. Choose flat, single-line and seven-line source states.
     sourceModes = [
         ('flat', 'flat', [eAxisMin, eAxisMax]),
         ('line', 'lines', [E0]),
         ('7lin', 'lines', [E0 + dELine*i for i in range(-3, 4)]),
         ]
+    # 4. Capture each source state with the calculated geometry.
     frames = {}
     for index, (sourcename, distE, energies) in enumerate(sourceModes):
         frames['frame_{0:04d}'.format(index)] = {
             'objects': {
-                'GeometricSource': {
+                beamLine.sources[0].name: {  # 'GeometricSource'
                     'dz': beamV,
                     'dxprime': dxprime,
                     'dzprime': dzprime,
                     'distE': distE,
                     'energies': energies,
                     },
-                analyzerName: {
+                beamLine.analyzer.name: {  # analyzerName
                     'surface': [crystalLabel],
                     'material': crystal.uuid,
                     'alpha': alpha,
                     'center': [0, p, 0],
                     'pitch': theta + alpha,
                     },
-                'Detector': {
+                beamLine.detector.name: {  # 'Detector'
                     'center': [0, yDet, zDet],
                     'z': [0, -sin2Theta, cos2Theta],
                     },
@@ -220,9 +224,9 @@ def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
 
     ``run_ray_tracing()`` keeps this yielding generator because it measures the
     flat and line-source widths after each ``yield``. xrtGlow receives the
-    precompiled ``make_glow_scan()`` frames instead: fixed analyzer geometry
-    plus a list of source energy modes. Lists are used for the source energies
-    because the values are discrete states, not a linear scan axis.
+    precompiled ``make_glow_scan(beamLine)`` frames instead: fixed analyzer
+    geometry plus a list of source energy modes. Lists are used for the source
+    energies because the values are discrete states, not a linear scan axis.
     """
     beamLine.source.dz = beamV
     bsname = 'h={0:03.0f}mum'.format(beamV*1e3)
@@ -358,7 +362,7 @@ def main():
     if showIn3D:
         while beamLine.analyzer.center == [0, 0, 0]:
             next(plot_generator(beamLine))  # make initial alignment
-        scan = make_glow_scan()
+        scan = make_glow_scan(beamLine)
         beamLine.glow(scale=4, centerAt=analyzerName, scan=scan,
                       sceneSettings=dict(rayFlag=[1,],
                                          geomSrcParam={'minSize': 10.}))

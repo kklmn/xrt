@@ -283,7 +283,7 @@ def define_plots(beamLine):
     return plots, plotsAnalyzer, plotsDetector, plotsE, plotDetE
 
 
-def make_glow_scan():
+def make_glow_scan(beamLine):
     """Creates explicit xrtGlow frames for the von Hamos source modes.
 
     The spectrometer geometry is computed from ``thetaDegree`` and ``Rs`` in
@@ -292,6 +292,7 @@ def make_glow_scan():
     modes are discrete and the 7-line spacing is a derived fallback value for
     glow, not a simple interpolation.
     """
+    # 1. Calculate the analyzer and detector geometry from the inputs above.
     hklSeparator = ',' if np.any(np.array(crystal.hkl) > 10) else ''
     crystalLabel = '{0}{1[0]}{2}{1[1]}{2}{1[2]}'.format(
         crystalMaterial, crystal.hkl, hklSeparator)
@@ -304,33 +305,36 @@ def make_glow_scan():
     zDet = p * sin2Theta
     dxprime = 1.1 * dxCrystal / p
     dzprime = dyCrystal * np.sin(theta) / p
+    # 2. Calculate the source energy window and fixed seven-line spacing.
     E0raw = rm.ch / (2 * crystal.d * sinTheta)
     dTheta = crystal.get_dtheta_symmetric_Bragg(E0raw)
     E0 = rm.ch / (2 * crystal.d * np.sin(theta + dTheta))
     dELine = E0 * eAxisFlat/3.
+    # 3. Choose flat, single-line and seven-line source states.
     sourceModes = [
         ('flat', 'flat', [E0 * (1 - eAxisFlat),
                           E0 * (1 + eAxisFlat)]),
         ('line', 'lines', [E0]),
         ('7lin', 'lines', [E0 + dELine*i for i in range(-3, 4)]),
         ]
+    # 4. Capture each source state with the calculated geometry.
     frames = {}
     for isource, (sourcename, distE, energies) in enumerate(sourceModes):
         frames['frame_{0:04d}'.format(isource)] = {
             'objects': {
-                'GeometricSource': {
+                beamLine.sources[0].name: {  # 'GeometricSource'
                     'dxprime': dxprime,
                     'dzprime': dzprime,
                     'distE': distE,
                     'energies': energies,
                     },
-                analyzerName: {
+                beamLine.analyzer.name: {  # analyzerName
                     'surface': [crystalLabel],
                     'material': crystal.uuid,
                     'center': [0, p, 0],
                     'pitch': theta,
                     },
-                'Detector': {
+                beamLine.detector.name: {  # 'Detector'
                     'center': [0, yDet, zDet],
                     'z': [0, cosTheta, sinTheta],
                     },
@@ -347,9 +351,10 @@ def plot_generator(beamLine, plots=[], plotsAnalyzer=[], plotsDetector=[],
     """Classic runner generator for the von Hamos source sequence.
 
     The runner version keeps the ``yield`` workflow so it can estimate energy
-    resolution from previous plots. xrtGlow receives ``make_glow_scan()``
-    frames: the aligned geometry plus a list of source modes. Lists fit these
-    discrete energy states better than ``linspace``.
+    resolution from previous plots. xrtGlow receives
+    ``make_glow_scan(beamLine)`` frames: the aligned geometry plus a list of
+    source modes. Lists fit these discrete energy states better than
+    ``linspace``.
     """
     hklSeparator = ',' if np.any(np.array(crystal.hkl) > 10) else ''
     crystalLabel = '{0}{1[0]}{2}{1[1]}{2}{1[2]}'.format(
@@ -452,7 +457,7 @@ def main():
     if showIn3D:
         while beamLine.analyzer.center == [0, 0, 0]:
             next(plot_generator(beamLine))  # make initial alignment
-        scan = make_glow_scan()
+        scan = make_glow_scan(beamLine)
         beamLine.glow(scale=4, centerAt=analyzerName, scan=scan,
                       sceneSettings=dict(rayFlag=[1,],
                                          geomSrcParam={'minSize': 3.}))

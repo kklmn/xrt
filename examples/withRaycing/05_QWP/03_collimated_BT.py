@@ -189,86 +189,73 @@ def define_plots(beamLine):
     return plots
 
 
+# Shared scan inputs: thickness in micrometers, pitch offsets in arcseconds.
+scanPolarizations = ('+45',)
+scanThicknessesUm = (200.,)
+positiveOffsetsArcsec = np.logspace(0, 9, 10, base=2)
+scanOffsetsArcsec = np.hstack(
+    (-positiveOffsetsArcsec[::-1], 0, positiveOffsetsArcsec))
+
+
+def make_glow_scan(beamLine):
+    """Capture the chosen source and QWP settings as Glow frames."""
+    sourceName = beamLine.sources[0].name
+    frames = {}
+    iFrame = 0
+    for polar in scanPolarizations:
+        suffix = polar
+        if suffix is None:
+            suffix = 'none'
+        for thick in scanThicknessesUm:
+            for iTheta, dTheta in enumerate(scanOffsetsArcsec):
+                pitch = theta0 + math.radians(dTheta / 3600.)
+                frames['frame_{0:04d}'.format(iFrame)] = {
+                    'objects': {
+                        sourceName: {'polarization': polar},
+                        'Diamond': {'t': thick * 1e-3},
+                        'QWP': {'pitch': pitch}},
+                    'output': {
+                        'glowFrameName':
+                            '{0}_{1}_{2:04.0f}um_{3:02d}.jpg'.format(
+                                prefix, suffix, thick, iTheta)}}
+                iFrame += 1
+    return {
+        'version': 1,
+        'kind': 'expanded_frames',
+        'frames': frames}
+
+
 def plot_generator(plots=None, beamLine=None):
-    """Prepare the QWP thickness and pitch scan.
-
-    The xrtGlow branch below returns explicit frame patches because the frame
-    values are computed from script constants: crystal thickness, ``theta0``
-    and the logarithmic ``departureTheta`` sequence. Users can save the
-    returned dictionary as JSON and pass the file name to ``beamLine.glow``.
-
-    A compact JSON recipe is preferable for simple inputs, for example one
-    ``linspace`` track over ``QWP.pitch``. Use explicit frames or ``list``
-    values when each frame comes from Python calculations or a non-uniform
-    table.
-    """
-#    polarization = ['horizontal', 'vertical', '+45', '-45', 'right', 'left',
-#        None]
-    polarization = '+45',
-
-#    thickness = np.linspace(500., 5000., 10) / 5.#in um
-    thickness = 200.,  # in um
-    posTheta = np.logspace(0, 9, 10, base=2)
-    departureTheta = np.hstack((-posTheta[::-1], 0, posTheta))
-
-    if showIn3D:
-        sourceName = beamLine.sources[0].name
-        frames = {}
-        iFrame = 0
-        for polar in polarization:
-            suffix = polar
-            if suffix is None:
-                suffix = 'none'
-            for thick in thickness:
-                for iTheta, dTheta in enumerate(departureTheta):
-                    pitch = theta0 + math.radians(dTheta / 3600.)
-                    frames['frame_{0:04d}'.format(iFrame)] = {
-                        'objects': {
-                            sourceName: {'polarization': polar},
-                            'Diamond': {'t': thick * 1e-3},
-                            'QWP': {'pitch': pitch}},
-                        'output': {
-                            'glowFrameName':
-                                '{0}_{1}_{2:04.0f}um_{3:02d}.jpg'.format(
-                                    prefix, suffix, thick, iTheta)}}
-                    iFrame += 1
-        return {
-            'version': 1,
-            'kind': 'expanded_frames',
-            'frames': frames}
-
-    def _run_generator():
-        for polar in polarization:
-            beamLine.sources[0].polarization = polar
-            suffix = polar
-            if suffix is None:
-                suffix = 'none'
-            for thick in thickness:
-                crystalDiamond.t = thick * 1e-3  # in mm
-                for iTheta, dTheta in enumerate(departureTheta):
-                    beamLine.qwp.pitch = \
-                        theta0 + math.radians(dTheta / 3600.)
-                    for plot in plots:
-                        plot.xaxis.fwhmFormatStr = '%.1f'
-                        plot.yaxis.fwhmFormatStr = '%.1f'
-                        fileName = '{0}_{1}_{2}_{3:04.0f}um_{4:02d}'.\
-                            format(prefix, plot.title, suffix, thick, iTheta)
-                        plot.saveName = fileName + '.png'
-#                        plot.persistentName = fileName + '.pickle'
-                        try:
-                            plot.textPanel.set_text(
-                                u'{0}\n{1:4.0f} µm\n{2:+4.0f} arcsec'.
-                                format(suffix, thick, dTheta))
-                        except AttributeError:
-                            pass
-                    yield
-    return _run_generator()
+    """Apply the same scan inputs and yield for ordinary ray tracing."""
+    for polar in scanPolarizations:
+        beamLine.sources[0].polarization = polar
+        suffix = polar
+        if suffix is None:
+            suffix = 'none'
+        for thick in scanThicknessesUm:
+            crystalDiamond.t = thick * 1e-3  # in mm
+            for iTheta, dTheta in enumerate(scanOffsetsArcsec):
+                beamLine.qwp.pitch = \
+                    theta0 + math.radians(dTheta / 3600.)
+                for plot in plots:
+                    plot.xaxis.fwhmFormatStr = '%.1f'
+                    plot.yaxis.fwhmFormatStr = '%.1f'
+                    fileName = '{0}_{1}_{2}_{3:04.0f}um_{4:02d}'.\
+                        format(prefix, plot.title, suffix, thick, iTheta)
+                    plot.saveName = fileName + '.png'
+                    try:
+                        plot.textPanel.set_text(
+                            u'{0}\n{1:4.0f} µm\n{2:+4.0f} arcsec'.
+                            format(suffix, thick, dTheta))
+                    except AttributeError:
+                        pass
+                yield
 
 
 def main():
     beamLine = build_beamline()
     if showIn3D:
-        scan = plot_generator(beamLine=beamLine)
+        scan = make_glow_scan(beamLine)
         beamLine.glow(scale=3e2, centerAt='QWP', startFrom=1,
                       scan=scan,
                       colorAxis='circular_polarization_rate',

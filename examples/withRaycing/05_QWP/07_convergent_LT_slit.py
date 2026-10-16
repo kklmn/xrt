@@ -243,93 +243,83 @@ def define_plots(beamLine):
     return plots
 
 
+# Shared scan inputs: dimensions in mm, pitch offsets in arcseconds.
+scanPolarizations = ('horiz',)
+scanHalfOpeningsMm = np.arange(1, 11) * 0.5
+scanPitchOffsetArcsec = 256.
+# Retain the former angle index in output filenames.
+scanFilenameAngleIndex = 23
+
+scanThicknessMm = 2.5
+
+
+def make_glow_scan(beamLine):
+    """Capture the chosen source and QWP settings as Glow frames."""
+    sourceName = beamLine.sources[0].name
+    frames = {}
+    iFrame = 0
+    for polar in scanPolarizations:
+        suffix = polar
+        if suffix is None:
+            suffix = 'none'
+        for halfOpening in scanHalfOpeningsMm:
+            pitch = theta0 + math.pi/2 +\
+                math.radians(scanPitchOffsetArcsec / 3600.)
+            frames['frame_{0:04d}'.format(iFrame)] = {
+                'objects': {
+                    sourceName: {'polarization': polar},
+                    'Diamond': {'t': scanThicknessMm},
+                    'QWPslit': {
+                        'blades.left': -halfOpening,
+                        'blades.right': halfOpening},
+                    'QWP': {'pitch': pitch}},
+                'output': {
+                    'glowFrameName':
+                        '{0}_{1}_slit{2:02.0f}mm_{3:02d}.jpg'.
+                        format(prefix, suffix, halfOpening*2,
+                               scanFilenameAngleIndex)}}
+            iFrame += 1
+    return {
+        'version': 1,
+        'kind': 'expanded_frames',
+        'frames': frames}
+
+
 def plot_generator(plots=None, beamLine=None):
-    """Prepare QWP slit-width and pitch frames.
-
-    ``run_ray_tracing()`` keeps the yielding generator for plot updates. The
-    xrtGlow branch returns explicit frames because each frame combines a slit
-    opening from a list with a selected logarithmic pitch offset. This is a
-    by-frame scan, not a uniform ``linspace`` over one property.
-    """
-#    polarization = ['horiz', 'vert', '+45', '-45', 'right', 'left', None]
-    polarization = 'horiz',
-
-    posTheta = np.logspace(0, 13, 14, base=2)
-    departureTheta = np.hstack((-posTheta[::-1], 0, posTheta))
-    halfOpenings = np.arange(1, 11) * 0.5
-
-    if showIn3D:
-        sourceName = beamLine.sources[0].name
-        frames = {}
-        iFrame = 0
-        for polar in polarization:
-            suffix = polar
-            if suffix is None:
-                suffix = 'none'
-            for halfOpening in halfOpenings:
-                for iTheta, dTheta in enumerate(departureTheta):
-                    if iTheta != 23:
-                        continue
-                    pitch = theta0 + math.pi/2 +\
-                        math.radians(dTheta / 3600.)
-                    frames['frame_{0:04d}'.format(iFrame)] = {
-                        'objects': {
-                            sourceName: {'polarization': polar},
-                            'Diamond': {'t': 2.5},
-                            'QWPslit': {
-                                'blades.left': -halfOpening,
-                                'blades.right': halfOpening},
-                            'QWP': {'pitch': pitch}},
-                        'output': {
-                            'glowFrameName':
-                                '{0}_{1}_slit{2:02.0f}mm_{3:02d}.jpg'.
-                                format(prefix, suffix, halfOpening*2,
-                                       iTheta)}}
-                    iFrame += 1
-        return {
-            'version': 1,
-            'kind': 'expanded_frames',
-            'frames': frames}
-
-    def _run_generator():
-        crystalDiamond.t = 2.5  # in mm
-        for polar in polarization:
-            beamLine.sources[0].polarization = polar
-            suffix = polar
-            if suffix is None:
-                suffix = 'none'
-            for halfOpening in halfOpenings:
-                beamLine.qwpSlit.opening[0] = -halfOpening
-                beamLine.qwpSlit.opening[1] = halfOpening
-                for iTheta, dTheta in enumerate(departureTheta):
-                    if iTheta != 23:
-                        continue
-                    beamLine.qwp.pitch = theta0 + math.pi/2 +\
-                        math.radians(dTheta / 3600.)
-                    for plot in plots:
-                        plot.xaxis.fwhmFormatStr = '%.1f'
-                        plot.yaxis.fwhmFormatStr = '%.1f'
-                        fileName = \
-                            '{0}_{1}_{2}_slit{3:02.0f}mm_{4:02d}'.\
-                            format(prefix, plot.title, suffix,
-                                   halfOpening*2, iTheta)
-                        plot.saveName = fileName + '.png'
-#                    plot.persistentName = fileName + '.pickle'
-                        try:
-                            plot.textPanel.set_text(
-                                u'{0}\nslit = {1:2.0f} mm\n'
-                                u'{2:+4.0f} arcsec'.
-                                format(suffix, halfOpening*2, dTheta))
-                        except AttributeError:
-                            pass
-                    yield
-    return _run_generator()
+    """Apply the same scan inputs and yield for ordinary ray tracing."""
+    crystalDiamond.t = scanThicknessMm  # in mm
+    for polar in scanPolarizations:
+        beamLine.sources[0].polarization = polar
+        suffix = polar
+        if suffix is None:
+            suffix = 'none'
+        for halfOpening in scanHalfOpeningsMm:
+            beamLine.qwpSlit.opening[0] = -halfOpening
+            beamLine.qwpSlit.opening[1] = halfOpening
+            beamLine.qwp.pitch = theta0 + math.pi/2 +\
+                math.radians(scanPitchOffsetArcsec / 3600.)
+            for plot in plots:
+                plot.xaxis.fwhmFormatStr = '%.1f'
+                plot.yaxis.fwhmFormatStr = '%.1f'
+                fileName = \
+                    '{0}_{1}_{2}_slit{3:02.0f}mm_{4:02d}'.\
+                    format(prefix, plot.title, suffix,
+                           halfOpening*2, scanFilenameAngleIndex)
+                plot.saveName = fileName + '.png'
+                try:
+                    plot.textPanel.set_text(
+                        u'{0}\nslit = {1:2.0f} mm\n'
+                        u'{2:+4.0f} arcsec'.
+                        format(suffix, halfOpening*2, scanPitchOffsetArcsec))
+                except AttributeError:
+                    pass
+            yield
 
 
 def main():
     beamLine = build_beamline()
     if showIn3D:
-        scan = plot_generator(beamLine=beamLine)
+        scan = make_glow_scan(beamLine)
         beamLine.glow(scale=[3e2, 3, 3e2], centerAt='QWP', startFrom=-4,
                       scan=scan,
                       colorAxis='circular_polarization_rate',
