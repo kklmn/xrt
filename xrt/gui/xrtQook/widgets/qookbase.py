@@ -188,7 +188,7 @@ class XrtQookBase(qt.QMainWindow):
             self.webHelp.setFont(self.defaultFont)
             self.webHelp.setReadOnly(True)
         self.webHelp.setMinimumWidth(240)
-        self.webHelp.setMinimumHeight(620)
+        self.webHelp.setMinimumHeight(520)
 
         self.setCentralWidget(mainWidget)
         self.initAllTrees()
@@ -1405,8 +1405,8 @@ class XrtQookBase(qt.QMainWindow):
                     .format(pypi_ver)
 
         txt = u"""
-.. image:: _images/qookSplash2.gif
-   :scale: 80 %
+.. image:: _images/qookSplash3.gif
+   :scale: 75 %
    :target: http://xrt.rtfd.io
 
 .. _PyPI: https://pypi.org/project/xrt
