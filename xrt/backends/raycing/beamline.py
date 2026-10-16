@@ -1067,7 +1067,6 @@ class BeamLine(object):
 
             if mat.uuid not in materialsDict:
                 materialsDict[mat.uuid] = mat
-                matNamesDict[mat.name] = mat.uuid
 
             return mat.uuid
 
@@ -1090,7 +1089,6 @@ class BeamLine(object):
 
             if fe.uuid not in feDict:
                 feDict[fe.uuid] = fe
-                feNamesDict[fe.name] = fe.uuid
 
             return fe.uuid
 
@@ -1138,9 +1136,35 @@ class BeamLine(object):
                     setattr(oe, attr, newFE)
 
         self.materialsDict.update(materialsDict)
-        # self.matnamesToUUIDs.update(matNamesDict)
+        usedNames = {mat.name for mat in self.materialsDict.values() if mat.name}
+        for mat in self.materialsDict.values():
+            name = baseName = mat.name or type(mat).__name__
+            suffix = 2
+            if not mat.name or name in matNamesDict:
+                while name in usedNames:
+                    name = f'{baseName}_{suffix}'
+                    suffix += 1
+            if mat.name != name:
+                mat.name = name
+            usedNames.add(name)
+            matNamesDict[name] = mat.uuid
+        self.matnamesToUUIDs.clear()
+        self.matnamesToUUIDs.update(matNamesDict)
         self.fesDict.update(feDict)
-        # self.fenamesToUUIDs.update(feNamesDict)
+        usedNames = {fe.name for fe in self.fesDict.values() if fe.name}
+        for fe in self.fesDict.values():
+            name = baseName = fe.name or type(fe).__name__
+            suffix = 2
+            if not fe.name or name in feNamesDict:
+                while name in usedNames:
+                    name = f'{baseName}_{suffix}'
+                    suffix += 1
+            if fe.name != name:
+                fe.name = name
+            usedNames.add(name)
+            feNamesDict[name] = fe.uuid
+        self.fenamesToUUIDs.clear()
+        self.fenamesToUUIDs.update(feNamesDict)
 
     def glow(self, scale=[], centerAt='', startFrom=0, colorAxis=None,
              colorAxisLimits=None, generator=None, generatorArgs=[],
@@ -1354,7 +1378,8 @@ class BeamLine(object):
                                                              eluuid)
             self.blViewer.show()
 
-    def explore(self, plots=None, block=None, closePlots=True):
+    def explore(self, plots=None, block=None, closePlots=True, *,
+                scanDescription=None, sceneSettings=None):
         def caller_docstring():
             frame = inspect.currentframe()
             try:
@@ -1430,9 +1455,13 @@ class BeamLine(object):
 
             self.blExplorer = xrtqook.XrtQook(loadLayout=layout)
             self.blExplorer.setWindowTitle("xrtQook")
-            self.blExplorer.show()
-        else:
-            self.blExplorer.show()
+
+        glow = self.blExplorer.blViewer
+        if scanDescription is not None:
+            glow.setScanDescription(scanDescription)
+        if sceneSettings is not None:
+            glow.applySceneProperties(sceneSettings)
+        self.blExplorer.show()
 
         try:
             loopLevel = app.thread().loopLevel()
