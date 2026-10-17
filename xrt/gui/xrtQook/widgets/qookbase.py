@@ -3022,7 +3022,16 @@ class XrtQookBase(qt.QMainWindow):
             dummy = unicode  # test for Python3 compatibility analysis:ignore
         except NameError:
             unicode = str
+        inputValue = value
         value = self.getVal(value)
+        if isinstance(value, (str, unicode)):
+            inputTypes = qt._argument_input_types(argName)
+            if any(inputType == 'sequence' or
+                   inputType.startswith('sequence:')
+                   for inputType in inputTypes):
+                parsed = raycing.parametrize(inputValue)
+                if isinstance(parsed, (list, tuple)):
+                    value = parsed
         if argName in raycing.filenameArgSet and isinstance(
                 value, (str, unicode, list, tuple)):
             return path_literal(value)

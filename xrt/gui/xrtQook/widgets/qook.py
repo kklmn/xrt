@@ -808,7 +808,8 @@ if __name__ == '__main__':
                             paraname = str(pItem.child(ieax, 0).text())
                             if paraname in ['_object']:
                                 continue
-                            paravalue = str(pItem.child(ieax, 1).text())
+                            paravalue = self.getParamItemValue(
+                                pItem.child(ieax, 1))
                             arg_defAx = str(axDefArgs.get(paraname))
 
                             if paraname == "data" and paravalue != "auto":
@@ -852,7 +853,8 @@ if __name__ == '__main__':
                         ieinit = ieinit.rstrip(",") + "),"
                     else:
                         paraname = str(tItem.child(iep, 0).text())
-                        paravalue = str(tItem.child(iep, 1).text())
+                        paravalue = self.getParamItemValue(
+                            tItem.child(iep, 1))
                         arg_def = str(plotDefArgs.get(paraname))
                         if paraname == "drawOeArea":
                             if raycing.parametrize(paravalue):
@@ -962,7 +964,8 @@ if __name__ == '__main__':
             for ie in range(self.rootRunItem.rowCount()):
                 if self.rootRunItem.child(ie, 0).text() != '_object':
                     paraname = str(self.rootRunItem.child(ie, 0).text())
-                    paravalue = str(self.rootRunItem.child(ie, 1).text())
+                    paravalue = self.getParamItemValue(
+                        self.rootRunItem.child(ie, 1))
                     if paraname == "generator":
                         selectedGenerator = paravalue
                     if paraname == "plots":
