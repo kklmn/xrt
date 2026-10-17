@@ -517,11 +517,22 @@ class XrtQook(QookScanMixin, XrtQookElements):
         BLName = str(self.rootBLItem.text())
         e0str = "{}E0 = 5000\n".format(myTab)
         fullCode = ""
-        codeHeader = """# -*- coding: utf-8 -*-\n\"\"\"\n
-__author__ = \"Konstantin Klementiev\", \"Roman Chernikov\"
-__date__ = \"{0}\"\n\nCreated with xrtQook\n\n\n{2}\n\n"\"\"\n
-import numpy as np\nimport sys\nsys.path.append({1})\n""".format(
-            str(date.today()), path_literal(path_to_xrt), self.fileDescription)
+        codeHeader = '''# -*- coding: utf-8 -*-
+r"""
+Created with xrtQook (xrt {3})
+
+{2}
+"""
+
+__author__ = "Konstantin Klementiev", "Roman Chernikov"
+__date__ = "{0}"
+
+import numpy as np
+import sys
+sys.path.append({1})
+'''.format(
+            str(date.today()), path_literal(path_to_xrt),
+            self.fileDescription, xrtversion)
         codeDeclarations = """\n"""
         codeBuildBeamline = "\ndef build_beamline():\n"
         codeBuildBeamline += '{2}bl = {1}.BeamLine('.format(
