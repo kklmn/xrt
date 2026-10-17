@@ -44,19 +44,62 @@ JS_PATH = CSS_PATH
 xrtQookPageName = 'xrtQookPage'
 
 
-def reorder(words):
-    priority = ['auto', 'None', 'True', 'False']
-    specials = [w for w in priority if w in words]
-    remaining = [w for w in words if w not in priority]
-    letters = [w for w in remaining if len(w) == 1]
-    others = [w for w in remaining if len(w) != 1]
+# def reorder(words):
+#     priority = ['auto', 'None', 'True', 'False']
+#     specials = [w for w in priority if w in words]
+#     remaining = [w for w in words if w not in priority]
+#     letters = [w for w in remaining if len(w) == 1]
+#     others = [w for w in remaining if len(w) != 1]
 
-    result = specials
-    if letters:
-        result.append(', '.join(letters))
-    result.extend(others)
+#     result = specials
+#     if letters:
+#         result.append(', '.join(letters))
+#     result.extend(others)
 
-    return result
+#     return result
+
+
+def build_import_table(tree):
+    imports = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                imports[alias.asname or alias.name] = alias.name
+        elif isinstance(node, ast.ImportFrom):
+            module = node.module or ""
+            for alias in node.names:
+                imports[alias.asname or alias.name] = (
+                    f"{module}.{alias.name}"
+                )
+    return imports
+
+
+def dotted_name(node):
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        left = dotted_name(node.value)
+        if left:
+            return f"{left}.{node.attr}"
+    return None
+
+
+def constructor_at_line(source, lineno):
+    tree = ast.parse(source)
+    imports = build_import_table(tree)
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        if node.lineno != lineno:
+            continue
+        name = dotted_name(node.func)
+        if not name:
+            continue
+        first, *rest = name.split('.')
+        if first in imports:
+            name = '.'.join([imports[first], *rest])
+        return name
+    return None
 
 
 class LineNumberArea(qt.QWidget):
@@ -137,49 +180,6 @@ class PythonHighlighter(qt.QSyntaxHighlighter):
             self.setFormat(start, length, fmt)
 
 
-def build_import_table(tree):
-    imports = {}
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
-            for alias in node.names:
-                imports[alias.asname or alias.name] = alias.name
-        elif isinstance(node, ast.ImportFrom):
-            module = node.module or ""
-            for alias in node.names:
-                imports[alias.asname or alias.name] = (
-                    f"{module}.{alias.name}"
-                )
-    return imports
-
-
-def dotted_name(node):
-    if isinstance(node, ast.Name):
-        return node.id
-    if isinstance(node, ast.Attribute):
-        left = dotted_name(node.value)
-        if left:
-            return f"{left}.{node.attr}"
-    return None
-
-
-def constructor_at_line(source, lineno):
-    tree = ast.parse(source)
-    imports = build_import_table(tree)
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.Call):
-            continue
-        if node.lineno != lineno:
-            continue
-        name = dotted_name(node.func)
-        if not name:
-            continue
-        first, *rest = name.split('.')
-        if first in imports:
-            name = '.'.join([imports[first], *rest])
-        return name
-    return None
-
-
 class PythonTextEdit(qt.QPlainTextEdit):
     INDENT = " "*4
     LINE_LENGTH = 80
@@ -230,6 +230,14 @@ class PythonTextEdit(qt.QPlainTextEdit):
 
         self._font_size = self.font().pointSizeF()
 
+        self.findAction = qt.QAction("Find...", self)
+        self.findAction.setShortcut(qt.QKeySequence.Find)
+        self.findAction.triggered.connect(self.findText)
+
+        self.replaceAction = qt.QAction("Replace...", self)
+        self.replaceAction.setShortcut("Ctrl+R")
+        self.replaceAction.triggered.connect(self.replaceText)
+
         self.zoomInAction = qt.QAction("Zoom In", self)
         self.zoomInAction.setShortcut(qt.QKeySequence.ZoomIn)
         self.zoomInAction.triggered.connect(self.zoomInEditor)
@@ -242,6 +250,8 @@ class PythonTextEdit(qt.QPlainTextEdit):
         self.resetZoomAction.setShortcut("Ctrl+0")
         self.resetZoomAction.triggered.connect(self.resetZoom)
 
+        self.addAction(self.findAction)
+        self.addAction(self.replaceAction)
         self.addAction(self.zoomInAction)
         self.addAction(self.zoomOutAction)
         self.addAction(self.resetZoomAction)
@@ -252,10 +262,16 @@ class PythonTextEdit(qt.QPlainTextEdit):
 
     def contextMenuEvent(self, event):
         menu = self.createStandardContextMenu()
+
+        menu.addSeparator()
+        menu.addAction(self.findAction)
+        menu.addAction(self.replaceAction)
+
         menu.addSeparator()
         menu.addAction(self.zoomInAction)
         menu.addAction(self.zoomOutAction)
         menu.addAction(self.resetZoomAction)
+
         menu.exec(event.globalPos())
 
     def setFont(self, font):
@@ -263,6 +279,30 @@ class PythonTextEdit(qt.QPlainTextEdit):
             self.defaultFontSize = font.pointSize()
         super().setFont(font)
         self.lineNumberArea.setFont(font)
+
+    def findText(self):
+        text, ok = qt.QInputDialog.getText(
+            self, "Find", "Find text:", text=getattr(self, "_last_search", ""))
+        if not ok or not text:
+            return
+        self._last_search = text
+        if not self.find(text):
+            cursor = self.textCursor()
+            cursor.movePosition(qt.QTextCursor.Start)
+            self.setTextCursor(cursor)
+            self.find(text)
+
+    def replaceText(self):
+        search, ok = qt.QInputDialog.getText(self, "Replace", "Find:")
+        if not ok or not search:
+            return
+        replace, ok = qt.QInputDialog.getText(self, "Replace", "Replace with:")
+        if not ok:
+            return
+        text = self.toPlainText()
+        if search not in text:
+            return
+        self.setPlainText(text.replace(search, replace))
 
     def zoomInEditor(self):
         self.changeFontSize(+1)

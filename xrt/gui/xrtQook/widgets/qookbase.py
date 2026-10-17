@@ -341,7 +341,7 @@ class XrtQookBase(qt.QMainWindow):
             qt.QIcon(os.path.join(self.iconsDir, 'run.png')),
             'Save Python Script And Run',
             self)
-        runScriptAction.setShortcut('Ctrl+R')
+        runScriptAction.setShortcut('Ctrl+F5')
         runScriptAction.triggered.connect(self.execCode)
 
         glowAction = qt.QAction(
@@ -350,7 +350,7 @@ class XrtQookBase(qt.QMainWindow):
             'Enable xrtGlow Live Update',
             self)
         if gl.isOpenGL:
-            glowAction.setShortcut('CTRL+F1')
+            glowAction.setShortcut('Ctrl+F1')
             glowAction.setCheckable(True)
             glowAction.setChecked(True)
             glowAction.toggled.connect(self.toggleGlow)
