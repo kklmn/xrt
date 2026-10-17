@@ -275,8 +275,8 @@ argumentInputGroups = {
         'afterScript', 'crossSection', 'extraRotationSequence',
         'name', 'orientation', 'rotationSequence', 'title',
         'customField', 'efficiencyFile', 'fileName',
-        'persistentName', 'saveName',
         },
+    ('string', 'sequence:string', 'None'): {'saveName', 'persistentName'},
     'format': {'fwhmFormatStr', 'contourFmt', 'fluxFormatStr'},
     'sequence': {
         'atoms', 'atomsXYZ', 'coeffs', 'columnFactors', 'energies',

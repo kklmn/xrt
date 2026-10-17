@@ -544,7 +544,9 @@ class InstanceInspector(qt.QDialog):
         editorHint = item.data(qt.EDITOR_HINT_ROLE)
         rawValue = raycing.serialize_editor_value(
             value, editorHint, getattr(self, 'beamLine', None))
-        if isinstance(editorHint, dict) and editorHint.get('editor') == 'dict':
+        if paramName in ('saveName', 'persistentName') or (
+                isinstance(editorHint, dict) and
+                editorHint.get('editor') == 'dict'):
             displayValue = rawValue
         else:
             displayValue = _format_display_value(value)

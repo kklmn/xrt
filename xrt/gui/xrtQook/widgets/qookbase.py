@@ -1622,7 +1622,9 @@ class XrtQookBase(qt.QMainWindow):
         rawValue = raycing.serialize_editor_value(
             value, editorHint, getattr(self, 'beamLine', None))
         item.setData(rawValue, qt.RAW_VALUE_ROLE)
-        if isinstance(editorHint, dict) and editorHint.get('editor') == 'dict':
+        if paramName in ('saveName', 'persistentName') or (
+                isinstance(editorHint, dict) and
+                editorHint.get('editor') == 'dict'):
             displayValue = rawValue
         else:
             displayValue = self.formatParamDisplay(paramName, value)

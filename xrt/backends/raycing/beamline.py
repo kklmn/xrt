@@ -1912,7 +1912,15 @@ class BeamLine(object):
         def xml_to_dict(element):
             # Recursively convert XML elements into a dictionary
             if len(element) == 0:  # Base case: if element has no children
-                return element.text
+                value = element.text
+                if (element.tag in ('saveName', 'persistentName') and
+                        isinstance(value, str)):
+                    text = value.strip()
+                    if (text.startswith('[') and text.endswith(']') and
+                            isinstance(get_init_val(text), str)):
+                        # Legacy filename wrapped in sequence brackets.
+                        return text[1:-1].strip()
+                return value
 
             result = OrderedDict()
             for child in element:
