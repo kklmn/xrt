@@ -214,11 +214,11 @@ class XrtQookBase(qt.QMainWindow):
 
         self.tabNames = "Live Doc", "xrtGlow"
         self.tabNameGlow = self.tabNames[1]
-        tabWidgets = self.webHelp, self.blViewer
+        self.tabWidgets = self.webHelp, self.blViewer
         tabIcons = "icon-help.png", "glow_3t_256.png"
         self.docks = []
         for i, (tabName, w, tabIcon) in enumerate(zip(
-                self.tabNames, tabWidgets, tabIcons)):
+                self.tabNames, self.tabWidgets, tabIcons)):
             dock = QDockWidgetNoClose(tabName, self)
             dock.setAllowedAreas(qt.Qt.RightDockWidgetArea)
             dock.setFeatures(dockFeatures)
@@ -252,6 +252,26 @@ class XrtQookBase(qt.QMainWindow):
         self.tabWidget.setIconSize(qt.QSize(iconSize, iconSize))
 
         self.setTabIcons()
+
+    def resizeEvent(self, event):
+        oldTotal = event.oldSize().width()
+        if oldTotal > 0:
+            for dock, w in zip(self.docks, self.tabWidgets):
+                if dock.isFloating():
+                    continue
+                oldRightW = w.width()
+                break
+            else:
+                oldTotal = 0
+        super().resizeEvent(event)
+        if oldTotal <= 0:
+            return
+        factor = self.width() / oldTotal
+        newRightW = round(oldRightW * factor)
+        for dock in self.docks:
+            if dock.isFloating():
+                continue
+            self.resizeDocks([dock], [newRightW], qt.Qt.Horizontal)
 
     def setTabIcons(self):
         for dock, tabName in zip(self.docks, self.tabNames):
