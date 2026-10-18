@@ -214,11 +214,11 @@ class XrtQookBase(qt.QMainWindow):
 
         self.tabNames = "Live Doc", "xrtGlow"
         self.tabNameGlow = self.tabNames[1]
-        tabWidgets = self.webHelp, self.blViewer
+        self.tabWidgets = self.webHelp, self.blViewer
         tabIcons = "icon-help.png", "glow_3t_256.png"
         self.docks = []
         for i, (tabName, w, tabIcon) in enumerate(zip(
-                self.tabNames, tabWidgets, tabIcons)):
+                self.tabNames, self.tabWidgets, tabIcons)):
             dock = QDockWidgetNoClose(tabName, self)
             dock.setAllowedAreas(qt.Qt.RightDockWidgetArea)
             dock.setFeatures(dockFeatures)
@@ -231,6 +231,7 @@ class XrtQookBase(qt.QMainWindow):
             else:
                 self.tabifyDockWidget(dock0, dock)
             self.docks.append(dock)
+        self._resizingDocks = False
 
         self.tabWidget = None
         for tab in self.findChildren(qt.QTabBar):
@@ -255,15 +256,29 @@ class XrtQookBase(qt.QMainWindow):
 
     def resizeEvent(self, event):
         oldTotal = event.oldSize().width()
-        dock = next((d for d in getattr(self, 'docks', ())
-                     if not d.isFloating()
-                     and not d.visibleRegion().isEmpty()), None)
-        newRightW = None
-        if dock is not None and oldTotal > 0:
-            newRightW = round(dock.width() * event.size().width() / oldTotal)
+        if oldTotal > 0:
+            for dock, w in zip(self.docks, self.tabWidgets):
+                if dock.isFloating():
+                    continue
+                oldRightW = w.width()
+                break
+            else:
+                oldTotal = 0
         super().resizeEvent(event)
-        if newRightW is not None and event.size().width() != oldTotal:
-            self.resizeDocks([dock], [newRightW], qt.Qt.Horizontal)
+        if self._resizingDocks:
+            return
+        if oldTotal <= 0:
+            return
+        factor = self.width() / oldTotal
+        newRightW = round(oldRightW * factor)
+        for dock in self.docks:
+            if dock.isFloating():
+                continue
+            self._resizingDocks = True
+            try:
+                self.resizeDocks([dock], [newRightW], qt.Qt.Horizontal)
+            finally:
+                self._resizingDocks = False
 
     def setTabIcons(self):
         for dock, tabName in zip(self.docks, self.tabNames):
