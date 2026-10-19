@@ -2684,6 +2684,12 @@ class XrtQookBase(qt.QMainWindow):
                             glWidget.coordOffset = center
                             glWidget.update_coord_grid()
                             glWidget.glDraw()
+                # restore GL port from saved json by sending a dummy resize evt:
+                widget = self
+                s = widget.size()
+                event = qt.QResizeEvent(s, s)
+                app = qt.QApplication.instance()
+                app.sendEvent(widget, event)
 
     def intToRegexp(self, intStr):
         a = list(str(int(intStr)))
