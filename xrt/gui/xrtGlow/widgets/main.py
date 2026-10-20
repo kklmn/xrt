@@ -2711,13 +2711,69 @@ class xrtGlow(GlowScanMixin, qt.QWidget):
         }
         self.applySceneProperties(defaults)
 
+    def restoreViewportSize(self, size, host=None):
+        if size.width() <= 0 or size.height() <= 0:
+            raise ValueError('Invalid saved viewport size')
+        restoreHost = getattr(self.parentRef, 'restoreGlowViewport', None)
+        if host is None and restoreHost is not None:
+            return restoreHost(size)
+        host = host or self.window()
+        if not host.isVisible():
+            self._pendingViewportSize = qt.QSize(size)
+            self._viewportHost = host
+            host.installEventFilter(self)
+            return
+        if host.isMaximized():
+            host.showNormal()
+        self.layout().setGeometry(self.rect())
+        self.canvasSplitter.setSizes(self.canvasSplitter.sizes())
+        glWidget = self.customGlWidget
+        glowExtra = self.size() - glWidget.size()
+        hostExtra = host.size() - glWidget.size()
+        frameExtra = host.frameGeometry().size() - host.size()
+        available = host.screen().availableGeometry()
+        limit = available.size() - frameExtra - hostExtra
+        scale = min(1.0, limit.width() / size.width(),
+                    limit.height() / size.height())
+        target = qt.QSize(round(size.width() * scale),
+                          round(size.height() * scale))
+        minimum = glWidget.minimumSize().expandedTo(
+            host.minimumSizeHint() - hostExtra)
+        if (target.width() < minimum.width() or
+                target.height() < minimum.height()):
+            print('Cannot restore viewport: saved aspect does not fit '
+                  'the minimum UI size')
+            return
+        panels = self.canvasSplitter.sizes()[1:]
+        host.resize(target + hostExtra)
+        self.resize(target + glowExtra)
+        self.layout().setGeometry(self.rect())
+        self.canvasSplitter.setSizes([target.width()] + panels)
+        glWidget.viewPortGL = [0, 0, glWidget.width(), glWidget.height()]
+        glWidget.aspect = glWidget.width() / max(1, glWidget.height())
+        frame = host.frameGeometry()
+        host.move(min(max(frame.left(), available.left()),
+                      available.right() - frame.width() + 1),
+                  min(max(frame.top(), available.top()),
+                      available.bottom() - frame.height() + 1))
+        return target + glowExtra
+
+    def eventFilter(self, obj, event):
+        if (obj is getattr(self, '_viewportHost', None) and
+                event.type() == qt.QEvent.Show):
+            obj.removeEventFilter(self)
+            self._viewportHost = None
+            qt.QTimer.singleShot(
+                0, partial(self.restoreViewportSize, self._pendingViewportSize))
+        return super().eventFilter(obj, event)
+
     def applySceneProperties(self, params):
         if not params:
             return
 
         previousGeomSrcParam = copy.deepcopy(
             self.customGlWidget.geomSrcParam)
-        sceneKeys = set(DEFAULT_SCENE_SETTINGS.keys())
+        sceneKeys = set(DEFAULT_SCENE_SETTINGS) - {'aspect', 'viewPortGL'}
         offsetParams = {}
         for pName, pValue in params.items():
             if pName not in sceneKeys:
@@ -2753,10 +2809,10 @@ class xrtGlow(GlowScanMixin, qt.QWidget):
         if offsetParams:
             self.customGlWidget.set_view_offsets(**offsetParams, redraw=False)
 
-        if 'size' in params:
-            self.setGeometry(params['size'])
         if 'sizeGL' in params:
             self.canvasSplitter.setSizes(params['sizeGL'])
+        if 'size' in params and 'viewPortGL' in params:
+            self.restoreViewportSize(qt.QSize(*params['viewPortGL'][2:4]))
         if 'scaleVec' in params:
             self.updateScaleFromGL(self.customGlWidget.scaleVec)
         if 'rotations' in params:
