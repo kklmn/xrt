@@ -9,6 +9,14 @@ This example demonstrates how to control a virtual xrt beamline remotely
 with EPICS_ control tools. All three scripts use the same xrtQook template,
 ``1crystal.xml``, featured in the xrtQook tutorial.
 
+.. note::
+
+    Run this example using the supplied Python scripts. It contains
+    detector and EPICS features not fully supported by xrtQook.
+    Editing the template or generating code in xrtQook is not the
+    intended workflow. Launching xrtGlow through the supplied script
+    remains supported.
+
 EPICS provides a framework for distributed control systems used at large
 scientific facilities, such as particle accelerators and synchrotron light
 sources. It lets applications monitor and control equipment over a network

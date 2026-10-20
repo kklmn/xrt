@@ -130,7 +130,6 @@
 				<parameters type="prop">
 					<beam type="param">toroidMirrorSTL_global</beam>
 					<onlyPositivePath type="param">False</onlyPositivePath>
-					<withHistogram type="param">False</withHistogram>
 				</parameters>
 				<_object type="param">xrt.backends.raycing.screens.Screen.expose</_object>
 				<output type="prop">
@@ -241,7 +240,6 @@
 				<parameters type="prop">
 					<beam type="param">toroidMirror01_global</beam>
 					<onlyPositivePath type="param">False</onlyPositivePath>
-					<withHistogram type="param">False</withHistogram>
 				</parameters>
 				<_object type="param">xrt.backends.raycing.screens.Screen.expose</_object>
 				<output type="prop">

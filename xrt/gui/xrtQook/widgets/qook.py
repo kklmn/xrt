@@ -733,7 +733,9 @@ if __name__ == '__main__':
                             for iep in range(mItem.rowCount()):
                                 paraname = str(
                                     mItem.child(iep, 0).text())
-                                if paraname in hiddenParams:
+                                if paraname in hiddenParams or (
+                                        paraname == 'withHistogram' and
+                                        paraname not in methodParams):
                                     continue
                                 arg_def = methodParams[paraname].default
                                 paravalue = self.getParamItemValue(
