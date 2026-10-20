@@ -437,6 +437,10 @@ def set_param_tooltip(child0, child1, paramName, unit=None, calculated=None,
         inputHint = ', '.join(componentTypes)
     elif argName == 'center':
         inputHint = '3-sequence of floats; any 2 can be auto'
+    elif argName == 'focus':
+        inputHint = 'float or 2-tuple (focalDistance, E)'
+    elif argName == 'nCRL':
+        inputHint = 'int or 2-tuple (focalDistance, E)'
     elif argName == 'lim' or argName.startswith(('limPhys', 'limOpt')):
         inputHint = 'sequence, None'
     else:
