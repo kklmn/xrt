@@ -163,7 +163,8 @@ class OE(OEMainMethods):
             are equal to 1.
 
         *figureError*: None or FigureError object.
-
+            If specified, refers to a FigureError object from module
+            :mod:`~xrt.backends.raycing.figure_error`.
 
         *alpha*: float
             Asymmetry angle for a crystal OE (rad). Positive sign is for the
