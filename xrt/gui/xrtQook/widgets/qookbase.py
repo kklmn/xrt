@@ -224,6 +224,8 @@ class XrtQookBase(qt.QMainWindow):
             dock.setAllowedAreas(qt.Qt.RightDockWidgetArea)
             dock.setFeatures(dockFeatures)
             dock.topLevelChanged.connect(dock.changeWindowFlags)
+            dock.visibilityChanged.connect(
+                partial(dock.setProperty, 'tabVisible'))
             self.addDockWidget(qt.Qt.RightDockWidgetArea, dock)
             dock.setWidget(w)
             dock.dockIcon = qt.QIcon(os.path.join(self.iconsDir, tabIcon))
@@ -279,6 +281,28 @@ class XrtQookBase(qt.QMainWindow):
             self.resizeDocks([raisedDock], [newRightW], qt.Qt.Horizontal)
         finally:
             self._resizingDocks = False
+
+    def restoreGlowViewport(self, size):
+        dock = self.dockIDs[self.tabNameGlow]
+        host = dock if dock.isFloating() else self
+        if host is self and self.isVisible():
+            if self.isMaximized():
+                self.showNormal()
+            self.layout().activate()
+            shownDock = next((d for d in self.docks
+                              if not d.isFloating() and d.property('tabVisible')),
+                             dock)
+            self.blViewer.resize(shownDock.widget().size())
+        wasResizing = self._resizingDocks
+        self._resizingDocks = True
+        try:
+            glowSize = self.blViewer.restoreViewportSize(size, host)
+            if glowSize is not None and host is self:
+                self.resizeDocks([dock], [glowSize.width()], qt.Qt.Horizontal)
+                self.layout().activate()
+                dock.resize(shownDock.size())
+        finally:
+            self._resizingDocks = wasResizing
 
     def setTabIcons(self):
         for dock, tabName in zip(self.docks, self.tabNames):
@@ -2684,12 +2708,6 @@ class XrtQookBase(qt.QMainWindow):
                             glWidget.coordOffset = center
                             glWidget.update_coord_grid()
                             glWidget.glDraw()
-                # restore GL port from saved json by sending a dummy resize evt:
-                widget = self
-                s = widget.size()
-                event = qt.QResizeEvent(s, s)
-                app = qt.QApplication.instance()
-                app.sendEvent(widget, event)
 
     def intToRegexp(self, intStr):
         a = list(str(int(intStr)))
