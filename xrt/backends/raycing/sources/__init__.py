@@ -546,16 +546,13 @@ application example :ref:`here <example-undulator-sizes>`.
 Comparison of synchrotron source codes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. imagezoom:: _images/flux_case3_xrt_UrgentICALC1.png
-
-.. raw:: html
-
-    <div class="clearer"> </div>
-
 .. _mesh-methods:
 
 Using xrt synchrotron sources on a mesh
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. imagezoom:: _images/flux_case3_xrt_UrgentICALC1.png
+   :align: right
 
 The main modus operandi of xrt synchrotron sources is to provide Monte Carlo
 rays or wave samples. For comparing our sources with other codes – all of them
@@ -575,6 +572,10 @@ intensity down to the needed aperture size. An example of such calculations is
 given in `tests/raycing/test_undulator_on_mesh.py` which produces the following
 plot (for a BESSY undulator, zero energy spread, as Urgent cannot take account
 of it):
+
+.. raw:: html
+
+    <div class="clearer"> </div>
 
 Undulator spectrum across a harmonic
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
