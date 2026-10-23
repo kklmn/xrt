@@ -1,12 +1,11 @@
 [workspace]
 name = "xrt"
-version = "2.0.0b1"
+version = "2.0.0"
 description = "Ray tracing and wave propagation in x-ray regime"
 channels = ["conda-forge"]
 platforms = ["linux-64", "osx-64", "osx-arm64", "win-64"]
 
 [dependencies]
-#python = ">=3.9"
 python = ">=3.9"
 numpy = ">=1.8"
 scipy = ">=0.17"

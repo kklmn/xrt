@@ -194,17 +194,6 @@ Optional functionality requires:
 - EPICS softIOC (beamline control integration)
 
 
-Status
-------
-
-Version 2.0 is currently in beta.
-
-The new propagation engine and GUI infrastructure are being stabilized.
-Core functionality is operational, but some features are still being
-restored or refined during the beta cycle. Feedback from users is
-welcome.
-
-
 License
 -------
 

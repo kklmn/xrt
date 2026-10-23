@@ -3,7 +3,9 @@
 Version history
 ---------------
 
-Current GitHub code (last modified 1 Oct 2026):
+Current GitHub code (last modified 23 Oct 2026):
+
+2.0.0 (23 Oct 2026):
     - New functionality: interactive, multi-track parameter scans in Glow;
       playback, reusable JSON recipes, and Qook script generation. Analytics
       adds selectable beam targets, intensity/flux/power and center/FWHM
