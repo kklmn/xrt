@@ -19,6 +19,10 @@ sys.path.append(os.path.join('..', '..'))
 if sys.platform == "linux":
     os.environ["PYOPENGL_PLATFORM"] = "glx"
 
+# prevent sliders slowdown on macOS
+if sys.platform == "darwin":
+    os.environ["QT_STYLE_OVERRIDE"] = "Fusion"
+
 import xrt.gui.xrtQook as xQ  # analysis:ignore
 
 
