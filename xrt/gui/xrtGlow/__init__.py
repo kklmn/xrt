@@ -45,6 +45,14 @@ See aslo :ref:`Notes on using xrtGlow <glow_notes>`.
 __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "27 Jan 2026"
 
+import os  # analysis:ignore
+import sys  # analysis:ignore
+
+if sys.platform == "linux":
+    os.environ["PYOPENGL_PLATFORM"] = "glx"
+if sys.platform == "darwin":
+    os.environ["QT_STYLE_OVERRIDE"] = "Fusion"
+
 from .widgets import xrtGlow  # analysis:ignore
 from .widgets.inspector import InstanceInspector, ConfigurablePlotWidget  # analysis:ignore
 from ._utils import is_screen, is_aperture  # analysis:ignore
