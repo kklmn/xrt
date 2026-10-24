@@ -10,18 +10,20 @@ import sys  # analysis:ignore
 import os  # analysis:ignore
 sys.path.append(os.path.join('..', '..'))
 
-# Fix opengl context mismatch on RHEL 9 / Wayland, should works on all linux OS
+# Fix opengl context mismatch on RHEL 9 / Wayland, should work on all linux OS
 # System packages required to run xrtQook on Wayland (tested on RHEL 9 KDE)
 # sudo dnf install \
 #  mesa-libGL mesa-dri-drivers \
 #  libglvnd-glx \
 #  xorg-x11-server-Xwayland
-if sys.platform == "linux":
-    os.environ["PYOPENGL_PLATFORM"] = "glx"
+#
+# os environment variables overrides have been moved to xrtGlow/__init__.py
+# if sys.platform == "linux":
+#     os.environ["PYOPENGL_PLATFORM"] = "glx"
 
 # prevent sliders slowdown on macOS
-if sys.platform == "darwin":
-    os.environ["QT_STYLE_OVERRIDE"] = "Fusion"
+# if sys.platform == "darwin":
+#     os.environ["QT_STYLE_OVERRIDE"] = "Fusion"
 
 import xrt.gui.xrtQook as xQ  # analysis:ignore
 
