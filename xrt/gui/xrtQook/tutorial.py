@@ -5,14 +5,14 @@ u"""
 Using xrtQook for script generation
 -----------------------------------
 
-- Start xrtQook: type ``python xrtQookStart.pyw`` from xrt/gui or, if you have
+- Start xrtQook: type ``python xrtQookStart.py`` from xrt/gui or, if you have
   installed xrt by running ``pip install xrt`` or ``python -m pip install .``,
   type ``xrtQook`` from any location.
 
   .. note::
      The scaling of GUI may behave differently in different systems and Qt
      versions. If it looks wrong, try the scaling options in
-     ``xrtQookStart.pyw``.
+     ``xrtQookStart.py``.
 
   .. note::
      If you want to start xrtQook from Spyder, select the run option
