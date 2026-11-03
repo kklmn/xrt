@@ -35,11 +35,11 @@ class EllipticalMirrorParam(OE):
     The user supplies two foci either by focal distances *p* and *q* (both are
     positive distances from the mirror center to the focal points) or as *f1*
     and *f2* points in the global coordinate system (3-sequences). Any
-    combination of (*p* or *f1*) and (*q* or *f2*) is allowed. If *p* is
-    supplied, not *f1*, the incoming optical axis is assumed to be along the
-    global Y axis. For a general orientation of the ellipse axes, *f1* or
-    *pAxis* -- the *p* arm direction in global coordinates -- should be
-    supplied.
+    combination of (*p* or *f1*) and (*q* or *f2*) is allowed. When *f1*
+    is not supplied, *pAxis* specifies the nominal incoming direction. Its
+    default, None, assumes global +Y; 'auto' uses the incoming connection.
+    The distance *p* refers to the intended source or object focus, not
+    necessarily to the preceding optical element.
 
     While either focal arm is missing or cannot yet be resolved, the OE behaves
     as a flat mirror. The elliptical surface and diagnostics are restored
@@ -53,6 +53,21 @@ class EllipticalMirrorParam(OE):
 
     Values of the ellipse semi-major and semi-minor axes lengths can be
     accessed after init as *ellipseA* and *ellipseB* respectively.
+
+    .. note::
+
+        The axis direction and nominal mirror orientation determine the
+        grazing angle used to calculate the surface shape. This angle
+        is measured relative to the tangent plane at *center* and is not
+        generally equal to *pitch*.
+
+        Changing nominal *pitch* can therefore change the surface shape
+        even when the axis vector is fixed. The extra rotations
+        (*extraPitch*, *extraRoll* and *extraYaw*) are excluded from the
+        shape calculation and can be used to rock the existing surface.
+
+        Automatic axis inference does not align the mirror. The nominal
+        rotations must also orient its meridional plane correctly.
 
     The usage is exemplified in `test_param_mirror.py` and
     `test_ellipsoid_tube_mirror.py`. Both test scripts can produce a 3D view by
@@ -88,9 +103,36 @@ class EllipticalMirrorParam(OE):
             Focal points in the global coordinate system. Alternatives for,
             correspondingly, *p* and *q*.
 
-        *pAxis*: 3-sequence
-            Used with *p*, the *p* arm direction in global coordinates,
-            defaults to the global Y axis.
+        *pAxis*: None, 'auto' or 3-sequence, optional
+            Direction of the nominal incoming beam in global coordinates.
+            Used with *p* when *f1* is not supplied; *f1* takes precedence.
+            Default is None, which assumes the global +Y direction.
+
+            For a beam arriving from an upstream optical element, the vector
+            points from the previous reflection point, usually the center of
+            that element, towards the current mirror center. Calculate it by
+            subtracting the previous point's coordinates from the current
+            mirror center's coordinates, component by component. The vector
+            must be nonzero but need not be normalized.
+
+            If 'auto', infer this direction from the center of the upstream
+            element or source producing the incoming beam towards the current
+            mirror center. The upstream element is selected through the
+            incoming beam connection.
+
+            The direction is calculated after automatic center alignment and
+            reused for subsequent scripted repeats. Forced alignment, as in
+            xrtQook, recalculates it from the current centers. Assign 'auto'
+            again to request recalculation after changing scripted geometry.
+
+            This is a center-to-center approximation. Supply an explicit vector
+            when the nominal incoming direction differs from this
+            approximation.
+            Automatic inference requires a beamline and an identifiable
+            producer.
+            While the upstream producer or centers cannot be resolved, the
+            mirror behaves as a flat surface. Automatic inference is retried
+            on later propagations while auto-calculation is enabled.
 
 
         """
@@ -142,14 +184,18 @@ class EllipticalMirrorParam(OE):
             axis = [c-f for c, f in zip(self.center, self.f1)]
             self._p = p
         else:
-            axis = self.pAxis if self.pAxis is not None else [0, 1, 0]
+            axis = self.pAxis
+            if isinstance(axis, str) and axis == 'auto':
+                axis = self._pAxisVal
+            elif axis is None:
+                axis = [0, 1, 0]
 
         if self.f2 is not None:
             q = (sum((x-y)**2 for x, y in zip(self.center, self.f2)))**0.5
             self._q = q
 
         self.f1diag, self.f2diag = None, None
-        if not self.p or not self.q:
+        if axis is None or not self.p or not self.q:
             self.ellipseA, self.ellipseB = None, None
             return
 
@@ -226,6 +272,7 @@ class EllipticalMirrorParam(OE):
     @pAxis.setter
     def pAxis(self, pAxis):
         self._pAxis = pAxis
+        self._pAxisVal = None
         self._reset_pq()
 
     def __pop_kwargs(self, **kwargs):
@@ -295,9 +342,11 @@ class ParabolicalMirrorParam(OE):
     The user supplies one (and only one) focal distance *p* or *q* as a
     positive value. Alternatively, instead of *p* one can specify *f1*
     (3-sequence) as a 3D point in the global coordinate system and instead of
-    *q* -- *f2*. If *p* or *q* is supplied, the paraboloid axis isassumed to be
-    along the global Y axis, otherwise supply *parabolaAxis* as a vector in
-    global coordinates.
+    *q* -- *f2*. Without an explicit focus, *parabolaAxis* specifies the
+    parallel arm: incoming for focusing (*q*), outgoing for collimation (*p*).
+    Its default, None, assumes global +Y; 'auto' uses the incoming connection.
+    The distance *p* refers to the intended source or object focus, not
+    necessarily to the preceding optical element.
 
     If *isCylindrical* is True, the figure is an
     parabolical cylinder, otherwise it is a paraboloid of revolution around the
@@ -316,8 +365,23 @@ class ParabolicalMirrorParam(OE):
     .. note::
 
         Any of *p*, *q*, *f1*, *f2* or *parabolaAxis* can be set as instance
-        attributes of this mirror object; the ellipsoid parameters will be
+        attributes of this mirror object; the parabola parameters will be
         recalculated automatically.
+
+    .. note::
+
+        The axis direction and nominal mirror orientation determine the
+        grazing angle used to calculate the surface shape. This angle
+        is measured relative to the tangent plane at *center* and is not
+        generally equal to *pitch*.
+
+        Changing nominal *pitch* can therefore change the surface shape
+        even when the axis vector is fixed. The extra rotations
+        (*extraPitch*, *extraRoll* and *extraYaw*) are excluded from the
+        shape calculation and can be used to rock the existing surface.
+
+        Automatic axis inference does not align the mirror. The nominal
+        rotations must also orient its meridional plane correctly.
 
     The usage is exemplified in `test_param_mirror.py`.
 
@@ -333,9 +397,35 @@ class ParabolicalMirrorParam(OE):
             Focal points in the global coordinate system. Alternatives for,
             correspondingly, *p* and *q*. Only one of them must be given.
 
-        *parabolaAxis*: 3-sequence
-            Used with *p* or *q*, the parabola axis in global coordinates,
-            defaults to the global Y axis.
+        *parabolaAxis*: None, 'auto' or 3-sequence, optional
+            Direction of the parabola axis in global coordinates. With *q*,
+            this is the incoming parallel-beam direction for focusing. With
+            *p*, it is the outgoing parallel-beam direction for collimation.
+
+            Used when the corresponding finite focus, *f1* or *f2*, is not
+            supplied. A supplied focus takes precedence. Default is None,
+            which assumes the global +Y direction. An explicit vector must
+            be nonzero but need not be normalized.
+
+            If 'auto', infer the nominal incoming direction from the center
+            of the upstream element or source producing the incoming beam
+            towards the current mirror center. For focusing, this is the
+            parabola-axis direction. For collimation, infer the outgoing
+            parallel direction by reflection about the nominal surface normal.
+
+            The direction is calculated after automatic center alignment and
+            reused for subsequent scripted repeats. Forced alignment, as in
+            xrtQook, recalculates it from the current centers. Assign 'auto'
+            again to request recalculation after changing scripted geometry.
+
+            The upstream element is selected through the incoming beam
+            connection. This is a center-to-center approximation; supply an
+            explicit vector when this approximation is unsuitable.
+            Automatic inference requires a beamline and an identifiable
+            producer.
+            While the upstream producer or centers cannot be resolved, the
+            mirror behaves as a flat surface. Automatic inference is retried
+            on later propagations while auto-calculation is enabled.
 
 
         """
@@ -399,6 +489,7 @@ class ParabolicalMirrorParam(OE):
     @parabolaAxis.setter
     def parabolaAxis(self, parabolaAxis):
         self._parabolaAxis = parabolaAxis
+        self._parabolaAxisVal = None
         self._reset_pq()
 
     def reset_pq(self, p=None, q=None, f1=None, f2=None, parabolaAxis=None):
@@ -440,10 +531,13 @@ class ParabolicalMirrorParam(OE):
         else:
             p = self.p if hasP else None
             q = self.q if hasQ else None
-            axis = self.parabolaAxis if self.parabolaAxis is not None else \
-                [0, 1, 0]
+            axis = self.parabolaAxis
+            if isinstance(axis, str) and axis == 'auto':
+                axis = self._parabolaAxisVal
+            elif axis is None:
+                axis = [0, 1, 0]
 
-        if not (p or q):
+        if axis is None or not (p or q):
             self.parabParam = None
             return
 
@@ -454,6 +548,8 @@ class ParabolicalMirrorParam(OE):
 
         norm = sum([a**2 for a in axis])**0.5
         sintheta = sum([a*n for a, n in zip(axis, normal)]) / norm
+        # For automatic collimation, axis is the incoming direction. Its
+        # absolute grazing angle equals that of the outgoing parallel arm.
         absPitch = abs(np.arcsin(sintheta))
 
         self._p = p
@@ -579,11 +675,11 @@ class HyperbolicMirrorParam(OE):
     The user supplies two foci either by focal distances *p* and *q* (both are
     positive distances from the mirror center to the focal points) or as *f1*
     and *f2* points in the global coordinate system (3-sequences). Any
-    combination of (*p* or *f1*) and (*q* or *f2*) is allowed. If *p* is
-    supplied, not *f1*, the incoming optical axis is assumed to be along the
-    global Y axis. For a general orientation of the hyperbola axes *f1* or
-    *pAxis* -- the *p* arm direction in global coordinates -- should be
-    supplied.
+    combination of (*p* or *f1*) and (*q* or *f2*) is allowed. When *f1*
+    is not supplied, *pAxis* specifies the nominal incoming direction. Its
+    default, None, assumes global +Y; 'auto' uses the incoming connection.
+    The distance *p* refers to the intended source or object focus, not
+    necessarily to the preceding optical element.
 
     While either focal arm is missing or cannot yet be resolved, the OE behaves
     as a flat mirror. The hyperbolic surface and diagnostics are restored
@@ -597,6 +693,21 @@ class HyperbolicMirrorParam(OE):
 
     Values of the hyperbola semi-major and semi-minor axes lengths can be
     accessed after init as *hyperbolaA* and *hyperbolaB* respectively.
+
+    .. note::
+
+        The axis direction and nominal mirror orientation determine the
+        grazing angle used to calculate the surface shape. This angle
+        is measured relative to the tangent plane at *center* and is not
+        generally equal to *pitch*.
+
+        Changing nominal *pitch* can therefore change the surface shape
+        even when the axis vector is fixed. The extra rotations
+        (*extraPitch*, *extraRoll* and *extraYaw*) are excluded from the
+        shape calculation and can be used to rock the existing surface.
+
+        Automatic axis inference does not align the mirror. The nominal
+        rotations must also orient its meridional plane correctly.
 
     The usage is exemplified in `test_param_mirror.py` and
     `test_hyperboloid_tube_mirror.py`. Both test scripts can produce a 3D view
@@ -614,9 +725,36 @@ class HyperbolicMirrorParam(OE):
             Focal points in the global coordinate system. Alternatives for,
             correspondingly, *p* and *q*.
 
-        *pAxis*: 3-sequence
-            Used with *p*, the *p* arm direction in global coordinates,
-            defaults to the global Y axis.
+        *pAxis*: None, 'auto' or 3-sequence, optional
+            Direction of the nominal incoming beam in global coordinates.
+            Used with *p* when *f1* is not supplied; *f1* takes precedence.
+            Default is None, which assumes the global +Y direction.
+
+            For a beam arriving from an upstream optical element, the vector
+            points from the previous reflection point, usually the center of
+            that element, towards the current mirror center. Calculate it by
+            subtracting the previous point's coordinates from the current
+            mirror center's coordinates, component by component. The vector
+            must be nonzero but need not be normalized.
+
+            If 'auto', infer this direction from the center of the upstream
+            element or source producing the incoming beam towards the current
+            mirror center. The upstream element is selected through the
+            incoming beam connection.
+
+            The direction is calculated after automatic center alignment and
+            reused for subsequent scripted repeats. Forced alignment, as in
+            xrtQook, recalculates it from the current centers. Assign 'auto'
+            again to request recalculation after changing scripted geometry.
+
+            This is a center-to-center approximation. Supply an explicit vector
+            when the nominal incoming direction differs from this
+            approximation.
+            Automatic inference requires a beamline and an identifiable
+            producer.
+            While the upstream producer or centers cannot be resolved, the
+            mirror behaves as a flat surface. Automatic inference is retried
+            on later propagations while auto-calculation is enabled.
 
 
         """
@@ -669,14 +807,18 @@ class HyperbolicMirrorParam(OE):
             axis = [c-f for c, f in zip(self.center, self.f1)]
             self._p = p
         else:
-            axis = self.pAxis if self.pAxis is not None else [0, 1, 0]
+            axis = self.pAxis
+            if isinstance(axis, str) and axis == 'auto':
+                axis = self._pAxisVal
+            elif axis is None:
+                axis = [0, 1, 0]
 
         if self.f2 is not None:
             q = (sum((x-y)**2 for x, y in zip(self.center, self.f2)))**0.5
             self._q = q
 
         self.f1diag, self.f2diag = None, None
-        if not self.p or not self.q:
+        if axis is None or not self.p or not self.q:
             self.hyperbolaA, self.hyperbolaB = None, None
             return
 
@@ -753,6 +895,7 @@ class HyperbolicMirrorParam(OE):
     @pAxis.setter
     def pAxis(self, pAxis):
         self._pAxis = pAxis
+        self._pAxisVal = None
         self._reset_pq()
 
     def __pop_kwargs(self, **kwargs):

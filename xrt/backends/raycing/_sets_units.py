@@ -284,8 +284,9 @@ argumentInputGroups = {
     ('sequence', 'None'): {
         'afterScriptArgs', 'atomsFraction', 'cLimits', 'contourColors',
         'contourLevels', 'efficiency', 'energyRange', 'generatorArgs',
-        'gratingDensity', 'limits', 'pAxis', 'parabolaAxis', 'quantities',
+        'gratingDensity', 'limits', 'quantities',
         'surface', 'targetE', 'jack1', 'jack2', 'jack3', 'tx1', 'tx2'},
+    ('sequence', 'auto', 'None'): {'pAxis', 'parabolaAxis'},
     ('string', 'sequence:string'): {'elements'},
     ('string', 'sequence', 'None'): {'refractiveIndex'},
     'dict': {'afterScriptKWargs', 'blades', 'generatorKWargs', 'renderSize'},

@@ -115,6 +115,7 @@ class Beam(object):
                 for attr in self.listOfAttrs:
                     if hasattr(copyFrom, attr):
                         setattr(self, attr, np.copy(getattr(copyFrom, attr)))
+                self.parentId = getattr(copyFrom, 'parentId', None)
 #                if not withNumberOfReflections and hasattr(self, 'nRefl'):
 #                    delattr(self, 'nRefl')
             except Exception as e:
@@ -233,6 +234,11 @@ class Beam(object):
         """Adds *beam* to *self*. Useful when more than one source is
         presented."""
         nself = len(self.x)
+        if nself == 0:
+            self.parentId = beam.parentId
+        elif len(beam.x) and self.parentId != beam.parentId:
+            # A merged beam has no unique producer for center-based alignment.
+            self.parentId = None
 
         self.state = np.concatenate((self.state, beam.state))
         self.x = np.concatenate((self.x, beam.x))
