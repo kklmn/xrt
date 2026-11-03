@@ -323,6 +323,15 @@ def is_auto_align_required(oe):
             len(getattr(oe, 'targetE', ()) or ()) == 3 and
             hasattr(oe, 'get_diagnostics')):
         return True
+
+    for name, foci in (('pAxis', ('f1',)),
+                       ('parabolaAxis', ('f1', 'f2'))):
+        value = getattr(oe, name, None)
+        if (isinstance(value, str) and value == 'auto' and
+                getattr(oe, '_' + name + 'Val', None) is None and
+                all(getattr(oe, focus, None) is None for focus in foci)):
+            return True
+
     needAutoAlign = False
     for autoParam in ["_center", "_pitch", "_bragg"]:
         naParam = autoParam.strip("_")
@@ -577,6 +586,16 @@ class BeamLine(object):
             return
         if self.flowSource == 'Qook':
             self.forceAlign = True
+
+        autoAxis = None
+        for name, foci in (('pAxis', ('f1',)),
+                           ('parabolaAxis', ('f1', 'f2'))):
+            value = getattr(oe, name, None)
+            if isinstance(value, str) and value == 'auto' and all(
+                    getattr(oe, focus, None) is None for focus in foci):
+                autoAxis = name
+                break
+
         if not (self.forceAlign or is_auto_align_required(oe)):
             return
 
@@ -663,6 +682,25 @@ class BeamLine(object):
             oe._centerVal = Center(centerList)
             if _VERBOSITY_ > 0:
                 print(oe.name, "center:", oe.center)
+
+        if autoAxis is not None and (
+                self.forceAlign or
+                getattr(oe, '_' + autoAxis + 'Val', None) is None):
+            axis = None
+            try:
+                upstream = self.oesDict[beam.parentId][0]
+                axis = (np.asarray(oe.center, dtype=float) -
+                        np.asarray(upstream.center, dtype=float))
+            except (KeyError, TypeError, ValueError):
+                pass
+
+            valueName = '_' + autoAxis + 'Val'
+            if axis is None or axis.shape != (3,) or \
+                    not np.all(np.isfinite(axis)) or not np.linalg.norm(axis):
+                axis = None
+
+            # An unresolved axis uses the conic's existing flat fallback.
+            setattr(oe, valueName, None if axis is None else axis.tolist())
 
         if (autoPitch and getattr(oe, '_pitch', None) == 'auto' and
                 len(getattr(oe, 'targetE', ()) or ()) == 3 and
