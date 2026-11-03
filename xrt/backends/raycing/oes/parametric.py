@@ -38,8 +38,8 @@ class EllipticalMirrorParam(OE):
     combination of (*p* or *f1*) and (*q* or *f2*) is allowed. When *f1*
     is not supplied, *pAxis* specifies the nominal incoming direction. Its
     default, None, assumes global +Y; 'auto' uses the incoming connection.
-    The distance *p* refers to the intended source or object focus, not
-    necessarily to the preceding optical element.
+    The distance *p* refers to the intended source focus, not necessarily to
+    the preceding optical element.
 
     While either focal arm is missing or cannot yet be resolved, the OE behaves
     as a flat mirror. The elliptical surface and diagnostics are restored
@@ -345,12 +345,11 @@ class ParabolicalMirrorParam(OE):
     *q* -- *f2*. Without an explicit focus, *parabolaAxis* specifies the
     parallel arm: incoming for focusing (*q*), outgoing for collimation (*p*).
     Its default, None, assumes global +Y; 'auto' uses the incoming connection.
-    The distance *p* refers to the intended source or object focus, not
-    necessarily to the preceding optical element.
+    The distance *p* refers to the intended source focus, not necessarily to
+    the preceding optical element.
 
-    If *isCylindrical* is True, the figure is an
-    parabolical cylinder, otherwise it is a paraboloid of revolution around the
-    major axis.
+    If *isCylindrical* is True, the figure is a parabolical cylinder,
+    otherwise it is a paraboloid of revolution around the major axis.
 
     If *isClosed* is True (default is False), the mirror is a complete surface
     of revolution. Otherwise the mirror is open, i.e. only its lower half is
@@ -678,8 +677,8 @@ class HyperbolicMirrorParam(OE):
     combination of (*p* or *f1*) and (*q* or *f2*) is allowed. When *f1*
     is not supplied, *pAxis* specifies the nominal incoming direction. Its
     default, None, assumes global +Y; 'auto' uses the incoming connection.
-    The distance *p* refers to the intended source or object focus, not
-    necessarily to the preceding optical element.
+    The distance *p* refers to the intended source focus, not necessarily to
+    the preceding optical element.
 
     While either focal arm is missing or cannot yet be resolved, the OE behaves
     as a flat mirror. The hyperbolic surface and diagnostics are restored
