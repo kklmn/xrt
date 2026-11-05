@@ -1484,7 +1484,7 @@ class XYCPlot(object):
         """
         Defines the right button click event for stopping the loop.
         """
-        if event.button == 3:
+        if event.button == 3 and runner.runCardVals is not None:
             runner.runCardVals.stop_event.set()
             self.textStatus.set_text("stopping ...")
 
