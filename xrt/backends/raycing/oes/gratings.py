@@ -435,7 +435,7 @@ class ProfiledGrating(OE):
 
 
 class BlazedGrating(ProfiledGrating):
-    r"""Grating of triangular shape given by two angles. The front
+    r"""Grating of triangular groove shape given by two angles. The front
     side of the triangle (the one looking towards the source) is at *blaze*
     angle to the base plane. The back side is at *antiblaze* angle.
 
@@ -631,7 +631,7 @@ class BlazedGrating(ProfiledGrating):
 
 
 class LaminarGrating(ProfiledGrating):
-    """Grating of rectangular profile."""
+    """Grating of rectangular groove profile."""
 
     hiddenParams = ['gratingDensity']
 
@@ -781,7 +781,7 @@ class LaminarGrating(ProfiledGrating):
 
 
 class VLSLaminarGrating(ProfiledGrating):
-    """Grating of rectangular profile with variable period."""
+    """Grating of rectangular groove profile with variable period."""
 
     hiddenParams = ['gratingDensity']
 
