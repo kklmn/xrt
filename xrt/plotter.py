@@ -508,9 +508,9 @@ class XYCAxis(object):
 
     @bins.setter
     def bins(self, bins):
-        self._bins = bins
+        self._bins = int(bins)
         if hasattr(self, '_ppb'):
-            self.pixels = bins * self._ppb
+            self.pixels = int(bins) * self._ppb
             # also defines the fig size
 
     @property
@@ -519,9 +519,9 @@ class XYCAxis(object):
 
     @ppb.setter
     def ppb(self, ppb):
-        self._ppb = ppb
+        self._ppb = int(ppb)
         if hasattr(self, '_bins'):
-            self.pixels = self._bins * ppb
+            self.pixels = self._bins * int(ppb)
 
     @property
     def outline(self):
