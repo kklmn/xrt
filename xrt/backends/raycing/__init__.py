@@ -75,6 +75,7 @@ from ._flow_utils import (
     is_valid_uuid, run_process_from_file, build_hist, parse_energy_string,
     is_auto_align_value, get_auto_align_energy, format_energy_input,
     warn_deprecated_list_auto_align)
+from ._orientation import Orientation
 from ._flow import propagationProcess, MessageHandler
 
 from .beamline import (
