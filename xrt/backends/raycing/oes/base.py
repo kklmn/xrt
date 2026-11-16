@@ -12,6 +12,7 @@ from .. import sources as rs
 from .. import myopencl as mcl
 from ..physconsts import CH, CHBAR, SQRT2PI
 from ..materials import EmptyMaterial
+from ..stages import Pose, set_mount, set_mount_offset
 from .reflect import OEMainMethods
 
 # try:
@@ -32,6 +33,7 @@ __fdir__ = os.path.dirname(__file__)
 __cldir__ = os.path.join(os.path.dirname(__fdir__), 'cl')
 
 allArguments = ['bl', 'name', 'center', 'bragg', 'pitch', 'roll', 'yaw',
+                'mount', 'mountOffset',
                 'positionRoll', 'extraPitch', 'extraRoll', 'extraYaw',
                 'rotationSequence', 'extraRotationSequence',
                 'surface', 'curSurface', 'material', 'material2', 'alpha',
@@ -105,7 +107,8 @@ class OE(OEMainMethods):
         limPhysY=[-raycing.maxHalfSizeOfOE, raycing.maxHalfSizeOfOE],
         limOptY=None, isParametric=False, shape='rect',
         gratingDensity=None, order=None, shouldCheckCenter=False,
-            targetOpenCL=None, precisionOpenCL='float32', **kwargs):
+        targetOpenCL=None, precisionOpenCL='float32',
+        mount=None, mountOffset=None, **kwargs):
         r"""
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
             Container for beamline elements. Optical elements are added to its
@@ -117,6 +120,15 @@ class OE(OEMainMethods):
         *center*: 3-sequence of floats
             3D point in global system. Any two coordinates
             can be 'auto' for automatic alignment.
+
+        *mount*: :class:`~xrt.backends.raycing.stages.Stage`, str or None
+            Stage carrying the optical element. While mounted, *center*,
+            *pitch*, *roll* and *yaw* are derived from the moving stage pose.
+            The angles use the existing beamline-relative convention.
+
+        *mountOffset*: :class:`~xrt.backends.raycing.stages.Pose` or None
+            Optical origin and orientation relative to the stage attachment.
+            Defaults to identity on attachment.
 
         *pitch, roll, yaw*: floats
             Rotations Rx, Ry, Rz, correspondingly, defined in the local system.
@@ -299,10 +311,9 @@ class OE(OEMainMethods):
 
         self.shouldCheckCenter = shouldCheckCenter
         self.needReCenter = False
+        self._mount = None
         self.center = center
-#        if any([x == 'auto' for x in self.center]):
-#            self._center = copy.copy(self.center)
-        if (bl is not None) and self.shouldCheckCenter:
+        if mount is None and bl is not None and self.shouldCheckCenter:
             self.checkCenter()
 
         self.pitch = pitch
@@ -310,6 +321,10 @@ class OE(OEMainMethods):
         self.yaw = yaw
         self.rotationSequence = rotationSequence
         self.positionRoll = positionRoll
+        set_mount_offset(self, mountOffset, strict=True)
+        set_mount(self, mount, strict=True)
+        if mount is not None and bl is not None and self.shouldCheckCenter:
+            self.checkCenter()
 
         self.extraPitch = extraPitch
         self.extraRoll = extraRoll
@@ -342,16 +357,79 @@ class OE(OEMainMethods):
         self.targetOpenCL = targetOpenCL
         self.precisionOpenCL = precisionOpenCL
 
-    center = raycing.center_property()
+    _unmounted_center = raycing.center_property()
+
+    @property
+    def center(self):
+        if self.mount is not None:
+            return tuple(self.globalPose.center)
+        return self._unmounted_center
+
+    @center.setter
+    def center(self, value):
+        if self.mount is None:
+            self._unmounted_center = value
+
+    @property
+    def mount(self):
+        """Stage that carries the OE, or None for independent placement."""
+        return getattr(self, '_mount', None)
+
+    @mount.setter
+    def mount(self, value):
+        set_mount(self, value)
+
+    @property
+    def mountOffset(self):
+        """Fixed pose of the OE relative to the stage's moving attachment."""
+        return getattr(self, '_mountOffset', None)
+
+    @mountOffset.setter
+    def mountOffset(self, value):
+        set_mount_offset(self, value)
+
+    def _virgin_orientation(self):
+        # The local-to-world transform applies negative beamline azimuth.
+        azimuth = self.bl.azimuth if self.bl is not None else 0.
+        return scprot.from_euler('z', -azimuth)
+
+    @property
+    def globalPose(self):
+        """World pose of the OE origin and nominal axes.
+
+        Use ``globalPose.orientation.x`` and ``globalPose.orientation.z``
+        for the nominal X and Z axes in world coordinates. The ray tracing
+        methods also apply any local optical adjustments, including the
+        extra angles.
+        """
+        if self.mount is not None:
+            return self.mount.mountPose @ self.mountOffset
+        orientation = raycing.Orientation(
+            pitch=self.pitch, roll=self.roll, yaw=self.yaw,
+            positionRoll=self.positionRoll, rotationSequence=self.rotationSequence)
+        rotation = self._virgin_orientation() * orientation._rotation
+        return Pose._from_orientation(
+            self.center, raycing.Orientation._from_rotation(rotation))
+
+    def _mounted_angles(self):
+        rotation = (self._virgin_orientation().inv() *
+                    self.globalPose.orientation._rotation)
+        orientation = raycing.Orientation._from_rotation(
+            rotation, self.rotationSequence, self.positionRoll)
+        return orientation.as_euler()
 
     @property
     def pitch(self):
+        if self.mount is not None:
+            return self._mounted_angles()[0]
         # _pitch can only contain unprocessed input for auto-calculation
         # _pitchVal is None before auto-calculation, a number after it
         return self._pitch if self._pitchVal is None else self._pitchVal
 
     @pitch.setter
     def pitch(self, pitch):
+        if self.mount is not None:
+            return
         self._pitchInit = copy.deepcopy(pitch)
         if isinstance(pitch, (list, tuple)):
             raycing.warn_deprecated_list_auto_align('pitch')
@@ -405,10 +483,14 @@ class OE(OEMainMethods):
 
     @property
     def roll(self):
+        if self.mount is not None:
+            return self._mounted_angles()[1]
         return self._roll
 
     @roll.setter
     def roll(self, roll):
+        if self.mount is not None:
+            return
         self._roll = raycing.auto_units_angle(roll)
         self._rollInit = copy.deepcopy(roll)
         if hasattr(self, '_reset_pq'):
@@ -416,10 +498,14 @@ class OE(OEMainMethods):
 
     @property
     def yaw(self):
+        if self.mount is not None:
+            return self._mounted_angles()[2]
         return self._yaw
 
     @yaw.setter
     def yaw(self, yaw):
+        if self.mount is not None:
+            return
         self._yaw = raycing.auto_units_angle(yaw)
         self._yawInit = copy.deepcopy(yaw)
         if hasattr(self, '_reset_pq'):

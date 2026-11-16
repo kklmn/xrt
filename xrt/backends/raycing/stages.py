@@ -26,7 +26,6 @@ __date__ = "07 Jan 2016"
 from dataclasses import dataclass
 import logging
 import math
-import uuid
 
 import numpy as np
 from scipy.spatial.transform import Rotation
@@ -45,15 +44,33 @@ AXES = {'x': (1., 0., 0.), 'y': (0., 1., 0.), 'z': (0., 0., 1.)}
 class Pose:
     """A translation and an orientation relative to a reference frame.
 
-    *center* is a mutable three-component list in mm. *orientation* is an
-    :class:`Orientation` and defaults to the identity rotation.
+    *center* is a mutable three-component list in mm. *pitch*, *roll* and
+    *yaw* default to zero and follow the xrt *rotationSequence* convention.
+    Numeric angles are in radians. Unit strings such as '90 deg' are accepted.
+    The resolved :class:`Orientation` provides X/Z axes and Euler readouts.
     ``parent @ child`` takes a child pose expressed in the parent frame and
     returns it expressed in the parent's reference frame.
     """
 
-    def __init__(self, center=(0, 0, 0), orientation=None):
+    def __init__(self, center=(0, 0, 0), *, pitch=0., roll=0., yaw=0.,
+                 rotationSequence=DEFAULT_ROTATION_SEQUENCE):
         self.center = center
-        self.orientation = Orientation() if orientation is None else orientation
+        self._orientation = Orientation(
+            pitch=pitch, roll=roll, yaw=yaw, rotationSequence=rotationSequence)
+
+    @classmethod
+    def from_xz(cls, center=(0, 0, 0), *, x, z,
+                rotationSequence=DEFAULT_ROTATION_SEQUENCE):
+        """Construct a pose from its local X and Z axes in the reference frame."""
+        return cls._from_orientation(
+            center, Orientation(x=x, z=z, rotationSequence=rotationSequence))
+
+    @classmethod
+    def _from_orientation(cls, center, orientation):
+        pose = cls.__new__(cls)
+        pose.center = center
+        pose._orientation = orientation
+        return pose
 
     @property
     def center(self):
@@ -65,13 +82,19 @@ class Pose:
 
     @property
     def orientation(self):
+        """Resolved rotation and conversions between X/Z and Euler angles."""
         return self._orientation
 
-    @orientation.setter
-    def orientation(self, value):
-        if not isinstance(value, Orientation):
-            raise TypeError('orientation must be an Orientation')
-        self._orientation = value
+    @property
+    def rotationSequence(self):
+        return self.orientation.rotationSequence
+
+    def as_dict(self):
+        """Return the pose parameters accepted by the constructor."""
+        pitch, roll, yaw = self.orientation.as_euler(positionRoll=0.)
+        return dict(center=self.center.copy(), pitch=float(pitch),
+                    roll=float(roll), yaw=float(yaw),
+                    rotationSequence=self.rotationSequence)
 
     @property
     def matrix(self):
@@ -99,7 +122,8 @@ class Pose:
         if matrix.shape != (4, 4):
             raise ValueError('Pose matrix must be 4×4')
         rotation = Rotation.from_matrix(matrix[:3, :3])
-        return cls(matrix[:3, 3], Orientation._from_rotation(rotation))
+        return cls._from_orientation(
+            matrix[:3, 3], Orientation._from_rotation(rotation))
 
     def __matmul__(self, child):
         if not isinstance(child, Pose):
@@ -108,11 +132,11 @@ class Pose:
         rotation = parent_rotation * child.orientation._rotation
         center = vector3(self.center, 'center') + parent_rotation.apply(
             vector3(child.center, 'center'))
-        return Pose(center, Orientation._from_rotation(rotation))
+        return Pose._from_orientation(center, Orientation._from_rotation(rotation))
 
 
 def pose_matrix(center, x, z):
-    return Pose(center, Orientation(x=x, z=z)).matrix
+    return Pose.from_xz(center, x=x, z=z).matrix
 
 
 def translation(vector):
@@ -140,6 +164,63 @@ class StageState:
     mountPose: Pose
 
 
+def resolve_mount(value, bl):
+    """Resolve a stage object, name or UUID in the beamline."""
+    if value is None:
+        return None
+    stage = raycing.normalize_ref(value, bl, 'stage', target='object')
+    if isinstance(stage, Stage):
+        return stage
+    if isinstance(value, (str, bytes)):
+        raise ValueError('Unknown mount stage {!r}'.format(value))
+    raise TypeError('mount must be a Stage, a stage reference or None')
+
+
+def set_mount(element, value, *, strict=False):
+    """Apply a mount edit, keeping the previous mount if it is invalid."""
+    try:
+        stage = resolve_mount(value, element.bl)
+        bl = element.bl
+        if isinstance(element, Stage):
+            ancestor = stage
+            while ancestor is not None:
+                if ancestor is element:
+                    raise ValueError('A stage stack cannot contain a cycle')
+                ancestor = ancestor.mount
+            if bl is not None and bl.stagesDict.get(element.uuid) is not element:
+                # Registration of a new stage also registers its ancestors.
+                bl = None
+        if stage is not None and bl is not None:
+            bl.register_stage(stage)
+    except (TypeError, ValueError) as error:
+        if strict:
+            raise
+        logger.warning('%s: %s', element.name, error)
+        return
+
+    element._mount = stage
+    if stage is not None and element.mountOffset is None:
+        element._mountOffset = Pose()
+
+
+def set_mount_offset(element, value, *, strict=False):
+    """Apply a pose or a pose mapping, keeping the last valid offset."""
+    try:
+        if isinstance(value, dict):
+            value = Pose(**value)
+        if value is not None and not isinstance(value, Pose):
+            raise TypeError('mountOffset must be a Pose, a pose mapping or None')
+    except (TypeError, ValueError, OverflowError) as error:
+        if strict:
+            raise
+        logger.warning('%s: %s', element.name, error)
+        return
+
+    if value is None and (isinstance(element, Stage) or element.mount is not None):
+        value = Pose()
+    element._mountOffset = value
+
+
 class Stage:
     """Installation geometry and stack evaluation shared by all stage types."""
 
@@ -152,7 +233,8 @@ class Stage:
                  yaw=0., positionRoll=0.,
                  rotationSequence=DEFAULT_ROTATION_SEQUENCE, pose=None,
                  mount=None, mountOffset=None, axis=None, position=0.,
-                 positionMin=None, positionMax=None, positionUnit=None):
+                 positionMin=None, positionMax=None, positionUnit=None,
+                 bl=None, uuid=None):
         """
         *name*: str
             Human-readable name of the stage.
@@ -178,7 +260,7 @@ class Stage:
             Optional complete unmounted base placement. Takes precedence over
             *center*, *pitch*, *roll* and *yaw*.
 
-        *mount*: :class:`Stage` or None
+        *mount*: :class:`Stage`, stage name or UUID, or None
             Parent stage. When mounted, base placement follows its moving
             attachment, and *center*, *pitch*, *roll* and *yaw* are calculated
             world readouts. The authored base placement is used when detached.
@@ -205,8 +287,15 @@ class Stage:
             Unit of the position and limits, fixed at construction. Defaults
             to 'mm' for a linear stage and 'rad' for a rotation stage. Other
             units use the raycing length or angle unit dictionary.
+
+        *bl*: :class:`~xrt.backends.raycing.BeamLine` or None
+            Beamline that registers the stage and resolves named mounts.
+
+        *uuid*: str or None
+            Stage identifier to restore from a layout. Defaults to a new UUID.
         """
-        self.uuid = str(uuid.uuid4())
+        self.bl = bl
+        self.uuid = str(raycing.uuid.uuid4()) if uuid is None else str(uuid)
         self.name = name
         self._mount = None
         self._axis = next(iter(self._axes))
@@ -226,6 +315,9 @@ class Stage:
         self.positionMin = positionMin
         self.positionMax = positionMax
         self.position = position
+        self._rotationSequence = DEFAULT_ROTATION_SEQUENCE
+        self._pitch = self._roll = self._yaw = self._positionRoll = 0.
+        self._center = [0., 0., 0.]
         self.rotationSequence = rotationSequence
         self.positionRoll = positionRoll
         if pose is not None:
@@ -238,13 +330,53 @@ class Stage:
         self.pitch = pitch
         self.roll = roll
         self.yaw = yaw
-        self.mountOffset = Pose() if mountOffset is None else mountOffset
-        self.mount = mount
+        self._check_position()
+        set_mount_offset(self, mountOffset, strict=True)
+        set_mount(self, mount, strict=True)
+        if self.bl is not None:
+            self.bl.register_stage(self)
 
-    def _require_unmounted(self, field):
-        if self.mount is not None:
-            raise AttributeError(
-                '{} is calculated when mounted; edit mountOffset'.format(field))
+    def _check_position(self):
+        pass
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        bl = getattr(self, 'bl', None)
+        if bl is None or bl.stagesDict.get(getattr(self, 'uuid', None)) is not self:
+            self._name = value
+            return
+
+        base_name = str(value) if value not in (None, '', 'None') else type(self).__name__
+        name, suffix = base_name, 2
+        names = bl.stagenamesToUUIDs
+        while names.get(name, self.uuid) != self.uuid:
+            name = '{}_{}'.format(base_name, suffix)
+            suffix += 1
+        if names.get(self._name) == self.uuid:
+            del names[self._name]
+        self._name = name
+        names[name] = self.uuid
+
+    def _can_edit_base(self, field):
+        if self.mount is None:
+            return True
+        logger.warning('%s: %s is calculated when mounted; edit mountOffset',
+                       self.name, field)
+        return False
+
+    def _set_angle(self, field, value):
+        if field != 'positionRoll' and not self._can_edit_base(field):
+            return
+        try:
+            angle = _angle(value)
+        except (TypeError, ValueError, OverflowError) as error:
+            logger.warning('%s: invalid %s: %s', self.name, field, error)
+            return
+        setattr(self, '_' + field, angle)
 
     @property
     def center(self):
@@ -254,8 +386,12 @@ class Stage:
 
     @center.setter
     def center(self, value):
-        self._require_unmounted('center')
-        self._center = vector3(value, 'center').tolist()
+        if not self._can_edit_base('center'):
+            return
+        try:
+            self._center = vector3(value, 'center').tolist()
+        except (TypeError, ValueError, OverflowError) as error:
+            logger.warning('%s: %s', self.name, error)
 
     @property
     def pitch(self):
@@ -263,8 +399,7 @@ class Stage:
 
     @pitch.setter
     def pitch(self, value):
-        self._require_unmounted('pitch')
-        self._pitch = _angle(value)
+        self._set_angle('pitch', value)
 
     @property
     def roll(self):
@@ -272,8 +407,7 @@ class Stage:
 
     @roll.setter
     def roll(self, value):
-        self._require_unmounted('roll')
-        self._roll = _angle(value)
+        self._set_angle('roll', value)
 
     @property
     def yaw(self):
@@ -281,8 +415,7 @@ class Stage:
 
     @yaw.setter
     def yaw(self, value):
-        self._require_unmounted('yaw')
-        self._yaw = _angle(value)
+        self._set_angle('yaw', value)
 
     @property
     def positionRoll(self):
@@ -290,7 +423,7 @@ class Stage:
 
     @positionRoll.setter
     def positionRoll(self, value):
-        self._positionRoll = _angle(value)
+        self._set_angle('positionRoll', value)
 
     @property
     def rotationSequence(self):
@@ -298,7 +431,11 @@ class Stage:
 
     @rotationSequence.setter
     def rotationSequence(self, value):
-        _rotation_axes(value)
+        try:
+            _rotation_axes(value)
+        except ValueError as error:
+            logger.warning('%s: %s', self.name, error)
+            return
         self._rotationSequence = value
 
     @property
@@ -308,9 +445,11 @@ class Stage:
 
     @orientation.setter
     def orientation(self, value):
-        self._require_unmounted('orientation')
+        if not self._can_edit_base('orientation'):
+            return
         if not isinstance(value, Orientation):
-            raise TypeError('orientation must be an Orientation')
+            logger.warning('%s: orientation must be an Orientation', self.name)
+            return
         self._pitch, self._roll, self._yaw = value.as_euler(
             self.rotationSequence, self.positionRoll)
 
@@ -320,14 +459,7 @@ class Stage:
 
     @mount.setter
     def mount(self, stage):
-        if stage is not None and not isinstance(stage, Stage):
-            raise TypeError('mount must be a Stage or None')
-        ancestor = stage
-        while ancestor is not None:
-            if ancestor is self:
-                raise ValueError('A stage stack cannot contain a cycle')
-            ancestor = ancestor.mount
-        self._mount = stage
+        set_mount(self, stage)
 
     @property
     def mountOffset(self):
@@ -335,9 +467,7 @@ class Stage:
 
     @mountOffset.setter
     def mountOffset(self, value):
-        if not isinstance(value, Pose):
-            raise TypeError('mountOffset must be a Pose')
-        self._mountOffset = value
+        set_mount_offset(self, value)
 
     @property
     def axis(self):
@@ -431,11 +561,11 @@ class Stage:
             orientation = Orientation(
                 pitch=self._pitch, roll=self._roll, yaw=self._yaw,
                 positionRoll=self.positionRoll, rotationSequence=self.rotationSequence)
-            return Pose(self._center, orientation)
+            return Pose._from_orientation(self._center, orientation)
         pose = self.mount.evaluate(states).mountPose @ self.mountOffset
-        pose.orientation = Orientation._from_rotation(
+        orientation = Orientation._from_rotation(
             pose.orientation._rotation, self.rotationSequence, self.positionRoll)
-        return pose
+        return Pose._from_orientation(pose.center, orientation)
 
     @property
     def globalPose(self):
@@ -480,18 +610,77 @@ class RotationStage(Stage):
     *pivotPoint* is a point on the rotation axis, in base coordinates (mm).
     It defaults to the stage origin. Set it away from the origin to model
     a cradle. Travel and its limits use *positionUnit*, radians by default.
+
+    With *positionUnit='eV'*, provide a *crystal* material with a Bragg angle
+    method returning radians. The position and both travel limits are then
+    photon energies in eV.
     """
 
     _axes = {'pitch': AXES['x'], 'roll': AXES['y'], 'yaw': AXES['z']}
-    _units = raycing.allUnitsAng
+    _units = {**raycing.allUnitsAng, 'eV': 1.}
     _unitSymbols = raycing.allUnitsAngStr
     _defaultPositionUnit = 'rad'
 
     def __init__(self, name='rotation', axis='pitch', position=0.,
-                 pivotPoint=(0, 0, 0), **kwargs):
-        super().__init__(name=name, axis=axis, position=position, **kwargs)
+                 pivotPoint=(0, 0, 0), crystal=None, **kwargs):
+        self.bl = kwargs.get('bl')
+        self.name = name
+        self._crystal = None
+        self.crystal = crystal
+        if kwargs.get('positionUnit') == 'eV' and self.crystal is None:
+            raise ValueError('An eV rotation stage requires a crystal material')
         self._pivotPoint = [0., 0., 0.]
         self.pivotPoint = pivotPoint
+        super().__init__(name=name, axis=axis, position=position, **kwargs)
+
+    def _check_position(self):
+        if self.positionUnit == 'eV' and self.position <= 0.:
+            raise ValueError(
+                'An eV rotation stage requires a positive position or minimum')
+
+    @staticmethod
+    def _bragg_method(crystal):
+        method = getattr(crystal, 'get_Bragg_angle', None)
+        if callable(method):
+            return method
+        return getattr(crystal, 'get_bragg_angle', None)
+
+    @property
+    def crystal(self):
+        """Material used to convert an eV position to a Bragg angle."""
+        return self._crystal
+
+    @crystal.setter
+    def crystal(self, value):
+        if isinstance(value, (str, bytes)):
+            material = raycing.normalize_ref(
+                value, self.bl, 'material', target='object')
+            if not callable(self._bragg_method(material)):
+                logger.warning('%s: unknown Bragg material %r', self.name, value)
+                return
+            value = material
+        if value is None:
+            if getattr(self, '_positionUnit', None) == 'eV':
+                logger.warning('%s: an eV stage requires a crystal', self.name)
+                return
+        elif not callable(self._bragg_method(value)):
+            logger.warning('%s: crystal must provide a Bragg angle method',
+                           self.name)
+            return
+        self._crystal = value
+
+    def _travel_value(self, value, field):
+        value = super()._travel_value(value, field)
+        if self.positionUnit == 'eV' and value is not None and value <= 0.:
+            logger.warning('%s: %s in eV must be positive', self.name, field)
+            return None
+        return value
+
+    @property
+    def _position_in_base_units(self):
+        if self.positionUnit == 'eV':
+            return float(self._bragg_method(self.crystal)(self.position))
+        return super()._position_in_base_units
 
     @property
     def pivotPoint(self):
@@ -511,8 +700,8 @@ class RotationStage(Stage):
         axis = np.asarray(self._axes[self.axis])
         rotation = Rotation.from_rotvec(axis * self._position_in_base_units)
         # T(pivot) @ R @ T(-pivot) fixes every point on the rotation axis.
-        return Pose(pivot - rotation.apply(pivot),
-                    Orientation._from_rotation(rotation))
+        return Pose._from_orientation(
+            pivot - rotation.apply(pivot), Orientation._from_rotation(rotation))
 
 
 class Tripod(object):

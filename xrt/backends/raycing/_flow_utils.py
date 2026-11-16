@@ -530,7 +530,7 @@ REFERENCE_KINDS = {
         'names': 'matnamesToUUIDs',
         'fields': {
             'material', 'material2', 'tlayer', 'blayer', 'coating',
-            'substrate', 'materialsindex'},
+            'substrate', 'materialsindex', 'crystal'},
         'prefixes': ('material', 'tlay', 'blay', 'coat', 'substrate'),
     },
     'figureError': {
@@ -538,6 +538,12 @@ REFERENCE_KINDS = {
         'names': 'fenamesToUUIDs',
         'fields': {'figureerror', 'basefe'},
         'prefixes': ('figureerr', 'basefe'),
+    },
+    'stage': {
+        'dict': 'stagesDict',
+        'names': 'stagenamesToUUIDs',
+        'fields': {'mount'},
+        'prefixes': tuple(),
     },
     'oe': {
         'dict': 'oesDict',
@@ -709,6 +715,9 @@ def serialize_editor_value(value, hint=None, bl=None):
 
 
 def _parametrize_reference(value, bl=None, refKind='material'):
+    if refKind == 'stage' and isinstance(value, str):
+        value = None if value == 'None' else value
+        return normalize_ref(value, bl, refKind, target='uuid')
     if not (isinstance(value, basestring) and is_valid_uuid(value)):
         value = parametrize(value)
     return normalize_ref(value, bl, refKind, target='uuid')
@@ -823,6 +832,10 @@ def get_init_kwargs(oeObj, compact=True, needRevG=False, blname=None,
                 elif hasattr(oeObj, f'_{arg}Init') and not resolveAuto:
                     realval = getattr(oeObj, f'_{arg}Init')
 #                    print(oeObj.name, f'_{arg}Init', realval)
+                elif (not resolveAuto and rawValue is not None and
+                      arg in ('center', 'pitch', 'roll', 'yaw') and
+                      getattr(oeObj, 'mount', None) is not None):
+                    realval = rawValue
                 else:
                     realval = getattr(oeObj, arg)
 
@@ -830,6 +843,8 @@ def get_init_kwargs(oeObj, compact=True, needRevG=False, blname=None,
                     realval = blname
                 if arg == 'elements':
                     realval = [x.name for x in realval]
+                if arg == 'mountOffset' and realval is not None:
+                    realval = realval.as_dict()
 
                 refKind = ref_kind_for_arg(arg)
                 if refKind is not None:

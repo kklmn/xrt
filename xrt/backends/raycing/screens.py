@@ -29,10 +29,11 @@ import copy
 
 from . import sources as rs
 from .physconsts import CHBAR
+from .stages import Pose, set_mount, set_mount_offset
 
 allArguments = ('bl', 'name', 'center', 'x', 'z', 'compressX',
                 'compressZ', 'R', 'phiOffset', 'thetaOffset', 'limPhysX',
-                'limPhysY')
+                'limPhysY', 'mount', 'mountOffset')
 
 _DEBUG = 20
 
@@ -41,7 +42,8 @@ class Screen(object):
     """Flat screen for beam visualization."""
 
     def __init__(self, bl=None, name='', center=[0, 0, 0], x='auto', z='auto',
-                 compressX=None, compressZ=None, **kwargs):
+                 compressX=None, compressZ=None, mount=None,
+                 mountOffset=None, **kwargs):
         """
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
             Container for beamline elements. Optical elements are added to its
@@ -59,6 +61,14 @@ class Screen(object):
             is horizontal and perpendicular to the beam line. If *z* is 'auto',
             it is vertical. Both *x* and *z* can also be set as instance
             attributes.
+
+        *mount*: :class:`~xrt.backends.raycing.stages.Stage`, str or None
+            Stage carrying the screen. While mounted, the screen center and
+            axes are readouts of the composed world pose.
+
+        *mountOffset*: :class:`~xrt.backends.raycing.stages.Pose` or None
+            Screen origin and orientation in the moving stage frame.
+            Defaults to identity on attachment.
 
         *compressX, compressZ*: float
             Multiplicative compression coefficients for the corresponding axes.
@@ -80,6 +90,7 @@ class Screen(object):
                 self.lostNum = -self.ordinalNum - 2000
         raycing.set_name(self, name)
         self.footprint = []
+        self._mount = None
         self.set_orientation(x, z)
 
         if not hasattr(self, 'uuid'):  # uuid must not change on re-init
@@ -92,13 +103,51 @@ class Screen(object):
                 bl.oenamesToUUIDs[self.name] = self.uuid
 
         self.center = center
+        set_mount_offset(self, mountOffset, strict=True)
+        set_mount(self, mount, strict=True)
         self.compressX = compressX
         self.compressZ = compressZ
 
         self.limPhysX = kwargs.pop('limPhysX', None)
         self.limPhysY = kwargs.pop('limPhysY', None)
 
-    center = raycing.center_property()
+    _unmounted_center = raycing.center_property()
+
+    @property
+    def center(self):
+        if self.mount is not None:
+            return tuple(self.globalPose.center)
+        return self._unmounted_center
+
+    @center.setter
+    def center(self, value):
+        if self.mount is None:
+            self._unmounted_center = value
+
+    @property
+    def mount(self):
+        """Stage carrying this screen, or None for independent placement."""
+        return getattr(self, '_mount', None)
+
+    @mount.setter
+    def mount(self, value):
+        set_mount(self, value)
+
+    @property
+    def mountOffset(self):
+        """Fixed screen pose relative to the stage's moving attachment."""
+        return getattr(self, '_mountOffset', None)
+
+    @mountOffset.setter
+    def mountOffset(self, value):
+        set_mount_offset(self, value)
+
+    @property
+    def globalPose(self):
+        """World pose of the screen origin and its local axes."""
+        if self.mount is not None:
+            return self.mount.mountPose @ self.mountOffset
+        return Pose.from_xz(self.center, x=self.x, z=self.z)
 
     @property
     def limPhysX(self):
@@ -124,21 +173,40 @@ class Screen(object):
 
     @property
     def x(self):
+        if self.mount is not None:
+            return self.globalPose.orientation.x
         return self._x
 
     @x.setter
     def x(self, x):
+        if self.mount is not None:
+            return
         self._xInit = copy.copy(x)
         self._x = copy.copy(x)
         self._set_orientation()
 #        self.update_orientation_quaternion()
 
     @property
+    def y(self):
+        if self.mount is not None:
+            return self.globalPose.orientation.matrix[:, 1].tolist()
+        return self._y
+
+    @y.setter
+    def y(self, value):
+        if self.mount is None:
+            self._y = value
+
+    @property
     def z(self):
+        if self.mount is not None:
+            return self.globalPose.orientation.z
         return self._z
 
     @z.setter
     def z(self, z):
+        if self.mount is not None:
+            return
         self._zInit = copy.copy(z)
         self._z = copy.copy(z)
         self._set_orientation()
@@ -154,16 +222,25 @@ class Screen(object):
 
     def set_orientation(self, x=None, z=None):
         """Set both input axes before resolving the screen orientation."""
+        if self.mount is not None:
+            return
         self._xInit = copy.copy(x)
         self._zInit = copy.copy(z)
         self._x = copy.copy(x)
         self._z = copy.copy(z)
         self._set_orientation()
 
+    def _ray_frame(self):
+        if self.mount is not None:
+            pose = self.globalPose
+            return pose.center, pose.orientation.matrix.T.tolist()
+        return self.center, (self.x, self.y, self.z)
+
     def local_to_global(self, x=0, y=0, z=0, **kwargs):
-        xglo = self.center[0] + x*self.x[0] + y*self.y[0] + z*self.z[0]
-        yglo = self.center[1] + x*self.x[1] + y*self.y[1] + z*self.z[1]
-        zglo = self.center[2] + x*self.x[2] + y*self.y[2] + z*self.z[2]
+        center, (x_axis, y_axis, z_axis) = self._ray_frame()
+        xglo = center[0] + x*x_axis[0] + y*y_axis[0] + z*z_axis[0]
+        yglo = center[1] + x*x_axis[1] + y*y_axis[1] + z*z_axis[1]
+        zglo = center[2] + x*x_axis[2] + y*y_axis[2] + z*z_axis[2]
         return xglo, yglo, zglo
 
     def expose_global(self, beam=None, onlyPositivePath=False):
@@ -176,11 +253,13 @@ class Screen(object):
                 kwArgsIn['beam'] = beam.parentId
             self.bl.auto_align(self, beam)
         glo = rs.Beam(copyFrom=beam)  # global
+        center, (_, normal, _) = self._ray_frame()
+        nx, ny, nz = normal
         with np.errstate(divide='ignore'):
-            path = ((self.center[0]-beam.x) * self.y[0] +
-                    (self.center[1]-beam.y) * self.y[1] +
-                    (self.center[2]-beam.z) * self.y[2]) /\
-                   (beam.a*self.y[0] + beam.b*self.y[1] + beam.c*self.y[2])
+            path = ((center[0]-beam.x) * nx +
+                    (center[1]-beam.y) * ny +
+                    (center[2]-beam.z) * nz) / (
+                        beam.a*nx + beam.b*ny + beam.c*nz)
 
         condBad = np.isnan(path) | np.isinf(path)
         if onlyPositivePath:
@@ -214,8 +293,8 @@ class Screen(object):
 #                kwArgsIn['beam'] = beam.parentId
 #            self.bl.auto_align(self, beam)
         blo = rs.Beam(copyFrom=beam, withNumberOfReflections=True)  # local
-        xyz = self.x, self.y, self.z
-        raycing.global_to_virgin_local(xyz, beam, blo, self.center)
+        center, xyz = self._ray_frame()
+        raycing.global_to_virgin_local(xyz, beam, blo, center)
 
         with np.errstate(divide='ignore'):
             path = -blo.y / blo.b
@@ -313,6 +392,9 @@ class Screen(object):
         wave.toOE = self
         wave.area = (np.ones_like(d1s) * dS).sum()
         wave.parentId = prevOE.uuid
+        if self.mount is not None and dy != 0:
+            nx, ny, nz = self.y
+            return rw.prepare_wave(prevOE, wave, xglo+dy*nx, yglo+dy*ny, zglo+dy*nz)
         return rw.prepare_wave(prevOE, wave, xglo, yglo+dy, zglo)
 
     def expose_wave(self, wave=None, beam=None, dim1=0, dim2=0):
@@ -383,6 +465,9 @@ class HemisphericScreen(Screen):
         *R*: float
             Radius of the hemisphere in mm.
 
+        *mount, mountOffset*:
+            Stage and relative pose, as on :class:`Screen`.
+
 
         """
 #        self.bl = bl
@@ -417,17 +502,19 @@ class HemisphericScreen(Screen):
 
     def _set_orientation(self):
         """Determines the local x, y and z in the global system."""
+        sa = self.bl.sinAzimuth if self.bl is not None else 0.
+        ca = self.bl.cosAzimuth if self.bl is not None else 1.
         if isinstance(self._x, (list, tuple, np.ndarray)):
             norm = sum([xc**2 for xc in self._x])**0.5
             self._x = [xc/norm for xc in self._x]
         else:
-            self._x = self.bl.sinAzimuth, self.bl.cosAzimuth, 0.
+            self._x = sa, ca, 0.
 
         if isinstance(self._z, (list, tuple, np.ndarray)):
             norm = sum([zc**2 for zc in self._z])**0.5
             self._z = [zc/norm for zc in self._z]
         else:
-            self._z = self.bl.cosAzimuth, -self.bl.sinAzimuth, 0.
+            self._z = ca, -sa, 0.
 
         xdotz = np.dot(self._x, self._z)
         if abs(xdotz) > 1e-8:
@@ -470,12 +557,10 @@ class HemisphericScreen(Screen):
         """
 
         blo = rs.Beam(copyFrom=beam, withNumberOfReflections=True)  # local
-        sqb_2 = (beam.a * (beam.x-self.center[0]) +
-                 beam.b * (beam.y-self.center[1]) +
-                 beam.c * (beam.z-self.center[2]))
-        sqc = ((beam.x-self.center[0])**2 +
-               (beam.y-self.center[1])**2 +
-               (beam.z-self.center[2])**2 - self.R**2)
+        center, (x_axis, y_axis, z_axis) = self._ray_frame()
+        dx, dy, dz = beam.x-center[0], beam.y-center[1], beam.z-center[2]
+        sqb_2 = beam.a*dx + beam.b*dy + beam.c*dz
+        sqc = dx**2 + dy**2 + dz**2 - self.R**2
         with np.errstate(invalid='ignore'):
             path = -sqb_2 + (sqb_2**2 - sqc)**0.5
 
@@ -487,12 +572,12 @@ class HemisphericScreen(Screen):
         blo.state[indBad] = self.lostNum
 
         blo.path += path
-        rx = beam.x + beam.a*path - self.center[0]
-        ry = beam.y + beam.b*path - self.center[1]
-        rz = beam.z + beam.c*path - self.center[2]
-        blo.z = rx*self.z[0] + ry*self.z[1] + rz*self.z[2]
-        blo.y = rx*self.y[0] + ry*self.y[1] + rz*self.y[2]
-        blo.x = rx*self.x[0] + ry*self.x[1] + rz*self.x[2]
+        rx = dx + beam.a*path
+        ry = dy + beam.b*path
+        rz = dz + beam.c*path
+        blo.z = rx*z_axis[0] + ry*z_axis[1] + rz*z_axis[2]
+        blo.y = rx*y_axis[0] + ry*y_axis[1] + rz*y_axis[2]
+        blo.x = rx*x_axis[0] + ry*x_axis[1] + rz*x_axis[2]
         blo.theta = np.arcsin(blo.z / self.R) - self.thetaOffset
         blo.phi = np.arctan2(blo.y, blo.x) - self.phiOffset
         if hasattr(blo, 'Es'):

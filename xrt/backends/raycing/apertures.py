@@ -66,6 +66,7 @@ import copy
 from .. import raycing
 from . import sources as rs
 from .physconsts import CHBAR
+from .stages import Pose, set_mount, set_mount_offset
 # from itertools import product
 
 __author__ = "Konstantin Klementiev, Roman Chernikov"
@@ -102,7 +103,7 @@ allArguments = ('bl', 'name', 'center', 'blades', 'vertices', 'x', 'z',
                 'nSpokes', 'rx', 'rz', 'phi0', 'vortex', 'vortexNradial',
                 'renderStyle', 'renderSize',
                 'apertures', 'centerZs', 'dXs', 'dZs',
-                'zActuator')
+                'zActuator', 'mount', 'mountOffset')
 
 
 class RectangularAperture(object):
@@ -119,7 +120,7 @@ class RectangularAperture(object):
                  alarmLevel=None, renderStyle='mask',
                  blades=_DEFAULT_RECTANGULAR_BLADES,
                  renderSize=_DEFAULT_RENDER_SIZE,
-                 **kwargs):
+                 mount=None, mountOffset=None, **kwargs):
         """
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
             Container for beamline elements. Optical elements are added to its
@@ -130,6 +131,15 @@ class RectangularAperture(object):
 
         *center*: 3-sequence of floats
             3D point in global system.
+
+        *mount*: :class:`~xrt.backends.raycing.stages.Stage`, str or None
+            Stage carrying the whole aperture. While mounted, the center
+            and axes are readouts of the composed world pose.
+
+        *mountOffset*: :class:`~xrt.backends.raycing.stages.Pose` or None
+            Aperture origin and orientation in the moving stage frame.
+            Defaults to identity on attachment. Blade coordinates stay local
+            to the aperture.
 
         *blades*: dict or None
             Mapping of blade names to their positions relative to the aperture
@@ -184,10 +194,11 @@ class RectangularAperture(object):
                 bl.oesDict[self.uuid] = [self, 1]
                 bl.oenamesToUUIDs[self.name] = self.uuid
 
+        self._mount = None
         self.center = center
-#        if any([xc == 'auto' for xc in self.center]):
-#            self._center = copy.copy(self.center)
         self.set_orientation(x, z)
+        set_mount_offset(self, mountOffset, strict=True)
+        set_mount(self, mount, strict=True)
 
         self.limOptX = kwargs.get('limOptX', [-500, 500])
         self.limOptY = kwargs.get('limOptY', [-500, 500])
@@ -228,10 +239,12 @@ class RectangularAperture(object):
 
     @property
     def x(self):
-        return self._x
+        return self.xyz[0] if self.mount is not None else self._x
 
     @x.setter
     def x(self, x):
+        if self.mount is not None:
+            return
         self._xInit = copy.copy(x)
         self._x = copy.copy(x)
         self._set_orientation()
@@ -299,15 +312,73 @@ class RectangularAperture(object):
 
     @property
     def z(self):
-        return self._z
+        return self.xyz[2] if self.mount is not None else self._z
 
     @z.setter
     def z(self, z):
+        if self.mount is not None:
+            return
         self._zInit = copy.copy(z)
         self._z = copy.copy(z)
         self._set_orientation()
 
-    center = raycing.center_property()
+    _unmounted_center = raycing.center_property()
+
+    @property
+    def center(self):
+        if self.mount is not None:
+            return tuple(self.globalPose.center)
+        return self._unmounted_center
+
+    @center.setter
+    def center(self, value):
+        if self.mount is None:
+            self._unmounted_center = value
+
+    @property
+    def mount(self):
+        """Stage carrying this aperture, or None for independent placement."""
+        return getattr(self, '_mount', None)
+
+    @mount.setter
+    def mount(self, value):
+        set_mount(self, value)
+
+    @property
+    def mountOffset(self):
+        """Fixed aperture pose relative to the stage's moving attachment."""
+        return getattr(self, '_mountOffset', None)
+
+    @mountOffset.setter
+    def mountOffset(self, value):
+        set_mount_offset(self, value)
+
+    @property
+    def globalPose(self):
+        """World pose of the aperture origin and its local axes."""
+        if self.mount is not None:
+            return self.mount.mountPose @ self.mountOffset
+        return Pose.from_xz(self.center, x=self.x, z=self.z)
+
+    @property
+    def y(self):
+        return self.xyz[1] if self.mount is not None else self._y
+
+    @y.setter
+    def y(self, value):
+        if self.mount is None:
+            self._y = value
+
+    @property
+    def xyz(self):
+        if self.mount is not None:
+            return self.globalPose.orientation.matrix.T.tolist()
+        return self._xyz
+
+    @xyz.setter
+    def xyz(self, value):
+        if self.mount is None:
+            self._xyz = value
 
     def _set_orientation(self):
         """Determines the local x, y and z as vectors in the global system."""
@@ -320,6 +391,8 @@ class RectangularAperture(object):
 
     def set_orientation(self, x=None, z=None):
         """Set both input axes before resolving the aperture orientation."""
+        if self.mount is not None:
+            return
         self._xInit = copy.copy(x)
         self._zInit = copy.copy(z)
         self._x = copy.copy(x)
@@ -377,6 +450,28 @@ class RectangularAperture(object):
                 div*sourceToAperture + sgn*raycing.accuracyInPosition)
         self.blades = dict(zip(self.blades.keys(), opening))
 
+    def _ray_frame(self):
+        if self.mount is not None:
+            pose = self.globalPose
+            return pose.center, pose.orientation.matrix.T.tolist()
+        axes = self.xyz
+        return self.center, self.bl if axes == 'auto' else axes
+
+    @staticmethod
+    def _apply_mounted_frame(beam, center, axes, part):
+        rotation = np.asarray(axes).T
+        points = np.array([beam.x[part], beam.y[part], beam.z[part]])
+        directions = np.array([beam.a[part], beam.b[part], beam.c[part]])
+        beam.x[part], beam.y[part], beam.z[part] = (
+            rotation @ points + np.asarray(center)[:, None])
+        beam.a[part], beam.b[part], beam.c[part] = rotation @ directions
+
+    def _restore_global_frame(self, beam, center, axes, part):
+        if self.mount is not None:
+            self._apply_mounted_frame(beam, center, axes, part)
+        else:
+            raycing.virgin_local_to_global(self.bl, beam, center, part)
+
     @raycing.append_to_flow_decorator
     def propagate(self, beam=None, needNewGlobal=False):
         """Assigns the "lost" value to *beam.state* array for the rays
@@ -406,8 +501,8 @@ class RectangularAperture(object):
         good = beam.state > 0
 # beam in local coordinates
         lo = rs.Beam(copyFrom=beam)
-        bl = self.bl if self.xyz == 'auto' else self.xyz
-        raycing.global_to_virgin_local(bl, beam, lo, self.center, good)
+        center, axes = self._ray_frame()
+        raycing.global_to_virgin_local(axes, beam, lo, center, good)
         path = -lo.y[good] / lo.b[good]
         lo.x[good] += lo.a[good] * path
         lo.z[good] += lo.c[good] * path
@@ -452,7 +547,7 @@ class RectangularAperture(object):
 
         if needNewGlobal:
             glo = rs.Beam(copyFrom=lo)
-            raycing.virgin_local_to_global(self.bl, glo, self.center, good)
+            self._restore_global_frame(glo, center, axes, good)
             raycing.append_to_flow(self.propagate, [glo, lo],
                                    inspect.currentframe())
 
@@ -477,8 +572,8 @@ class RectangularAperture(object):
 #        good = beam.state > 0
 # beam in local coordinates
         lo = rs.Beam(copyFrom=beam)
-        bl = self.bl if self.xyz == 'auto' else self.xyz
-        raycing.global_to_virgin_local(bl, beam, lo, self.center, good)
+        center, axes = self._ray_frame()
+        raycing.global_to_virgin_local(axes, beam, lo, center, good)
         lo.y[good] /= lo.b[good]
         if ('left' in self.blades) or ('right' in self.blades):
             lo.x[good] -= lo.a[good] * lo.y[good]
@@ -501,6 +596,11 @@ class RectangularAperture(object):
         self.set_optical_limits()
 
     def local_to_global(self, glo, returnBeam=False, **kwargs):
+        if self.mount is not None:
+            center, axes = self._ray_frame()
+            self._apply_mounted_frame(glo, center, axes, slice(None))
+            return rs.Beam(copyFrom=glo) if returnBeam else None
+
         x, y, z = glo.x, glo.y, glo.z
         xglo = self.center[0] + x*self.x[0] + y*self.y[0] + z*self.z[0]
         yglo = self.center[1] + x*self.x[1] + y*self.y[1] + z*self.z[1]
@@ -1044,8 +1144,8 @@ class DoubleSlit(RectangularAperture):
         good = beam.state > 0
 # beam in local coordinates
         lo = rs.Beam(copyFrom=beam)
-        bl = self.bl if self.xyz == 'auto' else self.xyz
-        raycing.global_to_virgin_local(bl, beam, lo, self.center, good)
+        center, axes = self._ray_frame()
+        raycing.global_to_virgin_local(axes, beam, lo, center, good)
         path = -lo.y[good] / lo.b[good]
         lo.x[good] += lo.a[good] * path
         lo.z[good] += lo.c[good] * path
@@ -1087,7 +1187,7 @@ class DoubleSlit(RectangularAperture):
 
         if needNewGlobal:
             glo = rs.Beam(copyFrom=lo)
-            raycing.virgin_local_to_global(self.bl, glo, self.center, good)
+            self._restore_global_frame(glo, center, axes, good)
             glo.path[good] += beam.path[good]
 
 #            self.bl.beamsDictU[self.uuid] = {'beamGlobal': glo,

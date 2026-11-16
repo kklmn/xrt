@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import time
+import logging
 import queue
 
 from ._sets_units import (
@@ -9,6 +10,9 @@ from ._flow_utils import parametrize, format_energy_input
 from .singletons import is_sequence
 
 from .beamline import BeamLine, _DEBUG_
+
+
+logger = logging.getLogger(__name__)
 
 
 DEFAULT_OUTPUT_POLICY = {
@@ -257,6 +261,12 @@ class MessageHandler:
             self.bl.init_material_from_json(objuuid, kwargs)
         elif object_type == 'fe':
             self.bl.init_fe_from_json(objuuid, kwargs)
+        elif object_type == 'stage':
+            try:
+                self.bl.init_stage_from_json(objuuid, kwargs)
+            except (AttributeError, ImportError, KeyError, TypeError,
+                    ValueError, OverflowError) as error:
+                logger.warning('Stage %s could not be created: %s', objuuid, error)
 
         if self.autoUpdate:
             if object_type in ['oe']:
@@ -276,7 +286,10 @@ class MessageHandler:
                 element = eLine[0]
                 for key, value in kwargs.items():
                     if isinstance(value, str):
-                        value = parametrize(value)
+                        if key == 'mount':
+                            value = None if value == 'None' else value
+                        else:
+                            value = parametrize(value)
                     args = key.split('.')
                     arg = args[0]
                     if len(args) > 1:
@@ -291,7 +304,8 @@ class MessageHandler:
                             if elId == objuuid:
                                 del self.bl.oenamesToUUIDs[oeName]
                         self.bl.oenamesToUUIDs[str(element.name)] = objuuid
-                    if arg.lower().startswith('center'):
+                    if (arg.lower().startswith('center') or
+                            arg in ('mount', 'mountOffset')):
                         self.bl.sort_flow()
 
                 if self.autoUpdate:
@@ -308,6 +322,24 @@ class MessageHandler:
                 if not (len(modified_kwargs) == 1 and
                         (modified_kwargs.keys() & renderOnlyArgSet)):
                     self._set_start_element(modifiedEl)
+        elif object_type == 'stage':
+            stage = self.bl.stagesDict.get(objuuid)
+            if stage is None:
+                return
+            for key, value in kwargs.items():
+                if key in ('uuid', 'bl'):
+                    continue
+                if key in ('mount', 'crystal') and isinstance(value, str):
+                    value = None if value == 'None' else value
+                elif key != 'name' and isinstance(value, str):
+                    value = parametrize(value)
+                try:
+                    setattr(stage, key, value)
+                except (AttributeError, TypeError, ValueError, OverflowError) as error:
+                    logger.warning('%s: invalid %s: %s', stage.name, key, error)
+
+            if kwargs.keys() - {'name', 'uuid', 'bl'}:
+                self._restart_from_stage(stage)
         elif object_type == 'mat':
             # element = self.bl.materialsDict.get(objuuid)
             # We reinstantiate the material object instead of updating. Single-
@@ -480,6 +512,22 @@ class MessageHandler:
     def handle_stop(self, message):
         print("Stopping processing loop.")
         self.stop = True
+
+    def _restart_from_stage(self, stage):
+        affected = list(self.bl.iter_stage_dependents(stage))
+        if not affected:
+            return
+        self.bl.sort_flow()
+        for oeid, element in affected:
+            if oeid not in self.bl.flowU:
+                continue
+            if hasattr(element, 'propagate'):
+                # Apertures can mark the upstream rays lost in place.
+                args = next(iter(self.bl.flowU[oeid].values()), {})
+                oeid = args.get('beam', oeid)
+            self._set_start_element(oeid)
+        if self.autoUpdate and self.startEl is not None:
+            self.needUpdate = True
 
     def _set_start_element(self, oeid):
         keys = list(self.bl.flowU.keys())

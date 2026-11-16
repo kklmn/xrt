@@ -211,7 +211,7 @@ _DEBUG_ = True  # If False, exceptions inside the module are ignored
 LAYOUT_GLOW_KEY = 'xrtGlow'
 LAYOUT_SCAN_KEY = 'scanDescription'
 LAYOUT_METADATA_KEYS = {
-    'Beams', 'Materials', 'FigureErrors', 'flow', 'plots',
+    'Beams', 'Materials', 'FigureErrors', 'Stages', 'flow', 'plots',
     'run_ray_tracing', 'description', LAYOUT_GLOW_KEY}
 
 
@@ -319,7 +319,8 @@ def xyz_from_xz(obj, x=None, z=None):
 
 
 def is_auto_align_required(oe):
-    if (getattr(oe, '_pitch', None) == 'auto' and
+    is_mounted = getattr(oe, 'mount', None) is not None
+    if (not is_mounted and getattr(oe, '_pitch', None) == 'auto' and
             len(getattr(oe, 'targetE', ()) or ()) == 3 and
             hasattr(oe, 'get_diagnostics')):
         return True
@@ -333,7 +334,8 @@ def is_auto_align_required(oe):
             return True
 
     needAutoAlign = False
-    for autoParam in ["_center", "_pitch", "_bragg"]:
+    autoParams = ("_bragg",) if is_mounted else ("_center", "_pitch", "_bragg")
+    for autoParam in autoParams:
         naParam = autoParam.strip("_")
         if hasattr(oe, autoParam) and hasattr(oe, naParam):
             if str(getattr(oe, autoParam)) == str(getattr(oe, naParam)):
@@ -479,6 +481,8 @@ class BeamLine(object):
         self.oenamesToUUIDs = {}  # Reverse lookup for oe names
         self.matnamesToUUIDs = {}  # Reverse lookup for mat names
         self.fenamesToUUIDs = {}
+        self.stagenamesToUUIDs = {}
+        self.stagesDict = OrderedDict()
         self.flow = []
         self.materialsDict = OrderedDict()
         self.beamsDict = OrderedDict()
@@ -603,11 +607,12 @@ class BeamLine(object):
         autoPitch = autoBragg = False
         alignE = self._alignE if hasattr(self, '_alignE') else self.alignE
 
-        if hasattr(oe, '_center') and isinstance(oe._center, list):
+        is_mounted = getattr(oe, 'mount', None) is not None
+        if not is_mounted and isinstance(getattr(oe, '_center', None), list):
             autoCenter = [isinstance(x, str) for x in oe._center]
 #            autoCenter = ['auto' in str(x) for x in oe._center]
 
-        if hasattr(oe, '_pitch'):
+        if not is_mounted and hasattr(oe, '_pitch'):
             try:
                 if is_auto_align_value(oe._pitch):
                     pitchAlignE = get_auto_align_energy(oe._pitch)
@@ -1075,6 +1080,42 @@ class BeamLine(object):
 
         return sortedFEList
 
+    def register_stage(self, stage):
+        """Register a stage and its mounting ancestors by UUID and name."""
+        from .stages import Stage
+
+        if not isinstance(stage, Stage):
+            raise TypeError('stage must be a Stage')
+        pending = {}
+        ancestor = stage
+        while ancestor is not None:
+            if ancestor.bl is not None and ancestor.bl is not self:
+                raise ValueError('Stage {!r} belongs to another beamline'.format(
+                    ancestor.name))
+            existing = self.stagesDict.get(ancestor.uuid)
+            if existing is ancestor:
+                break
+            if existing is not None or ancestor.uuid in pending:
+                raise ValueError('Duplicate stage UUID {!r}'.format(ancestor.uuid))
+            pending[ancestor.uuid] = ancestor
+            ancestor = ancestor.mount
+
+        for stage_id, item in reversed(list(pending.items())):
+            item.bl = self
+            self.stagesDict[stage_id] = item
+            item.name = item.name
+        return stage
+
+    def iter_stage_dependents(self, stage):
+        """Yield UUIDs and optical elements carried by this stage or its stack."""
+        for oeid, (element, *_) in self.oesDict.items():
+            mount = getattr(element, 'mount', None)
+            while mount is not None:
+                if mount is stage:
+                    yield oeid, element
+                    break
+                mount = mount.mount
+
     def index_materials(self):  # materials and figure error objects
         def register_material(mat):
             if mat is None:
@@ -1172,6 +1213,9 @@ class BeamLine(object):
                 if hasattr(oe, attr):
                     newFE = register_fe(getattr(oe, attr, None))
                     setattr(oe, attr, newFE)
+
+        for stage in self.stagesDict.values():
+            register_material(getattr(stage, 'crystal', None))
 
         self.materialsDict.update(materialsDict)
         usedNames = {mat.name for mat in self.materialsDict.values() if mat.name}
@@ -1705,6 +1749,8 @@ class BeamLine(object):
             else:
                 initKWArgs = oeParams
 
+            if 'mount' in initKWArgs and 'bl' not in initKWArgs:
+                initKWArgs = dict(initKWArgs, bl=self)
             try:
                 _ = getattr(oeModule, oeClass)(**initKWArgs)
                 initStatus = 0
@@ -1946,6 +1992,46 @@ class BeamLine(object):
             if feProps is not None:
                 _ = self.init_fe_from_json(feName, feProps)
 
+    def init_stage_from_json(self, stage_id, record):
+        """Create a stage from a layout or worker message."""
+        from .stages import Stage
+
+        module, name = record['_object'].rsplit('.', 1)
+        cls = getattr(importlib.import_module(module), name)
+        if not issubclass(cls, Stage):
+            raise TypeError('Expected a Stage class, got {!r}'.format(name))
+        params = {}
+        for key, value in record['properties'].items():
+            if key == 'bl':
+                continue
+            if key in ('mount', 'crystal') and isinstance(value, str):
+                params[key] = None if value == 'None' else value
+            else:
+                params[key] = (value if key in ('name', 'uuid')
+                               else parametrize(value))
+        params['bl'] = self
+        if is_valid_uuid(stage_id):
+            params['uuid'] = stage_id
+        elif stage_id is not None:
+            params['name'] = stage_id
+        return cls(**params)
+
+    def populate_stages_dict_from_json(self, records):
+        if not isinstance(records, dict):
+            return
+        from .stages import set_mount
+
+        # Resolve parent references only after every stage has a UUID and name.
+        mounts = []
+        for stage_id, record in records.items():
+            properties = record['properties'].copy()
+            parent = properties.pop('mount', None)
+            stage = self.init_stage_from_json(stage_id,
+                                              dict(record, properties=properties))
+            mounts.append((stage, None if parent == 'None' else parent))
+        for stage, parent in mounts:
+            set_mount(stage, parent, strict=True)
+
     def load_from_xml(self, openFileName):
         def xml_to_dict(element):
             # Recursively convert XML elements into a dictionary
@@ -2003,12 +2089,15 @@ class BeamLine(object):
         if feDict is not None:
             self.populate_figerrors_dict_from_json(feDict)
 
+        self.populate_stages_dict_from_json(data['Project'].get('Stages'))
         self.populate_oes_dict_from_json(data['Project'][beamlineName])
         if 'flow' in data['Project'].keys():
             self.flowU = data['Project']['flow']
         self._layoutLoaded = True
 
     def export_to_json(self):
+        if self.stagesDict:
+            self.index_materials()
 
         matDict = OrderedDict()
         feDict = OrderedDict()
@@ -2102,6 +2191,12 @@ class BeamLine(object):
         projectDict['Materials'] = matDict
         projectDict[self.name] = beamlineDict
         projectDict['FigureErrors'] = feDict
+        if self.stagesDict:
+            projectDict['Stages'] = OrderedDict(
+                (stage_id, dict(_object=get_obj_str(stage),
+                                properties=get_init_kwargs(
+                                    stage, compact=False, resolveAuto=False)))
+                for stage_id, stage in self.stagesDict.items())
         projectDict['flow'] = normalize_string_input(self.flowU)
 
         if plotsDict is not None:
