@@ -6,7 +6,6 @@ from itertools import product
 
 import numpy as np
 
-from ....backends import raycing
 from ....backends.raycing.stages import (
     LinearStage, RotationStage, transform_points)
 from .._utils import is_oe
@@ -86,8 +85,9 @@ def _linear_plates(stage, base, mount, bounds, optic):
 
     # The linear mount differs from the base by the actuator travel.
     base_limits = limits.copy()
-    scale = raycing.allUnitsLen[stage.positionUnit]
-    travel = scale * np.array((stage.positionMin or 0., stage.positionMax or 0.))
+    travel = np.array([
+        0. if value is None else stage.position_to_base_units(value)
+        for value in (stage.positionMin, stage.positionMax)])
     gap = sizes['gap']
     base_face = face - top_height - gap
     if axis == 2:

@@ -1,13 +1,13 @@
 {
-  "aspect": 1.1561014652252197,
+  "aspect": 1.2052297592163086,
   "viewPortGL": [
     0,
     0,
-    1459,
+    1521,
     1262
   ],
   "cameraAngle": 60.0,
-  "cameraDistance": 3.5,
+  "cameraDistance": 1.67403915,
   "sceneColors": {
     "normalColors": {
       "bgColor": [
@@ -45,13 +45,13 @@
     }
   },
   "scaleVec": [
-    37.33000183105469,
-    31.266956329345703,
-    37.33000183105469
+    14.229273796081543,
+    11.918184280395508,
+    14.229273796081543
   ],
   "rotations": [
-    -53.68338394165039,
-    16.64913558959961
+    -43.62546157836914,
+    25.062822341918945
   ],
   "coordOffset": [
     0.0,
@@ -127,7 +127,7 @@
   "globalColors": true,
   "linesDepthTest": false,
   "pointsDepthTest": false,
-  "invertColors": false,
+  "invertColors": true,
   "autoSizeOe": true,
   "rayFlag": [
     1,
@@ -149,7 +149,7 @@
   "apertureThickness": 1.0,
   "electronEnvelopeStep": 10.0,
   "electronEnvelopeSize": 3.0,
-  "maxLen": 10619.814752379643,
+  "maxLen": 10619.699753817116,
   "fontSize": 5,
   "labelCoordPrec": 1,
   "tiles": [
@@ -186,11 +186,11 @@
   "size": [
     0,
     31,
-    1555,
+    1617,
     1262
   ],
   "sizeGL": [
-    1459,
+    1521,
     0
   ]
 }

@@ -3,10 +3,14 @@
 	<Beams type="prop">
 		<None type="flat"></None>
 		<geometricSource01_global type="flat"></geometricSource01_global>
-		<rectangularAperture01_local type="flat"></rectangularAperture01_local>
-		<ToroidMirror_global type="flat"></ToroidMirror_global>
-		<ToroidMirror_local type="flat"></ToroidMirror_local>
-		<rectangularAperture02_local type="flat"></rectangularAperture02_local>
+		<Aperture77_local type="flat"></Aperture77_local>
+		<Toroid77_global type="flat"></Toroid77_global>
+		<Toroid77_local type="flat"></Toroid77_local>
+		<Aperture33_local type="flat"></Aperture33_local>
+		<Exit77_local type="flat"></Exit77_local>
+		<Toroid33_global type="flat"></Toroid33_global>
+		<Toroid33_local type="flat"></Toroid33_local>
+		<Exit33_local type="flat"></Exit33_local>
 	</Beams>
 	<Materials type="prop">
 	</Materials>
@@ -23,7 +27,7 @@
 			<properties type="prop">
 				<bl type="param">BeamLine</bl>
 				<name type="param">geometricSource01</name>
-				<center type="param">[0.0, 0.0, 1060.0]</center>
+				<center type="param">[0.0, 0.0, 1085.0]</center>
 				<pitch type="param">0</pitch>
 				<roll type="param">0</roll>
 				<yaw type="param">0</yaw>
@@ -58,10 +62,10 @@
 				</output>
 			</shine>
 		</geometricSource01>
-		<rectangularAperture01 type="value">
+		<Aperture33 type="value">
 			<properties type="prop">
 				<bl type="param">BeamLine</bl>
-				<name type="param">rectangularAperture01</name>
+				<name type="param">Aperture33</name>
 				<center type="param">[0.0, 0.0, 0.0]</center>
 				<blades type="param">{'left': -10, 'right': 10, 'bottom': -10, 'top': 10}</blades>
 				<x type="param">auto</x>
@@ -70,8 +74,8 @@
 				<renderStyle type="param">mask</renderStyle>
 				<renderSize type="param">{'slitThicknessFraction': None, 'apertureBladeWidth': None, 'apertureDefaultSpan': None, 'apertureThickness': None}</renderSize>
 				<renderColor type="param">auto</renderColor>
-				<mount type="param">MirrorSupport</mount>
-				<mountOffset type="param">{'center': [0, -620, 25], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
+				<mount type="param">Xmovale</mount>
+				<mountOffset type="param">{'center': [30, -620, 25], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
 			</properties>
 			<_object type="param">xrt.backends.raycing.apertures.RectangularAperture</_object>
 			<propagate type="prop">
@@ -80,20 +84,95 @@
 				</parameters>
 				<_object type="param">xrt.backends.raycing.apertures.RectangularAperture.propagate</_object>
 				<output type="prop">
-					<beamLocal type="param">rectangularAperture01_local</beamLocal>
+					<beamLocal type="param">Aperture33_local</beamLocal>
 				</output>
 			</propagate>
-		</rectangularAperture01>
-		<ToroidMirror type="value">
+		</Aperture33>
+		<Toroid33 type="value">
 			<properties type="prop">
 				<bl type="param">BeamLine</bl>
-				<name type="param">ToroidMirror</name>
+				<name type="param">Toroid33</name>
 				<center type="param">[0.0, 0.0, 0.0]</center>
 				<pitch type="param">0</pitch>
 				<roll type="param">0</roll>
 				<yaw type="param">0</yaw>
-				<mount type="param">MirrorSupport</mount>
-				<mountOffset type="param">{'center': [0.0, 0.0, 25.0], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
+				<mount type="param">Xmovale</mount>
+				<mountOffset type="param">{'center': [30, 0, 25], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
+				<positionRoll type="param">0</positionRoll>
+				<extraPitch type="param">0</extraPitch>
+				<extraRoll type="param">0</extraRoll>
+				<extraYaw type="param">0</extraYaw>
+				<rotationSequence type="param">RzRyRx</rotationSequence>
+				<extraRotationSequence type="param">RzRyRx</extraRotationSequence>
+				<surface type="param">None</surface>
+				<material type="param">None</material>
+				<alpha type="param">None</alpha>
+				<limPhysX type="param">[-20, 20]</limPhysX>
+				<limOptX type="param">None</limOptX>
+				<limPhysY type="param">[-600, 600]</limPhysY>
+				<limOptY type="param">None</limOptY>
+				<isParametric type="param">False</isParametric>
+				<shape type="param">rect</shape>
+				<gratingDensity type="param">None</gratingDensity>
+				<order type="param">1</order>
+				<shouldCheckCenter type="param">False</shouldCheckCenter>
+				<R type="param">5000000</R>
+				<r type="param">33</r>
+				<alarmLevel type="param">None</alarmLevel>
+				<targetOpenCL type="param">None</targetOpenCL>
+				<precisionOpenCL type="param">float32</precisionOpenCL>
+				<figureError type="param">None</figureError>
+				<renderColor type="param">auto</renderColor>
+			</properties>
+			<_object type="param">xrt.backends.raycing.oes.ToroidMirror</_object>
+			<reflect type="prop">
+				<parameters type="prop">
+					<beam type="param">geometricSource01_global</beam>
+					<noIntersectionSearch type="param">False</noIntersectionSearch>
+				</parameters>
+				<_object type="param">xrt.backends.raycing.oes.ToroidMirror.reflect</_object>
+				<output type="prop">
+					<beamGlobal type="param">Toroid33_global</beamGlobal>
+					<beamLocal type="param">Toroid33_local</beamLocal>
+				</output>
+			</reflect>
+		</Toroid33>
+		<Exit33 type="value">
+			<properties type="prop">
+				<bl type="param">BeamLine</bl>
+				<name type="param">Exit33</name>
+				<center type="param">[0.0, 0.0, 0.0]</center>
+				<blades type="param">{'left': -10, 'right': 10, 'bottom': -10, 'top': 10}</blades>
+				<x type="param">auto</x>
+				<z type="param">auto</z>
+				<alarmLevel type="param">None</alarmLevel>
+				<renderStyle type="param">mask</renderStyle>
+				<renderSize type="param">{'slitThicknessFraction': None, 'apertureBladeWidth': None, 'apertureDefaultSpan': None, 'apertureThickness': None}</renderSize>
+				<renderColor type="param">auto</renderColor>
+				<mount type="param">Xmovale</mount>
+				<mountOffset type="param">{'center': [30, 620, 25], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
+			</properties>
+			<_object type="param">xrt.backends.raycing.apertures.RectangularAperture</_object>
+			<propagate type="prop">
+				<parameters type="prop">
+					<beam type="param">Toroid33_global</beam>
+				</parameters>
+				<_object type="param">xrt.backends.raycing.apertures.RectangularAperture.propagate</_object>
+				<output type="prop">
+					<beamLocal type="param">Exit33_local</beamLocal>
+				</output>
+			</propagate>
+		</Exit33>
+		<Toroid77 type="value">
+			<properties type="prop">
+				<bl type="param">BeamLine</bl>
+				<name type="param">Toroid77</name>
+				<center type="param">[0.0, 0.0, 0.0]</center>
+				<pitch type="param">0</pitch>
+				<roll type="param">0</roll>
+				<yaw type="param">0</yaw>
+				<mount type="param">Xmovale</mount>
+				<mountOffset type="param">{'center': [-30, 0, 25], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
 				<positionRoll type="param">0</positionRoll>
 				<extraPitch type="param">0</extraPitch>
 				<extraRoll type="param">0</extraRoll>
@@ -113,7 +192,7 @@
 				<order type="param">1</order>
 				<shouldCheckCenter type="param">False</shouldCheckCenter>
 				<R type="param">5000000.0</R>
-				<r type="param">50.0</r>
+				<r type="param">77</r>
 				<alarmLevel type="param">None</alarmLevel>
 				<targetOpenCL type="param">None</targetOpenCL>
 				<precisionOpenCL type="param">float32</precisionOpenCL>
@@ -128,15 +207,15 @@
 				</parameters>
 				<_object type="param">xrt.backends.raycing.oes.ToroidMirror.reflect</_object>
 				<output type="prop">
-					<beamGlobal type="param">ToroidMirror_global</beamGlobal>
-					<beamLocal type="param">ToroidMirror_local</beamLocal>
+					<beamGlobal type="param">Toroid77_global</beamGlobal>
+					<beamLocal type="param">Toroid77_local</beamLocal>
 				</output>
 			</reflect>
-		</ToroidMirror>
-		<rectangularAperture02 type="value">
+		</Toroid77>
+		<Exit77 type="value">
 			<properties type="prop">
 				<bl type="param">BeamLine</bl>
-				<name type="param">rectangularAperture02</name>
+				<name type="param">Exit77</name>
 				<center type="param">[0.0, 0.0, 0.0]</center>
 				<blades type="param">{'left': -10, 'right': 10, 'bottom': -10, 'top': 10}</blades>
 				<x type="param">auto</x>
@@ -145,20 +224,46 @@
 				<renderStyle type="param">mask</renderStyle>
 				<renderSize type="param">{'slitThicknessFraction': None, 'apertureBladeWidth': None, 'apertureDefaultSpan': None, 'apertureThickness': None}</renderSize>
 				<renderColor type="param">auto</renderColor>
-				<mount type="param">MirrorSupport</mount>
-				<mountOffset type="param">{'center': [0, 620, 25], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
+				<mount type="param">Xmovale</mount>
+				<mountOffset type="param">{'center': [-30, 620, 25], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
 			</properties>
 			<_object type="param">xrt.backends.raycing.apertures.RectangularAperture</_object>
 			<propagate type="prop">
 				<parameters type="prop">
-					<beam type="param">ToroidMirror_global</beam>
+					<beam type="param">Toroid77_global</beam>
 				</parameters>
 				<_object type="param">xrt.backends.raycing.apertures.RectangularAperture.propagate</_object>
 				<output type="prop">
-					<beamLocal type="param">rectangularAperture02_local</beamLocal>
+					<beamLocal type="param">Exit77_local</beamLocal>
 				</output>
 			</propagate>
-		</rectangularAperture02>
+		</Exit77>
+		<Aperture77 type="value">
+			<properties type="prop">
+				<bl type="param">BeamLine</bl>
+				<name type="param">Aperture77</name>
+				<center type="param">[0.0, 0.0, 0.0]</center>
+				<blades type="param">{'left': -10, 'right': 10, 'bottom': -10, 'top': 10}</blades>
+				<x type="param">auto</x>
+				<z type="param">auto</z>
+				<alarmLevel type="param">None</alarmLevel>
+				<renderStyle type="param">mask</renderStyle>
+				<renderSize type="param">{'slitThicknessFraction': None, 'apertureBladeWidth': None, 'apertureDefaultSpan': None, 'apertureThickness': None}</renderSize>
+				<renderColor type="param">auto</renderColor>
+				<mount type="param">Xmovale</mount>
+				<mountOffset type="param">{'center': [-30, -620, 25], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
+			</properties>
+			<_object type="param">xrt.backends.raycing.apertures.RectangularAperture</_object>
+			<propagate type="prop">
+				<parameters type="prop">
+					<beam type="param">None</beam>
+				</parameters>
+				<_object type="param">xrt.backends.raycing.apertures.RectangularAperture.propagate</_object>
+				<output type="prop">
+					<beamLocal type="param">Aperture77_local</beamLocal>
+				</output>
+			</propagate>
+		</Aperture77>
 	</BeamLine>
 	<FigureErrors type="prop">
 	</FigureErrors>
@@ -178,8 +283,8 @@
 				<mount3 type="param">None</mount3>
 				<yReference type="param">None</yReference>
 				<renderStyle type="param">rectangular</renderStyle>
-				<renderSize type="param">{'width': 400.0, 'height': 150.0, 'length': 1400.0}</renderSize>
-				<renderColor type="param">Aluminum (red anodized)</renderColor>
+				<renderSize type="param">{'width': 250.0, 'height': 150.0, 'length': 1400.0}</renderSize>
+				<renderColor type="param">Concrete</renderColor>
 			</properties>
 			<_object type="param">xrt.backends.raycing.stages.MountingFrame</_object>
 		</Granite>
@@ -269,6 +374,70 @@
 			</properties>
 			<_object type="param">xrt.backends.raycing.stages.MountingFrame</_object>
 		</MirrorSupport>
+		<Xmovale type="value">
+			<properties type="prop">
+				<name type="param">Xmovale</name>
+				<center type="param">[0.0, 0.0, 0.0]</center>
+				<pitch type="param">0.0</pitch>
+				<roll type="param">0.0</roll>
+				<yaw type="param">0.0</yaw>
+				<positionRoll type="param">0.0</positionRoll>
+				<rotationSequence type="param">RzRyRx</rotationSequence>
+				<mount type="param">Xstage1</mount>
+				<mountOffset type="param">{'center': [0.0, 0.0, 8.0], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
+				<mount2 type="param">Xstage2</mount2>
+				<mount3 type="param">None</mount3>
+				<yReference type="param">Xstage2</yReference>
+				<renderStyle type="param">rectangular</renderStyle>
+				<renderSize type="param">{'width': 200.0, 'height': 8.0, 'length': 1300.0}</renderSize>
+				<renderColor type="param">auto</renderColor>
+			</properties>
+			<_object type="param">xrt.backends.raycing.stages.MountingFrame</_object>
+		</Xmovale>
+		<Xstage1 type="value">
+			<properties type="prop">
+				<name type="param">Xstage1</name>
+				<axis type="param">x</axis>
+				<position type="param">-25.0</position>
+				<center type="param">[0.0, 0.0, 0.0]</center>
+				<pitch type="param">0.0</pitch>
+				<roll type="param">0.0</roll>
+				<yaw type="param">0.0</yaw>
+				<positionRoll type="param">0.0</positionRoll>
+				<rotationSequence type="param">RzRyRx</rotationSequence>
+				<mount type="param">MirrorSupport</mount>
+				<mountOffset type="param">{'center': [0.0, -300.0, 15.0], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
+				<positionMin type="param">-50.0</positionMin>
+				<positionMax type="param">50.0</positionMax>
+				<positionUnit type="param">mm</positionUnit>
+				<renderStyle type="param">auto</renderStyle>
+				<renderSize type="param">{'width': 50.0, 'topLength': 200.0, 'bottomLength': 200.0, 'topHeight': 5.0, 'bottomHeight': 10.0, 'grooves': 1, 'grooveWidth': 6.0, 'grooveDepth': 5.0, 'gap': 0.5}</renderSize>
+				<renderColor type="param">auto</renderColor>
+			</properties>
+			<_object type="param">xrt.backends.raycing.stages.LinearStage</_object>
+		</Xstage1>
+		<Xstage2 type="value">
+			<properties type="prop">
+				<name type="param">Xstage2</name>
+				<axis type="param">x</axis>
+				<position type="param">-25.0</position>
+				<center type="param">[0.0, 0.0, 0.0]</center>
+				<pitch type="param">0.0</pitch>
+				<roll type="param">0.0</roll>
+				<yaw type="param">0.0</yaw>
+				<positionRoll type="param">0.0</positionRoll>
+				<rotationSequence type="param">RzRyRx</rotationSequence>
+				<mount type="param">MirrorSupport</mount>
+				<mountOffset type="param">{'center': [0.0, 300.0, 15.0], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
+				<positionMin type="param">-50.0</positionMin>
+				<positionMax type="param">50.0</positionMax>
+				<positionUnit type="param">mm</positionUnit>
+				<renderStyle type="param">auto</renderStyle>
+				<renderSize type="param">{'width': 50.0, 'topLength': 200.0, 'bottomLength': 200.0, 'topHeight': 5.0, 'bottomHeight': 10.0, 'grooves': 1, 'grooveWidth': 6.0, 'grooveDepth': 5.0, 'gap': 0.5}</renderSize>
+				<renderColor type="param">auto</renderColor>
+			</properties>
+			<_object type="param">xrt.backends.raycing.stages.LinearStage</_object>
+		</Xstage2>
 	</Stages>
 	<plots type="value">
 	</plots>

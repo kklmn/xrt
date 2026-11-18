@@ -735,7 +735,7 @@ class Stage(MountingFrame):
                  mount=None, mountOffset=None, axis=None, position=0.,
                  positionMin=None, positionMax=None, positionUnit=None,
                  bl=None, uuid=None, renderStyle='auto', renderSize=None,
-                 renderColor='auto'):
+                 renderColor='auto', positionOffset=0.):
         """
         Base placement, parent mounting and registration use the parameters
         of :class:`MountingFrame`.
@@ -745,8 +745,8 @@ class Stage(MountingFrame):
             stage type. Defaults to the first allowed axis.
 
         *position*: float
-            Signed actuator position in *positionUnit*. Values beyond the
-            travel limits are clamped to the nearest limit.
+            Controller position in *positionUnit*. Values beyond the travel
+            limits are clamped to the nearest limit.
 
         *positionMin, positionMax*: float or None
             Inclusive lower and upper travel limits, in *positionUnit*. A
@@ -754,8 +754,13 @@ class Stage(MountingFrame):
             a limit clamps the current position. A limit edit that crosses
             the opposite limit is ignored.
 
+        *positionOffset*: float
+            Controller position at the modeled zero, in *positionUnit*. The
+            actuator displacement is *position* minus *positionOffset*.
+            Defaults to zero. Nonzero offsets require length or angle units.
+
         *positionUnit*: str or None
-            Unit of the position and limits, fixed at construction. Defaults
+            Unit of position, offset and limits, fixed at construction. Defaults
             to 'mm' for a linear stage and 'rad' for a rotation stage. Other
             units use the raycing length or angle unit dictionary.
 
@@ -782,7 +787,8 @@ class Stage(MountingFrame):
             raise ValueError('positionUnit must be one of {}'.format(
                 ', '.join(self._units)))
         self._positionUnit = unit
-        self._position = 0.
+        self._position = self._positionOffset = 0.
+        self.positionOffset = positionOffset
         self._positionMin = self._positionMax = None
         self.positionMin = positionMin
         self.positionMax = positionMax
@@ -817,7 +823,7 @@ class Stage(MountingFrame):
 
     @property
     def positionUnit(self):
-        """Unit of position and travel limits."""
+        """Unit of position, offset and travel limits."""
         return self._positionUnit
 
     @property
@@ -829,6 +835,17 @@ class Stage(MountingFrame):
         value = self._travel_value(value, 'position')
         if value is not None:
             self._position = self._clamp_position(value)
+
+    @property
+    def positionOffset(self):
+        """Controller position at the stage's modeled zero."""
+        return self._positionOffset
+
+    @positionOffset.setter
+    def positionOffset(self, value):
+        value = self._travel_value(value, 'positionOffset')
+        if value is not None:
+            self._positionOffset = value
 
     @property
     def positionMin(self):
@@ -883,8 +900,8 @@ class Stage(MountingFrame):
         return value
 
     def position_to_base_units(self, position):
-        """Convert an actuator setting to mm or radians."""
-        return position * self._units[self.positionUnit]
+        """Convert a controller position to local motion in mm or radians."""
+        return (position - self.positionOffset) * self._units[self.positionUnit]
 
     @property
     def _position_in_base_units(self):
@@ -1002,9 +1019,15 @@ class RotationStage(Stage):
 
     def _travel_value(self, value, field):
         value = super()._travel_value(value, field)
-        if self.positionUnit == 'eV' and value is not None and value <= 0.:
-            logger.warning('%s: %s in eV must be positive', self.name, field)
-            return None
+        if self.positionUnit == 'eV' and value is not None:
+            if field == 'positionOffset':
+                if value != 0.:
+                    logger.warning('%s: positionOffset requires angular units',
+                                   self.name)
+                    return None
+            elif value <= 0.:
+                logger.warning('%s: %s in eV must be positive', self.name, field)
+                return None
         return value
 
     def position_to_base_units(self, position):
