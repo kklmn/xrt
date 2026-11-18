@@ -773,6 +773,7 @@ class OEMesh3D():
         self.vbo_contour = {}
         self.contourLengths = {}
         self.contourVertices = {}
+        self.surfaceBounds = {}
         self._firstPlateEdges = None
         self.trajectory = None
         self.trajectory_vao = None
@@ -1024,7 +1025,13 @@ class OEMesh3D():
     def generate_disk_ring_segment(
             rmin=0, rmax=10, phimin=0, phimax=2*np.pi,
             thickness=0.1, radial_steps=5, angular_steps=60,
-            center_z=0.0, dtype=np.float32):
+            center_z=0.0, dtype=np.float32, chordOffset=None):
+        """Build a cylinder sector or a solid section closed by y=chordOffset."""
+        if chordOffset is not None:
+            if rmin != 0 or not -rmax < chordOffset < rmax:
+                raise ValueError('The chord must cross a solid disk')
+            half_arc = np.arccos(chordOffset / rmax)
+            phimin, phimax = np.pi / 2 - half_arc, np.pi / 2 + half_arc
 
         dphi = phimax - phimin
         if dphi <= 0:
@@ -1061,33 +1068,42 @@ class OEMesh3D():
                     indices.extend([a, c, b])
                     indices.extend([b, c, d])
 
-        # Top and bottom faces
-        rs = np.linspace(rmin, rmax, radial_steps + 1)
         phis = np.linspace(phimin, phimax, angular_steps + 1)
-        rr, pp = np.meshgrid(rs, phis, indexing='ij')
+        if chordOffset is not None:
+            # Each convex cap follows the arc and closes along its chord.
+            arc = rmax * np.column_stack((np.cos(phis), np.sin(phis)))
+            for z, face, normal in ((z1, arc, 1.), (z0, arc[::-1], -1.)):
+                start = len(vertices)
+                vertices.extend(np.column_stack((face, np.full(len(face), z))))
+                normals.extend([(0., 0., normal)] * len(face))
+                for i in range(1, len(face) - 1):
+                    indices.extend((start, start + i, start + i + 1))
+        else:
+            # Top and bottom faces
+            rs = np.linspace(rmin, rmax, radial_steps + 1)
+            rr, pp = np.meshgrid(rs, phis, indexing='ij')
 
-        x = rr * np.cos(pp)
-        y = rr * np.sin(pp)
+            x = rr * np.cos(pp)
+            y = rr * np.sin(pp)
 
-        # Top
-        vtop = np.stack([x, y, np.full_like(x, z1)], axis=-1)
-        ntop = np.zeros_like(vtop)
-        ntop[..., 2] = 1.0
-        add_face_grid(vtop, ntop)
+            # Top
+            vtop = np.stack([x, y, np.full_like(x, z1)], axis=-1)
+            ntop = np.zeros_like(vtop)
+            ntop[..., 2] = 1.0
+            add_face_grid(vtop, ntop)
 
-        # Bottom
-        # Reverse angular direction to keep outward normal
-        # consistent with winding
-        vbot = np.stack([x[:, ::-1], y[:, ::-1],
-                         np.full_like(x[:, ::-1], z0)], axis=-1)
-        nbot = np.zeros_like(vbot)
-        nbot[..., 2] = -1.0
-        add_face_grid(vbot, nbot)
+            # Bottom
+            # Reverse angular direction to keep outward normal
+            # consistent with winding
+            vbot = np.stack([x[:, ::-1], y[:, ::-1],
+                             np.full_like(x[:, ::-1], z0)], axis=-1)
+            nbot = np.zeros_like(vbot)
+            nbot[..., 2] = -1.0
+            add_face_grid(vbot, nbot)
 
         # Outer cylindrical wall
-        phis_side = np.linspace(phimin, phimax, angular_steps + 1)
         zz = np.linspace(z0, z1, 2)
-        pp2, zz2 = np.meshgrid(phis_side, zz, indexing='ij')
+        pp2, zz2 = np.meshgrid(phis, zz, indexing='ij')
 
         xo = rmax * np.cos(pp2)
         yo = rmax * np.sin(pp2)
@@ -1095,6 +1111,8 @@ class OEMesh3D():
         vouter = np.stack([xo, yo, zz2], axis=-1).transpose(1, 0, 2)
         nouter = np.stack([np.cos(pp2), np.sin(pp2), np.zeros_like(pp2)],
                           axis=-1).transpose(1, 0, 2)
+        if chordOffset is not None:
+            vouter, nouter = vouter[:, ::-1], nouter[:, ::-1]
         add_face_grid(vouter, nouter)
 
         # Inner cylindrical wall
@@ -1110,8 +1128,15 @@ class OEMesh3D():
                               axis=-1).transpose(1, 0, 2)
             add_face_grid(vinner, ninner)
 
-        # Radial side walls for open segment
-        if not full_circle:
+        if chordOffset is not None:
+            ends = rmax * np.cos(phis[[0, -1]])
+            x, z = np.meshgrid(ends, (z0, z1))
+            chord = np.stack((x, np.full_like(x, chordOffset), z), axis=-1)
+            chord_normals = np.zeros_like(chord)
+            chord_normals[..., 1] = -1.
+            add_face_grid(chord, chord_normals)
+        elif not full_circle:
+            # Radial side walls for an open sector.
             rs_side = np.linspace(rmin, rmax, radial_steps + 1)
             zz = np.linspace(z0, z1, 2)
             rr2, zz2 = np.meshgrid(rs_side, zz, indexing='ij')
@@ -2019,46 +2044,15 @@ class OEMesh3D():
             self.get_loc2glo_transformation_matrix(
                 self.oe, is2ndXtal=is2ndXtal)
 
-        if nsIndex in self.vao.keys():  # Updating existing
-            vao = self.vao[nsIndex]
-        else:
-            vao = qt.QOpenGLVertexArrayObject()
-            vao.create()
-            self.vao[nsIndex] = None  # Will be updated after generation
-
         self.isStl = (
             getattr(self.oe, 'stl_mesh', None) is not None and
             getattr(self.oe, 'points', None) is not None and
             getattr(self.oe, 'normals', None) is not None)
         if self.isStl:
-            self.vbo_vertices[nsIndex] = create_qt_buffer(
-                    self.oe.points.copy())
-            self.vbo_normals[nsIndex] = create_qt_buffer(
-                    self.oe.normals.copy())
-            self.arrLengths[nsIndex] = len(self.oe.points)
-            gl.glGetError()
-
-            vao.bind()
-
-            self.vbo_vertices[nsIndex].bind()
-            gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
-            gl.glEnableVertexAttribArray(0)
-            self.vbo_vertices[nsIndex].release()
-
-            self.vbo_normals[nsIndex].bind()
-            gl.glVertexAttribPointer(1, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
-            gl.glEnableVertexAttribArray(1)
-            self.vbo_normals[nsIndex].release()
-
-            vao.release()
-
-            self.vao[nsIndex] = vao
-            self.ibo[nsIndex] = None  # Check if works with glDrawElements
+            self._upload_surface(nsIndex, self.oe.points, self.oe.normals,
+                                 updateMesh=updateMesh)
             self.prepare_contour(nsIndex, mesh_contour_segments(self.oe.points))
             return
-
-        surfmesh = {}
-        # TODO: Consider plates
 
         if isinstance(self.oe, rapts.RoundAperture):
             if self.oe.isBeamStop:
@@ -2095,84 +2089,81 @@ class OEMesh3D():
                 self.generate_surface_local_f(nsIndex, is2ndXtal,
                                               xLimits, yLimits)
 
-        surfmesh['points'] = allSurfaces.copy()
-        surfmesh['normals'] = allNormals.copy()
-        surfmesh['indices'] = allIndices
-
         self.allSurfaces = allSurfaces
         self.allNormals = allNormals
         self.allIndices = allIndices
 
-        if updateMesh:
-            oldVBOpoints = self.vbo_vertices[nsIndex] if\
-                nsIndex in self.vbo_vertices.keys() else None
-            oldVBOnorms = self.vbo_normals[nsIndex] if\
-                nsIndex in self.vbo_normals.keys() else None
-            oldIBO = self.ibo[nsIndex] if nsIndex in self.ibo.keys() else None
-            if oldVBOpoints is not None:
-                oldVBOpoints.destroy()
-                gl.glGetError()
-            if oldVBOnorms is not None:
-                oldVBOnorms.destroy()
-                gl.glGetError()
-            if oldIBO is not None:
-                oldIBO.destroy()
-                gl.glGetError()
-            oldVBOpoints, oldVBOnorms, oldIBO = None, None, None
-            # check existence
-#            del self.vbo_vertices[nsIndex]
-#            del self.vbo_normals[nsIndex]
-#            del self.ibo[nsIndex]
-            self.vbo_vertices[nsIndex] = None
-            self.vbo_normals[nsIndex] = None
-            self.ibo[nsIndex] = None
-            if vao is not None:
-                vao.destroy()
-            gl.glGetError()
-#            del self.vao[nsIndex]
-            self.vao[nsIndex] = None
-
-        self.vbo_vertices[nsIndex] = create_qt_buffer(surfmesh['points'])
-        self.vbo_normals[nsIndex] = create_qt_buffer(surfmesh['normals'])
-        self.ibo[nsIndex] = create_qt_buffer(surfmesh['indices'], isIndex=True)
-        self.arrLengths[nsIndex] = len(surfmesh['indices'])
-        gl.glGetError()
-
-        if updateMesh:
-            vao = qt.QOpenGLVertexArrayObject()
-            vao.create()
-            gl.glGetError()
-
-        vao.bind()
-
-        self.vbo_vertices[nsIndex].bind()
-        gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
-        gl.glEnableVertexAttribArray(0)
-        self.vbo_vertices[nsIndex].release()
-
-        self.vbo_normals[nsIndex].bind()
-        gl.glVertexAttribPointer(1, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
-        gl.glEnableVertexAttribArray(1)
-        self.vbo_normals[nsIndex].release()
-
-        self.ibo[nsIndex].bind()
-
-        vao.release()
-
-        self.vao[nsIndex] = vao
+        self._upload_surface(nsIndex, allSurfaces, allNormals, allIndices,
+                             updateMesh=updateMesh)
         self.prepare_contour(nsIndex, self.contourVertices.pop(nsIndex))
 
-#        if isScreen:
-#            axisGridArray, gridLabels, precisionLabels =\
-#                CoordinateBox.make_plane([xLimits, yLimits])
-#            self.grid_vbo = {}
-#            self.grid_vbo['vertices'] = create_qt_buffer(axisGridArray)
-#            self.grid_vbo['gridLen'] = len(axisGridArray)
-#            self.grid_vbo['gridLabels'] = gridLabels
-#            self.grid_vbo['precisionLabels'] = precisionLabels
+    def _upload_surface(self, nsIndex, points, normals, indices=None,
+                        updateMesh=False):
+        if updateMesh:
+            # Glow iterates the VAO keys while refreshing surfaces.
+            for buffers in (self.vao, self.vbo_vertices, self.vbo_normals,
+                            self.ibo):
+                old = buffers.get(nsIndex)
+                if old is not None:
+                    old.destroy()
+                    buffers[nsIndex] = None
 
-#        gridvao = qt.QOpenGLVertexArrayObject()
-#        gridvao.create()
+        vao = self.vao.get(nsIndex)
+        if vao is None:
+            vao = qt.QOpenGLVertexArrayObject()
+            vao.create()
+
+        self.vbo_vertices[nsIndex] = create_qt_buffer(points)
+        self.vbo_normals[nsIndex] = create_qt_buffer(normals)
+        self.arrLengths[nsIndex] = len(points if indices is None else indices)
+        self.ibo[nsIndex] = (None if indices is None else
+                             create_qt_buffer(indices, isIndex=True))
+
+        vao.bind()
+        for field, buffer in enumerate((self.vbo_vertices[nsIndex],
+                                        self.vbo_normals[nsIndex])):
+            buffer.bind()
+            gl.glVertexAttribPointer(field, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+            gl.glEnableVertexAttribArray(field)
+            buffer.release()
+        if self.ibo[nsIndex] is not None:
+            self.ibo[nsIndex].bind()
+        vao.release()
+        self.vao[nsIndex] = vao
+
+        self.surfaceBounds.pop(nsIndex, None)
+        if getattr(self.oe, 'mount', None) is not None:
+            finite = points[np.isfinite(points).all(axis=1)]
+            if len(finite):
+                self.surfaceBounds[nsIndex] = np.array((
+                    finite.min(axis=0), finite.max(axis=0)))
+
+    def prepare_stage_plate(self, index):
+        """Upload a unit box, disk or chord-cut cylinder for stage rendering."""
+        if isinstance(index, tuple):
+            points, normals, indices = self.generate_disk_ring_segment(
+                rmax=0.5, thickness=1., chordOffset=index[1])
+        elif index == 1:
+            points, normals, indices = self.generate_disk_ring_segment(
+                rmax=0.5, thickness=1., radial_steps=1)
+        else:
+            cube = self.cube_vertices.reshape(-1, 6)
+            points = np.ascontiguousarray(cube[:, :3])
+            normals = np.ascontiguousarray(cube[:, 3:])
+            indices = np.arange(len(points), dtype=np.uint32)
+        self._upload_surface(index, points, normals, indices)
+        self.prepare_contour(index, mesh_contour_segments(points, indices))
+        self.transMatrix[index] = qt.QMatrix4x4()
+
+    def discard_unused_cradles(self, active):
+        for index in tuple(self.vao):
+            if isinstance(index, tuple) and index not in active:
+                self.delete_contour(index)
+                for store in (self.vao, self.vbo_vertices, self.vbo_normals,
+                              self.ibo):
+                    store.pop(index).destroy()
+                self.arrLengths.pop(index)
+                self.transMatrix.pop(index)
 
     def delete_contour(self, nsIndex):
         for store in (self.vao_c, self.vbo_contour):
@@ -2230,6 +2221,7 @@ class OEMesh3D():
             self.delete_contour(nsIndex)
         self.contourLengths.clear()
         self.contourVertices.clear()
+        self.surfaceBounds.clear()
         for nsIndex in self.vao.keys():
             vao = self.vao[nsIndex]
 
@@ -2869,7 +2861,7 @@ class OEMesh3D():
             self.transMatrix[oeIndex]*rotOffsets
 
     def render_surface(self, mMod, mView, mProj, oeIndex=0,
-                       isSelected=False, shader=None):
+                       isSelected=False, shader=None, material=None):
 
         vao = self.vao[oeIndex]
 
@@ -2909,7 +2901,9 @@ class OEMesh3D():
         shader.setUniformValue("texlimitsy", qt.QVector2D(*yLimits))
         shader.setUniformValue("texlimitsz", qt.QVector2D(*zLimits))
 
-        if is_aperture(self.oe):
+        if material is not None:
+            mat = material
+        elif is_aperture(self.oe):
             mat = 'Cu'
         elif is_screen(self.oe):
             mat = 'Screen'

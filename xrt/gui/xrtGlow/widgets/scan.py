@@ -24,6 +24,7 @@ from ...commons import qt, config
 from ...commons.codegen import path_literal
 from ....backends import raycing
 from ....backends.raycing._flow_utils import normalize_string_input
+from ....backends.raycing.stages import Stage
 from .._constants import DEFAULT_SCENE_SETTINGS, DISPLAY_NUMBER_FORMAT
 from .._utils import is_aperture, is_screen
 
@@ -32,6 +33,7 @@ __date__ = "7 May 2026"
 
 
 SCENE_TARGETS = {'Scene', 'scene', 'xrtGlow', 'xrtglow'}
+SCAN_STAGE_PREFIX = 'Stage: '
 FRAME_SECTIONS = {'id', 'objects', 'scene', 'actions', 'output', 'vars'}
 SCENE_PROPERTY_NAMES = {
     'scaleVec', 'rotations', 'coordOffset', 'offsetCoord', 'tVec',
@@ -840,10 +842,13 @@ class ScanInstructionDialog(qt.QDialog):
             for prop in target.get('properties', []):
                 key = f"{target_name}::{prop.get('name')}"
                 value = prop.get('value', '')
-                child = qt.QTreeWidgetItem([
-                    str(prop.get('name')), _format_scan_display(value)])
+                unit = prop.get('unit')
+                display = _format_scan_display(value)
+                if unit:
+                    display = f'{display} {unit}'
+                child = qt.QTreeWidgetItem([str(prop.get('name')), display])
                 child.setData(0, qt.Qt.UserRole, key)
-                child.setToolTip(1, str(value))
+                child.setToolTip(1, f'{value} {unit}' if unit else str(value))
                 target_item.addChild(child)
                 self.propertyMap[key] = {
                     'target': target_name,
@@ -978,6 +983,18 @@ class ScanInstructionDialog(qt.QDialog):
                 item['start'] = start
                 item['duration'] = points
             return item
+        if (str(prop['target']).startswith(SCAN_STAGE_PREFIX) and
+                prop['property'] == 'position'):
+            try:
+                start_value = float(raycing.parametrize(start_value))
+                stop_value = (float(raycing.parametrize(stop_value))
+                              if points > 1 else start_value)
+                if not np.isfinite([start_value, stop_value]).all():
+                    raise ValueError
+            except (TypeError, ValueError, OverflowError):
+                raise ValueError(
+                    'Stage positions must be finite numbers in the stage unit.'
+                    ) from None
         item_id = f"{prop['target']}.{prop['property']}"
 
         values = OrderedDict([('type', 'constant'),
@@ -1643,6 +1660,8 @@ class GlowScanMixin:
                 name = getattr(obj, 'name', None)
                 if name:
                     mapping[str(object_id)] = name
+        for name, stage_id in getattr(bl, 'stagenamesToUUIDs', {}).items():
+            mapping[str(stage_id)] = SCAN_STAGE_PREFIX + name
         return mapping
 
     def _scan_portable_target(self, target, fallback=None):
@@ -2169,6 +2188,18 @@ class GlowScanMixin:
             'properties': self._scan_scene_properties(),
             }]
         catalog.extend(self._scan_element_properties())
+        for stage in self.customGlWidget.beamline.stagesDict.values():
+            if isinstance(stage, Stage):
+                name = SCAN_STAGE_PREFIX + stage.name
+                catalog.append({
+                    'target': name,
+                    'name': name,
+                    'properties': [{
+                        'name': 'position',
+                        'value': stage.position,
+                        'unit': stage.positionUnit,
+                        }],
+                    })
         return catalog
 
     def openScanInstructionDialog(self, frame_index=0):
@@ -2219,6 +2250,9 @@ class GlowScanMixin:
                 name = getattr(obj, 'name', None)
                 if name:
                     mapping[str(name)] = object_id
+        for name, stage_id in getattr(bl, 'stagenamesToUUIDs', {}).items():
+            mapping[str(stage_id)] = stage_id
+            mapping[SCAN_STAGE_PREFIX + name] = stage_id
         return mapping
 
     def _scan_resolve_target_id(self, object_id):
@@ -2235,7 +2269,7 @@ class GlowScanMixin:
             return bl.materialsDict[object_id]
         if object_id in bl.fesDict:
             return bl.fesDict[object_id]
-        return None
+        return bl.stagesDict.get(object_id)
 
     def _scan_snapshot_value(self, obj, prop):
         prop = prop.split('.')[0]
@@ -2741,6 +2775,9 @@ class QookScanMixin:
 
     def _scan_target_expr(self, target):
         target = str(target)
+        if target.startswith(SCAN_STAGE_PREFIX):
+            name = target[len(SCAN_STAGE_PREFIX):]
+            return f'beamLine.stagesDict[beamLine.stagenamesToUUIDs[{name!r}]]'
         return f'beamLine.{target}' if target.isidentifier() else \
             f'getattr(beamLine, {target!r})'
 

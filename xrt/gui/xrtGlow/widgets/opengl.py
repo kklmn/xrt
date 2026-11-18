@@ -20,6 +20,7 @@ from .._utils import (generate_hsv_texture, create_qt_buffer, update_qt_buffer,
                       is_aperture, is_screen,
                       is_dcm, snsc)
 from ..ogl import CoordinateBox, Beam3D, OEMesh3D
+from ..ogl.stage_meshes import stage_plates
 
 from ...commons import qt
 from ...commons import gl
@@ -28,6 +29,7 @@ from ....backends import raycing
 from ....backends.raycing import (propagationProcess, renderOnlyArgSet,
                                   orientationArgSet, shapeArgSet)
 from ....backends.raycing._flow_utils import limited_source_rays
+from ....backends.raycing.stages import update_stage
 from ....backends.raycing.epics import EpicsDevice, update_epics_readback
 from ....backends.raycing import apertures as rapts
 from ....backends.raycing import sources as rsources
@@ -115,6 +117,7 @@ def _clear_surface_mesh(mesh3D):
                           'vbo_positions', 'vbo_colors'):
         getattr(mesh3D, meshStoreName).clear()
     mesh3D.arrLengths.clear()
+    mesh3D.surfaceBounds.clear()
 
 
 class xrtGlWidget(qt.QOpenGLWidget):
@@ -186,6 +189,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.labelsToPlot = []
 
         self.meshDict = OrderedDict()
+        self.stagePlateMesh = None
         self.beamBufferDict = OrderedDict()
 
         self.arrayOfRays = arrayOfRays
@@ -575,6 +579,30 @@ class xrtGlWidget(qt.QOpenGLWidget):
     def update_beamline(self, oeid, kwargs, sender="gui"):  # one OE at a time
         if oeid is not None or '_object' in kwargs:
             self.accumulationStopped.emit()
+        stage = self.beamline.stagesDict.get(oeid)
+        if stage is not None:
+            command = 'create' if '_object' in kwargs else 'modify'
+            if command == 'modify':
+                if sender != 'Qook':
+                    update_stage(stage, kwargs)
+                affected = (list(self.beamline.iter_stage_dependents(stage))
+                            if kwargs.keys() - renderOnlyArgSet else [])
+                if affected:
+                    self.beamline.sort_flow()
+                    if self.parent is not None:
+                        self.parent.updateTargets()
+                    for oeuuid, _ in affected:
+                        self.queue_mesh_update(oeuuid)
+            if self.parent is not None and (
+                    command == 'create' or kwargs.keys() & {'name', 'mount'}):
+                self.parent.updateStagesModel()
+            self.glDraw()
+            if hasattr(self, 'input_queue'):
+                self.input_queue.put({
+                    'command': command, 'object_type': 'stage',
+                    'uuid': oeid, 'kwargs': kwargs.copy()})
+            return
+
         if '_object' in kwargs:  # only Qook can create new elements for now
             # new element
             if 'material' in kwargs['_object']:
@@ -774,7 +802,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
             if obj_type == "oe":
                 meshUpdateQueued = False
                 renderUpdateQueued = False
-                if arg0.lower().startswith('center'):
+                if arg0.lower().startswith('center') or arg0 in (
+                        'mount', 'mountOffset'):
                     flowOrder = tuple(self.beamline.flowU)
                     self.beamline.sort_flow()
                     if self.parent is not None and \
@@ -803,7 +832,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         if oeid not in self.needMeshUpdate:
                             self.needMeshUpdate.append(oeid)
                         meshUpdateQueued = True
-                elif arg0 in shapeArgSet:
+                elif arg0 in shapeArgSet or arg0 in ('mount', 'mountOffset'):
                     if oeid not in self.needMeshUpdate:
                         self.needMeshUpdate.append(oeid)
                     meshUpdateQueued = True
@@ -1319,6 +1348,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     mesh.delete_mesh()
                 del self.meshDict[meshId]
 
+            if self.stagePlateMesh is not None:
+                self.stagePlateMesh.delete_mesh()
+                self.stagePlateMesh = None
+
             if hasattr(self, 'cBox') and self.cBox is not None:
                 self.cBox.cleanup_gl_resources()
                 self.cBox = None
@@ -1469,16 +1502,24 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
         beamBuffer.clear()
 
+    def _stencil_id(self, objuuid):
+        for stencilNum, owner in self.selectableOEs.items():
+            if owner == objuuid:
+                return stencilNum
+        # Zero is reserved for the background of the 8-bit stencil buffer.
+        for stencilNum in range(1, 256):
+            if stencilNum not in self.selectableOEs:
+                self.selectableOEs[stencilNum] = objuuid
+                return stencilNum
+        return 0
+
     def rebuild_selectable_oes(self):
         self.selectableOEs.clear()
         self.selectedOE = 0
         for oeuuid in self.beamline.oesDict:
             mesh = self.meshDict.get(oeuuid)
-            if mesh is None:
-                continue
-            stencilNum = len(self.selectableOEs) + 1
-            self.selectableOEs[stencilNum] = oeuuid
-            mesh.stencilNum = stencilNum
+            if mesh is not None:
+                mesh.stencilNum = self._stencil_id(oeuuid)
 
     def delete_all_oe_buffers(self, oeid):
         for beamTag in list(self.beamBufferDict):
@@ -1526,8 +1567,21 @@ class xrtGlWidget(qt.QOpenGLWidget):
             elif objuuid in self.beamline.fesDict:
                 self.beamline.delete_fe_by_id(objuuid)
                 objType = "fe"
+            elif objuuid in self.beamline.stagesDict:
+                self.beamline.delete_stage_by_id(objuuid)
+                if self.parent is not None:
+                    self.parent.updateStagesModel()
+                self.glDraw()
+                objType = "stage"
 
             if objType is not None:
+                stencilNum = next(
+                    (number for number, owner in self.selectableOEs.items()
+                     if owner == objuuid), None)
+                if stencilNum is not None:
+                    del self.selectableOEs[stencilNum]
+                    if self.selectedOE == stencilNum:
+                        self.selectedOE = 0
                 message = {"command": "delete",
                            "object_type": objType,
                            "uuid": objuuid
@@ -1907,16 +1961,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
             beam.vbo['indices'].release()
 
     def init_oe_surface(self, oeuuid):
-        def assign_stencil_num(mesh):
-            if oeuuid not in self.selectableOEs.values():
-                if len(self.selectableOEs):
-                    stencilNum = np.max(
-                            list(self.selectableOEs.keys())) + 1
-                else:
-                    stencilNum = 1
-                self.selectableOEs[int(stencilNum)] = oeuuid
-                mesh.stencilNum = stencilNum
-
         oeLine = self.beamline.oesDict.get(oeuuid)
         mesh3D = None
 
@@ -1943,7 +1987,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     mesh3D.isEnabled = True
                 except Exception:
                     mesh3D.isEnabled = False
-                assign_stencil_num(mesh3D)
 
         elif is_aperture(oeToPlot):
             if oeuuid not in self.meshDict:
@@ -1954,7 +1997,6 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     mesh3D.isEnabled = True
                 except Exception:
                     mesh3D.isEnabled = False
-                assign_stencil_num(mesh3D)
 
         else:  # must be the source
             try:
@@ -1966,8 +2008,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 mesh3D.isEnabled = True
             except Exception:
                 mesh3D.isEnabled = False
-            assign_stencil_num(mesh3D)
 
+        mesh3D.stencilNum = self._stencil_id(oeuuid)
         self.meshDict[oeuuid] = mesh3D
 
     def update_oe_transform(self, posData):
@@ -2325,7 +2367,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
         self.update_coord_grid()
         self.toggleLoop()
 
-    def render_contours(self, contours, model):
+    def render_contours(self, contours, model, stage_contours=()):
         if not self.showContours:
             return
         depthTest = gl.glIsEnabled(gl.GL_DEPTH_TEST)
@@ -2338,6 +2380,11 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                        if gl.glIsEnabled(gl.GL_LINE_SMOOTH)
                                        else gl.GL_ALIASED_LINE_WIDTH_RANGE)
             gl.glLineWidth(float(np.clip(self.contourWidth, *widthRange)))
+            for index, transform, stencil in stage_contours:
+                self.stagePlateMesh.render_contour(
+                    transform, self.mView, self.mProj, self.shaderContour,
+                    oeIndex=index,
+                    isSelected=stencil != 0 and stencil == self.selectedOE)
             for mesh, kind, index in contours:
                 isSelected = self.selectedOE > 0 and\
                     mesh.stencilNum == self.selectedOE
@@ -2450,6 +2497,33 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 self.delete_all_oe_buffers(oeid)
 
             gl.glEnable(gl.GL_STENCIL_TEST)
+            stage_contours = []
+            active_cradles = set()
+            if self.beamline.stagesDict:
+                for stage, index, pose in stage_plates(
+                        self.beamline, self.meshDict):
+                    item = self.parent.getItem(stage.uuid, 'surface')
+                    if item is None or item.checkState() != qt.Qt.Checked:
+                        continue
+                    if self.stagePlateMesh is None:
+                        self.stagePlateMesh = OEMesh3D(None, self)
+                    if index not in self.stagePlateMesh.vao:
+                        self.stagePlateMesh.prepare_stage_plate(index)
+                    if isinstance(index, tuple):
+                        active_cradles.add(index)
+                    stencilNum = self._stencil_id(stage.uuid)
+                    gl.glStencilFunc(gl.GL_ALWAYS, stencilNum, 0xff)
+                    isSelected = stencilNum != 0 and stencilNum == self.selectedOE
+                    model = mMMLoc * qt.QMatrix4x4(*pose.ravel())
+                    self.stagePlateMesh.render_surface(
+                        model, self.mView, self.mProj, index,
+                        isSelected=isSelected,
+                        shader=self.shaderMesh, material='Steel')
+                    if self.showContours:
+                        stage_contours.append((index, model, stencilNum))
+            if self.stagePlateMesh is not None:
+                self.stagePlateMesh.discard_unused_cradles(active_cradles)
+
             visibleContours = []
 
             for oeuuid, mesh3D in self.meshDict.items():
@@ -2466,12 +2540,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
                     for is2ndXtal in is2ndXtalOpts:
                         if mesh3D.isEnabled:
-                            isSelected = False
-                            if oeuuid in self.selectableOEs.values():
-                                oeNum = mesh3D.stencilNum
-                                isSelected = oeNum == self.selectedOE
-                                gl.glStencilFunc(gl.GL_ALWAYS, np.uint8(oeNum),
-                                                 0xff)
+                            oeNum = mesh3D.stencilNum
+                            isSelected = oeNum != 0 and oeNum == self.selectedOE
+                            gl.glStencilFunc(gl.GL_ALWAYS, oeNum, 0xff)
                             try:
                                 mesh3D.render_surface(
                                     mMMLoc, self.mView,
@@ -2486,12 +2557,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 elif is_aperture(oeToPlot):
                     for blade in _aperture_surfaces(oeToPlot):
                         if mesh3D.isEnabled:
-                            isSelected = False
-                            if oeuuid in self.selectableOEs.values():
-                                oeNum = mesh3D.stencilNum
-                                isSelected = oeNum == self.selectedOE
-                                gl.glStencilFunc(gl.GL_ALWAYS, np.uint8(oeNum),
-                                                 0xff)
+                            oeNum = mesh3D.stencilNum
+                            isSelected = oeNum != 0 and oeNum == self.selectedOE
+                            gl.glStencilFunc(gl.GL_ALWAYS, oeNum, 0xff)
                             try:
                                 mesh3D.render_surface(
                                     mMMLoc, self.mView,
@@ -2504,12 +2572,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
                                 print(e)
                 elif is_source(oeToPlot):
                     if mesh3D.isEnabled:
-                        isSelected = False
-                        if oeuuid in self.selectableOEs.values():
-                            oeNum = mesh3D.stencilNum
-                            isSelected = oeNum == self.selectedOE
-                            gl.glStencilFunc(gl.GL_ALWAYS, np.uint8(oeNum),
-                                             0xff)
+                        oeNum = mesh3D.stencilNum
+                        isSelected = oeNum != 0 and oeNum == self.selectedOE
+                        gl.glStencilFunc(gl.GL_ALWAYS, oeNum, 0xff)
                         try:
                             if is_geometric_source(oeToPlot):
                                 mesh3D.render_geometric_source(
@@ -2549,12 +2614,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 if is_screen(mesh3D.oe):
                     is2ndXtal = False
                     if mesh3D.isEnabled:  # TODO: Looks like double check
-                        isSelected = False
-                        if oeuuid in self.selectableOEs.values():
-                            oeNum = mesh3D.stencilNum
-                            isSelected = oeNum == self.selectedOE
-                            gl.glStencilFunc(gl.GL_ALWAYS, np.uint8(oeNum),
-                                             0xff)
+                        oeNum = mesh3D.stencilNum
+                        isSelected = oeNum != 0 and oeNum == self.selectedOE
+                        gl.glStencilFunc(gl.GL_ALWAYS, oeNum, 0xff)
                         try:
                             mesh3D.render_surface(
                                     mMMLoc, self.mView,
@@ -2569,8 +2631,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
             gl.glStencilFunc(gl.GL_ALWAYS, 0, 0xff)
             gl.glDisable(gl.GL_STENCIL_TEST)
-            if visibleContours:
-                self.render_contours(visibleContours, mMMLoc)
+            if visibleContours or stage_contours:
+                self.render_contours(visibleContours, mMMLoc, stage_contours)
 
             if self.pointsDepthTest:
                 gl.glEnable(gl.GL_DEPTH_TEST)
@@ -2731,12 +2793,13 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 return (xmin - labelPadding, ymin - labelPadding,
                         xmax + labelPadding, ymax + labelPadding)
 
-            for oeuuid, mesh3D in self.meshDict.items():
-                item = self.parent.getItem(oeuuid, 'label')
-                if item is None or item.checkState() != 2:
+            label_objects = [mesh.oe for mesh in self.meshDict.values()]
+            label_objects.extend(self.beamline.stagesDict.values())
+            for oeToPlot in label_objects:
+                item = self.parent.getItem(oeToPlot.uuid, 'label')
+                if item is None or item.checkState() != qt.Qt.Checked:
                     continue
 
-                oeToPlot = self.beamline.oesDict[oeuuid][0]
                 oeCenter = oeToPlot.center
                 if any([isinstance(val, str) for val in oeCenter]):
                     continue
@@ -2828,7 +2891,28 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
             # RENDER LOCAL AXES
 
-            if self.showLocalAxes:
+            axes_meshes = []
+            for oeuuid, mesh3D in self.meshDict.items():
+                item = self.parent.getItem(oeuuid, 'axes')
+                if item is not None and item.checkState() == qt.Qt.Checked:
+                    axes_meshes.append(mesh3D)
+
+            stage_states = {}
+            stage_axes = []
+            stage_motion = {}
+            for stage in self.beamline.stagesDict.values():
+                axes = self.parent.getItem(stage.uuid, 'axes')
+                if axes is not None and axes.checkState() == qt.Qt.Checked:
+                    stage_axes.append(stage.evaluate(stage_states).globalPose)
+                motion = self.parent.getItem(stage.uuid, 'motion')
+                if motion is not None and motion.checkState() == qt.Qt.Checked:
+                    stage_motion[stage] = stage.evaluate(stage_states)
+
+            if stage_motion:
+                self.cBox.render_stage_motion(
+                    stage_motion, mMMLoc, self.mView, self.mProj, self.arrowSize)
+
+            if axes_meshes or stage_axes:
                 self.cBox.origShader.bind()
                 self.cBox.vao_arrow.bind()
                 self.cBox.origShader.setUniformValue("lineOpacity", 0.85)
@@ -2836,11 +2920,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 locTransforms = []
                 alphas = []
 
-                for oeuuid, mesh3D in self.meshDict.items():
-                    item = self.parent.getItem(oeuuid, 'surface')
-                    if item is None or item.checkState() != 2:
-                        continue
-
+                for mesh3D in axes_meshes:
                     oeToPlot = mesh3D.oe
 
                     is2ndXtalOpts = [False]
@@ -2879,6 +2959,14 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
                         except Exception as e:
                             print(e)
+
+                for pose in stage_axes:
+                    stage_matrix = qt.QMatrix4x4(*pose.matrix.ravel())
+                    stage_pos = (mMMLoc * qt.QVector4D(
+                        *pose.center, 1)).toVector3DAffine()
+                    locTransforms.append(self.cBox.render_local_axes(
+                        mMMLoc * stage_matrix, stage_pos, self.mView, self.mProj,
+                        self.cBox.origShader, False))
                 self.cBox.vao_arrow.release()
                 self.cBox.origShader.release()
 
@@ -3457,9 +3545,16 @@ class xrtGlWidget(qt.QOpenGLWidget):
 
                 self.glDraw()
             else:
-                if int(overOE) in self.selectableOEs:
-                    oe = self.beamline.oesDict[
-                        self.selectableOEs[int(overOE)]][0]
+                objuuid = self.selectableOEs.get(int(overOE))
+                stage = self.beamline.stagesDict.get(objuuid)
+                oeEntry = self.beamline.oesDict.get(objuuid)
+                if stage is not None:
+                    tooltip = (f"{stage.name}\n"
+                               f"{stage.axis}: {stage.position:.3f} "
+                               f"{stage.positionUnit}")
+                    qt.QToolTip.showText(mEvent.globalPos(), tooltip, self)
+                elif oeEntry is not None:
+                    oe = oeEntry[0]
                     try:
                         oePitchStr = np.degrees(
                             oe.pitch + (oe.bragg if hasattr(oe, 'bragg')
@@ -3487,19 +3582,15 @@ class xrtGlWidget(qt.QOpenGLWidget):
             self.doneCurrent()
 
     def highlightOE(self, objid=None):
-        if objid is None:
-            self.selectedOE = 0
-        else:
-            res = {k:v for k, v in self.selectableOEs.items() if v == objid}
-            if len(res) == 0:
-                return
-            self.selectedOE = int(list(res.keys())[0])
+        self.selectedOE = next(
+            (number for number, owner in self.selectableOEs.items()
+             if owner == objid), 0)
         self.glDraw()
 
     def mouseDoubleClickEvent(self, mdcevent):
-        if self.selectedOE > 0:
-            self.openElViewer.emit(self.selectableOEs.get(int(self.selectedOE),
-                                                          'None'))
+        objuuid = self.selectableOEs.get(self.selectedOE)
+        if objuuid is not None:
+            self.openElViewer.emit(objuuid)
 
     def mousePressEvent(self, mpevent):
         mouseX = mpevent.x()

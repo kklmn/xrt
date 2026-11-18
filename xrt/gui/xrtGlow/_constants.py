@@ -13,7 +13,8 @@ msg_start = {"command": "start"}
 msg_stop = {"command": "stop"}
 msg_exit = {"command": "exit"}
 
-itemTypes = {'beam': 0, 'footprint': 1, 'surface': 2, 'label': 3}
+itemTypes = {'beam': 0, 'footprint': 1, 'motion': 1,
+             'surface': 2, 'label': 3, 'axes': 4}
 
 ambient = {}
 diffuse = {}
@@ -40,6 +41,11 @@ ambient['Screen'] = qt.QVector4D(2*0.29225, 2.2*0.29225, 1.8*0.29225, 1.)
 diffuse['Screen'] = qt.QVector4D(0.50754, 1.1*0.50754, 0.9*0.50754, 1.)
 specular['Screen'] = qt.QVector4D(0.9, 1., 0.8, 1.)
 shininess['Screen'] = 80.
+
+ambient['Steel'] = qt.QVector4D(0.42*2, 0.44*1.75, 0.46*1.75, 0.5)
+diffuse['Steel'] = qt.QVector4D(0.38*2, 0.40*1.75, 0.42*1.75, 0.5)
+specular['Steel'] = qt.QVector4D(0.72, 0.76, 0.80, 0.5)
+shininess['Steel'] = 135.
 
 ambient['selected'] = qt.QVector4D(0.89225, 0.89225, 0.49225, 1.)
 

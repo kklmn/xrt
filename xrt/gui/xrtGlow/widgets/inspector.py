@@ -19,6 +19,7 @@ from .._utils import is_aperture, is_screen, is_parametric_oe, is_closed_surface
 
 from ....backends import raycing
 from ....backends.raycing._flow_utils import _class_from_string
+from ....backends.raycing.stages import MountingFrame, Stage
 from ....backends.raycing._sets_units import (
     argumentUnitExceptions, argumentUnitContextExceptions)
 from ....backends.raycing import materials as rmats
@@ -27,7 +28,8 @@ from ....backends.raycing.myopencl import ALL_CL_DEVICES
 from ....multipro import GenericProcessOrThread as GP
 from ....runner import RunCardVals
 from ....plotter import deserialize_plots
-from .scan import ScanInstructionDialog, find_catalog_property
+from .scan import (
+    SCAN_STAGE_PREFIX, ScanInstructionDialog, find_catalog_property)
 
 __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "27 Jan 2026"
@@ -145,8 +147,9 @@ class InstanceInspector(qt.QDialog):
         if viewOnly:
             self.windowTitleStr += ' - Static Mode - View Only'
         self.setWindowTitle(self.windowTitleStr)
-        self.comboDelegate = qt.DynamicArgumentDelegate(bl=beamLine,
-                                                        mainWidget=self)
+        self.comboDelegate = qt.DynamicArgumentDelegate(
+            bl=beamLine, mainWidget=self,
+            formatDisplay=lambda _name, value: _format_display_value(value))
         self.model = qt.QStandardItemModel()
         self.modelRoot = self.model.invisibleRootItem()
         self.original_data = raycing.OrderedDict()
@@ -199,7 +202,10 @@ class InstanceInspector(qt.QDialog):
             self.itemGroups['Other'] =\
                 self.add_prop(self.modelRoot, 'Other')
 
+        isStage = isinstance(self.editorObject, MountingFrame)
         for key, value in dataDict.items():
+            if isStage and key == 'uuid':
+                continue
             if categoriesDict is not None:
                 for igName, igSet in categoriesDict.items():
                     if key in igSet:
@@ -227,7 +233,8 @@ class InstanceInspector(qt.QDialog):
                         epv = None
                     self.add_param(parentItem, nkey, nvalue, epv=epv)
                     self.original_data[nkey] = nvalue
-                self.add_param(parentItem, f"{key} rbk", value)
+                if not isStage:
+                    self.add_param(parentItem, f"{key} rbk", value)
 
             elif key in ['limPhysX', 'limPhysY', 'limPhysX2', 'limPhysY2',
                          'limOptX', 'limOptY', 'limOptX2', 'limOptY2']:
@@ -255,7 +262,7 @@ class InstanceInspector(qt.QDialog):
                 else:
                     epv = None
                 self.original_data[key] = str(value)
-                if key in raycing.derivedArgSet:
+                if key in raycing.derivedArgSet and not isStage:
                     spVal = raycing.parametrize(initDict.get(key))
                     rawValue = getattr(self.editorObject, f'_{key}', None)
                     if key in raycing.calculatedArgSet and\
@@ -347,7 +354,7 @@ class InstanceInspector(qt.QDialog):
             self.widgetType = 'fe'
             self.dynamicPlotWidget = SurfacePlotWidget(
                     beamLine=beamLine, elementId=elementId)
-        elif self.beamLine.beamsDictU.get(elementId) is None:
+        elif isStage or self.beamLine.beamsDictU.get(elementId) is None:
             self.liveUpdateEnabled = False
             self.dynamicPlotWidget = None
         else:  # create dynamicPlotWidget
@@ -434,7 +441,7 @@ class InstanceInspector(qt.QDialog):
             return self.beamLine.materialsDict[elementId]
         if elementId in self.beamLine.fesDict:
             return self.beamLine.fesDict[elementId]
-        return None
+        return self.beamLine.stagesDict.get(elementId)
 
     def getArgumentEditorHint(self, argName, index=None):
         return raycing.get_argument_editor_hint(self.editorObject, argName)
@@ -506,7 +513,11 @@ class InstanceInspector(qt.QDialog):
 
         child1.setFlags(ch1flag)
 
-        if self.viewOnly:
+        stageReadOnly = isinstance(self.editorObject, MountingFrame) and (
+            paramName == 'positionUnit' or (
+                self.editorObject.mount is not None and
+                paramName.split('.')[0] in ('center', 'pitch', 'roll', 'yaw')))
+        if self.viewOnly or stageReadOnly:
             child1.setEditable(False)
 
         if paramName.endswith('rbk') or\
@@ -646,17 +657,20 @@ class InstanceInspector(qt.QDialog):
         copy_action = qt.QAction("Copy value", self)
         menu.addAction(copy_action)
         scan_action = None
-        scanProperty = None
 
-        rowParent = index.parent()
-        if rowParent.isValid():
+        targetName = self.elementName
+        isStage = isinstance(self.editorObject, Stage)
+        if isStage:
+            targetName = SCAN_STAGE_PREFIX + self.editorObject.name
+        if index.parent().isValid() or isStage:
             keyIndex = index.sibling(index.row(), 0)
             valueIndex = index.sibling(index.row(), 1)
             keyItem = self.model.itemFromIndex(keyIndex)
             valueItem = self.model.itemFromIndex(valueIndex)
             if keyItem is not None and valueItem is not None:
                 propName = str(keyItem.text())
-                scanProperty = self.scanCatalogProperty(propName)
+                scanProperty = find_catalog_property(
+                    self.scanInstructionCatalog(), targetName, propName)
                 if scanProperty is not None:
                     scan_action = qt.QAction("Create scan...", self)
                     menu.addAction(scan_action)
@@ -673,7 +687,7 @@ class InstanceInspector(qt.QDialog):
                 beam_names=glowObj.customGlWidget.beamline.beamNamesDict,
                 scan_targets=glowObj.scanDescription.get('scanTargets', []),
                 plots_by_beam=glowObj._scan_plot_names_by_beam(),
-                initial_property=(self.elementName, propName))
+                initial_property=(targetName, propName))
             dialog.targetsChanged.connect(glowObj.setScanTargets)
             dialog.scanCreated.connect(self.add_scan_item)
             dialog.exec_()
@@ -698,10 +712,6 @@ class InstanceInspector(qt.QDialog):
             return []
         return []
 
-    def scanCatalogProperty(self, propName):
-        return find_catalog_property(
-            self.scanInstructionCatalog(), self.elementName, propName)
-
     def add_scan_item(self, item):
         self.scanItems.append(copy.deepcopy(item))
         self.scanCreated.emit(item)
@@ -718,7 +728,28 @@ class InstanceInspector(qt.QDialog):
             self.changed_data))
         self.propertiesChanged.emit(changedData)
 
-        if self.widgetType == 'oe':
+        if isinstance(self.editorObject, MountingFrame):
+            stage = self.editorObject
+            values = raycing.get_init_kwargs(stage, compact=False)
+            values.update(zip(('center.x', 'center.y', 'center.z'), stage.center))
+            for row in range(self.modelRoot.rowCount()):
+                keyItem = self.modelRoot.child(row, 0)
+                key = keyItem.text()
+                if key not in values:
+                    continue
+                value = values[key]
+                kind = raycing.ref_kind_for_arg(key)
+                if kind is not None:
+                    value = raycing.normalize_ref(
+                        value, self.beamLine, kind, target='display')
+                valueItem = self.modelRoot.child(row, 1)
+                self.set_param_item_value(valueItem, key, value)
+                self.original_data[key] = str(value)
+                if key.startswith('center.') or key in ('pitch', 'roll', 'yaw'):
+                    valueItem.setEditable(
+                        stage.mount is None and not self.viewOnly)
+                self.set_row_highlight(keyItem, False)
+        elif self.widgetType == 'oe':
             for row in range(self.modelRoot.rowCount()):
                 catItem = self.modelRoot.child(row, 0)
                 for j in range(catItem.rowCount()):

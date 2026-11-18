@@ -3,11 +3,11 @@
 Positioning stages
 ------------------
 
-The positioning stages define mechanical systems that move optical elements.
-LinearStage and RotationStage provide stackable positioning objects.
-A stage's globalPose describes its base and its mountPose describes its moving
-attachment. Distances are in mm. Euler angles follow the xrt OE convention
-and are stored in radians.
+MountingFrame provides a rigid mount for a group of elements. LinearStage
+and RotationStage add actuator motion. The globalPose describes the base
+and the mountPose describes the attachment for children. They coincide for
+a rigid frame. Distances are in mm. Euler angles follow the xrt OE
+convention and are stored in radians.
 
 The legacy Tripod, OneXStage and TwoXStages classes work in both directions:
 they set the primary stages given the OE orientation and, inversely, find the
@@ -36,6 +36,10 @@ from ._orientation import (
 
 
 logger = logging.getLogger(__name__)
+
+
+__allSectioned__ = dict.fromkeys(
+    ('MountingFrame', 'LinearStage', 'RotationStage'))
 
 
 AXES = {'x': (1., 0., 0.), 'y': (0., 1., 0.), 'z': (0., 0., 1.)}
@@ -152,12 +156,12 @@ def transform_points(matrix, points):
 
 @dataclass(frozen=True)
 class StageState:
-    """Resolved placement for one evaluation of a stage.
+    """Resolved placement of a frame or stage.
 
-    *globalPose* maps stage-base coordinates to world coordinates.
-    *mountPose* maps moving attachment coordinates to world coordinates.
+    *globalPose* maps base coordinates to world coordinates.
+    *mountPose* maps attachment coordinates to world coordinates.
     Pass a fresh states dictionary to share ancestor calculations within
-    a single evaluation of several stages.
+    a single evaluation of several mounts.
     """
 
     globalPose: Pose
@@ -165,15 +169,15 @@ class StageState:
 
 
 def resolve_mount(value, bl):
-    """Resolve a stage object, name or UUID in the beamline."""
+    """Resolve a mounting frame or stage by object, name or UUID."""
     if value is None:
         return None
-    stage = raycing.normalize_ref(value, bl, 'stage', target='object')
-    if isinstance(stage, Stage):
-        return stage
+    mount = raycing.normalize_ref(value, bl, 'stage', target='object')
+    if isinstance(mount, MountingFrame):
+        return mount
     if isinstance(value, (str, bytes)):
-        raise ValueError('Unknown mount stage {!r}'.format(value))
-    raise TypeError('mount must be a Stage, a stage reference or None')
+        raise ValueError('Unknown mount stage or frame {!r}'.format(value))
+    raise TypeError('mount must be a frame, a stage, a mount reference or None')
 
 
 def set_mount(element, value, *, strict=False):
@@ -181,14 +185,14 @@ def set_mount(element, value, *, strict=False):
     try:
         stage = resolve_mount(value, element.bl)
         bl = element.bl
-        if isinstance(element, Stage):
+        if isinstance(element, MountingFrame):
             ancestor = stage
             while ancestor is not None:
                 if ancestor is element:
-                    raise ValueError('A stage stack cannot contain a cycle')
+                    raise ValueError('A mount stack cannot contain a cycle')
                 ancestor = ancestor.mount
             if bl is not None and bl.stagesDict.get(element.uuid) is not element:
-                # Registration of a new stage also registers its ancestors.
+                # Registration of a new mount also registers its ancestors.
                 bl = None
         if stage is not None and bl is not None:
             bl.register_stage(stage)
@@ -216,36 +220,57 @@ def set_mount_offset(element, value, *, strict=False):
         logger.warning('%s: %s', element.name, error)
         return
 
-    if value is None and (isinstance(element, Stage) or element.mount is not None):
+    if value is None and (isinstance(element, MountingFrame) or
+                          element.mount is not None):
         value = Pose()
     element._mountOffset = value
 
 
-class Stage:
-    """Installation geometry and stack evaluation shared by all stage types."""
+def update_stage(stage, kwargs):
+    """Apply property edits from the GUI or propagation worker."""
+    components = raycing.compoundArgs['center']
+    for key, value in kwargs.items():
+        if key in ('uuid', 'bl'):
+            continue
+        if key in ('mount', 'crystal') and isinstance(value, str):
+            value = None if value == 'None' else value
+        elif key != 'name' and isinstance(value, str):
+            value = raycing.parametrize(value)
 
-    _axes = AXES
-    _units = raycing.allUnitsLen
-    _unitSymbols = raycing.allUnitsLenStr
-    _defaultPositionUnit = 'mm'
+        arg, separator, field = key.partition('.')
+        if not hasattr(stage, arg) or (separator and (
+                arg != 'center' or field not in components)):
+            logger.warning('%s: unknown mounting parameter %s',
+                           stage.name, key)
+            continue
+        if separator:
+            center = list(stage.center)
+            center[components.index(field)] = value
+            value = center
+        try:
+            setattr(stage, arg, value)
+        except (AttributeError, TypeError, ValueError, OverflowError) as error:
+            logger.warning('%s: invalid %s: %s', stage.name, key, error)
 
-    def __init__(self, name='stage', center=(0, 0, 0), pitch=0., roll=0.,
+
+class MountingFrame:
+    """Rigid mount for optical elements, stages and other mounting frames."""
+
+    def __init__(self, name='frame', center=(0, 0, 0), pitch=0., roll=0.,
                  yaw=0., positionRoll=0.,
                  rotationSequence=DEFAULT_ROTATION_SEQUENCE, pose=None,
-                 mount=None, mountOffset=None, axis=None, position=0.,
-                 positionMin=None, positionMax=None, positionUnit=None,
-                 bl=None, uuid=None):
+                 mount=None, mountOffset=None, bl=None, uuid=None):
         """
         *name*: str
-            Human-readable name of the stage.
+            Human-readable name of the mount.
 
         *center*: 3-sequence of floats
-            World origin of the stage base in mm when unmounted. The stage
-            copies it into a list whose components can be edited individually.
+            World origin in mm when unmounted, stored as a mutable list.
+            Edit the center or its components directly to scan the translation.
 
         *pitch, roll, yaw*: float or str
-            World base angles for an unmounted stage. Numeric values are in
-            radians. Strings can specify angle units.
+            Editable world angles when unmounted. Numeric values are in radians.
+            Strings can specify angle units.
 
         *positionRoll*: float or str
             User-supplied roll contribution, using the OE convention
@@ -257,64 +282,28 @@ class Stage:
             unmounted or to extract its Euler angles when mounted.
 
         *pose*: :class:`Pose` or None
-            Optional complete unmounted base placement. Takes precedence over
-            *center*, *pitch*, *roll* and *yaw*.
+            Optional unmounted placement. Takes precedence over *center*,
+            *pitch*, *roll* and *yaw*.
 
-        *mount*: :class:`Stage`, stage name or UUID, or None
-            Parent stage. When mounted, base placement follows its moving
-            attachment, and *center*, *pitch*, *roll* and *yaw* are calculated
-            world readouts. The authored base placement is used when detached.
+        *mount*: :class:`MountingFrame`, name, UUID or None
+            Parent frame or stage. While mounted, *center*, *pitch*, *roll*
+            and *yaw* are world readouts. The authored placement is used
+            when detached.
 
-        *mountOffset*: :class:`Pose` or None
-            This stage's translation and orientation in the parent stage's
-            moving attachment frame. Defaults to the identity pose.
-
-        *axis*: str
-            Motion axis in the stage base. The allowed axes depend on the
-            stage type. Defaults to the first allowed axis.
-
-        *position*: float
-            Signed actuator position in *positionUnit*. Values beyond the
-            travel limits are clamped to the nearest limit.
-
-        *positionMin, positionMax*: float or None
-            Inclusive lower and upper travel limits, in *positionUnit*. A
-            limit of None leaves travel unbounded on that side. Tightening
-            a limit clamps the current position. A limit edit that crosses
-            the opposite limit is ignored.
-
-        *positionUnit*: str or None
-            Unit of the position and limits, fixed at construction. Defaults
-            to 'mm' for a linear stage and 'rad' for a rotation stage. Other
-            units use the raycing length or angle unit dictionary.
+        *mountOffset*: :class:`Pose`, mapping or None
+            Translation and orientation in the parent's attachment frame.
+            Defaults to the identity pose.
 
         *bl*: :class:`~xrt.backends.raycing.BeamLine` or None
-            Beamline that registers the stage and resolves named mounts.
+            Beamline that registers the mount and resolves named parents.
 
         *uuid*: str or None
-            Stage identifier to restore from a layout. Defaults to a new UUID.
+            Identifier to restore from a layout. Defaults to a new UUID.
         """
         self.bl = bl
         self.uuid = str(raycing.uuid.uuid4()) if uuid is None else str(uuid)
         self.name = name
         self._mount = None
-        self._axis = next(iter(self._axes))
-        if axis is not None:
-            self.axis = axis
-        unit = self._defaultPositionUnit if positionUnit is None else positionUnit
-        unit = raycing.normalize_mu(unit)
-        if isinstance(unit, str) and unit not in self._units:
-            unit = next((key for key, symbol in self._unitSymbols.items()
-                         if raycing.normalize_mu(symbol) == unit), unit)
-        if not isinstance(unit, str) or unit not in self._units:
-            raise ValueError('positionUnit must be one of {}'.format(
-                ', '.join(self._units)))
-        self._positionUnit = unit
-        self._position = 0.
-        self._positionMin = self._positionMax = None
-        self.positionMin = positionMin
-        self.positionMax = positionMax
-        self.position = position
         self._rotationSequence = DEFAULT_ROTATION_SEQUENCE
         self._pitch = self._roll = self._yaw = self._positionRoll = 0.
         self._center = [0., 0., 0.]
@@ -330,14 +319,10 @@ class Stage:
         self.pitch = pitch
         self.roll = roll
         self.yaw = yaw
-        self._check_position()
         set_mount_offset(self, mountOffset, strict=True)
         set_mount(self, mount, strict=True)
         if self.bl is not None:
             self.bl.register_stage(self)
-
-    def _check_position(self):
-        pass
 
     @property
     def name(self):
@@ -440,7 +425,7 @@ class Stage:
 
     @property
     def orientation(self):
-        """Resolved world orientation of the stage base."""
+        """Resolved world orientation of the base."""
         return self.globalPose.orientation
 
     @orientation.setter
@@ -458,8 +443,8 @@ class Stage:
         return self._mount
 
     @mount.setter
-    def mount(self, stage):
-        set_mount(self, stage)
+    def mount(self, value):
+        set_mount(self, value)
 
     @property
     def mountOffset(self):
@@ -468,6 +453,200 @@ class Stage:
     @mountOffset.setter
     def mountOffset(self, value):
         set_mount_offset(self, value)
+
+    def _global_pose(self, states=None):
+        if self.mount is None:
+            orientation = Orientation(
+                pitch=self._pitch, roll=self._roll, yaw=self._yaw,
+                positionRoll=self.positionRoll, rotationSequence=self.rotationSequence)
+            return Pose._from_orientation(self._center, orientation)
+        pose = self.mount.evaluate(states).mountPose @ self.mountOffset
+        orientation = Orientation._from_rotation(
+            pose.orientation._rotation, self.rotationSequence, self.positionRoll)
+        return Pose._from_orientation(pose.center, orientation)
+
+    @property
+    def globalPose(self):
+        """World pose of the base."""
+        return self._global_pose()
+
+    @property
+    def mountPose(self):
+        """World pose of the attachment used by mounted children."""
+        return self.evaluate().mountPose
+
+    def _attachment_pose(self, base):
+        return base
+
+    def evaluate(self, states=None):
+        """Resolve both poses, optionally sharing a cache for this snapshot."""
+        if states is None:
+            states = {}
+        if self not in states:
+            base = self._global_pose(states)
+            attachment = self._attachment_pose(base)
+            states[self] = StageState(base, attachment)
+        return states[self]
+
+
+class Stage(MountingFrame):
+    """A mounting frame with an actuator that moves its attachment."""
+
+    _axes = AXES
+    _units = raycing.allUnitsLen
+    _unitSymbols = raycing.allUnitsLenStr
+    _defaultPositionUnit = 'mm'
+    _renderStyles = ('auto',)
+    _renderSizes = {}
+    _renderExtents = ()
+
+    def __init__(self, name='stage', center=(0, 0, 0), pitch=0., roll=0.,
+                 yaw=0., positionRoll=0.,
+                 rotationSequence=DEFAULT_ROTATION_SEQUENCE, pose=None,
+                 mount=None, mountOffset=None, axis=None, position=0.,
+                 positionMin=None, positionMax=None, positionUnit=None,
+                 bl=None, uuid=None, renderStyle='auto', renderSize=None):
+        """
+        Base placement, parent mounting and registration use the parameters
+        of :class:`MountingFrame`.
+
+        *axis*: str
+            Motion axis in the stage base. The allowed axes depend on the
+            stage type. Defaults to the first allowed axis.
+
+        *position*: float
+            Signed actuator position in *positionUnit*. Values beyond the
+            travel limits are clamped to the nearest limit.
+
+        *positionMin, positionMax*: float or None
+            Inclusive lower and upper travel limits, in *positionUnit*. A
+            limit of None leaves travel unbounded on that side. Tightening
+            a limit clamps the current position. A limit edit that crosses
+            the opposite limit is ignored.
+
+        *positionUnit*: str or None
+            Unit of the position and limits, fixed at construction. Defaults
+            to 'mm' for a linear stage and 'rad' for a rotation stage. Other
+            units use the raycing length or angle unit dictionary.
+
+        *renderStyle*: str
+            Glow geometry style. 'auto' selects it from the actuator axis.
+
+        *renderSize*: dict or None
+            Glow dimensions in mm. Width and length entries accept a positive
+            centered span, a pair of local limits or None to fit the supported
+            geometry. Height entries set part thicknesses.
+        """
+        # Validate the actuator before the mount is registered on the beamline.
+        self.bl = bl
+        self.name = name
+        self._axis = next(iter(self._axes))
+        if axis is not None:
+            self.axis = axis
+        unit = self._defaultPositionUnit if positionUnit is None else positionUnit
+        unit = raycing.normalize_mu(unit)
+        if isinstance(unit, str) and unit not in self._units:
+            unit = next((key for key, symbol in self._unitSymbols.items()
+                         if raycing.normalize_mu(symbol) == unit), unit)
+        if not isinstance(unit, str) or unit not in self._units:
+            raise ValueError('positionUnit must be one of {}'.format(
+                ', '.join(self._units)))
+        self._positionUnit = unit
+        self._position = 0.
+        self._positionMin = self._positionMax = None
+        self.positionMin = positionMin
+        self.positionMax = positionMax
+        self.position = position
+        self._check_position()
+        self._renderStyle = 'auto'
+        self._renderSize = self._renderSizes.copy()
+        self.renderStyle = renderStyle
+        self.renderSize = renderSize
+        super().__init__(
+            name=name, center=center, pitch=pitch, roll=roll, yaw=yaw,
+            positionRoll=positionRoll, rotationSequence=rotationSequence,
+            pose=pose, mount=mount, mountOffset=mountOffset, bl=bl, uuid=uuid)
+
+    def _check_position(self):
+        pass
+
+    @classmethod
+    def get_argument_editor_hint(cls, argName):
+        if argName == 'renderStyle':
+            return {'editor': 'choice', 'choices': cls._renderStyles}
+        if argName == 'renderSize':
+            inputTypes = {key: ('float', 'None') for key in cls._renderSizes}
+            inputTypes.update((key, ('float', 'sequence:float', 'None'))
+                              for key in cls._renderExtents)
+            if 'grooves' in inputTypes:
+                inputTypes['grooves'] = ('integer', 'None')
+            return {
+                'editor': 'dict',
+                'title': 'Stage rendering size (mm)',
+                'fixedKeys': tuple(cls._renderSizes),
+                'fieldDefaults': cls._renderSizes,
+                'fieldInputTypes': inputTypes,
+                'fieldChoices': {'shape': ('None', 'square', 'round')},
+                'valueHint': {'type': 'parameter'},
+                'validator': cls._validate_render_size,
+                'default': cls._renderSizes,
+                }
+
+    @classmethod
+    def _validate_render_size(cls, **values):
+        sizes = cls._renderSizes.copy()
+        for key, value in values.items():
+            if key not in sizes:
+                raise ValueError('Unknown rendering dimension: {}'.format(key))
+            if value is None:
+                continue
+            if key == 'shape':
+                if value not in ('square', 'round'):
+                    raise ValueError('shape must be square or round')
+            elif (key in cls._renderExtents and
+                  not isinstance(value, (str, bytes)) and
+                  raycing.is_sequence(value)):
+                limits = np.asarray(value, dtype=float)
+                if (limits.shape != (2,) or not np.isfinite(limits).all() or
+                        not math.isfinite(limits[1] - limits[0]) or
+                        limits[1] <= limits[0]):
+                    raise ValueError('{} needs two increasing limits'.format(key))
+                value = limits.tolist()
+            else:
+                value = float(value)
+                if not math.isfinite(value) or value < 0. or (
+                        value == 0. and key not in ('gap', 'grooves')):
+                    raise ValueError('Invalid rendering dimension: {}'.format(key))
+                if key == 'grooves':
+                    if not value.is_integer():
+                        raise ValueError('grooves must be a whole number')
+                    value = int(value)
+            sizes[key] = value
+        return sizes
+
+    @property
+    def renderStyle(self):
+        return self._renderStyle
+
+    @renderStyle.setter
+    def renderStyle(self, value):
+        if isinstance(value, str) and value in self._renderStyles:
+            self._renderStyle = value
+        else:
+            logger.warning('%s: renderStyle must be one of %s',
+                           self.name, ', '.join(self._renderStyles))
+
+    @property
+    def renderSize(self):
+        return self._renderSize
+
+    @renderSize.setter
+    def renderSize(self, value):
+        try:
+            self._renderSize = self._validate_render_size(
+                **({} if value is None else value))
+        except (TypeError, ValueError, OverflowError) as error:
+            logger.warning('%s: %s', self.name, error)
 
     @property
     def axis(self):
@@ -548,51 +727,36 @@ class Stage:
             value = min(value, self.positionMax)
         return value
 
+    def position_to_base_units(self, position):
+        """Convert an actuator setting to mm or radians."""
+        return position * self._units[self.positionUnit]
+
     @property
     def _position_in_base_units(self):
-        return self.position * self._units[self.positionUnit]
+        return self.position_to_base_units(self.position)
 
     def motion_pose(self):
         """Return the transform produced by the actuator in base coordinates."""
         raise NotImplementedError
 
-    def _global_pose(self, states=None):
-        if self.mount is None:
-            orientation = Orientation(
-                pitch=self._pitch, roll=self._roll, yaw=self._yaw,
-                positionRoll=self.positionRoll, rotationSequence=self.rotationSequence)
-            return Pose._from_orientation(self._center, orientation)
-        pose = self.mount.evaluate(states).mountPose @ self.mountOffset
-        orientation = Orientation._from_rotation(
-            pose.orientation._rotation, self.rotationSequence, self.positionRoll)
-        return Pose._from_orientation(pose.center, orientation)
-
-    @property
-    def globalPose(self):
-        """World pose of the stage base."""
-        return self._global_pose()
-
-    @property
-    def mountPose(self):
-        """World pose of the moving attachment.
-
-        At zero travel it equals the base pose.
-        """
-        return self.evaluate().mountPose
-
-    def evaluate(self, states=None):
-        """Resolve both poses, optionally sharing a cache for this snapshot."""
-        if states is None:
-            states = {}
-        if self not in states:
-            base = self._global_pose(states)
-            attachment = base @ self.motion_pose()
-            states[self] = StageState(base, attachment)
-        return states[self]
+    def _attachment_pose(self, base):
+        return base @ self.motion_pose()
 
 
 class LinearStage(Stage):
-    """One signed translation along x, y or z of the stage base."""
+    """One signed translation along x, y or z of the stage base.
+
+    Glow styles are 'auto', 'plates' and 'grooved'. *renderSize* accepts
+    width across travel, topLength and bottomLength along travel, topHeight,
+    bottomHeight, grooves, grooveWidth, grooveDepth and gap. Automatic groove
+    counts are one for X/Y and zero for Z. The default gap is 0.5 mm.
+    """
+
+    _renderStyles = ('auto', 'plates', 'grooved')
+    _renderSizes = dict(width=None, topLength=None, bottomLength=None,
+                        topHeight=2., bottomHeight=None, grooves=None,
+                        grooveWidth=6., grooveDepth=5., gap=0.5)
+    _renderExtents = ('width', 'topLength', 'bottomLength')
 
     def __init__(self, name='linear', axis='x', position=0., **kwargs):
         super().__init__(name=name, axis=axis, position=position, **kwargs)
@@ -614,7 +778,19 @@ class RotationStage(Stage):
     With *positionUnit='eV'*, provide a *crystal* material with a Bragg angle
     method returning radians. The position and both travel limits are then
     photon energies in eV.
+
+    Glow styles are 'auto', 'disk' and 'cradle'. The automatic style is
+    'disk' for yaw and 'cradle' for pitch and roll. *renderSize* accepts
+    width, length, shape ('square' or 'round'), topHeight, bottomHeight and
+    radius. A disk radius sets the bearing radius and supplies the moving
+    plate's automatic width and length. The cradle radius can be inferred
+    from the plate and pivot.
     """
+
+    _renderStyles = ('auto', 'disk', 'cradle')
+    _renderSizes = dict(width=None, length=None, shape=None, topHeight=2.,
+                        bottomHeight=2., radius=None)
+    _renderExtents = ('width', 'length')
 
     _axes = {'pitch': AXES['x'], 'roll': AXES['y'], 'yaw': AXES['z']}
     _units = {**raycing.allUnitsAng, 'eV': 1.}
@@ -676,11 +852,10 @@ class RotationStage(Stage):
             return None
         return value
 
-    @property
-    def _position_in_base_units(self):
+    def position_to_base_units(self, position):
         if self.positionUnit == 'eV':
-            return float(self._bragg_method(self.crystal)(self.position))
-        return super()._position_in_base_units
+            return float(self._bragg_method(self.crystal)(position))
+        return super().position_to_base_units(position)
 
     @property
     def pivotPoint(self):

@@ -121,13 +121,13 @@ class OE(OEMainMethods):
             3D point in global system. Any two coordinates
             can be 'auto' for automatic alignment.
 
-        *mount*: :class:`~xrt.backends.raycing.stages.Stage`, str or None
-            Stage carrying the optical element. While mounted, *center*,
-            *pitch*, *roll* and *yaw* are derived from the moving stage pose.
+        *mount*: :class:`~xrt.backends.raycing.stages.MountingFrame`, str or None
+            Frame or stage carrying the optical element. While mounted,
+            *center*, *pitch*, *roll* and *yaw* follow the parent attachment.
             The angles use the existing beamline-relative convention.
 
         *mountOffset*: :class:`~xrt.backends.raycing.stages.Pose` or None
-            Optical origin and orientation relative to the stage attachment.
+            Optical origin and orientation relative to the parent attachment.
             Defaults to identity on attachment.
 
         *pitch, roll, yaw*: floats

@@ -132,12 +132,12 @@ class RectangularAperture(object):
         *center*: 3-sequence of floats
             3D point in global system.
 
-        *mount*: :class:`~xrt.backends.raycing.stages.Stage`, str or None
-            Stage carrying the whole aperture. While mounted, the center
-            and axes are readouts of the composed world pose.
+        *mount*: :class:`~xrt.backends.raycing.stages.MountingFrame`, str or None
+            Frame or stage carrying the whole aperture. While mounted,
+            the center and axes are readouts of the composed world pose.
 
         *mountOffset*: :class:`~xrt.backends.raycing.stages.Pose` or None
-            Aperture origin and orientation in the moving stage frame.
+            Aperture origin and orientation in the parent attachment frame.
             Defaults to identity on attachment. Blade coordinates stay local
             to the aperture.
 

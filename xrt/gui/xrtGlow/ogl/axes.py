@@ -14,6 +14,7 @@ from matplotlib import font_manager  # analysis:ignore
 
 from .._utils import (create_qt_buffer, update_qt_buffer, basis_rotation_q)  # analysis:ignore
 from .._constants import AXIS_TICK_STYLE
+from .stage_meshes import stage_motion
 
 from ...commons import qt  # analysis:ignore
 from ...commons import gl  # analysis:ignore
@@ -147,14 +148,14 @@ class CoordinateBox():
 
     def cleanup_gl_resources(self):
         for vbo_name in ['vbo_frame', 'vbo_grid', 'vbo_fineGrid', 'vbo_Text',
-                         'vbo_arrows', 'vbo_arr_colors']:
+                         'vbo_arrows', 'vbo_arr_colors', 'vbo_motion']:
             vbo = getattr(self, vbo_name, None)
             if vbo is not None:
                 vbo.destroy()
                 setattr(self, vbo_name, None)
 
         for vao_name in ['vaoFrame', 'vaoGrid', 'vaoFineGrid',
-                         'vaoOrigin', 'vaoText', 'vao_arrow']:
+                         'vaoOrigin', 'vaoText', 'vao_arrow', 'vao_motion']:
             vao = getattr(self, vao_name, None)
             if vao is not None:
                 vao.destroy()
@@ -764,6 +765,52 @@ class CoordinateBox():
             gl.glDrawArrays(gl.GL_TRIANGLES, 0, 6)
             ch[0].release()
         return mMod*qt.QVector4D(1.0, 0.0, 0.0, 1.0)
+
+    def render_stage_motion(self, states, model, view, projection, arrow_size):
+        scene = np.array(model.data()).reshape((4, 4), order='F')
+        colors = ((0., 0., 1.), (0., 1., 0.), (1., 0., 0.), (0., 1., 1.))
+        groups = [[], [], [], []]
+        for stage, state in states.items():
+            motion = stage_motion(stage, state.globalPose, scene, arrow_size)
+            if motion is not None:
+                axis, travel, marker = motion
+                if travel is not None:
+                    groups[axis].append(travel)
+                if marker is not None:
+                    groups[-1].append(marker)
+        vertices = [triangles for group in groups for triangles in group]
+        if not vertices:
+            return
+
+        data = np.concatenate(vertices)
+        if getattr(self, 'vbo_motion', None) is None:
+            self.vbo_motion = create_qt_buffer(data)
+            self.vao_motion = qt.QOpenGLVertexArrayObject()
+            self.vao_motion.create()
+            self.vao_motion.bind()
+            self.vbo_motion.bind()
+            gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+            gl.glEnableVertexAttribArray(0)
+            self.vbo_motion.release()
+            self.vao_motion.release()
+        else:
+            update_qt_buffer(self.vbo_motion, data)
+
+        self.shader.bind()
+        self.vao_motion.bind()
+        try:
+            self.shader.setUniformValue("pvm", projection * view)
+            self.shader.setUniformValue("lineOpacity", 1.)
+            offset = 0
+            for color, group in zip(colors, groups):
+                count = sum(len(triangles) for triangles in group)
+                if count:
+                    self.shader.setUniformValue("lineColor", qt.QVector3D(*color))
+                    gl.glDrawArrays(gl.GL_TRIANGLES, offset, count)
+                    offset += count
+        finally:
+            self.vao_motion.release()
+            self.shader.release()
 
     def render_local_axes(self, moe, trans, view, proj, shader, isScreen,
                           alpha=None):

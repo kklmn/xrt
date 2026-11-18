@@ -10,6 +10,7 @@ from ._flow_utils import parametrize, format_energy_input
 from .singletons import is_sequence
 
 from .beamline import BeamLine, _DEBUG_
+from .stages import update_stage
 
 
 logger = logging.getLogger(__name__)
@@ -228,7 +229,7 @@ class MessageHandler:
             return arrayValue
         if hasattr(arrayValue, 'tolist'):
             arrayValue = arrayValue.tolist()
-        elif isinstance(arrayValue, tuple):
+        elif isinstance(arrayValue, (tuple, list)):
             arrayValue = list(arrayValue)
 
         for fList in compoundArgs.values():
@@ -326,19 +327,9 @@ class MessageHandler:
             stage = self.bl.stagesDict.get(objuuid)
             if stage is None:
                 return
-            for key, value in kwargs.items():
-                if key in ('uuid', 'bl'):
-                    continue
-                if key in ('mount', 'crystal') and isinstance(value, str):
-                    value = None if value == 'None' else value
-                elif key != 'name' and isinstance(value, str):
-                    value = parametrize(value)
-                try:
-                    setattr(stage, key, value)
-                except (AttributeError, TypeError, ValueError, OverflowError) as error:
-                    logger.warning('%s: invalid %s: %s', stage.name, key, error)
+            update_stage(stage, kwargs)
 
-            if kwargs.keys() - {'name', 'uuid', 'bl'}:
+            if kwargs.keys() - renderOnlyArgSet - {'uuid', 'bl'}:
                 self._restart_from_stage(stage)
         elif object_type == 'mat':
             # element = self.bl.materialsDict.get(objuuid)
@@ -468,6 +459,9 @@ class MessageHandler:
 
             if self.autoUpdate and self.startEl is not None:
                 self.needUpdate = True
+
+        elif object_type == 'stage':
+            self.bl.delete_stage_by_id(objuuid)
 
     def handle_start(self, message):
         print("Starting processing loop.")

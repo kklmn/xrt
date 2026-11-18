@@ -62,12 +62,12 @@ class Screen(object):
             it is vertical. Both *x* and *z* can also be set as instance
             attributes.
 
-        *mount*: :class:`~xrt.backends.raycing.stages.Stage`, str or None
-            Stage carrying the screen. While mounted, the screen center and
-            axes are readouts of the composed world pose.
+        *mount*: :class:`~xrt.backends.raycing.stages.MountingFrame`, str or None
+            Frame or stage carrying the screen. While mounted, its center
+            and axes are readouts of the composed world pose.
 
         *mountOffset*: :class:`~xrt.backends.raycing.stages.Pose` or None
-            Screen origin and orientation in the moving stage frame.
+            Screen origin and orientation in the parent attachment frame.
             Defaults to identity on attachment.
 
         *compressX, compressZ*: float

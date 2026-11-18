@@ -1081,11 +1081,11 @@ class BeamLine(object):
         return sortedFEList
 
     def register_stage(self, stage):
-        """Register a stage and its mounting ancestors by UUID and name."""
-        from .stages import Stage
+        """Register a frame or stage and its ancestors by UUID and name."""
+        from .stages import MountingFrame
 
-        if not isinstance(stage, Stage):
-            raise TypeError('stage must be a Stage')
+        if not isinstance(stage, MountingFrame):
+            raise TypeError('expected a mounting frame or stage')
         pending = {}
         ancestor = stage
         while ancestor is not None:
@@ -1106,8 +1106,19 @@ class BeamLine(object):
             item.name = item.name
         return stage
 
+    def sort_stages(self):
+        """Return mount UUIDs with parents before their children."""
+        ordered = {}
+        for stage in self.stagesDict.values():
+            chain = []
+            while stage is not None and stage.uuid not in ordered:
+                chain.append(stage.uuid)
+                stage = stage.mount
+            ordered.update(dict.fromkeys(reversed(chain)))
+        return list(ordered)
+
     def iter_stage_dependents(self, stage):
-        """Yield UUIDs and optical elements carried by this stage or its stack."""
+        """Yield UUIDs and optical elements carried by this mount."""
         for oeid, (element, *_) in self.oesDict.items():
             mount = getattr(element, 'mount', None)
             while mount is not None:
@@ -1262,8 +1273,8 @@ class BeamLine(object):
             z.
 
         *centerAt*: str
-            Name of the optical element to center the initial view on. The
-            view waits for its center to resolve if needed.
+            Name of the optical element or stage to center the initial view on.
+            The view waits for its center to resolve if needed.
 
         *alignYlocal*, *alignYglobal*: str or None
             Name of the optical element whose outgoing beam should align with
@@ -1374,6 +1385,10 @@ class BeamLine(object):
             raise ValueError("Unknown glow mode {!r}. Use 'static' or "
                              "'dynamic'.".format(mode))
 
+        center_id = None
+        if centerAt:
+            center_id = (self.oenamesToUUIDs.get(centerAt) or
+                         self.stagenamesToUUIDs.get(centerAt))
         if self.blViewer is None:
             app = xrtglow.qt.QApplication.instance()
             if app is None:
@@ -1412,6 +1427,10 @@ class BeamLine(object):
                 rayPath = self.export_to_glow()
                 self.blViewer = xrtglow.xrtGlow(
                     rayPath, scanDescription=scanDescription)
+                snapshot = self.blViewer.customGlWidget.beamline
+                snapshot.stagesDict.update(self.stagesDict)
+                snapshot.stagenamesToUUIDs.update(self.stagenamesToUUIDs)
+                self.blViewer.updateStagesModel()
             self.blViewer.generator = generator
             self.blViewer.generatorArgs = generatorArgs
             self.blViewer.customGlWidget.generator = generator
@@ -1440,11 +1459,8 @@ class BeamLine(object):
 
             if initialAlignment is not None:
                 self.blViewer.queuePostPropagationAction(*initialAlignment)
-            if centerAt:
-                eluuid = self.oenamesToUUIDs.get(centerAt)
-                if eluuid is not None:
-                    self.blViewer.queuePostPropagationAction('centerEl',
-                                                             eluuid)
+            if center_id is not None:
+                self.blViewer.queuePostPropagationAction('centerEl', center_id)
             self.blViewer.show()
             sys.exit(app.exec_())
         else:
@@ -1453,11 +1469,8 @@ class BeamLine(object):
                 self.blViewer.setScanDescription(scanDescription)
             if initialAlignment is not None:
                 self.blViewer.queuePostPropagationAction(*initialAlignment)
-            if centerAt:
-                eluuid = self.oenamesToUUIDs.get(centerAt)
-                if eluuid is not None:
-                    self.blViewer.queuePostPropagationAction('centerEl',
-                                                             eluuid)
+            if center_id is not None:
+                self.blViewer.queuePostPropagationAction('centerEl', center_id)
             self.blViewer.show()
 
     def explore(self, plots=None, block=True, closePlots=True, *,
@@ -1813,6 +1826,12 @@ class BeamLine(object):
         if matid in self.materialsDict:
             del self.materialsDict[matid]
 
+    def delete_stage_by_id(self, stage_id):
+        stage = self.stagesDict.pop(stage_id, None)
+        if stage is not None:
+            self.stagenamesToUUIDs.pop(stage.name, None)
+            stage.bl = None
+
     def delete_fe_by_id(self, feid):
         if feid not in self.fesDict:
             for fename, tmpid in list(self.fenamesToUUIDs.items()):
@@ -1993,13 +2012,13 @@ class BeamLine(object):
                 _ = self.init_fe_from_json(feName, feProps)
 
     def init_stage_from_json(self, stage_id, record):
-        """Create a stage from a layout or worker message."""
-        from .stages import Stage
+        """Create a frame or stage from a layout or worker message."""
+        from .stages import MountingFrame
 
         module, name = record['_object'].rsplit('.', 1)
         cls = getattr(importlib.import_module(module), name)
-        if not issubclass(cls, Stage):
-            raise TypeError('Expected a Stage class, got {!r}'.format(name))
+        if not issubclass(cls, MountingFrame):
+            raise TypeError('Expected a mount class, got {!r}'.format(name))
         params = {}
         for key, value in record['properties'].items():
             if key == 'bl':
@@ -2021,7 +2040,7 @@ class BeamLine(object):
             return
         from .stages import set_mount
 
-        # Resolve parent references only after every stage has a UUID and name.
+        # Resolve parents after every mount has a UUID and name.
         mounts = []
         for stage_id, record in records.items():
             properties = record['properties'].copy()

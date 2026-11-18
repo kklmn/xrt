@@ -139,9 +139,10 @@ glowTopScale = QSlider.TicksAbove
 
 class DictEditorDialog(QDialog):
     def __init__(self, value=None, hint=None, bl=None, excludeRefs=None,
-                 parent=None):
+                 parent=None, formatDisplay=None):
         super().__init__(parent)
         self.hint = {} if hint is None else dict(hint)
+        self.formatDisplay = formatDisplay
         self.valueHint = dict(self.hint.get('valueHint') or {})
         self.fixedKeys = tuple(self.hint.get('fixedKeys') or ())
         self.bl = bl
@@ -179,8 +180,9 @@ class DictEditorDialog(QDialog):
 
         values = self._parse_value(value)
         if self.fixedKeys:
+            defaults = self.hint.get('fieldDefaults', {})
             for key in self.fixedKeys:
-                self.add_row(key, values.get(key))
+                self.add_row(key, values.get(key, defaults.get(key)))
         else:
             for key, itemValue in values.items():
                 self.add_row(key, itemValue)
@@ -216,6 +218,29 @@ class DictEditorDialog(QDialog):
             else:
                 combo.setEditText(text)
             self.table.setCellWidget(row, 1, combo)
+        elif self.valueHint.get('type') == 'parameter':
+            key = self.table.item(row, 0).text()
+            choices = self.hint.get('fieldChoices', {}).get(key)
+            if choices:
+                combo = QComboBox(self.table)
+                combo.addItems(choices)
+                combo.setCurrentText(str(value))
+                self.table.setCellWidget(row, 1, combo)
+                return
+            text = (str(value) if self.formatDisplay is None else
+                    self.formatDisplay(key, value))
+            item = QTableWidgetItem(text)
+            item.setData(RAW_VALUE_ROLE, value)
+            item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+            self.table.setItem(row, 1, item)
+
+            editor = QLineEdit(text, self.table)
+            fieldTypes = self.hint.get('fieldInputTypes', {})
+            validator = make_argument_validator(
+                key, editor, inputTypes=fieldTypes.get(key))
+            if validator is not None:
+                editor.setValidator(validator)
+            self.table.setCellWidget(row, 1, editor)
         else:
             self.table.setItem(row, 1, QTableWidgetItem(str(value)))
 
@@ -248,6 +273,16 @@ class DictEditorDialog(QDialog):
         widget = self.table.cellWidget(row, 1)
         if isinstance(widget, QComboBox):
             text = str(widget.currentText()).strip()
+        elif isinstance(widget, QLineEdit):
+            text = widget.text().strip()
+            item = self.table.item(row, 1)
+            # The host may round the display text.
+            if text == item.text().strip():
+                return item.data(RAW_VALUE_ROLE)
+            if not widget.hasAcceptableInput():
+                key = self.table.item(row, 0).text()
+                widget.setFocus()
+                raise ValueError(f'Enter a valid value for {key}.')
         else:
             item = self.table.item(row, 1)
             text = '' if item is None else str(item.text()).strip()
@@ -266,6 +301,10 @@ class DictEditorDialog(QDialog):
                 raise ValueError('{0} must be finite'.format(key))
             return value
 
+        if self.valueHint.get('type') == 'parameter':
+            from ...backends import raycing
+            return raycing.parametrize(text)
+
         return text
 
     def value(self):
@@ -280,6 +319,9 @@ class DictEditorDialog(QDialog):
                 raise ValueError('Duplicate key {0!r}'.format(key))
             seen.add(key)
             out[key] = self._cell_value(row)
+        validator = self.hint.get('validator')
+        if validator is not None:
+            validator(**out)
         return out
 
     def serialized_value(self):
@@ -685,16 +727,19 @@ class ParsedSequenceValidator(QValidator):
         return memberState, inputText, pos
 
 
-def make_argument_validator(argName, parent=None):
-    """Returns the fallback validator for an argument QLineEdit."""
+def make_argument_validator(argName, parent=None, *, inputTypes=None):
+    """Return a QLineEdit validator, with optional input types for this field."""
     argName = str(argName)
     rootName = argName.partition('.')[0]
     fields = _compound_fields(rootName)
 
-    inputTypes = _argument_input_types(rootName)
     componentTypes = _compound_component_types(argName)
+    if inputTypes is None:
+        inputTypes = componentTypes or _argument_input_types(rootName)
+    else:
+        inputTypes = _as_input_types(inputTypes)
     if componentTypes is not None:
-        return _atomic_validator(componentTypes, parent)
+        return _atomic_validator(inputTypes, parent)
 
     memberTypes = _sequence_member_types(inputTypes)
     if 'dict' in inputTypes or ('string' in inputTypes and not memberTypes):
@@ -725,11 +770,12 @@ def make_ray_flag_editor(parent=None):
 
 class DynamicArgumentDelegate(QStyledItemDelegate):
     def __init__(self, nameToModel=None, parent=None, mainWidget=None,
-                 bl=None):
+                 bl=None, formatDisplay=None):
         super().__init__(parent)
         self.nameToModel = nameToModel
         self.mainWidget = mainWidget
         self.bl = bl
+        self.formatDisplay = formatDisplay
 
         app = QApplication.instance()
         if TOOLTIP_STYLE not in app.styleSheet():
@@ -890,6 +936,9 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
 
         combo = QComboBox(parent)
         combo.activated.connect(lambda: self.commitData.emit(combo))
+        if editorHint is not None and editorHint.get('editor') == 'choice':
+            combo.addItems(editorHint['choices'])
+            return combo
 #        if isinstance(self.mainWidget.getVal(argValue), bool):
         if str(argValue).lower() in ['false', 'true']:
             combo.addItems(['False', 'True'])
@@ -1003,6 +1052,12 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
                 combo.setModel(proxy)
             else:
                 return self._createLineEditor(parent, argName)
+            return combo
+        elif argName == 'mount':
+            bl = self._beamLine()
+            if bl is None:
+                return self._createLineEditor(parent, argName)
+            combo.addItems(['None'] + list(bl.stagenamesToUUIDs))
             return combo
         elif argNameL == 'kind':  # material and bl
             matKindItems = ['mirror', 'thin mirror',
@@ -1388,7 +1443,7 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
         dialog = DictEditorDialog(
             self._indexRawValue(index), hint, bl=self._beamLine(),
             excludeRefs=self._excludedReferenceValues(index, hint),
-            parent=self.parent())
+            parent=self.parent(), formatDisplay=self.formatDisplay)
         if dialog.exec_():
             valueText = dialog.serialized_value()
             self._setModelValue(index.model(), index, valueText)

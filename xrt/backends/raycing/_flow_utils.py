@@ -51,6 +51,24 @@ def _class_from_string(objStr):
 def get_argument_editor_hint(objRef, argName):
     if objRef is None:
         return None
+    if argName == 'mountOffset':
+        from .stages import Pose
+        defaults = Pose().as_dict()
+        return {
+            'editor': 'dict',
+            'title': 'Mount offset',
+            'fixedKeys': tuple(defaults),
+            'fieldDefaults': defaults,
+            'fieldInputTypes': {
+                'center': 'sequence:float',
+                'pitch': 'angle',
+                'roll': 'angle',
+                'yaw': 'angle',
+                },
+            'valueHint': {'type': 'parameter'},
+            'validator': Pose,
+            'preserveNone': True,
+            }
     try:
         if isinstance(objRef, str):
             objRef = _class_from_string(objRef)
@@ -401,6 +419,10 @@ def get_init_val(value):
     try:
         tree = ast.parse(text, mode="eval")
         tree = NameAsString(safe_globals.keys()).visit(tree)
+        # A label such as Si(111) becomes a call on a string after rewriting.
+        if (isinstance(tree.body, ast.Call) and
+                isinstance(tree.body.func, ast.Constant)):
+            return text
         ast.fix_missing_locations(tree)
 
         v = eval(compile(tree, "<init>", "eval"), safe_globals)
@@ -669,6 +691,9 @@ def parse_editor_mapping(value):
         return {}
     if isinstance(value, dict):
         return dict(value)
+    as_dict = getattr(value, 'as_dict', None)
+    if callable(as_dict):
+        return dict(as_dict())
     if isinstance(value, (list, tuple)):
         return {i: item for i, item in enumerate(value)}
     try:
@@ -705,6 +730,9 @@ def format_editor_scalar(value, valueHint=None, bl=None,
 def serialize_editor_value(value, hint=None, bl=None):
     if not isinstance(hint, dict) or hint.get('editor') != 'dict':
         return str(value)
+    if hint.get('preserveNone') and (value is None or (
+            isinstance(value, str) and value.strip() == 'None')):
+        return 'None'
     valueHint = dict(hint.get('valueHint') or {})
     mapping = parse_editor_mapping(value)
     items = []

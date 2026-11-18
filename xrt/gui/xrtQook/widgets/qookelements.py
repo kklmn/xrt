@@ -60,12 +60,15 @@ class XrtQookElements(XrtQookBase):
         elif 'figure' in obj:
             tree = self.feTree
             rootItem = self.rootFEItem
+        elif obj.startswith('xrt.backends.raycing.stages.'):
+            tree = self.stageTree
+            rootItem = self.rootStageItem
         else:
             tree = self.tree
             rootItem = self.rootBLItem
 
-        nameScope = ('global' if isRoot or tree in (self.matTree,
-                                                    self.feTree) else 'oe')
+        nameScope = ('global' if isRoot or tree in (
+            self.matTree, self.feTree, self.stageTree) else 'oe')
         if isinstance(copyFrom, dict):
             elementName = self.validObjectName(elementName, nameScope)
             copyFrom['properties']['name'] = elementName
@@ -130,7 +133,8 @@ class XrtQookElements(XrtQookBase):
             if arg == 'uuid':
                 elementItem.setData(argVal, qt.Qt.UserRole)
                 continue
-            if arg in hiddenParams:
+            if arg in hiddenParams or (
+                    tree is self.stageTree and arg in ('bl', 'pose')):
                 continue
             refKind = raycing.ref_kind_for_arg(arg)
             if refKind is not None:
@@ -152,6 +156,10 @@ class XrtQookElements(XrtQookBase):
             self.updateBeamline(elementItem, newElement=obj)
         elif tree is self.feTree:
             self.updateBeamlineFEs(elementItem, newElement=obj)
+        elif tree is self.stageTree:
+            self.updateBeamlineStages(
+                propsDict['uuid'], self.treeToDict(elementItem))
+            self.paintStatus(elementClassItem, 0)
         else:
             self.updateBeamlineMaterials(elementItem, newElement=obj)
 
@@ -182,6 +190,8 @@ class XrtQookElements(XrtQookBase):
                 self.blViewer.customGlWidget.deletionQueue.append(objuuid)
                 # only delete oe when it is safe
             self.blViewer.customGlWidget.delete_object(objuuid)
+        elif view is self.tree and objuuid is not None:
+            self.beamLine.delete_oe_by_id(objuuid)
 
         oldname = str(item.text())
 

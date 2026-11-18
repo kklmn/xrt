@@ -34,6 +34,7 @@ from .nodeeditor import _FlowGraphPanel, FLOW_NODE_STYLES, FLOW_SCENE_STYLE
 
 from ....backends import raycing
 from ....backends.raycing import sources as rsources
+from ....backends.raycing.stages import Stage
 from ....plotter import colorFactor, colorSaturation
 
 __author__ = "Roman Chernikov, Konstantin Klementiev"
@@ -49,7 +50,7 @@ CONTROL_TAB_MODES = (
     "collapsible left",
     "collapsible right",
 )
-HORIZONTAL_HEADERS = ['Rays', 'Footprint', 'Surface', 'Label']
+HORIZONTAL_HEADERS = ['Rays', 'Footprint', 'Surface', 'Label', 'Axes']
 SCENE_COLOR_COLUMNS = (
     ('Normal', 'normalColors'),
     ('Inverted', 'invertedColors'),
@@ -172,6 +173,7 @@ class xrtGlow(GlowScanMixin, qt.QWidget):
 #        print("arrayOfRays", arrayOfRays)
         self.segmentsModel = self.initSegmentsModel()
         self.segmentsModelRoot = self.segmentsModel.invisibleRootItem()
+        self.stageRows = {}
 
         self.fluxDataModel = qt.QStandardItemModel()
 
@@ -400,6 +402,14 @@ class xrtGlow(GlowScanMixin, qt.QWidget):
         setattr(self.customGlWidget, pName, state)
         if pName == 'globalColors':
             self._syncColorScaleControls()
+        elif pName == 'showLocalAxes':
+            item = self.segmentsModelRoot.child(0, itemTypes['axes'])
+            checkState = qt.Qt.Checked if state else qt.Qt.Unchecked
+            if item.checkState() == checkState:
+                self.updateRaysList(item)
+            else:
+                item.setCheckState(checkState)
+            return
         self.customGlWidget.glDraw()
 
     def _setNestedGlFloat(self, rootName, pName, editor):
@@ -455,7 +465,32 @@ class xrtGlow(GlowScanMixin, qt.QWidget):
 
     def runElementViewer(self, oeuuid=None):
         if oeuuid is not None and hasattr(self.customGlWidget, 'beamline'):
-            oe = self.customGlWidget.beamline.oesDict.get(oeuuid, None)
+            glw = self.customGlWidget
+            stage = glw.beamline.stagesDict.get(oeuuid)
+            if stage is not None:
+                runStageViewer = getattr(self.parentRef, 'runStageViewer', None)
+                if callable(runStageViewer):
+                    runStageViewer(oeuuid)
+                    return
+                props = raycing.get_init_kwargs(stage, compact=False)
+                for key in ('bl', 'pose'):
+                    props.pop(key, None)
+                props['uuid'] = oeuuid
+                for key in ('mount', 'crystal'):
+                    if key in props:
+                        props[key] = raycing.normalize_ref(
+                            props[key], glw.beamline,
+                            raycing.ref_kind_for_arg(key), target='display')
+                viewer = InstanceInspector(
+                    self, props, beamLine=glw.beamline,
+                    viewOnly=glw.renderingMode == 'static')
+                viewer.propertiesChanged.connect(
+                    partial(glw.update_beamline, oeuuid, sender='OEE'))
+                viewer.scanCreated.connect(self.addScanItem)
+                viewer.show()
+                return
+
+            oe = glw.beamline.oesDict.get(oeuuid)
             if oe is None:
                 return
             oeObj = oe[0]
@@ -581,11 +616,83 @@ class xrtGlow(GlowScanMixin, qt.QWidget):
         self.oeTree.setIconSize(qt.QSize(32, 32))
         self.oeTree.setContextMenuPolicy(qt.Qt.CustomContextMenu)
         self.oeTree.customContextMenuRequested.connect(self.oeTreeMenu)
-        for clmn in range(4):
-            self.oeTree.resizeColumnToContents(clmn)
         self.navigationLayout.addWidget(self.oeTree)
+
+        self.stagesModel = qt.QStandardItemModel(self)
+        self.stagesModel.setHorizontalHeaderLabels(
+            ['Stage', 'Motion'] + HORIZONTAL_HEADERS[2:])
+        self.stagesTree = qt.QTreeView()
+        self.stagesTree.setModel(self.stagesModel)
+        for tree, peer in ((self.oeTree, self.stagesTree),
+                           (self.stagesTree, self.oeTree)):
+            header = tree.header()
+            header.setStretchLastSection(False)
+            header.sectionResized.connect(
+                lambda column, old, width, peer=peer:
+                peer.setColumnWidth(column, width))
+        self.stagesModel.itemChanged.connect(self.customGlWidget.glDraw)
+        self.navigationLayout.addWidget(self.stagesTree)
+
         self.navigationPanel = qt.QWidget(self)
         self.navigationPanel.setLayout(self.navigationLayout)
+        self.updateStagesModel()
+        for column in range(1, len(HORIZONTAL_HEADERS)):
+            self._fitNavigationColumn(column)
+
+    def _fitNavigationColumn(self, column):
+        width = max(
+            max(tree.sizeHintForColumn(column),
+                tree.header().sectionSizeHint(column))
+            for tree in (self.oeTree, self.stagesTree))
+        self.oeTree.setColumnWidth(column, width)
+
+    def updateStagesModel(self):
+        model = self.stagesModel
+        beamline = self.customGlWidget.beamline
+        stages = beamline.stagesDict
+        visibility = {uid: [item.checkState() for item in row[1:]]
+                      for uid, row in self.stageRows.items()}
+        collapsed = {uid for uid, row in self.stageRows.items()
+                     if row[0].hasChildren() and
+                     not self.stagesTree.isExpanded(row[0].index())}
+
+        model.removeRows(0, model.rowCount())
+        self.stageRows.clear()
+        root = model.invisibleRootItem()
+        defaults = (
+            qt.Qt.Unchecked, qt.Qt.Checked, qt.Qt.Unchecked,
+            qt.Qt.Checked if self.customGlWidget.showLocalAxes
+            else qt.Qt.Unchecked)
+        for uid in beamline.sort_stages():
+            stage = stages.get(uid)
+            if stage is None:
+                continue
+            row = [qt.QStandardItem(stage.name)]
+            row[0].setData(uid, qt.Qt.UserRole)
+            for col, state in enumerate(visibility.get(uid, defaults), 1):
+                item = qt.QStandardItem()
+                if col != itemTypes['motion'] or isinstance(stage, Stage):
+                    item.setCheckable(True)
+                    item.setCheckState(state)
+                row.append(item)
+            motion = row[itemTypes['motion']]
+            if motion.isCheckable():
+                motion.setToolTip(
+                    'Show the current setting and any travel range defined by '
+                    'positionMin and positionMax.')
+            for item in row:
+                item.setEditable(False)
+                item.setDragEnabled(False)
+                item.setDropEnabled(False)
+            mount_id = stage.mount.uuid if stage.mount is not None else None
+            self.stageRows.get(mount_id, (root,))[0].appendRow(row)
+            self.stageRows[uid] = row
+
+        self.stagesTree.expandAll()
+        for uid in collapsed.intersection(self.stageRows):
+            self.stagesTree.collapse(self.stageRows[uid][0].index())
+        self.stagesTree.setVisible(bool(self.stageRows))
+        self._fitNavigationColumn(0)
 
     def makeTransformationPanel(self):
         self.zoomPanel = qt.QGroupBox(self)
@@ -1343,41 +1450,36 @@ class xrtGlow(GlowScanMixin, qt.QWidget):
 
     def _controlPopupSize(self, widget):
         if widget is getattr(self, 'navigationPanel', None):
-            colWidths = []
-            extraWidth = self.oeTree.iconSize().width() + \
-                self.oeTree.indentation() + 40  # scrollbar + checkBox
-            minWidth = self.oeTree.header().minimumSectionSize()
-            for icol, header in enumerate(HORIZONTAL_HEADERS):
-                bbox = self.oeTree.fontMetrics().boundingRect(header)
-                colWidths.append(max(bbox.width()+20, minWidth))
-            model = self.oeTree.model()
-            rowCount = 0
-            rowHeights = []
-            parents = [qt.QModelIndex()]
-            while model is not None and parents:
-                parent = parents.pop()
-                for row in range(model.rowCount(parent)):
-                    rowCount += 1
-                    index = model.index(row, 0, parent)
-                    ss = model.data(index)
-                    icon = model.data(index, qt.Qt.DecorationRole)
-                    if icon is not None:
-                        rowHeight = self.oeTree.iconSize().height() + 4
-                    else:
-                        rowHeight = self.oeTree.fontMetrics().height() + 4
-                    rowHeights.append(rowHeight)
-                    bbox = self.oeTree.fontMetrics().boundingRect(ss)
-                    colWidths[0] = max(bbox.width()+extraWidth, colWidths[0])
-                    if self.oeTree.isExpanded(index):
-                        parents.append(index)
-            self.oeTree.setColumnWidth(0, colWidths[0])
-            treeHeight = min(self.oeTree.header().height()+4+sum(rowHeights),
-                             self.maxDesktopHeight-100)
-            treeWidth = sum(colWidths) + 8
-            # self.oeTree.resize(qt.QSize(treeWidth, treeHeight))
-            wMargins = widget.layout().contentsMargins()
-            wWidth = wMargins.left() + treeWidth + wMargins.right()
-            wHeight = wMargins.top() + treeHeight + wMargins.bottom()
+            trees = [self.oeTree]
+            if self.stageRows:
+                trees.append(self.stagesTree)
+            layout = widget.layout()
+            treeHeights = []
+            for tree in trees:
+                model = tree.model()
+                metrics = tree.fontMetrics()
+                height = tree.header().height() + 4
+                parents = [qt.QModelIndex()]
+                while parents:
+                    parent = parents.pop()
+                    for row in range(model.rowCount(parent)):
+                        index = model.index(row, 0, parent)
+                        icon = model.data(index, qt.Qt.DecorationRole)
+                        rowHeight = (tree.iconSize().height() if icon
+                                     else metrics.height())
+                        height += rowHeight + 4
+                        if tree.isExpanded(index):
+                            parents.append(index)
+                treeHeights.append(height)
+                layout.setStretchFactor(tree, height)
+            margins = layout.contentsMargins()
+            spacing = layout.spacing() if len(trees) > 1 else 0
+            scrollWidth = self.oeTree.style().pixelMetric(
+                qt.QStyle.PM_ScrollBarExtent)
+            wWidth = (margins.left() + self.oeTree.header().length() +
+                      2 * self.oeTree.frameWidth() + scrollWidth + margins.right())
+            wHeight = margins.top() + margins.bottom() + min(
+                sum(treeHeights) + spacing, self.maxDesktopHeight - 100)
         else:
             wHint = widget.sizeHint()
             wWidth = wHint.width()
@@ -1525,7 +1627,7 @@ class xrtGlow(GlowScanMixin, qt.QWidget):
         newModel.setHorizontalHeaderLabels(HORIZONTAL_HEADERS)
         if isNewModel:
             headerRow = []
-            for i in range(4):
+            for i in range(len(HORIZONTAL_HEADERS)):
                 child = qt.QStandardItem("")
                 child.setEditable(False)
                 child.setCheckable(True)
@@ -1537,6 +1639,9 @@ class xrtGlow(GlowScanMixin, qt.QWidget):
         return newModel
 
     def getItem(self, iId, itemType='beam', targetId=None):
+        row = self.stageRows.get(iId)
+        if row is not None:
+            return row[itemTypes[itemType]] if itemType != 'beam' else None
         item = None
         model = self.segmentsModel
         start_index = model.index(0, 0)
@@ -1567,7 +1672,7 @@ class xrtGlow(GlowScanMixin, qt.QWidget):
 
     def createRow(self, text, segMode, uuid=None, icon=None):
         newRow = []
-        for iCol in range(4):
+        for iCol in range(len(HORIZONTAL_HEADERS)):
             newItem = qt.QStandardItem(str(text) if iCol == 0 else "")
             if iCol == 0:
                 newItem.setData(uuid, qt.Qt.UserRole)
@@ -1576,8 +1681,12 @@ class xrtGlow(GlowScanMixin, qt.QWidget):
             newItem.setCheckable(True if (segMode == 3 and iCol == 0) or
                                  (segMode == 1 and iCol > 0) else False)
             if newItem.isCheckable():
+                checked = iCol < 3 or (
+                    iCol == itemTypes['axes'] and
+                    self.segmentsModelRoot.child(0, iCol).checkState() ==
+                    qt.Qt.Checked)
                 newItem.setCheckState(
-                    qt.Qt.Checked if iCol < 3 else qt.Qt.Unchecked)
+                    qt.Qt.Checked if checked else qt.Qt.Unchecked)
             newItem.setEditable(False)
             newRow.append(newItem)
         return newRow
@@ -1715,6 +1824,7 @@ class xrtGlow(GlowScanMixin, qt.QWidget):
                 targetId = targetItem.data(qt.Qt.UserRole)
                 targetName = getOeName(targetId)
                 targetItem.setText("to {}".format(targetName))
+        self._fitNavigationColumn(0)
         self.refreshNodeEditorPanel()
 
     def updateTargets(self):
@@ -1777,7 +1887,7 @@ class xrtGlow(GlowScanMixin, qt.QWidget):
 
         # Stage 4. Clear dead references
         tmpDict.clear()
-        self.oeTree.resizeColumnToContents(0)
+        self._fitNavigationColumn(0)
 #        self.centerCB.blockSignals(False)
         self.refreshNodeEditorPanel()
 
@@ -2232,7 +2342,7 @@ class xrtGlow(GlowScanMixin, qt.QWidget):
     def updateRaysList(self, item):
         if item.parent() is None:
             if item.row() == 0:
-                if item.checkState != 1:
+                if item.checkState() != qt.Qt.PartiallyChecked:
                     model = item.model()
                     column = item.column()
                     model.blockSignals(True)
@@ -2253,6 +2363,11 @@ class xrtGlow(GlowScanMixin, qt.QWidget):
                     finally:
                         model.blockSignals(False)
                         model.layoutChanged.emit()
+                    # Footprint and Motion share column 1.
+                    if column > 0:
+                        for row in self.stageRows.values():
+                            if row[column].isCheckable():
+                                row[column].setCheckState(item.checkState())
             else:
                 parent = self.segmentsModelRoot
                 model = item.model()
@@ -2468,10 +2583,10 @@ class xrtGlow(GlowScanMixin, qt.QWidget):
                 self.setRenderingParam, iAction))
             subMenuR.addAction(mAction)
         menu.addSeparator()
-        if glw.selectedOE in glw.selectableOEs:
-            oe = glw.beamline.oesDict[glw.selectableOEs[int(
-                    glw.selectedOE)]][0]
-#            oe = glw.uuidDict[glw.selectableOEs[int(glw.selectedOE)]]
+        objuuid = glw.selectableOEs.get(glw.selectedOE)
+        oeEntry = glw.beamline.oesDict.get(objuuid)
+        if oeEntry is not None:
+            oe = oeEntry[0]
             oeName = str(oe.name)
             oeuuid = oe.uuid
             menu.addAction('Center view at {}'.format(oeName),
@@ -2491,6 +2606,12 @@ class xrtGlow(GlowScanMixin, qt.QWidget):
                 subMenuF.addAction(
                     'Export OE shape to STL',
                     partial(self.exportOeShape, oeuuid))
+        elif objuuid in glw.beamline.stagesDict:
+            stage = glw.beamline.stagesDict[objuuid]
+            menu.addAction('Center view at {}'.format(stage.name),
+                           partial(self.centerEl, objuuid))
+            menu.addAction('View Properties',
+                           partial(self.runElementViewer, objuuid))
         menu.addSeparator()
         menu.exec_(self.customGlWidget.mapToGlobal(position))
 
@@ -2788,6 +2909,9 @@ class xrtGlow(GlowScanMixin, qt.QWidget):
                 pValue = set(pValue)
             elif pName in ('sceneColors', 'geomSrcParam'):
                 pValue = copy.deepcopy(pValue)
+            elif pName == 'showLocalAxes':
+                self._setGlFlag(pName, bool(pValue))
+                continue
             setattr(self.customGlWidget, pName, pValue)
 
         if 'sceneColors' in params:
@@ -3030,20 +3154,22 @@ class xrtGlow(GlowScanMixin, qt.QWidget):
             self.postPropagationActions.popleft()
 
     def centerEl(self, oeName):
-        oeLine = self.customGlWidget.beamline.oesDict.get(oeName)
-        if oeLine is None:
+        glw = self.customGlWidget
+        oeLine = glw.beamline.oesDict.get(oeName)
+        element = (oeLine[0] if oeLine is not None
+                   else glw.beamline.stagesDict.get(oeName))
+        if element is None:
             return False
         try:
-            center = np.asarray(oeLine[0].center, dtype=float)
+            center = np.asarray(element.center, dtype=float)
         except (TypeError, ValueError):
             return False
         if center.shape != (3,) or not np.all(np.isfinite(center)):
             return False
-        off0 = center - np.array(
-            self.customGlWidget.tmpOffset)
-        cOffset = qt.QVector4D(off0[0], off0[1], off0[2], 0)
-        off1 = self.customGlWidget.mModLocal * cOffset
-        self.customGlWidget.set_view_offsets(
+        off0 = center - np.array(glw.tmpOffset)
+        cOffset = qt.QVector4D(*off0, 0)
+        off1 = glw.mModLocal * cOffset
+        glw.set_view_offsets(
             coordOffset=[off1.x(), off1.y(), off1.z()],
             tVec=[0, 0, 0])
         return True

@@ -54,6 +54,7 @@ from ....backends.raycing import sources as rsources  # analysis:ignore
 from ....backends.raycing import screens as rscreens  # analysis:ignore
 from ....backends.raycing import materials as rmats  # analysis:ignore
 from ....backends.raycing import figure_error as rfe  # analysis:ignore
+from ....backends.raycing import stages as rstages
 from ....backends.raycing import oes as roes  # analysis:ignore
 from ....backends.raycing import apertures as rapts  # analysis:ignore
 from ....backends.raycing import oes as roes  # analysis:ignore
@@ -71,7 +72,8 @@ from ...xrtGlow._constants import DEFAULT_SCENE_SETTINGS as DEFAULT_GLOW_SCENE_S
 from ...xrtGlow._utils import is_source, is_aperture, is_screen
 from ...xrtGlow.widgets.inspector import (
     InstanceInspector, _getBeamName, _getArgumentUnit)  # analysis:ignore
-from ...xrtGlow.widgets.scan import ScanInstructionDialog, find_catalog_property
+from ...xrtGlow.widgets.scan import (
+    SCAN_STAGE_PREFIX, ScanInstructionDialog, find_catalog_property)
 from ...xrtGlow.widgets.nodeeditor import (
     HAS_QTPYNODEEDITOR, _FlowGraphPanel, FLOW_NODE_STYLES)
 
@@ -126,7 +128,7 @@ class XrtQookBase(qt.QMainWindow):
 
         self.xrtModules = ['rsources', 'rscreens',
                            'rmats', 'rmatsel', 'rmatsco', 'rmatscr',
-                           'roes', 'rapts', 'rfe',
+                           'roes', 'rapts', 'rfe', 'rstages',
                            'rrun', 'raycing', 'xrtplot', 'xrtrun']
 
         self.objectFlag = qt.Qt.ItemFlags(qt.Qt.ItemIsEnabled)
@@ -331,7 +333,7 @@ class XrtQookBase(qt.QMainWindow):
 
     def _addAction(self, module, elname, afunction, menu):
         objName = '{0}.{1}'.format(module.__name__, elname)
-        elAction = qt.QAction(self)
+        elAction = qt.QAction(menu)
         elAction.setText(elname)
         elAction.hovered.connect(partial(self.showObjHelp, objName))
         elAction.triggered.connect(partial(afunction, elname, objName))
@@ -433,13 +435,15 @@ class XrtQookBase(qt.QMainWindow):
         self.vToolBar.setIconSize(qt.QSize(64, 64))
 
         menuNames = ['Add Source', 'Add Optic', 'Add Aperture', 'Add Screen',
-                     'Add Material', 'Add Figure Error', 'Add Plot']
-        tabNames = ['Beamline']*4 + ['Materials', 'Figure Error', 'Plots']
-        modules = [rsources, roes, rapts, rscreens, rmats, rfe, None]
-        methods = [self.addElement]*6 + [self.addPlot]
+                     'Add Material', 'Add Figure Error', 'Add Stage',
+                     'Add Plot']
+        tabNames = ['Beamline']*4 + ['Materials', 'Figure Error', 'Stages',
+                                     'Plots']
+        modules = [rsources, roes, rapts, rscreens, rmats, rfe, rstages, None]
+        methods = [self.addElement]*7 + [self.addPlot]
         pngs = ['add-source.png', 'add-oe.png', 'add-aperture.png',
                 'add-screen.png', 'add-material.png', 'add-figure-error.png',
-                'add-plot.png']
+                'add-stage_3.png', 'add-plot.png']
         for menuName, amodule, afunction, aicon, tabName in zip(
                 menuNames, modules, methods, pngs, tabNames):
             amenuButton = qt.QToolButton()
@@ -489,7 +493,7 @@ class XrtQookBase(qt.QMainWindow):
             amenuButton.setMenu(tmenu)
             amenuButton.setPopupMode(qt.QToolButton.InstantPopup)
             self.vToolBar.addWidget(amenuButton)
-            if menuName in ['Add Screen', 'Add Figure Error']:
+            if menuName in ['Add Screen', 'Add Stage']:
                 self.vToolBar.addSeparator()
 
         self.tabs = qt.QTabWidget()
@@ -553,6 +557,7 @@ class XrtQookBase(qt.QMainWindow):
         self.matTree = TreeViewEx()
         self.plotTree = TreeViewEx()
         self.feTree = TreeViewEx()
+        self.stageTree = TreeViewEx()
 #        self.tree = qt.QTreeView()
 #        self.matTree = qt.QTreeView()
 #        self.plotTree = qt.QTreeView()
@@ -560,8 +565,8 @@ class XrtQookBase(qt.QMainWindow):
 
         self.defaultFont = qt.QFont("Consolas", 10, weight=400)
 
-        for itree in [self.tree, self.matTree, self.feTree, self.plotTree,
-                      self.runTree]:
+        for itree in [self.tree, self.matTree, self.feTree, self.stageTree,
+                      self.plotTree, self.runTree]:
             itree.setContextMenuPolicy(qt.Qt.CustomContextMenu)
             itree.clicked.connect(self.showDoc)
 
@@ -571,6 +576,8 @@ class XrtQookBase(qt.QMainWindow):
         self.matTree.objDoubleClicked.connect(self.runMaterialViewer)
         self.feTree.customContextMenuRequested.connect(self.feMenu)
         self.feTree.objDoubleClicked.connect(self.runSurfViewer)
+        self.stageTree.customContextMenuRequested.connect(self.stageMenu)
+        self.stageTree.objDoubleClicked.connect(self.runStageViewer)
         self.tree.customContextMenuRequested.connect(self.openMenu)
         self.tree.objDoubleClicked.connect(self.runElementViewer)
 
@@ -602,6 +609,7 @@ class XrtQookBase(qt.QMainWindow):
         self.tabs.addTab(self.tree, "Beamline")
         self.tabs.addTab(self.matTree, "Materials")
         self.tabs.addTab(self.feTree, "Figure Error")
+        self.tabs.addTab(self.stageTree, "Stages")
         self.tabs.addTab(self.plotTree, "Plots")
         self.tabs.addTab(self.runTree, "Job Settings")
         self.tabs.addTab(self.descrEdit, "Description")
@@ -928,6 +936,25 @@ class XrtQookBase(qt.QMainWindow):
                     surfViewer.dynamicPlotWidget.update_surface)
         surfViewer.show()
 
+    def runStageViewer(self, stageId):
+        stage = self.beamLine.stagesDict.get(stageId)
+        if stage is None:
+            return
+        props = raycing.get_init_kwargs(stage, compact=False)
+        for key in ('bl', 'pose'):
+            props.pop(key, None)
+        props['uuid'] = stageId
+        for key in ('mount', 'crystal'):
+            if key in props:
+                props[key] = raycing.normalize_ref(
+                    props[key], self.beamLine, raycing.ref_kind_for_arg(key),
+                    target='display')
+        viewer = InstanceInspector(self, props, beamLine=self.beamLine)
+        viewer.propertiesChanged.connect(
+            partial(self.updateBeamlineStages, stageId))
+        viewer.scanCreated.connect(self.addGlowScanItem)
+        viewer.show()
+
     def adjustUndockedPos(self, isFloating):
         if isFloating:
             self.sender().move(100, 100)
@@ -982,7 +1009,8 @@ class XrtQookBase(qt.QMainWindow):
 
     def initAllTrees(self, blProps=None, runProps=None):
         self.blUpdateLatchOpen = False
-        comboDelegate = qt.DynamicArgumentDelegate(mainWidget=self)
+        comboDelegate = qt.DynamicArgumentDelegate(
+            mainWidget=self, formatDisplay=self.formatParamDisplay)
 
         # plotTree view
         self.plotTree.setModel(self.plotModel)
@@ -1006,16 +1034,19 @@ class XrtQookBase(qt.QMainWindow):
         self.matTree.expanded.connect(
             lambda _index: self.matTree.resizeColumnToContents(0))
 
-        # figureErrorsTree view
-        self.feTree.setModel(self.fesModel)
-        self.feTree.setAlternatingRowColors(True)
-        self.feTree.setSortingEnabled(False)
-        self.feTree.setHeaderHidden(False)
-        self.feTree.setSelectionBehavior(qt.QAbstractItemView.SelectItems)
-        self.feTree.model().setHorizontalHeaderLabels(['Parameter', 'Value'])
-        self.feTree.setItemDelegateForColumn(1, comboDelegate)
-        self.feTree.expanded.connect(
-            lambda _index: self.feTree.resizeColumnToContents(0))
+        for tree, model in ((self.feTree, self.fesModel),
+                            (self.stageTree, self.stagesModel)):
+            tree.setModel(model)
+            tree.setAlternatingRowColors(True)
+            tree.setSortingEnabled(False)
+            tree.setHeaderHidden(False)
+            tree.setSelectionBehavior(qt.QAbstractItemView.SelectItems)
+            model.setHorizontalHeaderLabels(['Parameter', 'Value'])
+            tree.setItemDelegateForColumn(1, comboDelegate)
+            tree.expanded.connect(
+                lambda _index, view=tree: view.resizeColumnToContents(0))
+        self.stageTree.selectionModel().selectionChanged.connect(
+            self.highlightOE)
 
         # BLTree view
         self.tree.setModel(self.beamLineModel)
@@ -1097,6 +1128,11 @@ class XrtQookBase(qt.QMainWindow):
         if getattr(self, 'beamLine', None) is None:
             self.beamLine = raycing.BeamLine()
             self.beamLine.flowSource = 'Qook'
+        for stageId in reversed(self.beamLine.sort_stages()):
+            if self.blViewer is None:
+                self.beamLine.delete_stage_by_id(stageId)
+            else:
+                self.blViewer.customGlWidget.delete_object(stageId)
 #        self.updateBeamlineBeams(item=None)
         self.updateBeamlineMaterials(item=None)
         self.updateBeamline(item=None)
@@ -1132,6 +1168,12 @@ class XrtQookBase(qt.QMainWindow):
         self.rootFEItem.setText("FigureErrors")
         self.fesModel.itemChanged.connect(self.beamLineItemChanged)
         self.addProp(self.fesModel.invisibleRootItem(), "None")
+
+        self.stagesModel = qt.QStandardItemModel()
+        self.rootStageItem = self.stagesModel.invisibleRootItem()
+        self.rootStageItem.setText("Stages")
+        self.stagesModel.itemChanged.connect(self.beamLineItemChanged)
+        self.addProp(self.rootStageItem, "None")
 
         self.beamModel = qt.QStandardItemModel()
         self.beamModel.appendRow([qt.QStandardItem("None"),  # name
@@ -1253,7 +1295,7 @@ class XrtQookBase(qt.QMainWindow):
                     objRoot = selItem.parent().parent()
                 except AttributeError:
                     pass
-        elif model in [self.materialsModel, self.fesModel]:
+        elif model in [self.materialsModel, self.fesModel, self.stagesModel]:
             if level > 0:
                 objRoot = selItem.parent() if selItem.hasChildren() else\
                     selItem.parent().parent()
@@ -1864,6 +1906,25 @@ class XrtQookBase(qt.QMainWindow):
         return zip(args, argVals)
 
     def beamLineItemChanged(self, item):
+        if item.model() is self.stagesModel:
+            if not self.blUpdateLatchOpen or not item.isEditable():
+                return
+            parent = item.parent()
+            if parent is None and item.column() == 0:
+                arg = 'name'
+                value = self.validObjectName(
+                    item.text(), 'global', current=item, default='stage')
+                stageItem = item
+            elif (parent is not None and parent.text() == 'properties' and
+                  item.column() == 1):
+                arg = parent.child(item.row(), 0).text()
+                value = self.getParamItemValue(item)
+                stageItem = parent.parent()
+            else:
+                return
+            self.updateBeamlineStages(
+                stageItem.data(qt.Qt.UserRole), {arg: value})
+            return
         self.colorizeChangedParam(item)
         if self.blUpdateLatchOpen:
             if item.model() is self.beamLineModel:
@@ -1880,7 +1941,8 @@ class XrtQookBase(qt.QMainWindow):
         if scope == 'global':
             beamLineRoot = self.beamLineModel.item(0, 0)
             roots = (self.materialsModel.invisibleRootItem(),
-                     self.fesModel.invisibleRootItem())
+                     self.fesModel.invisibleRootItem(),
+                     self.rootStageItem)
             if beamLineRoot is not None and beamLineRoot is not current:
                 used.add(str(beamLineRoot.text()))
         elif scope == 'oe':
@@ -2275,7 +2337,8 @@ class XrtQookBase(qt.QMainWindow):
     def refreshInputValues(self):
         """Refresh retained inputs before serializing cached tree values."""
         for objId in list(self.beamLine.oesDict) +\
-                list(self.beamLine.materialsDict) + list(self.beamLine.fesDict):
+                list(self.beamLine.materialsDict) + list(self.beamLine.fesDict) +\
+                list(self.beamLine.stagesDict):
             self.updateBeamlineModel((objId, {}))
 
     def exportLayout(self):
@@ -2336,12 +2399,14 @@ class XrtQookBase(qt.QMainWindow):
                                        self.rootMatItem,
                                        self.rootBLItem,
                                        self.rootFEItem,
+                                       self.rootStageItem,
                                        self.rootPlotItem,
                                        self.rootRunItem],
                                       [None,
                                        self.matTree,
                                        self.tree,
                                        self.feTree,
+                                       self.stageTree,
                                        self.plotTree,
                                        self.runTree]):
                     item.model().blockSignals(True)
@@ -2458,6 +2523,13 @@ class XrtQookBase(qt.QMainWindow):
         if item.model() in [self.beamModel]:
             flatModel = True
 
+        stageProps = {}
+        if item.model() is self.stagesModel and item.text() == 'properties':
+            stageId = item.parent().data(qt.Qt.UserRole)
+            stageProps = raycing.get_init_kwargs(
+                self.beamLine.stagesDict[stageId], compact=False,
+                resolveAuto=False)
+
         if item.hasChildren():
             self.prefixtab = self.ntab * '\t'
             if item.isEditable():
@@ -2481,6 +2553,7 @@ class XrtQookBase(qt.QMainWindow):
                 child1 = item.child(row, 1)
                 if child1 is not None and item.model() not in [self.beamModel]:
                     if child1.flags() != self.paramFlag or\
+                            child0.text() in stageProps or\
                             str(child0.text()) == "name" or\
                             str(child0.text()).startswith('beam'):
                         if child1.isEnabled():
@@ -2488,7 +2561,11 @@ class XrtQookBase(qt.QMainWindow):
                         else:
                             itemType = "object"
                         if int(child1.isEnabled()) == int(child0.isEnabled()):
-                            child1Value = self.getParamItemValue(child1)
+                            if stageProps and child0.text() in (
+                                    'center', 'pitch', 'roll', 'yaw'):
+                                child1Value = stageProps[child0.text()]
+                            else:
+                                child1Value = self.getParamItemValue(child1)
                             if not str(child1Value).endswith('plot') and not\
                                     str(child1Value).startswith('Instance'):
                                 self.confText +=\
@@ -2604,6 +2681,15 @@ class XrtQookBase(qt.QMainWindow):
                         continue
                     elementDict['properties']['uuid'] = element
                     self.addElement(copyFrom=elementDict)
+
+            self.beamLine.populate_stages_dict_from_json(project.get('Stages'))
+            for stageId in self.beamLine.sort_stages():
+                stage = self.beamLine.stagesDict[stageId]
+                props = raycing.get_init_kwargs(
+                    stage, compact=False, resolveAuto=False)
+                props['uuid'] = stageId
+                self.addElement(copyFrom={
+                    '_object': raycing.get_obj_str(stage), 'properties': props})
 
             beamlineDict = project.get(beamlineName)
             flowDict = project.get('flow')
@@ -2765,13 +2851,19 @@ class XrtQookBase(qt.QMainWindow):
         propName = str(propItem.text())
         if not propName or propName.startswith('_') or propName == 'name':
             return None
-        scanProperty = self.scanCatalogProperty(str(elementItem.text()),
-                                                propName)
+        targetName = str(elementItem.text())
+        if elementItem.model() is self.stagesModel:
+            stage = self.beamLine.stagesDict.get(
+                elementItem.data(qt.Qt.UserRole))
+            if stage is None:
+                return None
+            targetName = SCAN_STAGE_PREFIX + stage.name
+        scanProperty = self.scanCatalogProperty(targetName, propName)
         if scanProperty is None:
             return None
         currentValue = scanProperty.get(
             'value', self.getParamItemValue(valueItem))
-        return elementItem, propName, currentValue
+        return targetName, propName, currentValue
 
     def scanCatalogProperty(self, targetName, propName):
         if self.blViewer is None:
@@ -2804,14 +2896,14 @@ class XrtQookBase(qt.QMainWindow):
                 self, 'Create scan',
                 'xrtGlow must be available before creating a scan.')
             return
-        elementItem, propName, _ = scanContext
+        targetName, propName, _ = scanContext
         self.updateGlowScanOutputDirectory()
         dialog = ScanInstructionDialog(
             self.blViewer.scanInstructionCatalog(), parent=self,
             beam_names=self.blViewer.customGlWidget.beamline.beamNamesDict,
             scan_targets=self.blViewer.scanDescription.get('scanTargets', []),
             plots_by_beam=self.blViewer._scan_plot_names_by_beam(),
-            initial_property=(str(elementItem.text()), propName))
+            initial_property=(targetName, propName))
         dialog.targetsChanged.connect(self.blViewer.setScanTargets)
         dialog.scanCreated.connect(self.addGlowScanItem)
         dialog.exec_()
@@ -3059,6 +3151,33 @@ class XrtQookBase(qt.QMainWindow):
 
         menu.exec_(self.feTree.viewport().mapToGlobal(position))
 
+    def stageMenu(self, position):
+        menu = qt.QMenu()
+        addMenu = menu.addMenu(self.tr("Add Stage"))
+        for name in rstages.__allSectioned__:
+            self._addAction(rstages, name, self.addElement, addMenu)
+
+        index = self.stageTree.indexAt(position)
+        if index.isValid():
+            selectedItem = self.stagesModel.itemFromIndex(index)
+            while index.parent().isValid():
+                index = index.parent()
+            stageId = index.siblingAtColumn(0).data(qt.Qt.UserRole)
+            stage = self.beamLine.stagesDict.get(stageId)
+            if stage is not None:
+                menu.addSeparator()
+                if self.blViewer is not None:
+                    menu.addAction('Center xrtGlow at ' + stage.name,
+                                   partial(self.blViewer.centerEl, stageId))
+                menu.addAction("Inspect", partial(self.runStageViewer, stageId))
+                scanContext = self.scanContextFromBeamlineProperty(selectedItem)
+                if scanContext is not None:
+                    menu.addSeparator()
+                    menu.addAction("Create Scan", partial(
+                        self.createScanFromBeamlineProperty, selectedItem))
+
+        menu.exec_(self.stageTree.viewport().mapToGlobal(position))
+
     def getVal(self, value):
         if str(value) == 'round':
             return str(value)
@@ -3255,7 +3374,7 @@ class XrtQookBase(qt.QMainWindow):
         index = selected.indexes()[0]
         if not index.isValid():
             return
-        objItem = self.tree.model().itemFromIndex(index)
+        objItem = index.model().itemFromIndex(index)
         objid = str(objItem.data(qt.Qt.UserRole))
         if not raycing.is_valid_uuid(objid):
             self.blViewer.highlightOE()

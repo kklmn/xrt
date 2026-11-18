@@ -24,6 +24,7 @@ from ....backends.raycing import sources as rsources  # analysis:ignore
 from ....backends.raycing import screens as rscreens  # analysis:ignore
 from ....backends.raycing import materials as rmats  # analysis:ignore
 from ....backends.raycing import figure_error as rfe  # analysis:ignore
+from ....backends.raycing import stages as rstages
 from ....backends.raycing import oes as roes  # analysis:ignore
 from ....backends.raycing import apertures as rapts  # analysis:ignore
 from ....backends.raycing import oes as roes  # analysis:ignore
@@ -109,9 +110,16 @@ class XrtQook(QookScanMixin, XrtQookElements):
             model = self.fesModel
             tree = self.feTree
             rootItem = self.rootFEItem
+        elif oeid in self.beamLine.stagesDict:
+            oeObj = self.beamLine.stagesDict[oeid]
+            kwargs.update(raycing.get_init_kwargs(oeObj, compact=False))
+            model = self.stagesModel
+            tree = self.stageTree
+            rootItem = self.rootStageItem
         else:
             return
 
+        isStage = model is self.stagesModel
         signalsBlocked = model.signalsBlocked()
         updatedItems = []
         model.blockSignals(True)
@@ -120,6 +128,8 @@ class XrtQook(QookScanMixin, XrtQookElements):
                 elItem = rootItem.child(i, 0)
                 elUUID = str(elItem.data(qt.Qt.UserRole))
                 if elUUID == oeid:
+                    if isStage:
+                        elItem.setText(oeObj.name)
                     for j in range(elItem.rowCount()):
                         pItem = elItem.child(j, 0)
                         if str(pItem.text()) == 'properties':
@@ -139,6 +149,16 @@ class XrtQook(QookScanMixin, XrtQookElements):
                                                 refKind, target='display')
 
                                         pVItem = pItem.child(k, 1)
+                                        if isStage:
+                                            self.setParamItemValue(
+                                                pVItem, argName, argValue)
+                                            readOnly = argName in (
+                                                'name', 'positionUnit') or (
+                                                oeObj.mount is not None and
+                                                argName in ('center', 'pitch',
+                                                            'roll', 'yaw'))
+                                            pVItem.setEditable(not readOnly)
+                                            continue
                                         if oeObj is not None and\
                                                 (argName in raycing.calculatedArgSet or
                                                  hasattr(oeObj, f'_{argName}Init')):
@@ -340,6 +360,31 @@ class XrtQook(QookScanMixin, XrtQookElements):
 
         self.blViewer.customGlWidget.update_beamline(
                 feId, outDict, sender='Qook')
+
+    def updateBeamlineStages(self, stageId, kwargs):
+        stage = self.beamLine.stagesDict.get(stageId)
+        oldName = stage.name if stage is not None else None
+        if '_object' in kwargs:
+            if stage is None:
+                stage = self.beamLine.init_stage_from_json(stageId, kwargs)
+            else:
+                stage.name = kwargs['properties']['name']
+            kwargs['properties'] = raycing.get_init_kwargs(
+                stage, compact=False, resolveAuto=False)
+        elif stage is not None:
+            rstages.update_stage(stage, kwargs)
+        else:
+            return
+
+        if oldName is not None and oldName != stage.name:
+            for rootItem in (self.rootStageItem, self.rootBLItem):
+                self.iterateRename(rootItem, oldName, stage.name, ['mount'])
+        for mountId in self.beamLine.stagesDict:
+            self.updateBeamlineModel((mountId, {}))
+
+        if self.blViewer is not None:
+            self.blViewer.customGlWidget.update_beamline(
+                stageId, kwargs, sender='Qook')
 
     def updateBeamline(self, item=None, newElement=None, newOrder=False):
         def beamToUuid(beamName):
@@ -648,6 +693,25 @@ if __name__ == '__main__':
                     codeDeclarations += '{0} = {1})\n\n'.format(
                         feItem.text(), str.rstrip(ieinit, ","))
 #                    break
+
+        for stageId in self.beamLine.sort_stages():
+            stage = self.beamLine.stagesDict[stageId]
+            props = raycing.get_init_kwargs(
+                stage, compact=True, resolveAuto=False)
+            args = ['bl=bl', f'name={stage.name!r}']
+            for arg, value in props.items():
+                if arg in ('name', 'bl', 'uuid'):
+                    continue
+                ref = getattr(stage, arg) if arg in ('mount', 'crystal') else None
+                if ref is not None:
+                    value = ref.name
+                else:
+                    value = self.quotize(value, arg)
+                args.append(f'{arg}={value}')
+            kwargs = (',\n' + myTab * 2).join(args)
+            codeBuildBeamline += (
+                f'{myTab}{stage.name} = {raycing.get_obj_str(stage)}(\n'
+                f'{myTab * 2}{kwargs})\n\n')
 
         self.progressBar.setValue(30)
         self.progressBar.setFormat("Adding optical elements.")
