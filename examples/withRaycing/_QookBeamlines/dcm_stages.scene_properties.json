@@ -1,0 +1,197 @@
+{
+  "aspect": 1.2906666666666666,
+  "viewPortGL": [
+    0,
+    0,
+    1452,
+    1125
+  ],
+  "cameraAngle": 60.0,
+  "cameraDistance": 3.5,
+  "sceneColors": {
+    "normalColors": {
+      "bgColor": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "lineColor": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "textColor": [
+        1.0,
+        1.0,
+        0.0
+      ]
+    },
+    "invertedColors": {
+      "bgColor": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "lineColor": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "textColor": [
+        0.0,
+        0.0,
+        1.0
+      ]
+    }
+  },
+  "scaleVec": [
+    56.68689727783203,
+    56.21107482910156,
+    56.68689727783203
+  ],
+  "rotations": [
+    -34.07767868041992,
+    13.626684188842773
+  ],
+  "coordOffset": [
+    0.0,
+    10000.0,
+    1.6653345369377348e-15
+  ],
+  "tmpOffset": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "tVec": [
+    0.0,
+    -46.03078079223633,
+    -16.43103790283203
+  ],
+  "mModLocal": [
+    [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      1.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.0,
+      1.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "colorAxis": "energy",
+  "colorMin": 12375.0,
+  "colorMax": 12625.0,
+  "selColorMin": 12375.0,
+  "selColorMax": 12625.0,
+  "cutoffI": 0.01,
+  "globalNorm": true,
+  "iHSV": false,
+  "lineOpacity": 0.1,
+  "lineWidth": 1,
+  "pointOpacity": 0.1,
+  "pointSize": 1,
+  "drawGrid": true,
+  "perspectiveEnabled": true,
+  "fineGridEnabled": false,
+  "aPos": [
+    0.8999999761581421,
+    1.9700000286102295,
+    0.8999999761581421
+  ],
+  "projectionsVisibility": [
+    0,
+    0,
+    0
+  ],
+  "lineProjectionOpacity": 0.1,
+  "lineProjectionWidth": 1,
+  "pointProjectionOpacity": 0.1,
+  "pointProjectionSize": 1,
+  "enableAA": false,
+  "globalColors": true,
+  "linesDepthTest": false,
+  "pointsDepthTest": false,
+  "invertColors": true,
+  "autoSizeOe": true,
+  "rayFlag": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "showLostRays": true,
+  "showLocalAxes": false,
+  "showContours": true,
+  "showInternalBeam": true,
+  "renderPlateSides": true,
+  "showElectronTrajectory": false,
+  "trajectoryWithEmittance": false,
+  "oeThickness": 5.0,
+  "oeThicknessForce": null,
+  "slitThicknessFraction": 50.0,
+  "apertureBladeWidth": 5.0,
+  "apertureDefaultSpan": 10.0,
+  "apertureThickness": 1.0,
+  "electronEnvelopeStep": 10.0,
+  "electronEnvelopeSize": 3.0,
+  "maxLen": 12000.0,
+  "fontSize": 5,
+  "labelCoordPrec": 1,
+  "tiles": [
+    25,
+    25
+  ],
+  "geomSrcParam": {
+    "shape": "sphere",
+    "minSize": 1.0,
+    "radius": 2,
+    "stacks": 8,
+    "slices": 12,
+    "spikeScale": 5,
+    "faceColor": [
+      0.1,
+      0.9,
+      0.9,
+      1
+    ],
+    "edgeColor": [
+      1,
+      0,
+      1,
+      1
+    ]
+  },
+  "magnetShape": {
+    "gap": 10,
+    "period": 40,
+    "dx": 40,
+    "dy": 40,
+    "dz": 10
+  },
+  "size": [
+    0,
+    31,
+    1548,
+    1125
+  ],
+  "sizeGL": [
+    1452,
+    0
+  ]
+}

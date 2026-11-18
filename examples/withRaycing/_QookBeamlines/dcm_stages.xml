@@ -1,0 +1,420 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+	<Beams type="prop">
+		<None type="flat"></None>
+		<Geometric_source_global type="flat"></Geometric_source_global>
+		<Slit_1_local type="flat"></Slit_1_local>
+		<X1_global type="flat"></X1_global>
+		<X1_local type="flat"></X1_local>
+		<X2_global type="flat"></X2_global>
+		<X2_local type="flat"></X2_local>
+		<Slit_2_local type="flat"></Slit_2_local>
+		<Exit_screen_local type="flat"></Exit_screen_local>
+	</Beams>
+	<Materials type="prop">
+		<Si_111_ type="value">
+			<properties type="prop">
+				<tK type="param">297.15</tK>
+				<hkl type="param">[1, 1, 1]</hkl>
+				<d type="param">3.1354575567115175</d>
+				<elements type="param">['Si']</elements>
+				<quantities type="param">[1.0]</quantities>
+				<rho type="param">0</rho>
+				<t type="param">None</t>
+				<factDW type="param">1.0</factDW>
+				<geom type="param">Bragg reflected</geom>
+				<table type="param">Chantler total</table>
+				<name type="param">Si_111_</name>
+				<volumetricDiffraction type="param">False</volumetricDiffraction>
+				<useTT type="param">False</useTT>
+				<nu type="param">None</nu>
+				<mosaicity type="param">0</mosaicity>
+				<efficiency type="param">None</efficiency>
+				<efficiencyFile type="param">None</efficiencyFile>
+				<refractiveIndex type="param">None</refractiveIndex>
+			</properties>
+			<_object type="param">xrt.backends.raycing.materials.crystals_basic.CrystalSi</_object>
+		</Si_111_>
+	</Materials>
+	<Fixed_exit_Si_111__DCM type="value">
+		<properties type="prop">
+			<azimuth type="param">0.0</azimuth>
+			<height type="param">0.0</height>
+			<alignE type="param">auto</alignE>
+			<name type="param">Fixed_exit_Si_111__DCM</name>
+			<description type="param">None</description>
+		</properties>
+		<_object type="param">xrt.backends.raycing.BeamLine</_object>
+		<Geometric_source type="value">
+			<properties type="prop">
+				<bl type="param">Fixed_exit_Si_111__DCM</bl>
+				<name type="param">Geometric_source</name>
+				<center type="param">[0.0, 0.0, 0.0]</center>
+				<pitch type="param">0</pitch>
+				<roll type="param">0</roll>
+				<yaw type="param">0</yaw>
+				<nrays type="param">50000</nrays>
+				<distx type="param">normal</distx>
+				<dx type="param">2</dx>
+				<disty type="param">None</disty>
+				<dy type="param">0</dy>
+				<distz type="param">normal</distz>
+				<dz type="param">2</dz>
+				<distxprime type="param">None</distxprime>
+				<dxprime type="param">0.001</dxprime>
+				<distzprime type="param">None</distzprime>
+				<dzprime type="param">0.0001</dzprime>
+				<distE type="param">lines</distE>
+				<energies type="param">[12500.0]</energies>
+				<polarization type="param">horizontal</polarization>
+				<filamentBeam type="param">False</filamentBeam>
+				<uniformRayDensity type="param">False</uniformRayDensity>
+				<totalFlux type="param">None</totalFlux>
+			</properties>
+			<_object type="param">xrt.backends.raycing.sources.geoms.GeometricSource</_object>
+			<shine type="prop">
+				<parameters type="prop">
+					<withAmplitudes type="param">False</withAmplitudes>
+					<accuBeam type="param">None</accuBeam>
+					<wave type="param">None</wave>
+				</parameters>
+				<_object type="param">xrt.backends.raycing.sources.geoms.GeometricSource.shine</_object>
+				<output type="prop">
+					<beamGlobal type="param">Geometric_source_global</beamGlobal>
+				</output>
+			</shine>
+		</Geometric_source>
+		<Slit_1 type="value">
+			<properties type="prop">
+				<bl type="param">Fixed_exit_Si_111__DCM</bl>
+				<name type="param">Slit_1</name>
+				<center type="param">[0.0, 0.0, 0.0]</center>
+				<blades type="param">{'left': -1.0, 'right': 1.0, 'bottom': -1.0, 'top': 1.0}</blades>
+				<x type="param">auto</x>
+				<z type="param">auto</z>
+				<alarmLevel type="param">None</alarmLevel>
+				<renderStyle type="param">mask</renderStyle>
+				<renderSize type="param">{'slitThicknessFraction': None, 'apertureBladeWidth': None, 'apertureDefaultSpan': None, 'apertureThickness': None}</renderSize>
+				<mount type="param">Base_height</mount>
+				<mountOffset type="param">{'center': [0, -200, 250], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
+			</properties>
+			<_object type="param">xrt.backends.raycing.apertures.RectangularAperture</_object>
+			<propagate type="prop">
+				<parameters type="prop">
+					<beam type="param">Geometric_source_global</beam>
+				</parameters>
+				<_object type="param">xrt.backends.raycing.apertures.RectangularAperture.propagate</_object>
+				<output type="prop">
+					<beamLocal type="param">Slit_1_local</beamLocal>
+				</output>
+			</propagate>
+		</Slit_1>
+		<X1 type="value">
+			<properties type="prop">
+				<bl type="param">Fixed_exit_Si_111__DCM</bl>
+				<name type="param">X1</name>
+				<center type="param">[0.0, 0.0, 0.0]</center>
+				<pitch type="param">0</pitch>
+				<roll type="param">0</roll>
+				<yaw type="param">0</yaw>
+				<mount type="param">Bragg_disk</mount>
+				<mountOffset type="param">{'center': [0.0, 0.0, 10.0], 'pitch': 0.0, 'roll': -1.5707963267948963, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
+				<positionRoll type="param">0</positionRoll>
+				<extraPitch type="param">0</extraPitch>
+				<extraRoll type="param">0</extraRoll>
+				<extraYaw type="param">0</extraYaw>
+				<rotationSequence type="param">RzRyRx</rotationSequence>
+				<extraRotationSequence type="param">RzRyRx</extraRotationSequence>
+				<surface type="param">None</surface>
+				<material type="param">Si_111_</material>
+				<alpha type="param">None</alpha>
+				<limPhysX type="param">[-10.0, 10.0]</limPhysX>
+				<limOptX type="param">None</limOptX>
+				<limPhysY type="param">[-50.0, 50.0]</limPhysY>
+				<limOptY type="param">None</limOptY>
+				<isParametric type="param">False</isParametric>
+				<shape type="param">rect</shape>
+				<gratingDensity type="param">None</gratingDensity>
+				<order type="param">1</order>
+				<shouldCheckCenter type="param">False</shouldCheckCenter>
+				<alarmLevel type="param">None</alarmLevel>
+				<targetOpenCL type="param">None</targetOpenCL>
+				<precisionOpenCL type="param">float32</precisionOpenCL>
+				<figureError type="param">None</figureError>
+			</properties>
+			<_object type="param">xrt.backends.raycing.oes.base.OE</_object>
+			<reflect type="prop">
+				<parameters type="prop">
+					<beam type="param">Geometric_source_global</beam>
+					<noIntersectionSearch type="param">False</noIntersectionSearch>
+				</parameters>
+				<_object type="param">xrt.backends.raycing.oes.base.OE.reflect</_object>
+				<output type="prop">
+					<beamGlobal type="param">X1_global</beamGlobal>
+					<beamLocal type="param">X1_local</beamLocal>
+				</output>
+			</reflect>
+		</X1>
+		<X2 type="value">
+			<properties type="prop">
+				<bl type="param">Fixed_exit_Si_111__DCM</bl>
+				<name type="param">X2</name>
+				<center type="param">[0.0, 0.0, 0.0]</center>
+				<pitch type="param">0</pitch>
+				<roll type="param">0</roll>
+				<yaw type="param">0</yaw>
+				<mount type="param">X2_cradle</mount>
+				<mountOffset type="param">{'center': [0.0, 0.0, 10.0], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
+				<positionRoll type="param">0</positionRoll>
+				<extraPitch type="param">0</extraPitch>
+				<extraRoll type="param">0</extraRoll>
+				<extraYaw type="param">0</extraYaw>
+				<rotationSequence type="param">RyRzRx</rotationSequence>
+				<extraRotationSequence type="param">RzRyRx</extraRotationSequence>
+				<surface type="param">None</surface>
+				<material type="param">Si_111_</material>
+				<alpha type="param">None</alpha>
+				<limPhysX type="param">[-10.0, 10.0]</limPhysX>
+				<limOptX type="param">None</limOptX>
+				<limPhysY type="param">[-50.0, 50.0]</limPhysY>
+				<limOptY type="param">None</limOptY>
+				<isParametric type="param">False</isParametric>
+				<shape type="param">rect</shape>
+				<gratingDensity type="param">None</gratingDensity>
+				<order type="param">1</order>
+				<shouldCheckCenter type="param">False</shouldCheckCenter>
+				<alarmLevel type="param">None</alarmLevel>
+				<targetOpenCL type="param">None</targetOpenCL>
+				<precisionOpenCL type="param">float32</precisionOpenCL>
+				<figureError type="param">None</figureError>
+			</properties>
+			<_object type="param">xrt.backends.raycing.oes.base.OE</_object>
+			<reflect type="prop">
+				<parameters type="prop">
+					<beam type="param">X1_global</beam>
+					<noIntersectionSearch type="param">False</noIntersectionSearch>
+				</parameters>
+				<_object type="param">xrt.backends.raycing.oes.base.OE.reflect</_object>
+				<output type="prop">
+					<beamGlobal type="param">X2_global</beamGlobal>
+					<beamLocal type="param">X2_local</beamLocal>
+				</output>
+			</reflect>
+		</X2>
+		<Slit_2 type="value">
+			<properties type="prop">
+				<bl type="param">Fixed_exit_Si_111__DCM</bl>
+				<name type="param">Slit_2</name>
+				<center type="param">[0.0, 0.0, 0.0]</center>
+				<blades type="param">{'left': -1.0, 'right': 1.0, 'bottom': -1.0, 'top': 1.0}</blades>
+				<x type="param">auto</x>
+				<z type="param">auto</z>
+				<alarmLevel type="param">None</alarmLevel>
+				<renderStyle type="param">mask</renderStyle>
+				<renderSize type="param">{'slitThicknessFraction': None, 'apertureBladeWidth': None, 'apertureDefaultSpan': None, 'apertureThickness': None}</renderSize>
+				<mount type="param">Base_height</mount>
+				<mountOffset type="param">{'center': [0, 200, 260], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
+			</properties>
+			<_object type="param">xrt.backends.raycing.apertures.RectangularAperture</_object>
+			<propagate type="prop">
+				<parameters type="prop">
+					<beam type="param">X2_global</beam>
+				</parameters>
+				<_object type="param">xrt.backends.raycing.apertures.RectangularAperture.propagate</_object>
+				<output type="prop">
+					<beamLocal type="param">Slit_2_local</beamLocal>
+				</output>
+			</propagate>
+		</Slit_2>
+		<Exit_screen type="value">
+			<properties type="prop">
+				<bl type="param">Fixed_exit_Si_111__DCM</bl>
+				<name type="param">Exit_screen</name>
+				<center type="param">[0.0, 12000.0, 10.0]</center>
+				<x type="param">auto</x>
+				<z type="param">auto</z>
+				<compressX type="param">None</compressX>
+				<compressZ type="param">None</compressZ>
+				<limPhysX type="param">[0.0, 0.0]</limPhysX>
+				<limPhysY type="param">[0.0, 0.0]</limPhysY>
+				<mount type="param">None</mount>
+				<mountOffset type="param">None</mountOffset>
+			</properties>
+			<_object type="param">xrt.backends.raycing.screens.Screen</_object>
+			<expose type="prop">
+				<parameters type="prop">
+					<beam type="param">X2_global</beam>
+					<onlyPositivePath type="param">False</onlyPositivePath>
+				</parameters>
+				<_object type="param">xrt.backends.raycing.screens.Screen.expose</_object>
+				<output type="prop">
+					<beamLocal type="param">Exit_screen_local</beamLocal>
+				</output>
+			</expose>
+		</Exit_screen>
+	</Fixed_exit_Si_111__DCM>
+	<FigureErrors type="prop">
+	</FigureErrors>
+	<Stages type="prop">
+		<Base_height type="value">
+			<properties type="prop">
+				<name type="param">Base_height</name>
+				<axis type="param">z</axis>
+				<position type="param">0.0</position>
+				<center type="param">[0.0, 10000.0, -250.0]</center>
+				<pitch type="param">0.0</pitch>
+				<roll type="param">0.0</roll>
+				<yaw type="param">0.0</yaw>
+				<positionRoll type="param">0.0</positionRoll>
+				<rotationSequence type="param">RzRyRx</rotationSequence>
+				<mount type="param">None</mount>
+				<mountOffset type="param">{'center': [0.0, 0.0, 0.0], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
+				<positionMin type="param">-20.0</positionMin>
+				<positionMax type="param">20.0</positionMax>
+				<positionUnit type="param">mm</positionUnit>
+				<renderStyle type="param">auto</renderStyle>
+				<renderSize type="param">{'width': 200.0, 'topLength': 500.0, 'bottomLength': 500.0, 'topHeight': 20.0, 'bottomHeight': 100.0, 'grooves': None, 'grooveWidth': 6.0, 'grooveDepth': 5.0, 'gap': 0.5}</renderSize>
+			</properties>
+			<_object type="param">xrt.backends.raycing.stages.LinearStage</_object>
+		</Base_height>
+		<Bragg_disk type="value">
+			<properties type="prop">
+				<name type="param">Bragg_disk</name>
+				<axis type="param">yaw</axis>
+				<position type="param">9.101863673348971</position>
+				<pivotPoint type="param">[0.0, 0.0, 0.0]</pivotPoint>
+				<crystal type="param">None</crystal>
+				<center type="param">[0.0, 0.0, 0.0]</center>
+				<pitch type="param">0.0</pitch>
+				<roll type="param">0.0</roll>
+				<yaw type="param">0.0</yaw>
+				<positionRoll type="param">0.0</positionRoll>
+				<rotationSequence type="param">RzRyRx</rotationSequence>
+				<mount type="param">Base_height</mount>
+				<mountOffset type="param">{'center': [-10.0, 0.0, 250.0], 'pitch': -0.0, 'roll': 1.5707963267948966, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
+				<positionMin type="param">5.0</positionMin>
+				<positionMax type="param">35.0</positionMax>
+				<positionUnit type="param">deg</positionUnit>
+				<renderStyle type="param">auto</renderStyle>
+				<renderSize type="param">{'width': None, 'length': None, 'shape': None, 'topHeight': 2.0, 'bottomHeight': 2.0, 'radius': 150.0}</renderSize>
+			</properties>
+			<_object type="param">xrt.backends.raycing.stages.RotationStage</_object>
+		</Bragg_disk>
+		<X2_longitudinal type="value">
+			<properties type="prop">
+				<name type="param">X2_longitudinal</name>
+				<axis type="param">y</axis>
+				<position type="param">0.0</position>
+				<center type="param">[0.0, 0.0, 0.0]</center>
+				<pitch type="param">0.0</pitch>
+				<roll type="param">0.0</roll>
+				<yaw type="param">0.0</yaw>
+				<positionRoll type="param">0.0</positionRoll>
+				<rotationSequence type="param">RzRyRx</rotationSequence>
+				<mount type="param">Bragg_disk</mount>
+				<mountOffset type="param">{'center': [-30.0, 31.6075, 10.0], 'pitch': 3.141592653589793, 'roll': 1.5707926535897934, 'yaw': 3.141592653589793, 'rotationSequence': 'RzRyRx'}</mountOffset>
+				<positionMin type="param">-20.0</positionMin>
+				<positionMax type="param">20.0</positionMax>
+				<positionUnit type="param">mm</positionUnit>
+				<renderStyle type="param">auto</renderStyle>
+				<renderSize type="param">{'width': None, 'topLength': None, 'bottomLength': None, 'topHeight': 2.0, 'bottomHeight': None, 'grooves': None, 'grooveWidth': 6.0, 'grooveDepth': 5.0, 'gap': 0.5}</renderSize>
+			</properties>
+			<_object type="param">xrt.backends.raycing.stages.LinearStage</_object>
+		</X2_longitudinal>
+		<X2_perpendicular type="value">
+			<properties type="prop">
+				<name type="param">X2_perpendicular</name>
+				<axis type="param">z</axis>
+				<position type="param">5.0</position>
+				<center type="param">[0.0, 0.0, 0.0]</center>
+				<pitch type="param">0.0</pitch>
+				<roll type="param">0.0</roll>
+				<yaw type="param">0.0</yaw>
+				<positionRoll type="param">0.0</positionRoll>
+				<rotationSequence type="param">RzRyRx</rotationSequence>
+				<mount type="param">X2_longitudinal</mount>
+				<mountOffset type="param">{'center': [0.0, 0.0, 10.0], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
+				<positionMin type="param">-5.0</positionMin>
+				<positionMax type="param">8.0</positionMax>
+				<positionUnit type="param">mm</positionUnit>
+				<renderStyle type="param">auto</renderStyle>
+				<renderSize type="param">{'width': None, 'topLength': None, 'bottomLength': None, 'topHeight': 2.0, 'bottomHeight': None, 'grooves': None, 'grooveWidth': 6.0, 'grooveDepth': 5.0, 'gap': 0.5}</renderSize>
+			</properties>
+			<_object type="param">xrt.backends.raycing.stages.LinearStage</_object>
+		</X2_perpendicular>
+		<X2_cradle type="value">
+			<properties type="prop">
+				<name type="param">X2_cradle</name>
+				<axis type="param">pitch</axis>
+				<position type="param">0.0</position>
+				<pivotPoint type="param">[0.0, 0.0, 10.0]</pivotPoint>
+				<crystal type="param">None</crystal>
+				<center type="param">[0.0, 0.0, 0.0]</center>
+				<pitch type="param">0.0</pitch>
+				<roll type="param">0.0</roll>
+				<yaw type="param">0.0</yaw>
+				<positionRoll type="param">0.0</positionRoll>
+				<rotationSequence type="param">RzRyRx</rotationSequence>
+				<mount type="param">X2_perpendicular</mount>
+				<mountOffset type="param">{'center': [0.0, 0.0, 0.0], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
+				<positionMin type="param">-45.0</positionMin>
+				<positionMax type="param">45.0</positionMax>
+				<positionUnit type="param">deg</positionUnit>
+				<renderStyle type="param">auto</renderStyle>
+				<renderSize type="param">{'width': None, 'length': None, 'shape': None, 'topHeight': 2.0, 'bottomHeight': 2.0, 'radius': 10.0}</renderSize>
+			</properties>
+			<_object type="param">xrt.backends.raycing.stages.RotationStage</_object>
+		</X2_cradle>
+	</Stages>
+	<plots type="value">
+	</plots>
+	<run_ray_tracing type="prop">
+		<plots type="param">plots</plots>
+		<repeats type="param">1</repeats>
+		<updateEvery type="param">1</updateEvery>
+		<pickleEvery type="param">None</pickleEvery>
+		<energyRange type="param">None</energyRange>
+		<backend type="param">raycing</backend>
+		<beamLine type="param">Fixed_exit_Si_111__DCM</beamLine>
+		<threads type="param">1</threads>
+		<processes type="param">1</processes>
+		<generator type="param">None</generator>
+		<generatorArgs type="param">[]</generatorArgs>
+		<generatorKWargs type="param">auto</generatorKWargs>
+		<globalNorm type="param">0</globalNorm>
+		<afterScript type="param">None</afterScript>
+		<afterScriptArgs type="param">[]</afterScriptArgs>
+		<afterScriptKWargs type="param">{}</afterScriptKWargs>
+		<_object type="param">xrt.runner.run_ray_tracing</_object>
+	</run_ray_tracing>
+<description>Scan a fixed-exit Si(111) DCM assembled from individual raycing stages.</description>
+	<xrtGlow type="prop">
+		<scanDescription type="param"><![CDATA[
+{
+  "version": 1,
+  "kind": "timeline_recipe",
+  "frames": 17,
+  "output": {
+    "glowFrameName": "frame{index:04d}.jpg"
+  },
+  "items": [
+    {
+      "type": "track",
+      "id": "Stage: X2_perpendicular.position",
+      "start": 0,
+      "duration": 17,
+      "target": "Stage: X2_perpendicular",
+      "property": "position",
+      "values": {
+        "type": "linspace",
+        "start": -3.0,
+        "stop": 5.0,
+        "steps": 17
+      }
+    }
+  ],
+  "scanTargets": []
+}
+		]]></scanDescription>
+	</xrtGlow>
+</Project>

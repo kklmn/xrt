@@ -1,145 +1,233 @@
 # -*- coding: utf-8 -*-
-"""Scan a fixed-exit Si(111) DCM assembled from individual raycing stages."""
+r"""
+Created with xrtQook (xrt 2.0.0)
 
-from pathlib import Path
-import sys
+Scan a fixed-exit Si(111) DCM assembled from individual raycing stages.
+"""
+
+__author__ = "Konstantin Klementiev", "Roman Chernikov"
+__date__ = "2026-11-17"
 
 import numpy as np
+import os, sys; sys.path.append(os.path.join('..', '..', '..'))  # analysis:ignore
+import xrt.backends.raycing.sources as rsources
+import xrt.backends.raycing.screens as rscreens
+import xrt.backends.raycing.materials as rmats
+import xrt.backends.raycing.materials.elemental as rmatsel
+import xrt.backends.raycing.materials.compounds as rmatsco
+import xrt.backends.raycing.materials.crystals as rmatscr
+import xrt.backends.raycing.oes as roes
+import xrt.backends.raycing.apertures as rapts
+import xrt.backends.raycing.figure_error as rfe
+import xrt.backends.raycing.stages as rstages
+import xrt.backends.raycing.run as rrun
+import xrt.backends.raycing as raycing
+import xrt.plotter as xrtplot
+import xrt.runner as xrtrun
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-from xrt.backends import raycing
-from xrt.backends.raycing.apertures import RectangularAperture
-from xrt.backends.raycing.materials import CrystalSi
-from xrt.backends.raycing.oes import OE
-from xrt.backends.raycing.screens import Screen
-from xrt.backends.raycing.sources import GeometricSource
-from xrt.backends.raycing.stages import LinearStage, Pose, RotationStage
-
-
-ENERGY_MIN = 5000.
-ENERGY_MAX = 20000.
-REFERENCE_ENERGY = (ENERGY_MIN + ENERGY_MAX) / 2
-SCAN_POINTS = 7
-
-MONO_Y = 10000.
-SCREEN_DISTANCE = 2000.
-FIXED_EXIT = 10.
-AXIS_HEIGHT = 50.
-SLIT_DISTANCE = 600.
-SLIT_HALF_OPENING = 1.
-CRYSTAL_X_LIMITS = (-10., 10.)
-X1_Y_LIMITS = (-50., 50.)
-X2_Y_LIMITS = (-50., 50.)
-
-
-def bragg_pitch(material, energy):
-    """Return the symmetric Bragg setting in radians, including refraction."""
-    return material.get_Bragg_angle(energy) - material.get_dtheta(energy)
-
-
-def x2_center_on_disk(pitch):
-    """Return the nominal X2 hit point in the rotating disk frame, in mm."""
-    # The two surfaces are parallel. For an exit rise h, their separation
-    # normal to the surfaces is h/(2 cos pitch). Center X2 on the reflected
-    # ray by placing it h/(2 sin pitch) along the disk's local Y axis.
-    return np.array((0., FIXED_EXIT / (2 * np.sin(pitch)),
-                     FIXED_EXIT / (2 * np.cos(pitch))))
+Si_111_ = rmats.crystals_basic.CrystalSi(
+    d=3.1354575567115175,
+    elements=['Si'],
+    quantities=[1.0],
+    name='Si_111_')
 
 
 def build_beamline():
-    beamline = raycing.BeamLine(name='Fixed-exit Si(111) DCM')
-    beamline.source = GeometricSource(
-        beamline, name='Geometric source', nrays=1,
-        distx=None, disty=None, distz=None, distxprime=None, distzprime=None,
-        energies=(REFERENCE_ENERGY,))
-    si111 = CrystalSi(hkl=(1, 1, 1), name='Si(111)')
+    bl = raycing.BeamLine(
+        name='Fixed_exit_Si_111__DCM',
+        description=None)
 
-    # At base travel zero, the X1 surface and entrance slit are at source Z=0.
-    beamline.baseZ = LinearStage(
-        name='Base height', axis='z', center=(0, MONO_Y, -AXIS_HEIGHT))
-    beamline.disk = RotationStage(
-        name='Bragg disk', axis='pitch', positionUnit='deg',
-        mount=beamline.baseZ, mountOffset=Pose(center=(0, 0, AXIS_HEIGHT)))
+    Base_height = rstages.LinearStage(
+        bl=bl,
+        name='Base_height',
+        axis='z',
+        center=[0.0, 10000.0, -250.0],
+        mountOffset={'center': [0.0, 0.0, 0.0],
+                     'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0,
+                     'rotationSequence': 'RzRyRx'},
+        positionMin=-20.0,
+        positionMax=20.0,
+        positionUnit='mm',
+        renderSize={'width': 200.0, 'topLength': 500.0, 'bottomLength': 500.0,
+                    'topHeight': 20.0, 'bottomHeight': 100.0, 'grooves': None,
+                    'grooveWidth': 6.0, 'grooveDepth': 5.0, 'gap': 0.5})
 
-    blades = dict(left=-SLIT_HALF_OPENING, right=SLIT_HALF_OPENING,
-                  bottom=-SLIT_HALF_OPENING, top=SLIT_HALF_OPENING)
-    beamline.slit1 = RectangularAperture(
-        beamline, name='Slit 1', blades=blades, mount=beamline.baseZ,
-        mountOffset=Pose(center=(0, -SLIT_DISTANCE, AXIS_HEIGHT)))
-    beamline.x1 = OE(
-        beamline, name='X1', material=si111, mount=beamline.disk,
-        limPhysX=CRYSTAL_X_LIMITS, limPhysY=X1_Y_LIMITS)
+    Bragg_disk = rstages.RotationStage(
+        bl=bl,
+        name='Bragg_disk',
+        axis='yaw',
+        position=9.101863673348971,
+        pivotPoint=[0.0, 0.0, 0.0],
+        center=[0.0, 0.0, 0.0],
+        mount=Base_height,
+        mountOffset={'center': [-10.0, 0.0, 250.0],
+                     'pitch': -0.0, 'roll': '90 deg', 'yaw': 0.0,
+                     'rotationSequence': 'RzRyRx'},
+        positionMin=5.0,
+        positionMax=35.0,
+        positionUnit='deg',
+        renderSize={'width': None, 'length': None, 'shape': None,
+                    'topHeight': 2.0, 'bottomHeight': 2.0, 'radius': 150.0})
 
-    # Place the X2 optical origin at the reference hit point with both
-    # translation stages at zero. Both travel axes rotate with the disk.
-    reference_center = x2_center_on_disk(bragg_pitch(si111, REFERENCE_ENERGY))
-    beamline.x2Long = LinearStage(
-        name='X2 longitudinal', axis='y', mount=beamline.disk,
-        mountOffset=Pose(center=reference_center))
-    beamline.x2Perp = LinearStage(
-        name='X2 perpendicular', axis='z', mount=beamline.x2Long)
-    # The centered surface and the nominal beam hit share the cradle pivot.
-    beamline.x2Theta = RotationStage(
-        name='X2 cradle', axis='pitch', positionUnit='deg',
-        pivotPoint=(0, 0, 0), mount=beamline.x2Perp)
-    # Flip the reflecting face to look back at X1, retaining the local Y axis.
-    beamline.x2 = OE(
-        beamline, name='X2', material=si111, mount=beamline.x2Theta,
-        mountOffset=Pose(roll='180 deg'), positionRoll='180 deg',
-        rotationSequence='RyRzRx', limPhysX=CRYSTAL_X_LIMITS,
-        limPhysY=X2_Y_LIMITS)
+    X2_longitudinal = rstages.LinearStage(
+        bl=bl,
+        name='X2_longitudinal',
+        axis='y',
+        center=[0.0, 0.0, 0.0],
+        mount=Bragg_disk,
+        mountOffset={'center': [-30.0, 31.6075, 10.0],
+                     'pitch': '180 deg', 'roll': '90 deg', 'yaw': '180 deg',
+                     'rotationSequence': 'RzRyRx'},
+        positionMin=-20.0,
+        positionMax=20.0,
+        positionUnit='mm')
 
-    beamline.slit2 = RectangularAperture(
-        beamline, name='Slit 2', blades=blades, mount=beamline.baseZ,
-        mountOffset=Pose(center=(0, SLIT_DISTANCE, AXIS_HEIGHT + FIXED_EXIT)))
-    beamline.screen = Screen(
-        beamline, name='Exit screen',
-        center=(0, MONO_Y + SCREEN_DISTANCE, FIXED_EXIT))
-    set_energy(beamline, REFERENCE_ENERGY)
-    return beamline
+    X2_perpendicular = rstages.LinearStage(
+        bl=bl,
+        name='X2_perpendicular',
+        axis='z',
+        position=5.0,
+        center=[0.0, 0.0, 0.0],
+        mount=X2_longitudinal,
+        mountOffset={'center': [0.0, 0.0, 10.0],
+                     'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0,
+                     'rotationSequence': 'RzRyRx'},
+        positionMin=-5.0,
+        positionMax=8.0,
+        positionUnit='mm')
+
+    X2_cradle = rstages.RotationStage(
+        bl=bl,
+        name='X2_cradle',
+        axis='pitch',
+        pivotPoint=[0.0, 0.0, 10.0],
+        center=[0.0, 0.0, 0.0],
+        mount=X2_perpendicular,
+        mountOffset={'center': [0.0, 0.0, 0.0],
+                     'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0,
+                     'rotationSequence': 'RzRyRx'},
+        positionMin=-45.0,
+        positionMax=45.0,
+        positionUnit='deg',
+        renderSize={'width': None, 'length': None, 'shape': None,
+                    'topHeight': 2.0, 'bottomHeight': 2.0, 'radius': 10.0})
+
+    bl.Geometric_source = rsources.geoms.GeometricSource(
+        bl=bl,
+        name='Geometric_source',
+        center=[0.0, 0.0, 0.0],
+        nrays=50000,
+        dx=2,
+        dz=2,
+        distxprime=None,
+        distzprime=None,
+        energies=[12500.0])
+
+    bl.Slit_1 = rapts.RectangularAperture(
+        bl=bl,
+        name='Slit_1',
+        center=[0.0, 0.0, 0.0],
+        blades={'left': -1.0, 'right': 1.0, 'bottom': -1.0, 'top': 1.0},
+        mount='Base_height',
+        mountOffset={'center': [0.0, -200.0, 250.0],
+                     'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0,
+                     'rotationSequence': 'RzRyRx'})
+
+    bl.X1 = roes.base.OE(
+        bl=bl,
+        name='X1',
+        center=[0.0, 0.0, 0.0],
+        mount='Bragg_disk',
+        mountOffset={'center': [0.0, 0.0, 10.0],
+                     'pitch': 0.0, 'roll': '-90 deg', 'yaw': 0.0,
+                     'rotationSequence': 'RzRyRx'},
+        material=Si_111_,
+        limPhysX=[-10.0, 10.0],
+        limPhysY=[-50.0, 50.0],
+        order=1)
+
+    bl.X2 = roes.base.OE(
+        bl=bl,
+        name='X2',
+        center=[0.0, 0.0, 0.0],
+        mount='X2_cradle',
+        mountOffset={'center': [0.0, 0.0, 10.0],
+                     'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0,
+                     'rotationSequence': 'RzRyRx'},
+        rotationSequence='RyRzRx',
+        material=Si_111_,
+        limPhysX=[-10.0, 10.0],
+        limPhysY=[-50.0, 50.0],
+        order=1)
+
+    bl.Slit_2 = rapts.RectangularAperture(
+        bl=bl,
+        name='Slit_2',
+        center=[0.0, 0.0, 0.0],
+        blades={'left': -1.0, 'right': 1.0, 'bottom': -1.0, 'top': 1.0},
+        mount='Base_height',
+        mountOffset={'center': [0.0, 200.0, 260.0],
+                     'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0,
+                     'rotationSequence': 'RzRyRx'})
+
+    bl.Exit_screen = rscreens.Screen(
+        bl=bl,
+        name='Exit_screen',
+        center=[0.0, 12000.0, 10.0],
+        limPhysX=[0.0, 0.0],
+        limPhysY=[0.0, 0.0])
+
+    return bl
 
 
-def set_energy(beamline, energy):
-    """Tune the disk and both X2 slides. The cradle remains a separate trim."""
-    pitch = bragg_pitch(beamline.x1.material, energy)
-    beamline.disk.position = np.degrees(pitch)
-    travel = x2_center_on_disk(pitch) - beamline.x2Long.mountOffset.center
-    beamline.x2Long.position = travel[1]
-    beamline.x2Perp.position = travel[2]
-    beamline.source.energies = (energy,)
+def run_process(bl):
+    Geometric_source_global = bl.Geometric_source.shine()
+
+    Slit_1_local = bl.Slit_1.propagate(
+        beam=Geometric_source_global)
+
+    X1_global, X1_local = bl.X1.reflect(
+        beam=Geometric_source_global)
+
+    X2_global, X2_local = bl.X2.reflect(
+        beam=X1_global)
+
+    Slit_2_local = bl.Slit_2.propagate(
+        beam=X2_global)
+
+    Exit_screen_local = bl.Exit_screen.expose(
+        beam=X2_global)
+
+    outDict = {
+        'Geometric_source_global': Geometric_source_global,
+        'Slit_1_local': Slit_1_local,
+        'X1_global': X1_global,
+        'X1_local': X1_local,
+        'X2_global': X2_global,
+        'X2_local': X2_local,
+        'Slit_2_local': Slit_2_local,
+        'Exit_screen_local': Exit_screen_local}
+    return outDict
 
 
-def run_process(beamline):
-    """Trace the beam through both slits and both crystal reflections."""
-    source = beamline.source.shine()
-    incident, slit1 = beamline.slit1.propagate(source, needNewGlobal=True)
-    reflected, x1 = beamline.x1.reflect(incident)
-    exit_beam, x2 = beamline.x2.reflect(reflected)
-    transmitted, slit2 = beamline.slit2.propagate(exit_beam, needNewGlobal=True)
-    screen = beamline.screen.expose(transmitted, onlyPositivePath=True)
-    screen_global = beamline.screen.expose_global(
-        transmitted, onlyPositivePath=True)
-    return dict(beamSlit1=slit1, beamX1=x1, beamX2=x2, beamSlit2=slit2,
-                beamScreen=screen, beamScreenGlobal=screen_global)
+rrun.run_process = run_process
 
 
-def scan(beamline, steps=SCAN_POINTS):
-    for energy in np.linspace(ENERGY_MIN, ENERGY_MAX, steps):
-        set_energy(beamline, energy)
-        yield energy, run_process(beamline)
+def define_plots(bl):
+    plots = []
+    return plots
 
 
 def main():
-    beamline = build_beamline()
-    for energy, beams in scan(beamline):
-        screen = beams['beamScreenGlobal']
-        good = screen.state == 1
-        z = np.mean(screen.z[good]) if good.any() else np.nan
-        flux = (screen.Jss[good] + screen.Jpp[good]).mean() if good.any() else 0.
-        print(f'{energy:7.0f} eV | disk {beamline.disk.position:8.4f} deg | '
-              f'X2 long {beamline.x2Long.position:+8.4f}, '
-              f'perp {beamline.x2Perp.position:+7.4f} mm | '
-              f'exit Z {z:7.3f} mm | relative intensity {flux:.3f}')
+    Fixed_exit_Si_111__DCM = build_beamline()
+    Fixed_exit_Si_111__DCM.glow(scale=[1e2, 1e2, 1e2], centerAt='X1')
+#    E0 = list(Fixed_exit_Si_111__DCM.Geometric_source.energies)[0]
+#    Fixed_exit_Si_111__DCM.alignE = E0
+#    plots = define_plots(Fixed_exit_Si_111__DCM)
+#    xrtrun.run_ray_tracing(
+#        plots=plots,
+#        backend='raycing',
+#        beamLine=Fixed_exit_Si_111__DCM)
 
 
 if __name__ == '__main__':
