@@ -97,7 +97,8 @@ _RENDER_SIZE_EDITOR_HINT = {
     },
 }
 
-allArguments = ('bl', 'name', 'center', 'blades', 'vertices', 'x', 'z',
+allArguments = ('bl', 'name', 'center', 'blades', 'vertices',
+                'outerLimits', 'x', 'z',
                 'alarmLevel', 'r', 'shadeFraction',
                 'dx', 'dz', 'px', 'pz', 'nx', 'nz',
                 'nSpokes', 'rx', 'rz', 'phi0', 'vortex', 'vortexNradial',
@@ -120,7 +121,8 @@ class RectangularAperture(object):
                  alarmLevel=None, renderStyle='mask',
                  blades=_DEFAULT_RECTANGULAR_BLADES,
                  renderSize=_DEFAULT_RENDER_SIZE,
-                 mount=None, mountOffset=None, renderColor='auto', **kwargs):
+                 mount=None, mountOffset=None, renderColor='auto',
+                 outerLimits=None, **kwargs):
         """
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
             Container for beamline elements. Optical elements are added to its
@@ -145,6 +147,12 @@ class RectangularAperture(object):
             Mapping of blade names to their positions relative to the aperture
             center. Supported keys are 'left', 'right', 'bottom' and 'top'.
             Missing keys mean that the corresponding blade is absent.
+
+        *outerLimits*: dict or None
+            Rectangular outer bounds in local millimetres from *center*, as
+            ``{'x': [xmin, xmax], 'z': [zmin, zmax]}``. Rays outside the bounds
+            bypass the aperture. Beamstops invert the complete aperture mask.
+            None leaves the aperture bounds unlimited.
 
         *kind* and *opening*: sequence
             Compatibility API for existing scripts. *kind* defines any
@@ -212,6 +220,7 @@ class RectangularAperture(object):
         self.renderSize = dict(
             _DEFAULT_RENDER_SIZE if renderSize is None else renderSize)
         self.renderColor = renderColor
+        self.outerLimits = copy.deepcopy(outerLimits)
 
         self._blades = {}
         self._kind = []
@@ -521,11 +530,19 @@ class RectangularAperture(object):
                 badIndices[good] = badIndices[good] | (lo.z[good] < d)
             elif akind.startswith('t'):
                 badIndices[good] = badIndices[good] | (lo.z[good] > d)
+        if self.outerLimits is not None:
+            xmin, xmax = self.outerLimits['x']
+            zmin, zmax = self.outerLimits['z']
+            x, z = lo.x[good], lo.z[good]
+            insideOuter = (
+                (x >= xmin) & (x <= xmax) & (z >= zmin) & (z <= zmax))
+            badIndices[good] &= insideOuter
+            if not self.isBeamStop:
+                lo.state[good] = np.where(insideOuter, lo.state[good], 3)
         if self.isBeamStop:
             badIndices[good] = np.invert(badIndices[good])
         beam.state[badIndices] = self.lostNum
-
-        lo.state[:] = beam.state
+        lo.state[badIndices] = self.lostNum
         lo.y[good] = 0.
 
         if hasattr(lo, 'Es'):
@@ -534,6 +551,8 @@ class RectangularAperture(object):
             lo.Ep[good] *= propPhase
 
         goodN = lo.state > 0
+        if self.outerLimits is not None and not self.isBeamStop:
+            goodN[good] &= insideOuter
         try:
             self.spotLimits = [min(self.spotLimits[0], lo.x[goodN].min()),
                                max(self.spotLimits[1], lo.x[goodN].max()),
@@ -550,6 +569,8 @@ class RectangularAperture(object):
 
         if needNewGlobal:
             glo = rs.Beam(copyFrom=lo)
+            if self.outerLimits is not None:
+                glo.state[:] = beam.state
             self._restore_global_frame(glo, center, axes, good)
             raycing.append_to_flow(self.propagate, [glo, lo],
                                    inspect.currentframe())
@@ -704,8 +725,8 @@ class RectangularAperture(object):
 class RectangularBeamStop(RectangularAperture):
     """Convenience class for RectangularAperture in beam-stop mode.
 
-    In beam-stop mode the nominal aperture opening is the stopped (solid)
-    region, while rays outside it pass through.
+    In beam-stop mode the aperture mask is inverted. With finite
+    *outerLimits*, rays beyond those bounds are also stopped.
     """
 
     def __init__(self, *args, **kwargs):
@@ -721,8 +742,11 @@ class SetOfRectangularAperturesOnZActuator(RectangularAperture):
                  x='auto', z='auto', alarmLevel=None, blades=None,
                  zActuator=None, renderStyle='mask',
                  renderSize=_DEFAULT_RENDER_SIZE, renderColor='auto',
-                 **kwargs):
+                 outerLimits=None, **kwargs):
         """
+        *outerLimits*: dict or None
+            Local rectangular bounds as in :class:`RectangularAperture`.
+
         *apertures*: sequence of str
             Names of apertures. The last one must be one of 'bottom-edge' or
             'top-edge'.
@@ -794,6 +818,7 @@ class SetOfRectangularAperturesOnZActuator(RectangularAperture):
         self.renderSize = dict(
             _DEFAULT_RENDER_SIZE if renderSize is None else renderSize)
         self.renderColor = renderColor
+        self.outerLimits = copy.deepcopy(outerLimits)
         self.isBeamStop = False
         self._blades = {}
         self._kind = []
@@ -851,10 +876,13 @@ class RoundAperture(object):
     def __init__(self, bl=None, name='',
                  center=[0, 0, 0], r=1, x='auto', z='auto', alarmLevel=None,
                  renderSize=_DEFAULT_RENDER_SIZE, renderColor='auto',
-                 **kwargs):
+                 outerLimits=None, **kwargs):
         """ A round aperture aperture.
 
-        *r* is the radius.
+        *r* is the radius of the opening.
+
+        *outerLimits*: dict or None
+            Local rectangular bounds as in :class:`RectangularAperture`.
 
         *x, z*: 3-tuples or 'auto'.
             Normalized 3D vectors in the global system which determine the
@@ -896,6 +924,7 @@ class RoundAperture(object):
         self.renderSize = dict(
             _DEFAULT_RENDER_SIZE if renderSize is None else renderSize)
         self.renderColor = renderColor
+        self.outerLimits = copy.deepcopy(outerLimits)
 # For plotting footprint images with the envelope aperture:
         self.surface = name,
         self.limOptX = [-r, r]
@@ -984,10 +1013,19 @@ class RoundAperture(object):
 
         badIndices = np.zeros(len(beam.x), dtype=bool)
         badIndices[good] = lo.r > self.r
+        if self.outerLimits is not None:
+            xmin, xmax = self.outerLimits['x']
+            zmin, zmax = self.outerLimits['z']
+            x, z = lo.x[good], lo.z[good]
+            insideOuter = (
+                (x >= xmin) & (x <= xmax) & (z >= zmin) & (z <= zmax))
+            badIndices[good] &= insideOuter
+            if not self.isBeamStop:
+                lo.state[good] = np.where(insideOuter, lo.state[good], 3)
         if self.isBeamStop:
             badIndices[good] = np.invert(badIndices[good])
         beam.state[badIndices] = self.lostNum
-        lo.state[good] = beam.state[good]
+        lo.state[badIndices] = self.lostNum
         lo.y[good] = 0.
 
         if hasattr(lo, 'Es'):
@@ -1000,6 +1038,8 @@ class RoundAperture(object):
 
         if needNewGlobal:
             glo = rs.Beam(copyFrom=lo)
+            if self.outerLimits is not None:
+                glo.state[:] = beam.state
             raycing.virgin_local_to_global(self.bl, glo, self.center, good)
 
             return glo, lo
@@ -1098,8 +1138,8 @@ class RoundAperture(object):
 class RoundBeamStop(RoundAperture):
     """Round beamstop. Descends from RoundAperture and has the same parameters.
 
-    In beam-stop mode the nominal aperture opening is the stopped (solid)
-    region, while rays outside it pass through.
+    In beam-stop mode the aperture mask is inverted. With finite
+    *outerLimits*, rays beyond those bounds are also stopped.
     """
 
     def __init__(self, *args, **kwargs):
@@ -1173,11 +1213,19 @@ class DoubleSlit(RectangularAperture):
         st = dsb + (dst - dsb) * shadeMax
         badIndices[good] = \
             badIndices[good] | ((lo.z[good] > sb) & (lo.z[good] < st))
+        if self.outerLimits is not None:
+            xmin, xmax = self.outerLimits['x']
+            zmin, zmax = self.outerLimits['z']
+            x, z = lo.x[good], lo.z[good]
+            insideOuter = (
+                (x >= xmin) & (x <= xmax) & (z >= zmin) & (z <= zmax))
+            badIndices[good] &= insideOuter
+            if not self.isBeamStop:
+                lo.state[good] = np.where(insideOuter, lo.state[good], 3)
         if self.isBeamStop:
             badIndices[good] = np.invert(badIndices[good])
         beam.state[badIndices] = self.lostNum
-
-        lo.state[good] = beam.state[good]
+        lo.state[badIndices] = self.lostNum
         lo.y[good] = 0.
 
         if hasattr(lo, 'Es'):
@@ -1193,6 +1241,8 @@ class DoubleSlit(RectangularAperture):
 
         if needNewGlobal:
             glo = rs.Beam(copyFrom=lo)
+            if self.outerLimits is not None:
+                glo.state[:] = beam.state
             self._restore_global_frame(glo, center, axes, good)
             glo.path[good] += beam.path[good]
 
@@ -1214,8 +1264,8 @@ class DoubleSlit(RectangularAperture):
 class DoubleBeamStop(DoubleSlit):
     """Convenience class for DoubleSlit in beam-stop mode.
 
-    In beam-stop mode the nominal slit openings are the stopped (solid)
-    regions, while rays outside them pass through.
+    In beam-stop mode the slit mask is inverted. With finite
+    *outerLimits*, rays beyond those bounds are also stopped.
     """
 
     def __init__(self, *args, **kwargs):
@@ -1236,7 +1286,7 @@ class PolygonalAperture(object):
                  opening=None, x='auto', z='auto', alarmLevel=None,
                  vertices=_DEFAULT_POLYGON_VERTICES,
                  renderSize=_DEFAULT_RENDER_SIZE, renderColor='auto',
-                 **kwargs):
+                 outerLimits=None, **kwargs):
         """
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
             Container for beamline elements. Optical elements are added to its
@@ -1253,6 +1303,9 @@ class PolygonalAperture(object):
 
         *vertices*: sequence
             Coordinates [(x0, y0), ...(xN, yN)] of the polygon vertices.
+
+        *outerLimits*: dict or None
+            Local rectangular bounds as in :class:`RectangularAperture`.
 
         *x, z*: 3-tuples or 'auto'.
             Normalized 3D vectors in the global system which determine the
@@ -1300,6 +1353,7 @@ class PolygonalAperture(object):
         self.renderSize = dict(
             _DEFAULT_RENDER_SIZE if renderSize is None else renderSize)
         self.renderColor = renderColor
+        self.outerLimits = copy.deepcopy(outerLimits)
         self.isBeamStop = False
 # For plotting footprint images with the envelope aperture:
         self.surface = name,
@@ -1419,13 +1473,22 @@ class PolygonalAperture(object):
         lo.path[good] += path
 
         footprint = mplPath(self.vertices)
-        badIndices = np.invert(footprint.contains_points(np.array(
-                list(zip(lo.x, lo.z)))))
+        badIndices = np.zeros(len(beam.x), dtype=bool)
+        badIndices[good] = ~footprint.contains_points(
+            np.column_stack((lo.x[good], lo.z[good])))
+        if self.outerLimits is not None:
+            xmin, xmax = self.outerLimits['x']
+            zmin, zmax = self.outerLimits['z']
+            x, z = lo.x[good], lo.z[good]
+            insideOuter = (
+                (x >= xmin) & (x <= xmax) & (z >= zmin) & (z <= zmax))
+            badIndices[good] &= insideOuter
+            if not self.isBeamStop:
+                lo.state[good] = np.where(insideOuter, lo.state[good], 3)
         if self.isBeamStop:
             badIndices[good] = np.invert(badIndices[good])
         beam.state[badIndices] = self.lostNum
-
-        lo.state[good] = beam.state[good]
+        lo.state[badIndices] = self.lostNum
         lo.y[good] = 0.
 
         if hasattr(lo, 'Es'):
@@ -1441,6 +1504,8 @@ class PolygonalAperture(object):
 
         if needNewGlobal:
             glo = rs.Beam(copyFrom=lo)
+            if self.outerLimits is not None:
+                glo.state[:] = beam.state
             raycing.virgin_local_to_global(self.bl, glo, self.center, good)
 
 #            self.bl.beamsDictU[self.uuid] = {'beamGlobal': glo,
@@ -1526,8 +1591,8 @@ class PolygonalAperture(object):
 class PolygonalBeamStop(PolygonalAperture):
     """Convenience class for PolygonalAperture in beam-stop mode.
 
-    In beam-stop mode the nominal polygonal opening is the stopped (solid)
-    region, while rays outside it pass through.
+    In beam-stop mode the aperture mask is inverted. With finite
+    *outerLimits*, rays beyond those bounds are also stopped.
     """
 
     def __init__(self, *args, **kwargs):
@@ -1664,8 +1729,8 @@ class GridAperture(PolygonalAperture):
 class GridBeamStop(GridAperture):
     """Convenience class for GridAperture in beam-stop mode.
 
-    In beam-stop mode the nominal grid openings are the stopped (solid)
-    regions, while rays outside them pass through.
+    In beam-stop mode the aperture mask is inverted. With finite
+    *outerLimits*, rays beyond those bounds are also stopped.
     """
 
     def __init__(self, *args, **kwargs):
