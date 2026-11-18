@@ -43,6 +43,8 @@ __allSectioned__ = dict.fromkeys(
 
 
 AXES = {'x': (1., 0., 0.), 'y': (0., 1., 0.), 'z': (0., 0., 1.)}
+MOUNT_FIELDS = ('mount', 'mount2', 'mount3')
+MOUNT_REFERENCE_FIELDS = MOUNT_FIELDS + ('yReference',)
 
 
 class Pose:
@@ -170,7 +172,7 @@ class StageState:
 
 def resolve_mount(value, bl):
     """Resolve a mounting frame or stage by object, name or UUID."""
-    if value is None:
+    if value is None or (isinstance(value, str) and value == 'None'):
         return None
     mount = raycing.normalize_ref(value, bl, 'stage', target='object')
     if isinstance(mount, MountingFrame):
@@ -182,20 +184,13 @@ def resolve_mount(value, bl):
 
 def set_mount(element, value, *, strict=False):
     """Apply a mount edit, keeping the previous mount if it is invalid."""
+    if isinstance(element, MountingFrame):
+        element._set_mounts({'mount': value}, strict=strict)
+        return
     try:
         stage = resolve_mount(value, element.bl)
-        bl = element.bl
-        if isinstance(element, MountingFrame):
-            ancestor = stage
-            while ancestor is not None:
-                if ancestor is element:
-                    raise ValueError('A mount stack cannot contain a cycle')
-                ancestor = ancestor.mount
-            if bl is not None and bl.stagesDict.get(element.uuid) is not element:
-                # Registration of a new mount also registers its ancestors.
-                bl = None
-        if stage is not None and bl is not None:
-            bl.register_stage(stage)
+        if stage is not None and element.bl is not None:
+            element.bl.register_stage(stage)
     except (TypeError, ValueError) as error:
         if strict:
             raise
@@ -228,11 +223,15 @@ def set_mount_offset(element, value, *, strict=False):
 
 def update_stage(stage, kwargs):
     """Apply property edits from the GUI or propagation worker."""
+    mounts = {key: kwargs[key] for key in MOUNT_REFERENCE_FIELDS
+              if key in kwargs}
+    if mounts:
+        stage._set_mounts(mounts)
     components = raycing.compoundArgs['center']
     for key, value in kwargs.items():
-        if key in ('uuid', 'bl'):
+        if key in ('uuid', 'bl') or key in mounts:
             continue
-        if key in ('mount', 'crystal') and isinstance(value, str):
+        if key == 'crystal' and isinstance(value, str):
             value = None if value == 'None' else value
         elif key != 'name' and isinstance(value, str):
             value = raycing.parametrize(value)
@@ -256,10 +255,16 @@ def update_stage(stage, kwargs):
 class MountingFrame:
     """Rigid mount for optical elements, stages and other mounting frames."""
 
+    _renderStyles = ('rectangular', 'round')
+    _renderSizes = dict(width=None, height=2., length=None)
+    _renderExtents = ('width', 'length')
+
     def __init__(self, name='frame', center=(0, 0, 0), pitch=0., roll=0.,
                  yaw=0., positionRoll=0.,
                  rotationSequence=DEFAULT_ROTATION_SEQUENCE, pose=None,
-                 mount=None, mountOffset=None, bl=None, uuid=None):
+                 mount=None, mountOffset=None, bl=None, uuid=None,
+                 mount2=None, mount3=None, yReference=None,
+                 renderStyle='rectangular', renderSize=None, renderColor='auto'):
         """
         *name*: str
             Human-readable name of the mount.
@@ -290,20 +295,47 @@ class MountingFrame:
             and *yaw* are world readouts. The authored placement is used
             when detached.
 
+        *mount2, mount3*: :class:`LinearStage`, name, UUID or None
+            Additional supports for a dual mount or tripod. Supports must be
+            distinct linear stages. Tripods require axis 'z' on each support.
+            Set mount2 before mount3.
+
+        *yReference*: :class:`LinearStage`, name, UUID or None
+            Support whose attachment point defines positive Y from the
+            midpoint or centroid. Defaults to mount.
+
         *mountOffset*: :class:`Pose`, mapping or None
-            Translation and orientation in the parent's attachment frame.
-            Defaults to the identity pose.
+            Pose relative to the parent attachment or to the frame computed
+            from the support points. Defaults to the identity pose.
 
         *bl*: :class:`~xrt.backends.raycing.BeamLine` or None
             Beamline that registers the mount and resolves named parents.
 
         *uuid*: str or None
             Identifier to restore from a layout. Defaults to a new UUID.
+
+        *renderStyle*: str
+            Glow plate shape, 'rectangular' or 'round'.
+
+        *renderSize*: dict or None
+            Glow plate dimensions in mm. Width and length follow local X and Y
+            and accept a positive centered span, a pair of local limits or
+            None to fit the mounted geometry. For a round plate they set the
+            diameters. Height is the thickness along local Z and defaults
+            to 2 mm.
+
+        *renderColor*: str
+            Glow surface material preset. 'auto' uses the standard steel.
         """
         self.bl = bl
         self.uuid = str(raycing.uuid.uuid4()) if uuid is None else str(uuid)
         self.name = name
-        self._mount = None
+        self._renderStyle = self._renderStyles[0]
+        self._renderSize = self._renderSizes.copy()
+        self.renderStyle = renderStyle
+        self.renderSize = renderSize
+        self.renderColor = renderColor
+        self._mount = self._mount2 = self._mount3 = self._yReference = None
         self._rotationSequence = DEFAULT_ROTATION_SEQUENCE
         self._pitch = self._roll = self._yaw = self._positionRoll = 0.
         self._center = [0., 0., 0.]
@@ -320,9 +352,89 @@ class MountingFrame:
         self.roll = roll
         self.yaw = yaw
         set_mount_offset(self, mountOffset, strict=True)
-        set_mount(self, mount, strict=True)
+        self._set_mounts(dict(mount=mount, mount2=mount2, mount3=mount3,
+                              yReference=yReference), strict=True)
         if self.bl is not None:
             self.bl.register_stage(self)
+
+    @classmethod
+    def get_argument_editor_hint(cls, argName):
+        if argName == 'renderStyle':
+            return {'editor': 'choice', 'choices': cls._renderStyles}
+        if argName == 'renderSize':
+            inputTypes = {key: ('float', 'None') for key in cls._renderSizes}
+            inputTypes.update((key, ('float', 'sequence:float', 'None'))
+                              for key in cls._renderExtents)
+            if 'grooves' in inputTypes:
+                inputTypes['grooves'] = ('integer', 'None')
+            return {
+                'editor': 'dict',
+                'title': 'Stage rendering size (mm)',
+                'fixedKeys': tuple(cls._renderSizes),
+                'fieldDefaults': cls._renderSizes,
+                'fieldInputTypes': inputTypes,
+                'fieldChoices': ({'shape': ('None', 'square', 'round')}
+                                 if 'shape' in cls._renderSizes else {}),
+                'valueHint': {'type': 'parameter'},
+                'validator': cls._validate_render_size,
+                'default': cls._renderSizes,
+                }
+
+    @classmethod
+    def _validate_render_size(cls, **values):
+        sizes = cls._renderSizes.copy()
+        for key, value in values.items():
+            if key not in sizes:
+                raise ValueError('Unknown rendering dimension: {}'.format(key))
+            if value is None:
+                continue
+            if key == 'shape':
+                if value not in ('square', 'round'):
+                    raise ValueError('shape must be square or round')
+            elif (key in cls._renderExtents and
+                  not isinstance(value, (str, bytes)) and
+                  raycing.is_sequence(value)):
+                limits = np.asarray(value, dtype=float)
+                if (limits.shape != (2,) or not np.isfinite(limits).all() or
+                        not math.isfinite(limits[1] - limits[0]) or
+                        limits[1] <= limits[0]):
+                    raise ValueError('{} needs two increasing limits'.format(key))
+                value = limits.tolist()
+            else:
+                value = float(value)
+                if not math.isfinite(value) or value < 0. or (
+                        value == 0. and key not in ('gap', 'grooves')):
+                    raise ValueError('Invalid rendering dimension: {}'.format(key))
+                if key == 'grooves':
+                    if not value.is_integer():
+                        raise ValueError('grooves must be a whole number')
+                    value = int(value)
+            sizes[key] = value
+        return sizes
+
+    @property
+    def renderStyle(self):
+        return self._renderStyle
+
+    @renderStyle.setter
+    def renderStyle(self, value):
+        if isinstance(value, str) and value in self._renderStyles:
+            self._renderStyle = value
+        else:
+            logger.warning('%s: renderStyle must be one of %s',
+                           self.name, ', '.join(self._renderStyles))
+
+    @property
+    def renderSize(self):
+        return self._renderSize
+
+    @renderSize.setter
+    def renderSize(self, value):
+        try:
+            self._renderSize = self._validate_render_size(
+                **({} if value is None else value))
+        except (TypeError, ValueError, OverflowError) as error:
+            logger.warning('%s: %s', self.name, error)
 
     @property
     def name(self):
@@ -447,6 +559,116 @@ class MountingFrame:
         set_mount(self, value)
 
     @property
+    def mount2(self):
+        return self._mount2
+
+    @mount2.setter
+    def mount2(self, value):
+        self._set_mounts({'mount2': value})
+
+    @property
+    def mount3(self):
+        return self._mount3
+
+    @mount3.setter
+    def mount3(self, value):
+        self._set_mounts({'mount3': value})
+
+    @property
+    def yReference(self):
+        return self._yReference
+
+    @yReference.setter
+    def yReference(self, value):
+        self._set_mounts({'yReference': value})
+
+    @property
+    def _mount_parents(self):
+        return tuple(mount for mount in (self.mount, self.mount2, self.mount3)
+                     if mount is not None)
+
+    def _set_mounts(self, changes, *, strict=False, validate_pose=True):
+        try:
+            mounts = tuple(
+                resolve_mount(changes[key], self.bl) if key in changes
+                else getattr(self, key) for key in MOUNT_FIELDS)
+            supports = tuple(mount for mount in mounts if mount is not None)
+            if any(m is None for m in mounts[:len(supports)]):
+                raise ValueError('Set mount, mount2 and mount3 in order')
+            if len(supports) > 1:
+                if isinstance(self, Stage):
+                    raise ValueError('Multiple supports require a mounting frame')
+                if len(set(supports)) != len(supports):
+                    raise ValueError('Frame supports must be distinct stages')
+                if any(not isinstance(m, LinearStage) for m in supports):
+                    raise ValueError('All frame supports must be linear stages')
+                if len(supports) == 3 and any(m.axis != 'z' for m in supports):
+                    raise ValueError('All tripod supports must be Z linear stages')
+
+            reference = changes.get('yReference', self._yReference)
+            if isinstance(reference, str):
+                if reference == 'None':
+                    reference = None
+                else:
+                    matches = [m for m in supports
+                               if reference in (m.name, m.uuid)]
+                    if len(matches) != 1:
+                        raise ValueError('yReference must identify one support')
+                    reference = matches[0]
+            if reference is not None and reference not in supports:
+                if 'yReference' in changes:
+                    raise ValueError('yReference must be a frame support')
+                reference = None
+
+            pending = list(supports)
+            seen = set()
+            while pending:
+                parent = pending.pop()
+                if parent is self:
+                    raise ValueError('A mount stack cannot contain a cycle')
+                if parent not in seen:
+                    seen.add(parent)
+                    pending.extend(parent._mount_parents)
+            if validate_pose and len(supports) > 1:
+                self._support_pose(supports, reference or supports[0], {})
+            bl = self.bl
+            if (supports and bl is not None and
+                    bl.stagesDict.get(self.uuid) is self):
+                bl.register_stage(*supports)
+        except (TypeError, ValueError) as error:
+            if strict:
+                raise
+            logger.warning('%s: %s', self.name, error)
+            return
+
+        self._mount, self._mount2, self._mount3 = mounts
+        self._yReference = reference
+
+    def _support_pose(self, supports, reference, states):
+        if len(supports) == 3 and any(stage.axis != 'z' for stage in supports):
+            raise ValueError(f'{self.name}: all tripod supports must be Z stages')
+        poses = [stage.evaluate(states).mountPose for stage in supports]
+        points = np.array([pose.center for pose in poses])
+        center = points.mean(axis=0)
+        y = points[supports.index(reference)] - center
+        y_norm = np.linalg.norm(y)
+        if y_norm < 1e-12:
+            raise ValueError(f'{self.name}: support centers do not define Y')
+        y /= y_norm
+        up = np.sum([pose.orientation.z for pose in poses], axis=0)
+        if len(poses) == 2:
+            z = up - (up @ y) * y
+        else:
+            z = np.cross(points[1] - points[0], points[2] - points[0])
+            if z @ up < 0:
+                z = -z
+        z_norm = np.linalg.norm(z)
+        if z_norm < 1e-12:
+            raise ValueError(f'{self.name}: supports do not define a plane')
+        z /= z_norm
+        return Pose.from_xz(center, x=np.cross(y, z), z=z)
+
+    @property
     def mountOffset(self):
         return self._mountOffset
 
@@ -458,11 +680,18 @@ class MountingFrame:
         if self.mount is None:
             orientation = Orientation(
                 pitch=self._pitch, roll=self._roll, yaw=self._yaw,
-                positionRoll=self.positionRoll, rotationSequence=self.rotationSequence)
+                positionRoll=self.positionRoll,
+                rotationSequence=self.rotationSequence)
             return Pose._from_orientation(self._center, orientation)
-        pose = self.mount.evaluate(states).mountPose @ self.mountOffset
+        if self.mount2 is None:
+            parent_pose = self.mount.evaluate(states).mountPose
+        else:
+            parent_pose = self._support_pose(
+                self._mount_parents, self.yReference or self.mount, states)
+        pose = parent_pose @ self.mountOffset
         orientation = Orientation._from_rotation(
-            pose.orientation._rotation, self.rotationSequence, self.positionRoll)
+            pose.orientation._rotation, self.rotationSequence,
+            self.positionRoll)
         return Pose._from_orientation(pose.center, orientation)
 
     @property
@@ -505,7 +734,8 @@ class Stage(MountingFrame):
                  rotationSequence=DEFAULT_ROTATION_SEQUENCE, pose=None,
                  mount=None, mountOffset=None, axis=None, position=0.,
                  positionMin=None, positionMax=None, positionUnit=None,
-                 bl=None, uuid=None, renderStyle='auto', renderSize=None):
+                 bl=None, uuid=None, renderStyle='auto', renderSize=None,
+                 renderColor='auto'):
         """
         Base placement, parent mounting and registration use the parameters
         of :class:`MountingFrame`.
@@ -558,95 +788,15 @@ class Stage(MountingFrame):
         self.positionMax = positionMax
         self.position = position
         self._check_position()
-        self._renderStyle = 'auto'
-        self._renderSize = self._renderSizes.copy()
-        self.renderStyle = renderStyle
-        self.renderSize = renderSize
         super().__init__(
             name=name, center=center, pitch=pitch, roll=roll, yaw=yaw,
             positionRoll=positionRoll, rotationSequence=rotationSequence,
-            pose=pose, mount=mount, mountOffset=mountOffset, bl=bl, uuid=uuid)
+            pose=pose, mount=mount, mountOffset=mountOffset, bl=bl, uuid=uuid,
+            renderStyle=renderStyle, renderSize=renderSize,
+            renderColor=renderColor)
 
     def _check_position(self):
         pass
-
-    @classmethod
-    def get_argument_editor_hint(cls, argName):
-        if argName == 'renderStyle':
-            return {'editor': 'choice', 'choices': cls._renderStyles}
-        if argName == 'renderSize':
-            inputTypes = {key: ('float', 'None') for key in cls._renderSizes}
-            inputTypes.update((key, ('float', 'sequence:float', 'None'))
-                              for key in cls._renderExtents)
-            if 'grooves' in inputTypes:
-                inputTypes['grooves'] = ('integer', 'None')
-            return {
-                'editor': 'dict',
-                'title': 'Stage rendering size (mm)',
-                'fixedKeys': tuple(cls._renderSizes),
-                'fieldDefaults': cls._renderSizes,
-                'fieldInputTypes': inputTypes,
-                'fieldChoices': {'shape': ('None', 'square', 'round')},
-                'valueHint': {'type': 'parameter'},
-                'validator': cls._validate_render_size,
-                'default': cls._renderSizes,
-                }
-
-    @classmethod
-    def _validate_render_size(cls, **values):
-        sizes = cls._renderSizes.copy()
-        for key, value in values.items():
-            if key not in sizes:
-                raise ValueError('Unknown rendering dimension: {}'.format(key))
-            if value is None:
-                continue
-            if key == 'shape':
-                if value not in ('square', 'round'):
-                    raise ValueError('shape must be square or round')
-            elif (key in cls._renderExtents and
-                  not isinstance(value, (str, bytes)) and
-                  raycing.is_sequence(value)):
-                limits = np.asarray(value, dtype=float)
-                if (limits.shape != (2,) or not np.isfinite(limits).all() or
-                        not math.isfinite(limits[1] - limits[0]) or
-                        limits[1] <= limits[0]):
-                    raise ValueError('{} needs two increasing limits'.format(key))
-                value = limits.tolist()
-            else:
-                value = float(value)
-                if not math.isfinite(value) or value < 0. or (
-                        value == 0. and key not in ('gap', 'grooves')):
-                    raise ValueError('Invalid rendering dimension: {}'.format(key))
-                if key == 'grooves':
-                    if not value.is_integer():
-                        raise ValueError('grooves must be a whole number')
-                    value = int(value)
-            sizes[key] = value
-        return sizes
-
-    @property
-    def renderStyle(self):
-        return self._renderStyle
-
-    @renderStyle.setter
-    def renderStyle(self, value):
-        if isinstance(value, str) and value in self._renderStyles:
-            self._renderStyle = value
-        else:
-            logger.warning('%s: renderStyle must be one of %s',
-                           self.name, ', '.join(self._renderStyles))
-
-    @property
-    def renderSize(self):
-        return self._renderSize
-
-    @renderSize.setter
-    def renderSize(self, value):
-        try:
-            self._renderSize = self._validate_render_size(
-                **({} if value is None else value))
-        except (TypeError, ValueError, OverflowError) as error:
-            logger.warning('%s: %s', self.name, error)
 
     @property
     def axis(self):
@@ -655,6 +805,11 @@ class Stage(MountingFrame):
     @axis.setter
     def axis(self, value):
         if isinstance(value, str) and value in self._axes:
+            if (self._axis == 'z' and value != 'z' and self.bl is not None and
+                    any(frame.mount3 is not None and self in frame._mount_parents
+                        for frame in self.bl.stagesDict.values())):
+                logger.warning('%s: a tripod support must use axis z', self.name)
+                return
             self._axis = value
         else:
             logger.warning('%s: axis must be one of %s', self.name,

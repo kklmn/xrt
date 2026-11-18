@@ -16,39 +16,6 @@ msg_exit = {"command": "exit"}
 itemTypes = {'beam': 0, 'footprint': 1, 'motion': 1,
              'surface': 2, 'label': 3, 'axes': 4}
 
-ambient = {}
-diffuse = {}
-specular = {}
-shininess = {}
-
-ambient['Cu'] = qt.QVector4D(0.8, 0.4, 0.15, 1.)
-diffuse['Cu'] = qt.QVector4D(0.50, 0.25, 0.12, 1.)
-specular['Cu'] = qt.QVector4D(1., 0.9, 0.8, 1.)
-shininess['Cu'] = 100.
-
-ambient['Si'] = qt.QVector4D(2*0.29225, 2*0.29225, 2*0.29225, 1.)
-diffuse['Si'] = qt.QVector4D(0.50754, 0.50754, 0.50754, 1.)
-specular['Si'] = qt.QVector4D(1., 0.9, 0.8, 1.)
-shininess['Si'] = 100.
-
-ambient['Quartz'] = qt.QVector4D(0.84, 0.85, 0.87, 1.)
-diffuse['Quartz'] = qt.QVector4D(0.28*2, 0.31*2, 0.35*2, 1.)
-specular['Quartz'] = qt.QVector4D(0.92, 0.96, 1.00, 1.)
-shininess['Quartz'] = 180.
-
-ambient['Screen'] = qt.QVector4D(2*0.29225, 2.2*0.29225, 1.8*0.29225, 1.)
-# ambient['Screen'] = qt.QVector4D(2*0.29225, 2*0.29225, 2*0.29225, 1.)
-diffuse['Screen'] = qt.QVector4D(0.50754, 1.1*0.50754, 0.9*0.50754, 1.)
-specular['Screen'] = qt.QVector4D(0.9, 1., 0.8, 1.)
-shininess['Screen'] = 80.
-
-ambient['Steel'] = qt.QVector4D(0.42*2, 0.44*1.75, 0.46*1.75, 0.5)
-diffuse['Steel'] = qt.QVector4D(0.38*2, 0.40*1.75, 0.42*1.75, 0.5)
-specular['Steel'] = qt.QVector4D(0.72, 0.76, 0.80, 0.5)
-shininess['Steel'] = 135.
-
-ambient['selected'] = qt.QVector4D(0.89225, 0.89225, 0.49225, 1.)
-
 scr_m = qt.QMatrix4x4(1, 0, 0, 0,  0, 0, -1, 0,  0, 1, 0, 0,  0, 0, 0, 1)
 
 _DEBUG_ = True  # If False, exceptions inside the module are ignored

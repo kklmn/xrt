@@ -101,7 +101,7 @@ allArguments = ('bl', 'name', 'center', 'blades', 'vertices', 'x', 'z',
                 'alarmLevel', 'r', 'shadeFraction',
                 'dx', 'dz', 'px', 'pz', 'nx', 'nz',
                 'nSpokes', 'rx', 'rz', 'phi0', 'vortex', 'vortexNradial',
-                'renderStyle', 'renderSize',
+                'renderStyle', 'renderSize', 'renderColor',
                 'apertures', 'centerZs', 'dXs', 'dZs',
                 'zActuator', 'mount', 'mountOffset')
 
@@ -120,7 +120,7 @@ class RectangularAperture(object):
                  alarmLevel=None, renderStyle='mask',
                  blades=_DEFAULT_RECTANGULAR_BLADES,
                  renderSize=_DEFAULT_RENDER_SIZE,
-                 mount=None, mountOffset=None, **kwargs):
+                 mount=None, mountOffset=None, renderColor='auto', **kwargs):
         """
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
             Container for beamline elements. Optical elements are added to its
@@ -171,6 +171,8 @@ class RectangularAperture(object):
             Per-aperture xrtGlow size overrides. Missing keys and values set
             to None use the corresponding global scene setting.
 
+        *renderColor*: str
+            Glow surface material preset. 'auto' uses the standard copper.
 
         """
         self.bl = bl
@@ -209,6 +211,7 @@ class RectangularAperture(object):
         self.renderStyle = renderStyle
         self.renderSize = dict(
             _DEFAULT_RENDER_SIZE if renderSize is None else renderSize)
+        self.renderColor = renderColor
 
         self._blades = {}
         self._kind = []
@@ -717,7 +720,8 @@ class SetOfRectangularAperturesOnZActuator(RectangularAperture):
                  centerZs=[0,], dXs=[0,], dZs=[0,],
                  x='auto', z='auto', alarmLevel=None, blades=None,
                  zActuator=None, renderStyle='mask',
-                 renderSize=_DEFAULT_RENDER_SIZE, **kwargs):
+                 renderSize=_DEFAULT_RENDER_SIZE, renderColor='auto',
+                 **kwargs):
         """
         *apertures*: sequence of str
             Names of apertures. The last one must be one of 'bottom-edge' or
@@ -789,6 +793,7 @@ class SetOfRectangularAperturesOnZActuator(RectangularAperture):
         self.renderStyle = renderStyle
         self.renderSize = dict(
             _DEFAULT_RENDER_SIZE if renderSize is None else renderSize)
+        self.renderColor = renderColor
         self.isBeamStop = False
         self._blades = {}
         self._kind = []
@@ -845,7 +850,7 @@ class RoundAperture(object):
 
     def __init__(self, bl=None, name='',
                  center=[0, 0, 0], r=1, x='auto', z='auto', alarmLevel=None,
-                 renderSize=_DEFAULT_RENDER_SIZE,
+                 renderSize=_DEFAULT_RENDER_SIZE, renderColor='auto',
                  **kwargs):
         """ A round aperture aperture.
 
@@ -890,6 +895,7 @@ class RoundAperture(object):
         self.alarmLevel = alarmLevel
         self.renderSize = dict(
             _DEFAULT_RENDER_SIZE if renderSize is None else renderSize)
+        self.renderColor = renderColor
 # For plotting footprint images with the envelope aperture:
         self.surface = name,
         self.limOptX = [-r, r]
@@ -1229,7 +1235,7 @@ class PolygonalAperture(object):
     def __init__(self, bl=None, name='', center=[0, 0, 0],
                  opening=None, x='auto', z='auto', alarmLevel=None,
                  vertices=_DEFAULT_POLYGON_VERTICES,
-                 renderSize=_DEFAULT_RENDER_SIZE,
+                 renderSize=_DEFAULT_RENDER_SIZE, renderColor='auto',
                  **kwargs):
         """
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
@@ -1293,6 +1299,7 @@ class PolygonalAperture(object):
         self.alarmLevel = alarmLevel
         self.renderSize = dict(
             _DEFAULT_RENDER_SIZE if renderSize is None else renderSize)
+        self.renderColor = renderColor
         self.isBeamStop = False
 # For plotting footprint images with the envelope aperture:
         self.surface = name,

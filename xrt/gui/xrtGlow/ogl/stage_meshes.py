@@ -345,20 +345,25 @@ def stage_plates(beamline, meshes):
         stage = beamline.stagesDict.get(stage_id)
         if stage is None:
             continue
-        samples = footprints.pop(stage, None)
+        style = stage.renderStyle
+        if style == 'auto' and isinstance(stage, RotationStage):
+            style = 'disk' if stage.axis == 'yaw' else 'cradle'
+        samples = footprints.pop(stage, [])
         if not samples:
-            continue
+            sizes = stage.renderSize
+            length = sizes.get('topLength' if isinstance(stage, LinearStage)
+                               else 'length')
+            has_footprint = sizes.get('width') is not None and length is not None
+            if not has_footprint and (style != 'disk' or sizes['radius'] is None):
+                continue
         normals = optical_normals.pop(stage, [])
         state = stage.evaluate(states)
 
         base, mount = state.globalPose.matrix, state.mountPose.matrix
-        points = np.concatenate(samples)
+        points = np.concatenate(samples) if samples else mount[None, :3, 3]
         optic = direct_optics.get(stage) if len(samples) == 1 else None
         if isinstance(stage, RotationStage):
             axis = ('pitch', 'roll', 'yaw').index(stage.axis)
-            style = stage.renderStyle
-            if style == 'auto':
-                style = 'disk' if axis == 2 else 'cradle'
             if style == 'disk':
                 pieces = _disk_plates(
                     stage, base, mount, points, normals, axis, optic)
@@ -371,14 +376,18 @@ def stage_plates(beamline, meshes):
             if isinstance(stage, LinearStage):
                 pieces = _linear_plates(stage, base, mount, bounds, optic)
             else:
-                front = _front(mount, normals)
-                face = bounds[0 if front > 0 else 1, 2] if optic else 0.
-                pieces = [(0, _plate(mount, bounds[:, :2], face, 2., front))]
+                sizes = stage.renderSize
+                limits = np.column_stack((
+                    _extent(sizes['width'], bounds[:, 0]),
+                    _extent(sizes['length'], bounds[:, 1])))
+                index = int(stage.renderStyle == 'round')
+                # The frame's local XY plane is the top of the plate.
+                pieces = [(index, _plate(mount, limits, 0., sizes['height'], 1))]
 
         for index, model in pieces:
             yield stage, index, model
 
-        if stage.mount is not None:
+        if samples and stage.mount is not None:
             footprints[stage.mount].extend(samples)
             footprints[stage.mount].append(np.array(
                 (state.globalPose.center, state.mountPose.center)))

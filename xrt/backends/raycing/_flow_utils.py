@@ -564,7 +564,7 @@ REFERENCE_KINDS = {
     'stage': {
         'dict': 'stagesDict',
         'names': 'stagenamesToUUIDs',
-        'fields': {'mount'},
+        'fields': {'mount', 'mount2', 'mount3', 'yreference'},
         'prefixes': tuple(),
     },
     'oe': {

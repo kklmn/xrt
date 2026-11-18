@@ -37,6 +37,8 @@ from qtpy.QtOpenGL import *
 from qtpy.QtSql import (QSqlDatabase, QSqlQuery, QSqlTableModel,
                         QSqlQueryModel)
 
+from .render_materials import RENDER_COLOR_CHOICES
+
 from ...backends.raycing._sets_units import (
     allUnitsAng, allUnitsEnergy, argumentInputGroups, compoundArgs,
     argumentInputTooltips, argumentTooltips, SHOW_DOCS_IN_TOOLTIPS)
@@ -790,6 +792,8 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
         return editor
 
     def argumentEditorHint(self, index, argName):
+        if argName == 'renderColor':
+            return {'editor': 'choice', 'choices': RENDER_COLOR_CHOICES}
         model = index.model()
         if hasattr(model, 'itemFromIndex'):
             valueItem = model.itemFromIndex(index)
@@ -1053,7 +1057,7 @@ class DynamicArgumentDelegate(QStyledItemDelegate):
             else:
                 return self._createLineEditor(parent, argName)
             return combo
-        elif argName == 'mount':
+        elif argName in ('mount', 'mount2', 'mount3', 'yReference'):
             bl = self._beamLine()
             if bl is None:
                 return self._createLineEditor(parent, argName)

@@ -1,0 +1,295 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+	<Beams type="prop">
+		<None type="flat"></None>
+		<geometricSource01_global type="flat"></geometricSource01_global>
+		<rectangularAperture01_local type="flat"></rectangularAperture01_local>
+		<ToroidMirror_global type="flat"></ToroidMirror_global>
+		<ToroidMirror_local type="flat"></ToroidMirror_local>
+		<rectangularAperture02_local type="flat"></rectangularAperture02_local>
+	</Beams>
+	<Materials type="prop">
+	</Materials>
+	<BeamLine type="value">
+		<properties type="prop">
+			<azimuth type="param">0.0</azimuth>
+			<height type="param">0.0</height>
+			<alignE type="param">auto</alignE>
+			<name type="param">BeamLine</name>
+			<description type="param">None</description>
+		</properties>
+		<_object type="param">xrt.backends.raycing.BeamLine</_object>
+		<geometricSource01 type="value">
+			<properties type="prop">
+				<bl type="param">BeamLine</bl>
+				<name type="param">geometricSource01</name>
+				<center type="param">[0.0, 0.0, 1060.0]</center>
+				<pitch type="param">0</pitch>
+				<roll type="param">0</roll>
+				<yaw type="param">0</yaw>
+				<nrays type="param">100000</nrays>
+				<distx type="param">normal</distx>
+				<dx type="param">0.32</dx>
+				<disty type="param">None</disty>
+				<dy type="param">0</dy>
+				<distz type="param">normal</distz>
+				<dz type="param">0.018</dz>
+				<distxprime type="param">normal</distxprime>
+				<dxprime type="param">0.001</dxprime>
+				<distzprime type="param">normal</distzprime>
+				<dzprime type="param">0.0001</dzprime>
+				<distE type="param">lines</distE>
+				<energies type="param">[9000]</energies>
+				<polarization type="param">horizontal</polarization>
+				<filamentBeam type="param">False</filamentBeam>
+				<uniformRayDensity type="param">False</uniformRayDensity>
+				<totalFlux type="param">None</totalFlux>
+			</properties>
+			<_object type="param">xrt.backends.raycing.sources.geoms.GeometricSource</_object>
+			<shine type="prop">
+				<parameters type="prop">
+					<withAmplitudes type="param">False</withAmplitudes>
+					<accuBeam type="param">None</accuBeam>
+					<wave type="param">None</wave>
+				</parameters>
+				<_object type="param">xrt.backends.raycing.sources.geoms.GeometricSource.shine</_object>
+				<output type="prop">
+					<beamGlobal type="param">geometricSource01_global</beamGlobal>
+				</output>
+			</shine>
+		</geometricSource01>
+		<rectangularAperture01 type="value">
+			<properties type="prop">
+				<bl type="param">BeamLine</bl>
+				<name type="param">rectangularAperture01</name>
+				<center type="param">[0.0, 0.0, 0.0]</center>
+				<blades type="param">{'left': -10, 'right': 10, 'bottom': -10, 'top': 10}</blades>
+				<x type="param">auto</x>
+				<z type="param">auto</z>
+				<alarmLevel type="param">None</alarmLevel>
+				<renderStyle type="param">mask</renderStyle>
+				<renderSize type="param">{'slitThicknessFraction': None, 'apertureBladeWidth': None, 'apertureDefaultSpan': None, 'apertureThickness': None}</renderSize>
+				<renderColor type="param">auto</renderColor>
+				<mount type="param">MirrorSupport</mount>
+				<mountOffset type="param">{'center': [0, -620, 25], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
+			</properties>
+			<_object type="param">xrt.backends.raycing.apertures.RectangularAperture</_object>
+			<propagate type="prop">
+				<parameters type="prop">
+					<beam type="param">geometricSource01_global</beam>
+				</parameters>
+				<_object type="param">xrt.backends.raycing.apertures.RectangularAperture.propagate</_object>
+				<output type="prop">
+					<beamLocal type="param">rectangularAperture01_local</beamLocal>
+				</output>
+			</propagate>
+		</rectangularAperture01>
+		<ToroidMirror type="value">
+			<properties type="prop">
+				<bl type="param">BeamLine</bl>
+				<name type="param">ToroidMirror</name>
+				<center type="param">[0.0, 0.0, 0.0]</center>
+				<pitch type="param">0</pitch>
+				<roll type="param">0</roll>
+				<yaw type="param">0</yaw>
+				<mount type="param">MirrorSupport</mount>
+				<mountOffset type="param">{'center': [0.0, 0.0, 25.0], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
+				<positionRoll type="param">0</positionRoll>
+				<extraPitch type="param">0</extraPitch>
+				<extraRoll type="param">0</extraRoll>
+				<extraYaw type="param">0</extraYaw>
+				<rotationSequence type="param">RzRyRx</rotationSequence>
+				<extraRotationSequence type="param">RzRyRx</extraRotationSequence>
+				<surface type="param">None</surface>
+				<material type="param">None</material>
+				<alpha type="param">None</alpha>
+				<limPhysX type="param">[-20.0, 20.0]</limPhysX>
+				<limOptX type="param">None</limOptX>
+				<limPhysY type="param">[-600.0, 600.0]</limPhysY>
+				<limOptY type="param">None</limOptY>
+				<isParametric type="param">False</isParametric>
+				<shape type="param">rect</shape>
+				<gratingDensity type="param">None</gratingDensity>
+				<order type="param">1</order>
+				<shouldCheckCenter type="param">False</shouldCheckCenter>
+				<R type="param">5000000.0</R>
+				<r type="param">50.0</r>
+				<alarmLevel type="param">None</alarmLevel>
+				<targetOpenCL type="param">None</targetOpenCL>
+				<precisionOpenCL type="param">float32</precisionOpenCL>
+				<figureError type="param">None</figureError>
+				<renderColor type="param">auto</renderColor>
+			</properties>
+			<_object type="param">xrt.backends.raycing.oes.ToroidMirror</_object>
+			<reflect type="prop">
+				<parameters type="prop">
+					<beam type="param">geometricSource01_global</beam>
+					<noIntersectionSearch type="param">False</noIntersectionSearch>
+				</parameters>
+				<_object type="param">xrt.backends.raycing.oes.ToroidMirror.reflect</_object>
+				<output type="prop">
+					<beamGlobal type="param">ToroidMirror_global</beamGlobal>
+					<beamLocal type="param">ToroidMirror_local</beamLocal>
+				</output>
+			</reflect>
+		</ToroidMirror>
+		<rectangularAperture02 type="value">
+			<properties type="prop">
+				<bl type="param">BeamLine</bl>
+				<name type="param">rectangularAperture02</name>
+				<center type="param">[0.0, 0.0, 0.0]</center>
+				<blades type="param">{'left': -10, 'right': 10, 'bottom': -10, 'top': 10}</blades>
+				<x type="param">auto</x>
+				<z type="param">auto</z>
+				<alarmLevel type="param">None</alarmLevel>
+				<renderStyle type="param">mask</renderStyle>
+				<renderSize type="param">{'slitThicknessFraction': None, 'apertureBladeWidth': None, 'apertureDefaultSpan': None, 'apertureThickness': None}</renderSize>
+				<renderColor type="param">auto</renderColor>
+				<mount type="param">MirrorSupport</mount>
+				<mountOffset type="param">{'center': [0, 620, 25], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
+			</properties>
+			<_object type="param">xrt.backends.raycing.apertures.RectangularAperture</_object>
+			<propagate type="prop">
+				<parameters type="prop">
+					<beam type="param">ToroidMirror_global</beam>
+				</parameters>
+				<_object type="param">xrt.backends.raycing.apertures.RectangularAperture.propagate</_object>
+				<output type="prop">
+					<beamLocal type="param">rectangularAperture02_local</beamLocal>
+				</output>
+			</propagate>
+		</rectangularAperture02>
+	</BeamLine>
+	<FigureErrors type="prop">
+	</FigureErrors>
+	<Stages type="prop">
+		<Granite type="value">
+			<properties type="prop">
+				<name type="param">Granite</name>
+				<center type="param">[0.0, 10000.0, 1000.0]</center>
+				<pitch type="param">0.0</pitch>
+				<roll type="param">0.0</roll>
+				<yaw type="param">0.0</yaw>
+				<positionRoll type="param">0.0</positionRoll>
+				<rotationSequence type="param">RzRyRx</rotationSequence>
+				<mount type="param">None</mount>
+				<mountOffset type="param">{'center': [0.0, 0.0, 0.0], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
+				<mount2 type="param">None</mount2>
+				<mount3 type="param">None</mount3>
+				<yReference type="param">None</yReference>
+				<renderStyle type="param">rectangular</renderStyle>
+				<renderSize type="param">{'width': 400.0, 'height': 150.0, 'length': 1400.0}</renderSize>
+				<renderColor type="param">Aluminum (red anodized)</renderColor>
+			</properties>
+			<_object type="param">xrt.backends.raycing.stages.MountingFrame</_object>
+		</Granite>
+		<Downstream_center type="value">
+			<properties type="prop">
+				<name type="param">Downstream_center</name>
+				<axis type="param">z</axis>
+				<position type="param">3.0</position>
+				<center type="param">[0.0, 0.0, 0.0]</center>
+				<pitch type="param">0.0</pitch>
+				<roll type="param">0.0</roll>
+				<yaw type="param">0.0</yaw>
+				<positionRoll type="param">0.0</positionRoll>
+				<rotationSequence type="param">RzRyRx</rotationSequence>
+				<mount type="param">Granite</mount>
+				<mountOffset type="param">{'center': [0.0, 600.0, 25.0], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
+				<positionMin type="param">-20.0</positionMin>
+				<positionMax type="param">20.0</positionMax>
+				<positionUnit type="param">mm</positionUnit>
+				<renderStyle type="param">auto</renderStyle>
+				<renderSize type="param">{'width': 30.0, 'topLength': 30.0, 'bottomLength': 30.0, 'topHeight': 2.0, 'bottomHeight': 2.0, 'grooves': None, 'grooveWidth': 6.0, 'grooveDepth': 5.0, 'gap': 0.5}</renderSize>
+				<renderColor type="param">auto</renderColor>
+			</properties>
+			<_object type="param">xrt.backends.raycing.stages.LinearStage</_object>
+		</Downstream_center>
+		<Upstream_left type="value">
+			<properties type="prop">
+				<name type="param">Upstream_left</name>
+				<axis type="param">z</axis>
+				<position type="param">-3.0</position>
+				<center type="param">[0.0, 0.0, 0.0]</center>
+				<pitch type="param">0.0</pitch>
+				<roll type="param">0.0</roll>
+				<yaw type="param">0.0</yaw>
+				<positionRoll type="param">0.0</positionRoll>
+				<rotationSequence type="param">RzRyRx</rotationSequence>
+				<mount type="param">Granite</mount>
+				<mountOffset type="param">{'center': [-50.0, -600.0, 25.0], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
+				<positionMin type="param">-20.0</positionMin>
+				<positionMax type="param">20.0</positionMax>
+				<positionUnit type="param">mm</positionUnit>
+				<renderStyle type="param">plates</renderStyle>
+				<renderSize type="param">{'width': 30.0, 'topLength': 30.0, 'bottomLength': 30.0, 'topHeight': 2.0, 'bottomHeight': 2.0, 'grooves': None, 'grooveWidth': 6.0, 'grooveDepth': 5.0, 'gap': 0.5}</renderSize>
+				<renderColor type="param">auto</renderColor>
+			</properties>
+			<_object type="param">xrt.backends.raycing.stages.LinearStage</_object>
+		</Upstream_left>
+		<Upstream_right type="value">
+			<properties type="prop">
+				<name type="param">Upstream_right</name>
+				<axis type="param">z</axis>
+				<position type="param">-3.0</position>
+				<center type="param">[0.0, 0.0, 0.0]</center>
+				<pitch type="param">0.0</pitch>
+				<roll type="param">0.0</roll>
+				<yaw type="param">0.0</yaw>
+				<positionRoll type="param">0.0</positionRoll>
+				<rotationSequence type="param">RzRyRx</rotationSequence>
+				<mount type="param">Granite</mount>
+				<mountOffset type="param">{'center': [50.0, -600.0, 25.0], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
+				<positionMin type="param">-20.0</positionMin>
+				<positionMax type="param">20.0</positionMax>
+				<positionUnit type="param">mm</positionUnit>
+				<renderStyle type="param">auto</renderStyle>
+				<renderSize type="param">{'width': 30.0, 'topLength': 30.0, 'bottomLength': 30.0, 'topHeight': 2.0, 'bottomHeight': 2.0, 'grooves': None, 'grooveWidth': 6.0, 'grooveDepth': 5.0, 'gap': 0.5}</renderSize>
+				<renderColor type="param">auto</renderColor>
+			</properties>
+			<_object type="param">xrt.backends.raycing.stages.LinearStage</_object>
+		</Upstream_right>
+		<MirrorSupport type="value">
+			<properties type="prop">
+				<name type="param">MirrorSupport</name>
+				<center type="param">[0.0, 0.0, 0.0]</center>
+				<pitch type="param">0.0</pitch>
+				<roll type="param">0.0</roll>
+				<yaw type="param">0.0</yaw>
+				<positionRoll type="param">0.0</positionRoll>
+				<rotationSequence type="param">RzRyRx</rotationSequence>
+				<mount type="param">Downstream_center</mount>
+				<mountOffset type="param">{'center': [0.0, 200.0, 10.0], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
+				<mount2 type="param">Upstream_left</mount2>
+				<mount3 type="param">Upstream_right</mount3>
+				<yReference type="param">None</yReference>
+				<renderStyle type="param">rectangular</renderStyle>
+				<renderSize type="param">{'width': 200.0, 'height': 10.0, 'length': 1300.0}</renderSize>
+				<renderColor type="param">Steel</renderColor>
+			</properties>
+			<_object type="param">xrt.backends.raycing.stages.MountingFrame</_object>
+		</MirrorSupport>
+	</Stages>
+	<plots type="value">
+	</plots>
+	<run_ray_tracing type="prop">
+		<plots type="param">plots</plots>
+		<repeats type="param">1</repeats>
+		<updateEvery type="param">1</updateEvery>
+		<pickleEvery type="param">None</pickleEvery>
+		<energyRange type="param">None</energyRange>
+		<backend type="param">raycing</backend>
+		<beamLine type="param">BeamLine</beamLine>
+		<threads type="param">1</threads>
+		<processes type="param">1</processes>
+		<generator type="param">None</generator>
+		<generatorArgs type="param">[]</generatorArgs>
+		<generatorKWargs type="param">auto</generatorKWargs>
+		<globalNorm type="param">0</globalNorm>
+		<afterScript type="param">None</afterScript>
+		<afterScriptArgs type="param">[]</afterScriptArgs>
+		<afterScriptKWargs type="param">{}</afterScriptKWargs>
+		<_object type="param">xrt.runner.run_ray_tracing</_object>
+	</run_ray_tracing>
+<description>None</description>
+</Project>

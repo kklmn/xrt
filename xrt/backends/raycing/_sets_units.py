@@ -26,7 +26,7 @@ shapeArgSet = {'limPhysX', 'limPhysY', 'limPhysX2', 'limPhysY2',
 calculatedArgSet = {'R', 'r', 'Rm', 'Rs', 'focus', 'nCRL'}
 derivedArgSet = {'center', 'pitch', 'bragg'} | calculatedArgSet
 
-renderOnlyArgSet = {'renderStyle', 'renderSize', 'name'}
+renderOnlyArgSet = {'renderStyle', 'renderSize', 'renderColor', 'name'}
 
 # String-valued arguments interpreted as filenames during code generation.
 filenameArgSet = {'fileName', 'efficiencyFile', 'saveName',
@@ -266,9 +266,9 @@ argumentInputGroups = {
         'distE', 'distx', 'distxprime', 'disty', 'distz', 'distzprime',
         'figureError', 'fluxKind', 'fluxUnit', 'generator', 'geom', 'kind',
         'material', 'material2', 'polarization', 'precisionOpenCL',
-        'propagationMode', 'renderStyle', 'rmsKind', 'shape', 'substrate',
-        'surfaceHintX', 'surfaceHintY', 'tLayer', 'table', 'wave', 'waveFar',
-        'E from Source', 'θ from OE'},
+        'propagationMode', 'renderColor', 'renderStyle', 'rmsKind', 'shape',
+        'substrate', 'surfaceHintX', 'surfaceHintY', 'tLayer', 'table', 'wave',
+        'waveFar', 'E from Source', 'θ from OE'},
     ('string', 'editableCombo'): {'label', 'targetOpenCL', 'unit'},
     ('integer', 'combo'): {'ePos', 'xPos', 'yPos'},
     'string': {

@@ -10,7 +10,8 @@ import numpy as np
 
 from .._utils import create_qt_buffer, update_qt_buffer
 from .._utils import (is_oe, is_dcm, is_plate, is_aperture, is_screen)
-from .._constants import (ambient, diffuse, specular, shininess)
+from ...commons.render_materials import (
+    AUTO_MATERIALS, SELECTED_AMBIENT, get_render_material)
 
 from ...commons import qt
 from ...commons import gl
@@ -31,6 +32,16 @@ except ImportError:
 
 __author__ = "Roman Chernikov, Konstantin Klementiev"
 __date__ = "27 Jan 2026"
+
+
+def _set_surface_material(shader, material, isSelected):
+    ambient = SELECTED_AMBIENT if isSelected else material.ambient
+    shader.setUniformValue("frontMaterial.ambient", qt.QVector4D(*ambient, 1.))
+    shader.setUniformValue("frontMaterial.diffuse",
+                           qt.QVector4D(*material.diffuse, 1.))
+    shader.setUniformValue("frontMaterial.specular",
+                           qt.QVector4D(*material.specular, 1.))
+    shader.setUniformValue("frontMaterial.shininess", material.shininess)
 
 
 def contour_segments(paths, closed=False):
@@ -439,7 +450,7 @@ class OEMesh3D():
 
       vec3 diffuseReflection = vec3(0.0, 0.0, 0.0);
       vec3 specularReflection = vec3(0.0, 0.0, 0.0);
-      float gloss = max(frontMaterial.shininess * 1.6, 120.0);
+      float gloss = max(frontMaterial.shininess * 1.6, 1.0);
       for (int i = 0; i < lightCount; ++i)
         {
           vec3 lightDirection = normalize(lightDirections[i]);
@@ -674,7 +685,7 @@ class OEMesh3D():
 
       vec3 diffuseReflection = vec3(0.0, 0.0, 0.0);
       vec3 specularReflection = vec3(0.0, 0.0, 0.0);
-      float gloss = max(frontMaterial.shininess * 1.6, 120.0);
+      float gloss = max(frontMaterial.shininess * 1.6, 1.0);
       for (int i = 0; i < lightCount; ++i)
         {
           vec3 lightDirection = normalize(lightDirections[i]);
@@ -2206,7 +2217,8 @@ class OEMesh3D():
                 color = qt.QVector4D(*self.parent.textColor, 1.)
             elif is_aperture(self.oe):
                 brightness = 0.5 if self.parent.invertColors else 2.
-                color = qt.QVector4D(ambient['Cu'].toVector3D()*brightness, 1.)
+                copper = qt.QVector3D(*AUTO_MATERIALS['Cu'].ambient)
+                color = qt.QVector4D(copper * brightness, 1.)
             else:
                 color = qt.QVector4D(*self.parent.lineColor, 1.)
             shader.setUniformValue("cColor", color)
@@ -2901,28 +2913,20 @@ class OEMesh3D():
         shader.setUniformValue("texlimitsy", qt.QVector2D(*yLimits))
         shader.setUniformValue("texlimitsz", qt.QVector2D(*zLimits))
 
-        if material is not None:
-            mat = material
+        if self.oe is None:
+            default = 'Steel'
         elif is_aperture(self.oe):
-            mat = 'Cu'
+            default = 'Cu'
         elif is_screen(self.oe):
-            mat = 'Screen'
+            default = 'Screen'
         elif is_plate(self.oe):
-            mat = 'Quartz'
+            default = 'Quartz'
         else:
-            mat = 'Si'
-
-#        mat = 'Cu' if is_aperture(self.oe) else 'Si'
-
-        ambient_in = ambient['selected'] if isSelected else ambient[mat]
-        diffuse_in = diffuse[mat]
-        specular_in = specular[mat]
-        shininess_in = shininess[mat]
-
-        shader.setUniformValue("frontMaterial.ambient", ambient_in)
-        shader.setUniformValue("frontMaterial.diffuse", diffuse_in)
-        shader.setUniformValue("frontMaterial.specular", specular_in)
-        shader.setUniformValue("frontMaterial.shininess", shininess_in)
+            default = 'Si'
+        if material is None:
+            material = getattr(self.oe, 'renderColor', 'auto')
+        _set_surface_material(
+            shader, get_render_material(material, default), isSelected)
 
         shader.setUniformValue("opacity", float(self.parent.pointOpacity*2))
         shader.setUniformValue("surfOpacity", float(surfOpacity))
@@ -3015,16 +3019,7 @@ class OEMesh3D():
 
         shader.setUniformValue("v_inv", mView.inverted()[0])
 
-        mat = 'Si'
-        ambient_in = ambient['selected'] if isSelected else ambient[mat]
-        diffuse_in = diffuse[mat]
-        specular_in = specular[mat]
-        shininess_in = shininess[mat]
-
-        shader.setUniformValue("frontMaterial.ambient", ambient_in)
-        shader.setUniformValue("frontMaterial.diffuse", diffuse_in)
-        shader.setUniformValue("frontMaterial.specular", specular_in)
-        shader.setUniformValue("frontMaterial.shininess", shininess_in)
+        _set_surface_material(shader, AUTO_MATERIALS['Si'], isSelected)
 
         magnetArrays = getattr(
             self, 'magnet_arrays',

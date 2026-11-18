@@ -33,7 +33,7 @@ from .stages import Pose, set_mount, set_mount_offset
 
 allArguments = ('bl', 'name', 'center', 'x', 'z', 'compressX',
                 'compressZ', 'R', 'phiOffset', 'thetaOffset', 'limPhysX',
-                'limPhysY', 'mount', 'mountOffset')
+                'limPhysY', 'mount', 'mountOffset', 'renderColor')
 
 _DEBUG = 20
 
@@ -43,7 +43,7 @@ class Screen(object):
 
     def __init__(self, bl=None, name='', center=[0, 0, 0], x='auto', z='auto',
                  compressX=None, compressZ=None, mount=None,
-                 mountOffset=None, **kwargs):
+                 mountOffset=None, renderColor='auto', **kwargs):
         """
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
             Container for beamline elements. Optical elements are added to its
@@ -80,6 +80,8 @@ class Screen(object):
             Physical dimensions in mm along the local x and z axes. Used for
             the visible screen size in Glow.
 
+        *renderColor*: str
+            Glow surface material preset. 'auto' uses the standard appearance.
 
         """
         self.bl = bl
@@ -90,6 +92,7 @@ class Screen(object):
                 self.lostNum = -self.ordinalNum - 2000
         raycing.set_name(self, name)
         self.footprint = []
+        self.renderColor = renderColor
         self._mount = None
         self.set_orientation(x, z)
 

@@ -1080,52 +1080,62 @@ class BeamLine(object):
 
         return sortedFEList
 
-    def register_stage(self, stage):
+    def register_stage(self, stage, *other_stages):
         """Register a frame or stage and its ancestors by UUID and name."""
         from .stages import MountingFrame
 
-        if not isinstance(stage, MountingFrame):
-            raise TypeError('expected a mounting frame or stage')
         pending = {}
-        ancestor = stage
-        while ancestor is not None:
-            if ancestor.bl is not None and ancestor.bl is not self:
-                raise ValueError('Stage {!r} belongs to another beamline'.format(
-                    ancestor.name))
-            existing = self.stagesDict.get(ancestor.uuid)
-            if existing is ancestor:
-                break
-            if existing is not None or ancestor.uuid in pending:
-                raise ValueError('Duplicate stage UUID {!r}'.format(ancestor.uuid))
-            pending[ancestor.uuid] = ancestor
-            ancestor = ancestor.mount
+        visiting = set()
 
-        for stage_id, item in reversed(list(pending.items())):
+        def visit(ancestor):
+            if not isinstance(ancestor, MountingFrame):
+                raise TypeError('expected a mounting frame or stage')
+            stage_id = ancestor.uuid
+            if stage_id in visiting:
+                raise ValueError('A mount stack cannot contain a cycle')
+            existing = self.stagesDict.get(stage_id, pending.get(stage_id))
+            if existing is ancestor:
+                return
+            if existing is not None:
+                raise ValueError(f'Duplicate stage UUID {stage_id!r}')
+            visiting.add(stage_id)
+            for parent in ancestor._mount_parents:
+                visit(parent)
+            visiting.remove(stage_id)
+            pending[stage_id] = ancestor
+
+        for mount in (stage,) + other_stages:
+            visit(mount)
+        for stage_id, item in pending.items():
             item.bl = self
             self.stagesDict[stage_id] = item
             item.name = item.name
         return stage
 
     def sort_stages(self):
-        """Return mount UUIDs with parents before their children."""
+        """Return mount UUIDs with supports before the frames they carry."""
         ordered = {}
+
+        def visit(stage):
+            if stage.uuid not in ordered:
+                for parent in stage._mount_parents:
+                    visit(parent)
+                ordered[stage.uuid] = stage
+
         for stage in self.stagesDict.values():
-            chain = []
-            while stage is not None and stage.uuid not in ordered:
-                chain.append(stage.uuid)
-                stage = stage.mount
-            ordered.update(dict.fromkeys(reversed(chain)))
+            visit(stage)
         return list(ordered)
 
     def iter_stage_dependents(self, stage):
-        """Yield UUIDs and optical elements carried by this mount."""
+        """Yield UUIDs and optical elements carried directly or indirectly."""
+        affected = {stage}
+        for stage_id in self.sort_stages():
+            mount = self.stagesDict.get(stage_id)
+            if mount is not None and affected.intersection(mount._mount_parents):
+                affected.add(mount)
         for oeid, (element, *_) in self.oesDict.items():
-            mount = getattr(element, 'mount', None)
-            while mount is not None:
-                if mount is stage:
-                    yield oeid, element
-                    break
-                mount = mount.mount
+            if getattr(element, 'mount', None) in affected:
+                yield oeid, element
 
     def index_materials(self):  # materials and figure error objects
         def register_material(mat):
@@ -2013,7 +2023,7 @@ class BeamLine(object):
 
     def init_stage_from_json(self, stage_id, record):
         """Create a frame or stage from a layout or worker message."""
-        from .stages import MountingFrame
+        from .stages import MountingFrame, MOUNT_REFERENCE_FIELDS
 
         module, name = record['_object'].rsplit('.', 1)
         cls = getattr(importlib.import_module(module), name)
@@ -2023,7 +2033,8 @@ class BeamLine(object):
         for key, value in record['properties'].items():
             if key == 'bl':
                 continue
-            if key in ('mount', 'crystal') and isinstance(value, str):
+            if (key in MOUNT_REFERENCE_FIELDS or key == 'crystal') and \
+                    isinstance(value, str):
                 params[key] = None if value == 'None' else value
             else:
                 params[key] = (value if key in ('name', 'uuid')
@@ -2038,18 +2049,23 @@ class BeamLine(object):
     def populate_stages_dict_from_json(self, records):
         if not isinstance(records, dict):
             return
-        from .stages import set_mount
+        from .stages import MOUNT_REFERENCE_FIELDS
 
         # Resolve parents after every mount has a UUID and name.
         mounts = []
         for stage_id, record in records.items():
             properties = record['properties'].copy()
-            parent = properties.pop('mount', None)
+            parents = {key: properties.pop(key) for key in MOUNT_REFERENCE_FIELDS
+                       if key in properties}
             stage = self.init_stage_from_json(stage_id,
                                               dict(record, properties=properties))
-            mounts.append((stage, None if parent == 'None' else parent))
-        for stage, parent in mounts:
-            set_mount(stage, parent, strict=True)
+            mounts.append((stage, parents))
+        for stage, parents in mounts:
+            stage._set_mounts(parents, strict=True, validate_pose=False)
+        states = {}
+        for stage, _ in mounts:
+            if stage.mount2 is not None:
+                stage.evaluate(states)
 
     def load_from_xml(self, openFileName):
         def xml_to_dict(element):

@@ -476,11 +476,11 @@ class xrtGlow(GlowScanMixin, qt.QWidget):
                 for key in ('bl', 'pose'):
                     props.pop(key, None)
                 props['uuid'] = oeuuid
-                for key in ('mount', 'crystal'):
-                    if key in props:
+                for key, value in props.items():
+                    ref_kind = raycing.ref_kind_for_arg(key)
+                    if ref_kind is not None:
                         props[key] = raycing.normalize_ref(
-                            props[key], glw.beamline,
-                            raycing.ref_kind_for_arg(key), target='display')
+                            value, glw.beamline, ref_kind, target='display')
                 viewer = InstanceInspector(
                     self, props, beamLine=glw.beamline,
                     viewOnly=glw.renderingMode == 'static')

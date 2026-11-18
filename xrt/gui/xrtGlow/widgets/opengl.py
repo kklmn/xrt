@@ -29,7 +29,7 @@ from ....backends import raycing
 from ....backends.raycing import (propagationProcess, renderOnlyArgSet,
                                   orientationArgSet, shapeArgSet)
 from ....backends.raycing._flow_utils import limited_source_rays
-from ....backends.raycing.stages import update_stage
+from ....backends.raycing.stages import Stage, update_stage
 from ....backends.raycing.epics import EpicsDevice, update_epics_readback
 from ....backends.raycing import apertures as rapts
 from ....backends.raycing import sources as rsources
@@ -2518,7 +2518,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     self.stagePlateMesh.render_surface(
                         model, self.mView, self.mProj, index,
                         isSelected=isSelected,
-                        shader=self.shaderMesh, material='Steel')
+                        shader=self.shaderMesh,
+                        material=getattr(stage, 'renderColor', 'auto'))
                     if self.showContours:
                         stage_contours.append((index, model, stencilNum))
             if self.stagePlateMesh is not None:
@@ -3549,9 +3550,10 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 stage = self.beamline.stagesDict.get(objuuid)
                 oeEntry = self.beamline.oesDict.get(objuuid)
                 if stage is not None:
-                    tooltip = (f"{stage.name}\n"
-                               f"{stage.axis}: {stage.position:.3f} "
-                               f"{stage.positionUnit}")
+                    tooltip = str(stage.name)
+                    if isinstance(stage, Stage):
+                        tooltip += (f"\n{stage.axis}: {stage.position:.3f} "
+                                    f"{stage.positionUnit}")
                     qt.QToolTip.showText(mEvent.globalPos(), tooltip, self)
                 elif oeEntry is not None:
                     oe = oeEntry[0]

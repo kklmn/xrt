@@ -378,7 +378,8 @@ class XrtQook(QookScanMixin, XrtQookElements):
 
         if oldName is not None and oldName != stage.name:
             for rootItem in (self.rootStageItem, self.rootBLItem):
-                self.iterateRename(rootItem, oldName, stage.name, ['mount'])
+                self.iterateRename(rootItem, oldName, stage.name,
+                                   rstages.MOUNT_REFERENCE_FIELDS)
         for mountId in self.beamLine.stagesDict:
             self.updateBeamlineModel((mountId, {}))
 
@@ -702,7 +703,8 @@ if __name__ == '__main__':
             for arg, value in props.items():
                 if arg in ('name', 'bl', 'uuid'):
                     continue
-                ref = getattr(stage, arg) if arg in ('mount', 'crystal') else None
+                ref = (getattr(stage, arg)
+                       if raycing.ref_kind_for_arg(arg) is not None else None)
                 if ref is not None:
                     value = ref.name
                 else:
