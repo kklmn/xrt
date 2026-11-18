@@ -64,14 +64,14 @@ def _front(pose, normals):
 
 
 def _linear_plates(stage, base, mount, bounds, optic):
-    sizes = stage.renderSize
+    sizes = stage.renderOptions
     axis = 'xyz'.index(stage.axis)
     along = axis if axis < 2 else 1
     across = 1 - along
     grooves = sizes['grooves']
     if grooves is None:
-        grooves = int(axis < 2 or stage.renderStyle == 'grooved')
-    if stage.renderStyle == 'plates':
+        grooves = int(axis < 2 or stage.renderOptions['style'] == 'grooved')
+    if stage.renderOptions['style'] == 'plates':
         grooves = 0
 
     # The plates face local +Z. A child stage sits at the attachment plane.
@@ -151,7 +151,7 @@ def _disk_plates(stage, base, mount, points, normals, axis, optic):
     back = 0.
     if optic is not None:
         back = local[:, 2].min() if front > 0 else local[:, 2].max()
-    sizes = stage.renderSize
+    sizes = stage.renderOptions
     bearing_radius = sizes['radius']
     radius = (max(min(np.ptp(local[:, :2], axis=0)), 0.1)
               if bearing_radius is None else bearing_radius)
@@ -184,7 +184,7 @@ def _cradle_plates(stage, base, mount, points, normals, axis, optic):
         bounds = np.array((local.min(axis=0), local.max(axis=0)))
         front = _front(pose, normals)
         back = bounds[0 if front > 0 else 1, 2] if optic is not None else 0.
-    sizes = stage.renderSize
+    sizes = stage.renderOptions
     limits = np.column_stack((
         _extent(sizes['width'], bounds[:, 0]),
         _extent(sizes['length'], bounds[:, 1])))
@@ -345,12 +345,12 @@ def stage_plates(beamline, meshes):
         stage = beamline.stagesDict.get(stage_id)
         if stage is None:
             continue
-        style = stage.renderStyle
+        style = stage.renderOptions['style']
         if style == 'auto' and isinstance(stage, RotationStage):
             style = 'disk' if stage.axis == 'yaw' else 'cradle'
         samples = footprints.pop(stage, [])
         if not samples:
-            sizes = stage.renderSize
+            sizes = stage.renderOptions
             length = sizes.get('topLength' if isinstance(stage, LinearStage)
                                else 'length')
             has_footprint = sizes.get('width') is not None and length is not None
@@ -376,11 +376,11 @@ def stage_plates(beamline, meshes):
             if isinstance(stage, LinearStage):
                 pieces = _linear_plates(stage, base, mount, bounds, optic)
             else:
-                sizes = stage.renderSize
+                sizes = stage.renderOptions
                 limits = np.column_stack((
                     _extent(sizes['width'], bounds[:, 0]),
                     _extent(sizes['length'], bounds[:, 1])))
-                index = int(stage.renderStyle == 'round')
+                index = int(stage.renderOptions['style'] == 'round')
                 # The frame's local XY plane is the top of the plate.
                 pieces = [(index, _plate(mount, limits, 0., sizes['height'], 1))]
 

@@ -93,8 +93,7 @@
 				<x type="param">auto</x>
 				<z type="param">auto</z>
 				<alarmLevel type="param">None</alarmLevel>
-				<renderStyle type="param">mask</renderStyle>
-				<renderSize type="param">{'slitThicknessFraction': None, 'apertureBladeWidth': None, 'apertureDefaultSpan': None, 'apertureThickness': None}</renderSize>
+				<renderOptions type="param">{'style': 'mask'}</renderOptions>
 				<mount type="param">Base_height</mount>
 				<mountOffset type="param">{'center': [0, -200, 250], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
 			</properties>
@@ -210,8 +209,7 @@
 				<x type="param">auto</x>
 				<z type="param">auto</z>
 				<alarmLevel type="param">None</alarmLevel>
-				<renderStyle type="param">mask</renderStyle>
-				<renderSize type="param">{'slitThicknessFraction': None, 'apertureBladeWidth': None, 'apertureDefaultSpan': None, 'apertureThickness': None}</renderSize>
+				<renderOptions type="param">{'style': 'mask'}</renderOptions>
 				<mount type="param">Base_height</mount>
 				<mountOffset type="param">{'center': [0, 200, 260], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
 			</properties>
@@ -235,8 +233,6 @@
 				<z type="param">auto</z>
 				<compressX type="param">None</compressX>
 				<compressZ type="param">None</compressZ>
-				<limPhysX type="param">[0.0, 0.0]</limPhysX>
-				<limPhysY type="param">[0.0, 0.0]</limPhysY>
 				<mount type="param">None</mount>
 				<mountOffset type="param">None</mountOffset>
 			</properties>
@@ -272,8 +268,7 @@
 				<positionMin type="param">-20.0</positionMin>
 				<positionMax type="param">20.0</positionMax>
 				<positionUnit type="param">mm</positionUnit>
-				<renderStyle type="param">auto</renderStyle>
-				<renderSize type="param">{'width': 200.0, 'topLength': 500.0, 'bottomLength': 500.0, 'topHeight': 20.0, 'bottomHeight': 100.0, 'grooves': None, 'grooveWidth': 6.0, 'grooveDepth': 5.0, 'gap': 0.5}</renderSize>
+				<renderOptions type="param">{'style': 'auto', 'width': 200.0, 'topLength': 500.0, 'bottomLength': 500.0, 'topHeight': 20.0, 'bottomHeight': 100.0, 'grooveWidth': 6.0, 'grooveDepth': 5.0, 'gap': 0.5}</renderOptions>
 			</properties>
 			<_object type="param">xrt.backends.raycing.stages.LinearStage</_object>
 		</Base_height>
@@ -295,8 +290,7 @@
 				<positionMin type="param">5.0</positionMin>
 				<positionMax type="param">35.0</positionMax>
 				<positionUnit type="param">deg</positionUnit>
-				<renderStyle type="param">auto</renderStyle>
-				<renderSize type="param">{'width': None, 'length': None, 'shape': None, 'topHeight': 2.0, 'bottomHeight': 2.0, 'radius': 150.0}</renderSize>
+				<renderOptions type="param">{'style': 'auto', 'topHeight': 2.0, 'bottomHeight': 2.0, 'radius': 150.0}</renderOptions>
 			</properties>
 			<_object type="param">xrt.backends.raycing.stages.RotationStage</_object>
 		</Bragg_disk>
@@ -316,8 +310,7 @@
 				<positionMin type="param">-20.0</positionMin>
 				<positionMax type="param">20.0</positionMax>
 				<positionUnit type="param">mm</positionUnit>
-				<renderStyle type="param">auto</renderStyle>
-				<renderSize type="param">{'width': None, 'topLength': None, 'bottomLength': None, 'topHeight': 2.0, 'bottomHeight': None, 'grooves': None, 'grooveWidth': 6.0, 'grooveDepth': 5.0, 'gap': 0.5}</renderSize>
+				<renderOptions type="param">{'style': 'auto', 'topHeight': 2.0, 'grooveWidth': 6.0, 'grooveDepth': 5.0, 'gap': 0.5}</renderOptions>
 			</properties>
 			<_object type="param">xrt.backends.raycing.stages.LinearStage</_object>
 		</X2_longitudinal>
@@ -337,8 +330,7 @@
 				<positionMin type="param">-5.0</positionMin>
 				<positionMax type="param">8.0</positionMax>
 				<positionUnit type="param">mm</positionUnit>
-				<renderStyle type="param">auto</renderStyle>
-				<renderSize type="param">{'width': None, 'topLength': None, 'bottomLength': None, 'topHeight': 2.0, 'bottomHeight': None, 'grooves': None, 'grooveWidth': 6.0, 'grooveDepth': 5.0, 'gap': 0.5}</renderSize>
+				<renderOptions type="param">{'style': 'auto', 'topHeight': 2.0, 'grooveWidth': 6.0, 'grooveDepth': 5.0, 'gap': 0.5}</renderOptions>
 			</properties>
 			<_object type="param">xrt.backends.raycing.stages.LinearStage</_object>
 		</X2_perpendicular>
@@ -360,8 +352,7 @@
 				<positionMin type="param">-45.0</positionMin>
 				<positionMax type="param">45.0</positionMax>
 				<positionUnit type="param">deg</positionUnit>
-				<renderStyle type="param">auto</renderStyle>
-				<renderSize type="param">{'width': None, 'length': None, 'shape': None, 'topHeight': 2.0, 'bottomHeight': 2.0, 'radius': 10.0}</renderSize>
+				<renderOptions type="param">{'style': 'auto', 'topHeight': 2.0, 'bottomHeight': 2.0, 'radius': 10.0}</renderOptions>
 			</properties>
 			<_object type="param">xrt.backends.raycing.stages.RotationStage</_object>
 		</X2_cradle>

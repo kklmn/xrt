@@ -58,7 +58,7 @@ allArguments = ['bl', 'name', 'center', 'bragg', 'pitch', 'roll', 'yaw',
                 'targetOpenCL', 'precisionOpenCL', 'propagationMode',
                 'fileName', 'recenter',
                 'orientation', 'figureError', 'surfaceHintX', 'surfaceHintY',
-                 'renderColor']
+                 'renderOptions']
 
 
 def flatten(x):
@@ -73,6 +73,7 @@ def flatten(x):
 class OE(OEMainMethods):
     """The main base class for an optical element. It implements a generic flat
     mirror, crystal, multilayer or grating."""
+    _renderOptionDefaults = dict(color=None, thickness=None)
     hiddenMethods = ['multiple_reflect']
     cl_plist = ["center"]
     cl_local_z = """
@@ -109,7 +110,8 @@ class OE(OEMainMethods):
         limOptY=None, isParametric=False, shape='rect',
         gratingDensity=None, order=None, shouldCheckCenter=False,
         targetOpenCL=None, precisionOpenCL='float32',
-        mount=None, mountOffset=None, renderColor='auto', **kwargs):
+        mount=None, mountOffset=None, renderColor='auto', renderOptions=None,
+        **kwargs):
         r"""
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
             Container for beamline elements. Optical elements are added to its
@@ -131,8 +133,10 @@ class OE(OEMainMethods):
             Optical origin and orientation relative to the parent attachment.
             Defaults to identity on attachment.
 
-        *renderColor*: str
-            Glow surface material preset. 'auto' uses the standard appearance.
+        *renderOptions*: dict or None
+            Glow surface options. Use 'color' for a material preset and
+            'thickness' for the rendered thickness in mm. Omitted options
+            use the default appearance.
 
         *pitch, roll, yaw*: floats
             Rotations Rx, Ry, Rz, correspondingly, defined in the local system.
@@ -314,7 +318,9 @@ class OE(OEMainMethods):
                 bl.oenamesToUUIDs[self.name] = self.uuid
 
         self.shouldCheckCenter = shouldCheckCenter
-        self.renderColor = renderColor
+        self.renderOptions = dict(renderOptions or {})
+        if renderColor != 'auto':
+            self.renderOptions.setdefault('color', renderColor)
         self.needReCenter = False
         self._mount = None
         self.center = center

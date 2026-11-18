@@ -10,6 +10,7 @@ import numpy as np
 
 from .device import resolve_epics_readback, resolve_epics_record
 from ..detectors import DetectorScreen
+from ..screens import Screen
 from .._flow_utils import to_valid_var_name
 from .._named_arrays import Center, Limits
 from .._sets_units import (
@@ -183,6 +184,8 @@ def element_records(oe_obj: Any,
     _add_image_records(oe_obj, oename, add)
 
     pv_fields = {"name"} | orientationArgSet | shapeArgSet
+    if isinstance(oe_obj, Screen) and not isinstance(oe_obj, DetectorScreen):
+        pv_fields.difference_update(("limPhysX", "limPhysY"))
     if hasattr(oe_obj, "shine") and hasattr(oe_obj, "nrays"):
         pv_fields.add("nrays")
     for arg_name in _ordered_fields(pv_fields):
@@ -347,7 +350,7 @@ def template_records(category: str) -> List[PvSpec]:
                    "rw", 100000, "Source"),
         ] + orient
     if category == "screens":
-        return common + limits
+        return common
     if category == "detectors":
         return common + [
             PvSpec("$(E):image", "Image", "image", "image", "ro",

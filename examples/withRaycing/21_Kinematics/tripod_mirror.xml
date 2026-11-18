@@ -72,9 +72,7 @@
 				<x type="param">auto</x>
 				<z type="param">auto</z>
 				<alarmLevel type="param">None</alarmLevel>
-				<renderStyle type="param">mask</renderStyle>
-				<renderSize type="param">{'slitThicknessFraction': None, 'apertureBladeWidth': None, 'apertureDefaultSpan': None, 'apertureThickness': None}</renderSize>
-				<renderColor type="param">auto</renderColor>
+				<renderOptions type="param">{'style': 'mask', 'color': 'auto'}</renderOptions>
 				<mount type="param">Xmovale</mount>
 				<mountOffset type="param">{'center': [30.0, -620.0, 25.0], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
 			</properties>
@@ -123,7 +121,7 @@
 				<targetOpenCL type="param">None</targetOpenCL>
 				<precisionOpenCL type="param">float32</precisionOpenCL>
 				<figureError type="param">None</figureError>
-				<renderColor type="param">auto</renderColor>
+				<renderOptions type="param">{'color': 'auto'}</renderOptions>
 			</properties>
 			<_object type="param">xrt.backends.raycing.oes.ToroidMirror</_object>
 			<reflect type="prop">
@@ -147,9 +145,7 @@
 				<x type="param">auto</x>
 				<z type="param">auto</z>
 				<alarmLevel type="param">None</alarmLevel>
-				<renderStyle type="param">mask</renderStyle>
-				<renderSize type="param">{'slitThicknessFraction': None, 'apertureBladeWidth': None, 'apertureDefaultSpan': None, 'apertureThickness': None}</renderSize>
-				<renderColor type="param">auto</renderColor>
+				<renderOptions type="param">{'style': 'mask', 'color': 'auto'}</renderOptions>
 				<mount type="param">Xmovale</mount>
 				<mountOffset type="param">{'center': [30.0, 620.0, 25.0], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
 			</properties>
@@ -173,19 +169,21 @@
 				<z type="param">auto</z>
 				<compressX type="param">None</compressX>
 				<compressZ type="param">None</compressZ>
-				<limPhysX type="param">-20, 20</limPhysX>
-				<limPhysY type="param">-20, 20</limPhysY>
+				<limPhysX type="param">[-20.0, 20.0]</limPhysX>
+				<limPhysY type="param">[-20.0, 20.0]</limPhysY>
 				<mount type="param">None</mount>
 				<mountOffset type="param">None</mountOffset>
-				<renderColor type="param">auto</renderColor>
+				<renderOptions type="param">{'color': 'auto', 'width': 40.0, 'height': 40.0}</renderOptions>
+				<histShape type="param">[256, 256]</histShape>
 			</properties>
-			<_object type="param">xrt.backends.raycing.screens.Screen</_object>
+			<_object type="param">xrt.backends.raycing.detectors.DetectorScreen</_object>
 			<expose type="prop">
 				<parameters type="prop">
 					<beam type="param">Toroid33_global</beam>
 					<onlyPositivePath type="param">False</onlyPositivePath>
+					<withHistogram type="param">True</withHistogram>
 				</parameters>
-				<_object type="param">xrt.backends.raycing.screens.Screen.expose</_object>
+				<_object type="param">xrt.backends.raycing.detectors.DetectorScreen.expose</_object>
 				<output type="prop">
 					<beamLocal type="param">screen01_local</beamLocal>
 				</output>
@@ -225,7 +223,7 @@
 				<targetOpenCL type="param">None</targetOpenCL>
 				<precisionOpenCL type="param">float32</precisionOpenCL>
 				<figureError type="param">None</figureError>
-				<renderColor type="param">auto</renderColor>
+				<renderOptions type="param">{'color': 'auto'}</renderOptions>
 			</properties>
 			<_object type="param">xrt.backends.raycing.oes.ToroidMirror</_object>
 			<reflect type="prop">
@@ -249,9 +247,7 @@
 				<x type="param">auto</x>
 				<z type="param">auto</z>
 				<alarmLevel type="param">None</alarmLevel>
-				<renderStyle type="param">mask</renderStyle>
-				<renderSize type="param">{'slitThicknessFraction': None, 'apertureBladeWidth': None, 'apertureDefaultSpan': None, 'apertureThickness': None}</renderSize>
-				<renderColor type="param">auto</renderColor>
+				<renderOptions type="param">{'style': 'mask', 'color': 'auto'}</renderOptions>
 				<mount type="param">Xmovale</mount>
 				<mountOffset type="param">{'center': [-30.0, 620.0, 25.0], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
 			</properties>
@@ -275,9 +271,7 @@
 				<x type="param">auto</x>
 				<z type="param">auto</z>
 				<alarmLevel type="param">None</alarmLevel>
-				<renderStyle type="param">mask</renderStyle>
-				<renderSize type="param">{'slitThicknessFraction': None, 'apertureBladeWidth': None, 'apertureDefaultSpan': None, 'apertureThickness': None}</renderSize>
-				<renderColor type="param">auto</renderColor>
+				<renderOptions type="param">{'style': 'mask', 'color': 'auto'}</renderOptions>
 				<mount type="param">Xmovale</mount>
 				<mountOffset type="param">{'center': [-30.0, -620.0, 25.0], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
 			</properties>
@@ -310,9 +304,7 @@
 				<mount2 type="param">None</mount2>
 				<mount3 type="param">None</mount3>
 				<yReference type="param">None</yReference>
-				<renderStyle type="param">rectangular</renderStyle>
-				<renderSize type="param">{'width': 250.0, 'height': 150.0, 'length': 1400.0}</renderSize>
-				<renderColor type="param">Concrete</renderColor>
+				<renderOptions type="param">{'style': 'rectangular', 'width': 250.0, 'height': 150.0, 'length': 1400.0, 'color': 'Concrete'}</renderOptions>
 			</properties>
 			<_object type="param">xrt.backends.raycing.stages.MountingFrame</_object>
 		</Granite>
@@ -332,9 +324,7 @@
 				<positionMin type="param">-20.0</positionMin>
 				<positionMax type="param">20.0</positionMax>
 				<positionUnit type="param">mm</positionUnit>
-				<renderStyle type="param">auto</renderStyle>
-				<renderSize type="param">{'width': 30.0, 'topLength': 30.0, 'bottomLength': 30.0, 'topHeight': 2.0, 'bottomHeight': 2.0, 'grooves': None, 'grooveWidth': 6.0, 'grooveDepth': 5.0, 'gap': 0.5}</renderSize>
-				<renderColor type="param">auto</renderColor>
+				<renderOptions type="param">{'style': 'auto', 'width': 30.0, 'topLength': 30.0, 'bottomLength': 30.0, 'topHeight': 2.0, 'bottomHeight': 2.0, 'grooveWidth': 6.0, 'grooveDepth': 5.0, 'gap': 0.5, 'color': 'auto'}</renderOptions>
 				<positionOffset type="param">0.0</positionOffset>
 			</properties>
 			<_object type="param">xrt.backends.raycing.stages.LinearStage</_object>
@@ -355,9 +345,7 @@
 				<positionMin type="param">-20.0</positionMin>
 				<positionMax type="param">20.0</positionMax>
 				<positionUnit type="param">mm</positionUnit>
-				<renderStyle type="param">plates</renderStyle>
-				<renderSize type="param">{'width': 30.0, 'topLength': 30.0, 'bottomLength': 30.0, 'topHeight': 2.0, 'bottomHeight': 2.0, 'grooves': None, 'grooveWidth': 6.0, 'grooveDepth': 5.0, 'gap': 0.5}</renderSize>
-				<renderColor type="param">auto</renderColor>
+				<renderOptions type="param">{'style': 'plates', 'width': 30.0, 'topLength': 30.0, 'bottomLength': 30.0, 'topHeight': 2.0, 'bottomHeight': 2.0, 'grooveWidth': 6.0, 'grooveDepth': 5.0, 'gap': 0.5, 'color': 'auto'}</renderOptions>
 				<positionOffset type="param">0.0</positionOffset>
 			</properties>
 			<_object type="param">xrt.backends.raycing.stages.LinearStage</_object>
@@ -378,9 +366,7 @@
 				<positionMin type="param">-20.0</positionMin>
 				<positionMax type="param">20.0</positionMax>
 				<positionUnit type="param">mm</positionUnit>
-				<renderStyle type="param">auto</renderStyle>
-				<renderSize type="param">{'width': 30.0, 'topLength': 30.0, 'bottomLength': 30.0, 'topHeight': 2.0, 'bottomHeight': 2.0, 'grooves': None, 'grooveWidth': 6.0, 'grooveDepth': 5.0, 'gap': 0.5}</renderSize>
-				<renderColor type="param">auto</renderColor>
+				<renderOptions type="param">{'style': 'auto', 'width': 30.0, 'topLength': 30.0, 'bottomLength': 30.0, 'topHeight': 2.0, 'bottomHeight': 2.0, 'grooveWidth': 6.0, 'grooveDepth': 5.0, 'gap': 0.5, 'color': 'auto'}</renderOptions>
 				<positionOffset type="param">0.0</positionOffset>
 			</properties>
 			<_object type="param">xrt.backends.raycing.stages.LinearStage</_object>
@@ -399,9 +385,7 @@
 				<mount2 type="param">Upstream_left</mount2>
 				<mount3 type="param">Upstream_right</mount3>
 				<yReference type="param">None</yReference>
-				<renderStyle type="param">rectangular</renderStyle>
-				<renderSize type="param">{'width': 200.0, 'height': 10.0, 'length': 1300.0}</renderSize>
-				<renderColor type="param">Steel</renderColor>
+				<renderOptions type="param">{'style': 'rectangular', 'width': 200.0, 'height': 10.0, 'length': 1300.0, 'color': 'Steel'}</renderOptions>
 			</properties>
 			<_object type="param">xrt.backends.raycing.stages.MountingFrame</_object>
 		</MirrorSupport>
@@ -421,9 +405,7 @@
 				<positionMin type="param">-50.0</positionMin>
 				<positionMax type="param">50.0</positionMax>
 				<positionUnit type="param">mm</positionUnit>
-				<renderStyle type="param">auto</renderStyle>
-				<renderSize type="param">{'width': 50.0, 'topLength': 200.0, 'bottomLength': 200.0, 'topHeight': 5.0, 'bottomHeight': 10.0, 'grooves': 1, 'grooveWidth': 6.0, 'grooveDepth': 5.0, 'gap': 0.5}</renderSize>
-				<renderColor type="param">auto</renderColor>
+				<renderOptions type="param">{'style': 'auto', 'width': 50.0, 'topLength': 200.0, 'bottomLength': 200.0, 'topHeight': 5.0, 'bottomHeight': 10.0, 'grooves': 1, 'grooveWidth': 6.0, 'grooveDepth': 5.0, 'gap': 0.5, 'color': 'auto'}</renderOptions>
 				<positionOffset type="param">0.0</positionOffset>
 			</properties>
 			<_object type="param">xrt.backends.raycing.stages.LinearStage</_object>
@@ -444,9 +426,7 @@
 				<positionMin type="param">-50.0</positionMin>
 				<positionMax type="param">50.0</positionMax>
 				<positionUnit type="param">mm</positionUnit>
-				<renderStyle type="param">auto</renderStyle>
-				<renderSize type="param">{'width': 50.0, 'topLength': 200.0, 'bottomLength': 200.0, 'topHeight': 5.0, 'bottomHeight': 10.0, 'grooves': 1, 'grooveWidth': 6.0, 'grooveDepth': 5.0, 'gap': 0.5}</renderSize>
-				<renderColor type="param">auto</renderColor>
+				<renderOptions type="param">{'style': 'auto', 'width': 50.0, 'topLength': 200.0, 'bottomLength': 200.0, 'topHeight': 5.0, 'bottomHeight': 10.0, 'grooves': 1, 'grooveWidth': 6.0, 'grooveDepth': 5.0, 'gap': 0.5, 'color': 'auto'}</renderOptions>
 				<positionOffset type="param">0.0</positionOffset>
 			</properties>
 			<_object type="param">xrt.backends.raycing.stages.LinearStage</_object>
@@ -465,9 +445,7 @@
 				<mount2 type="param">Xstage2</mount2>
 				<mount3 type="param">None</mount3>
 				<yReference type="param">Xstage2</yReference>
-				<renderStyle type="param">rectangular</renderStyle>
-				<renderSize type="param">{'width': 200.0, 'height': 8.0, 'length': 1300.0}</renderSize>
-				<renderColor type="param">auto</renderColor>
+				<renderOptions type="param">{'style': 'rectangular', 'width': 200.0, 'height': 8.0, 'length': 1300.0, 'color': 'auto'}</renderOptions>
 			</properties>
 			<_object type="param">xrt.backends.raycing.stages.MountingFrame</_object>
 		</Xmovale>

@@ -22,6 +22,7 @@ import xrt  #analysis:ignore
 from ....backends import raycing  # analysis:ignore
 from ....backends.raycing import sources as rsources  # analysis:ignore
 from ....backends.raycing import screens as rscreens  # analysis:ignore
+from ....backends.raycing import detectors as rdetectors  # analysis:ignore
 from ....backends.raycing import materials as rmats  # analysis:ignore
 from ....backends.raycing import figure_error as rfe  # analysis:ignore
 from ....backends.raycing import stages as rstages

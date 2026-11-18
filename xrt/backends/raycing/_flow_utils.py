@@ -72,6 +72,21 @@ def get_argument_editor_hint(objRef, argName):
     try:
         if isinstance(objRef, str):
             objRef = _class_from_string(objRef)
+        defaults = getattr(objRef, '_renderOptionDefaults', None)
+        if argName == 'renderOptions' and defaults is not None:
+            return {
+                'editor': 'dict',
+                'title': 'Rendering options',
+                'fixedKeys': tuple(defaults),
+                'fieldDefaults': defaults,
+                'fieldInputTypes': {key: ('float', 'None') for key in defaults
+                                    if key not in ('color', 'style')},
+                'fieldChoices': ({'style': ('None', 'mask', 'blades')}
+                                 if 'style' in defaults else {}),
+                'valueHint': {'type': 'parameter'},
+                'renderOptions': True,
+                'default': {},
+                }
         hintFunc = getattr(objRef, 'get_argument_editor_hint', None)
         if hintFunc is None:
             return None
@@ -759,7 +774,8 @@ def create_paramdict_oe(paramDictStr, defArgs, beamLine=None):
         if not isinstance(paravalue, str):
             paravalue = str(paravalue)  # TODO: temporary workaround
         if (paraname in defArgs and paravalue != str(defArgs[paraname])) or\
-                paraname in ['bl', 'uuid']:
+                paraname in ['bl', 'uuid'] or (
+                    paraname == 'renderColor' and 'renderOptions' in defArgs):
 
             if paraname == 'center':
                 paravalue = paravalue.strip('[]() ')

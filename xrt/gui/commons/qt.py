@@ -223,6 +223,8 @@ class DictEditorDialog(QDialog):
         elif self.valueHint.get('type') == 'parameter':
             key = self.table.item(row, 0).text()
             choices = self.hint.get('fieldChoices', {}).get(key)
+            if key == 'color' and self.hint.get('renderOptions'):
+                choices = ('None', *RENDER_COLOR_CHOICES)
             if choices:
                 combo = QComboBox(self.table)
                 combo.addItems(choices)

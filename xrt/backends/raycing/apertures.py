@@ -86,6 +86,10 @@ _DEFAULT_RENDER_SIZE = {
     'apertureDefaultSpan': None,
     'apertureThickness': None,
 }
+_RENDER_OPTION_DEFAULTS = dict(style=None, color=None, thickness=None,
+                               slitThicknessFraction=None,
+                               apertureBladeWidth=None,
+                               apertureDefaultSpan=None)
 _RENDER_SIZE_EDITOR_HINT = {
     'editor': 'dict',
     'title': 'Aperture rendering size',
@@ -102,13 +106,15 @@ allArguments = ('bl', 'name', 'center', 'blades', 'vertices',
                 'alarmLevel', 'r', 'shadeFraction',
                 'dx', 'dz', 'px', 'pz', 'nx', 'nz',
                 'nSpokes', 'rx', 'rz', 'phi0', 'vortex', 'vortexNradial',
-                'renderStyle', 'renderSize', 'renderColor',
+                'renderStyle', 'renderSize', 'renderColor', 'renderOptions',
                 'apertures', 'centerZs', 'dXs', 'dZs',
                 'zActuator', 'mount', 'mountOffset')
 
 
 class RectangularAperture(object):
     """Aperture as a combination of straight edges."""
+
+    _renderOptionDefaults = _RENDER_OPTION_DEFAULTS
 
     @staticmethod
     def get_argument_editor_hint(argName):
@@ -122,7 +128,7 @@ class RectangularAperture(object):
                  blades=_DEFAULT_RECTANGULAR_BLADES,
                  renderSize=_DEFAULT_RENDER_SIZE,
                  mount=None, mountOffset=None, renderColor='auto',
-                 outerLimits=None, **kwargs):
+                 outerLimits=None, renderOptions=None, **kwargs):
         """
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
             Container for beamline elements. Optical elements are added to its
@@ -171,6 +177,12 @@ class RectangularAperture(object):
             relative to the number of incident rays. If exceeded, an alarm
             output is printed in the console.
 
+        *renderOptions*: dict or None
+            Glow settings for 'color', 'style', 'thickness' (mm) and the
+            frame and blade dimensions from *renderSize*. The default color
+            is copper. *renderStyle* and *renderSize* supply defaults for
+            omitted style and size options.
+
         *renderStyle*: str
             Controls rendering style in xrtGlow. Can be either single-piece
             'mask' or a set of individual 'blades'.
@@ -178,9 +190,6 @@ class RectangularAperture(object):
         *renderSize*: dict
             Per-aperture xrtGlow size overrides. Missing keys and values set
             to None use the corresponding global scene setting.
-
-        *renderColor*: str
-            Glow surface material preset. 'auto' uses the standard copper.
 
         """
         self.bl = bl
@@ -220,6 +229,7 @@ class RectangularAperture(object):
         self.renderSize = dict(
             _DEFAULT_RENDER_SIZE if renderSize is None else renderSize)
         self.renderColor = renderColor
+        self.renderOptions = dict(renderOptions or {})
         self.outerLimits = copy.deepcopy(outerLimits)
 
         self._blades = {}
@@ -742,10 +752,13 @@ class SetOfRectangularAperturesOnZActuator(RectangularAperture):
                  x='auto', z='auto', alarmLevel=None, blades=None,
                  zActuator=None, renderStyle='mask',
                  renderSize=_DEFAULT_RENDER_SIZE, renderColor='auto',
-                 outerLimits=None, **kwargs):
+                 outerLimits=None, renderOptions=None, **kwargs):
         """
         *outerLimits*: dict or None
             Local rectangular bounds as in :class:`RectangularAperture`.
+
+        *renderOptions*: dict or None
+            Glow surface options as in :class:`RectangularAperture`.
 
         *apertures*: sequence of str
             Names of apertures. The last one must be one of 'bottom-edge' or
@@ -818,6 +831,7 @@ class SetOfRectangularAperturesOnZActuator(RectangularAperture):
         self.renderSize = dict(
             _DEFAULT_RENDER_SIZE if renderSize is None else renderSize)
         self.renderColor = renderColor
+        self.renderOptions = dict(renderOptions or {})
         self.outerLimits = copy.deepcopy(outerLimits)
         self.isBeamStop = False
         self._blades = {}
@@ -867,6 +881,8 @@ class SetOfRectangularAperturesOnZActuator(RectangularAperture):
 class RoundAperture(object):
     """Round aperture meant to represent a pipe or a flange."""
 
+    _renderOptionDefaults = _RENDER_OPTION_DEFAULTS
+
     @staticmethod
     def get_argument_editor_hint(argName):
         if argName == 'renderSize':
@@ -876,13 +892,16 @@ class RoundAperture(object):
     def __init__(self, bl=None, name='',
                  center=[0, 0, 0], r=1, x='auto', z='auto', alarmLevel=None,
                  renderSize=_DEFAULT_RENDER_SIZE, renderColor='auto',
-                 outerLimits=None, **kwargs):
+                 outerLimits=None, renderOptions=None, **kwargs):
         """ A round aperture aperture.
 
         *r* is the radius of the opening.
 
         *outerLimits*: dict or None
             Local rectangular bounds as in :class:`RectangularAperture`.
+
+        *renderOptions*: dict or None
+            Glow surface options as in :class:`RectangularAperture`.
 
         *x, z*: 3-tuples or 'auto'.
             Normalized 3D vectors in the global system which determine the
@@ -924,6 +943,7 @@ class RoundAperture(object):
         self.renderSize = dict(
             _DEFAULT_RENDER_SIZE if renderSize is None else renderSize)
         self.renderColor = renderColor
+        self.renderOptions = dict(renderOptions or {})
         self.outerLimits = copy.deepcopy(outerLimits)
 # For plotting footprint images with the envelope aperture:
         self.surface = name,
@@ -1276,6 +1296,8 @@ class DoubleBeamStop(DoubleSlit):
 class PolygonalAperture(object):
     """Aperture or obstacle defined as a set of polygon vertices."""
 
+    _renderOptionDefaults = _RENDER_OPTION_DEFAULTS
+
     @staticmethod
     def get_argument_editor_hint(argName):
         if argName == 'renderSize':
@@ -1286,7 +1308,7 @@ class PolygonalAperture(object):
                  opening=None, x='auto', z='auto', alarmLevel=None,
                  vertices=_DEFAULT_POLYGON_VERTICES,
                  renderSize=_DEFAULT_RENDER_SIZE, renderColor='auto',
-                 outerLimits=None, **kwargs):
+                 outerLimits=None, renderOptions=None, **kwargs):
         """
         *bl*: instance of :class:`~xrt.backends.raycing.BeamLine`
             Container for beamline elements. Optical elements are added to its
@@ -1306,6 +1328,9 @@ class PolygonalAperture(object):
 
         *outerLimits*: dict or None
             Local rectangular bounds as in :class:`RectangularAperture`.
+
+        *renderOptions*: dict or None
+            Glow surface options as in :class:`RectangularAperture`.
 
         *x, z*: 3-tuples or 'auto'.
             Normalized 3D vectors in the global system which determine the
@@ -1353,6 +1378,7 @@ class PolygonalAperture(object):
         self.renderSize = dict(
             _DEFAULT_RENDER_SIZE if renderSize is None else renderSize)
         self.renderColor = renderColor
+        self.renderOptions = dict(renderOptions or {})
         self.outerLimits = copy.deepcopy(outerLimits)
         self.isBeamStop = False
 # For plotting footprint images with the envelope aperture:

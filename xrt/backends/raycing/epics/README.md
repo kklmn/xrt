@@ -43,9 +43,8 @@ reserves space for at least `1024 * 1024` pixels by default, or the initial
 detector `histShape` if it is larger. Pass `imageMaxLength` to `EpicsDevice` if larger
 runtime histograms are expected.
 
-Plain `Screen` objects expose position and physical limits, but do not provide
-image or `histShape` records. Generic screen and detector templates reflect
-this distinction.
+Plain `Screen` objects expose their name and pose. `DetectorScreen` also
+exposes physical limits, histogram dimensions and the image waveform.
 
 ## Stages and mounted elements
 

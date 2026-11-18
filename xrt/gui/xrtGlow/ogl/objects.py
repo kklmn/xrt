@@ -801,15 +801,7 @@ class OEMesh3D():
         self.envelope_instance_count = 0
         self.envelope_step = None
 
-        if self.parent is not None:
-            self.sync_rendering_settings()
-        else:
-            self.oeThickness = 5
-            self.apertureThickness = 0.1
-            self.apertureBladeWidth = 5
-            self.apertureDefaultSpan = 10
-            self.slitThicknessFraction = 50
-            self.tiles = [25, 25]
+        self.sync_rendering_settings()
         self.showLocalAxes = False
         self.isEnabled = False
         self.stencilNum = 0
@@ -867,23 +859,35 @@ class OEMesh3D():
 
     def sync_rendering_settings(self):
         if self.parent is None:
-            return
-        self.oeThickness = self.parent.oeThickness
-        self.apertureBladeWidth = self.parent.apertureBladeWidth
-        self.apertureDefaultSpan = self.parent.apertureDefaultSpan
-        self.apertureThickness = self.parent.apertureThickness
-        self.slitThicknessFraction = self.parent.slitThicknessFraction
-        self.tiles = self.parent.tiles
+            self.oeThickness = 5
+            self.apertureThickness = 0.1
+            self.apertureBladeWidth = 5
+            self.apertureDefaultSpan = 10
+            self.slitThicknessFraction = 50
+            self.tiles = [25, 25]
+        else:
+            self.oeThickness = self.parent.oeThickness
+            self.apertureBladeWidth = self.parent.apertureBladeWidth
+            self.apertureDefaultSpan = self.parent.apertureDefaultSpan
+            self.apertureThickness = self.parent.apertureThickness
+            self.slitThicknessFraction = self.parent.slitThicknessFraction
+            self.tiles = self.parent.tiles
 
-        renderSize = getattr(self.oe, 'renderSize', None)
-        if isinstance(renderSize, dict):
-            for attrName in ('slitThicknessFraction',
-                             'apertureBladeWidth',
-                             'apertureDefaultSpan',
-                             'apertureThickness'):
-                localValue = renderSize.get(attrName)
-                if localValue is not None:
-                    setattr(self, attrName, localValue)
+        options = getattr(self.oe, 'renderOptions', None) or {}
+        self.apertureStyle = options.get('style') or getattr(
+            self.oe, 'renderStyle', None)
+        if is_aperture(self.oe):
+            legacySizes = getattr(self.oe, 'renderSize', None) or {}
+            for attrName, key in (
+                    ('slitThicknessFraction', 'slitThicknessFraction'),
+                    ('apertureBladeWidth', 'apertureBladeWidth'),
+                    ('apertureDefaultSpan', 'apertureDefaultSpan'),
+                    ('apertureThickness', 'thickness')):
+                value = options.get(key)
+                if value is None:
+                    value = legacySizes.get(attrName)
+                if value is not None:
+                    setattr(self, attrName, value)
 
     def get_aperture_frame_width(self, renderStyle=None):
         if renderStyle != 'mask':
@@ -1209,8 +1213,7 @@ class OEMesh3D():
         xIntervals, zIntervals = self.get_grid_intervals()
         xmin, xmax = xIntervals[0][0], xIntervals[-1][1]
         zmin, zmax = zIntervals[0][0], zIntervals[-1][1]
-        bt = self.get_aperture_frame_width(getattr(self.oe, 'renderStyle',
-                                                   None))
+        bt = self.get_aperture_frame_width(self.apertureStyle)
 
         if part[0] == 'gridFrame' and len(part) == 2:
             if part[1] == 'left':
@@ -1250,9 +1253,13 @@ class OEMesh3D():
             yDim = 2
 
         if isScreen:
+            options = getattr(self.oe, 'renderOptions', None) or {}
+            width, height = options.get('width'), options.get('height')
             autoSizedX = False
             autoSizedY = False
-            if self.oe.limPhysX is not None and np.sum(np.abs(
+            if width is not None:
+                xLimits = [-0.5 * width, 0.5 * width]
+            elif self.oe.limPhysX is not None and np.sum(np.abs(
                     self.oe.limPhysX)) > 0:
                 xLimits = self.oe.limPhysX if isinstance(
                     self.oe.limPhysX, list) else self.oe.limPhysX.tolist()
@@ -1263,7 +1270,9 @@ class OEMesh3D():
             else:
                 xLimits = [-10, 10]
 
-            if self.oe.limPhysY is not None and np.sum(np.abs(
+            if height is not None:
+                yLimits = [-0.5 * height, 0.5 * height]
+            elif self.oe.limPhysY is not None and np.sum(np.abs(
                     self.oe.limPhysY)) > 0:
                 yLimits = self.oe.limPhysY if isinstance(
                     self.oe.limPhysY, list) else self.oe.limPhysY.tolist()
@@ -1290,7 +1299,7 @@ class OEMesh3D():
 
             yDim = 2
         elif isAperture:
-            renderStyle = getattr(self.oe, 'renderStyle', 'mask')
+            renderStyle = self.apertureStyle or 'mask'
             blades = getattr(self.oe, 'blades', {})
             defaultSpan = self.apertureDefaultSpan
             defaultHalfSpan = 0.5 * defaultSpan
@@ -1452,12 +1461,16 @@ class OEMesh3D():
 
         def get_thickness():
             thsrc = self.parent or self
-            if thsrc.oeThicknessForce is not None:
-                return thsrc.oeThicknessForce
+            forced = getattr(thsrc, 'oeThicknessForce', None)
+            if forced is not None:
+                return forced
             thickness = thsrc.oeThickness
 
             if isScreen or isAperture:
                 return 0
+            options = getattr(self.oe, 'renderOptions', None) or {}
+            if options.get('thickness') is not None:
+                return options['thickness']
             if isPlate:
                 if self.oe.t is not None:
                     thickness = self.oe.t
@@ -1753,7 +1766,7 @@ class OEMesh3D():
         elif isAperture:
             apThick = self.apertureThickness
             local_n = lambda x, y: [0, 0, 1]
-            renderStyle = getattr(self.oe, 'renderStyle', 'mask')
+            renderStyle = self.apertureStyle or 'mask'
             if str(nsIndex) in ['left', 'right'] and renderStyle != 'mask':
                 local_z = lambda x, y: 0 * np.ones_like(x)  # actual thickness
                 thickness = -apThick  # Inverted position of the back side
@@ -2072,7 +2085,7 @@ class OEMesh3D():
             else:
                 rmin = self.oe.r
                 rmax = self.oe.r+self.get_aperture_frame_width(
-                    getattr(self.oe, 'renderStyle', None))
+                    self.apertureStyle)
             allSurfaces, allNormals, allIndices =\
                 self.generate_disk_ring_segment(
                     rmin=rmin, rmax=rmax, thickness=self.apertureThickness)
@@ -2885,9 +2898,11 @@ class OEMesh3D():
         xLimits, yLimits, zLimits =\
             beamLimits[:, 0], beamLimits[:, 1], beamLimits[:, 2]
 
+        options = getattr(self.oe, 'renderOptions', None) or {}
         surfOpacity = 1.0
         if is_screen(self.oe):
-            surfOpacity = 0.75
+            opacity = options.get('opacity')
+            surfOpacity = 0.75 if opacity is None else opacity
         elif is_plate(self.oe):
             surfOpacity = 0.85
 #        elif is_aperture(self.oe):
@@ -2924,7 +2939,9 @@ class OEMesh3D():
         else:
             default = 'Si'
         if material is None:
-            material = getattr(self.oe, 'renderColor', 'auto')
+            material = options.get('color')
+            if material is None:
+                material = getattr(self.oe, 'renderColor', 'auto')
         _set_surface_material(
             shader, get_render_material(material, default), isSelected)
 

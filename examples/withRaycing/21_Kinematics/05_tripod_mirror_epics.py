@@ -16,7 +16,8 @@ Bash or sh::
 
 For Phoebus with the JCA backend, add the JVM option
 ``-Djca.use_env=true`` to enable environment lookup. Open
-``tripod_mirror_bob/stages/Granite.bob`` after starting the example.
+``tripod_mirror_bob/stages/Granite.bob`` for the stages and
+``tripod_mirror_bob/detectors/screen01.bob`` for the detector histogram.
 If the EPICS command-line tools are installed, check the connection with
 ``caget TRIPOD:Downstream_center:RBV``.
 """

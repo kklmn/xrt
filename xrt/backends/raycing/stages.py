@@ -255,6 +255,7 @@ def update_stage(stage, kwargs):
 class MountingFrame:
     """Rigid mount for optical elements, stages and other mounting frames."""
 
+    hiddenParams = ('renderStyle', 'renderSize', 'renderColor')
     _renderStyles = ('rectangular', 'round')
     _renderSizes = dict(width=None, height=2., length=None)
     _renderExtents = ('width', 'length')
@@ -264,7 +265,8 @@ class MountingFrame:
                  rotationSequence=DEFAULT_ROTATION_SEQUENCE, pose=None,
                  mount=None, mountOffset=None, bl=None, uuid=None,
                  mount2=None, mount3=None, yReference=None,
-                 renderStyle='rectangular', renderSize=None, renderColor='auto'):
+                 renderStyle='rectangular', renderSize=None, renderColor='auto',
+                 renderOptions=None):
         """
         *name*: str
             Human-readable name of the mount.
@@ -314,27 +316,21 @@ class MountingFrame:
         *uuid*: str or None
             Identifier to restore from a layout. Defaults to a new UUID.
 
-        *renderStyle*: str
-            Glow plate shape, 'rectangular' or 'round'.
-
-        *renderSize*: dict or None
-            Glow plate dimensions in mm. Width and length follow local X and Y
-            and accept a positive centered span, a pair of local limits or
-            None to fit the mounted geometry. For a round plate they set the
-            diameters. Height is the thickness along local Z and defaults
-            to 2 mm.
-
-        *renderColor*: str
-            Glow surface material preset. 'auto' uses the standard steel.
+        *renderOptions*: dict or None
+            Glow plate settings. 'style' is 'rectangular' or 'round', and
+            'color' selects the material preset. 'width' and 'length' take
+            a centered span, local limits or None to fit the mounted geometry.
+            'height' is the thickness and defaults to 2 mm. Dimensions are in
+            mm. The legacy rendering arguments supply defaults for omitted
+            options.
         """
         self.bl = bl
         self.uuid = str(raycing.uuid.uuid4()) if uuid is None else str(uuid)
         self.name = name
-        self._renderStyle = self._renderStyles[0]
-        self._renderSize = self._renderSizes.copy()
-        self.renderStyle = renderStyle
-        self.renderSize = renderSize
-        self.renderColor = renderColor
+        self._renderOptions = self._validate_render_options()
+        self.renderOptions = {
+            'style': renderStyle, 'color': renderColor,
+            **(renderSize or {}), **(renderOptions or {})}
         self._mount = self._mount2 = self._mount3 = self._yReference = None
         self._rotationSequence = DEFAULT_ROTATION_SEQUENCE
         self._pitch = self._roll = self._yaw = self._positionRoll = 0.
@@ -359,36 +355,45 @@ class MountingFrame:
 
     @classmethod
     def get_argument_editor_hint(cls, argName):
-        if argName == 'renderStyle':
-            return {'editor': 'choice', 'choices': cls._renderStyles}
-        if argName == 'renderSize':
+        if argName == 'renderOptions':
+            defaults = cls._validate_render_options()
             inputTypes = {key: ('float', 'None') for key in cls._renderSizes}
             inputTypes.update((key, ('float', 'sequence:float', 'None'))
                               for key in cls._renderExtents)
             if 'grooves' in inputTypes:
                 inputTypes['grooves'] = ('integer', 'None')
+            choices = {'style': cls._renderStyles}
+            if 'shape' in cls._renderSizes:
+                choices['shape'] = ('None', 'square', 'round')
             return {
                 'editor': 'dict',
-                'title': 'Stage rendering size (mm)',
-                'fixedKeys': tuple(cls._renderSizes),
-                'fieldDefaults': cls._renderSizes,
+                'title': 'Rendering options',
+                'fixedKeys': tuple(defaults),
+                'fieldDefaults': defaults,
                 'fieldInputTypes': inputTypes,
-                'fieldChoices': ({'shape': ('None', 'square', 'round')}
-                                 if 'shape' in cls._renderSizes else {}),
+                'fieldChoices': choices,
                 'valueHint': {'type': 'parameter'},
-                'validator': cls._validate_render_size,
-                'default': cls._renderSizes,
+                'renderOptions': True,
+                'validator': cls._validate_render_options,
+                'default': defaults,
                 }
 
     @classmethod
-    def _validate_render_size(cls, **values):
-        sizes = cls._renderSizes.copy()
+    def _validate_render_options(cls, **values):
+        options = {'style': cls._renderStyles[0], 'color': 'auto',
+                   **cls._renderSizes}
         for key, value in values.items():
-            if key not in sizes:
-                raise ValueError('Unknown rendering dimension: {}'.format(key))
+            if key not in options:
+                raise ValueError('Unknown rendering option: {}'.format(key))
             if value is None:
                 continue
-            if key == 'shape':
+            if key == 'style':
+                if value not in cls._renderStyles:
+                    raise ValueError('style must be one of {}'.format(
+                        ', '.join(cls._renderStyles)))
+            elif key == 'color':
+                pass
+            elif key == 'shape':
                 if value not in ('square', 'round'):
                     raise ValueError('shape must be square or round')
             elif (key in cls._renderExtents and
@@ -409,29 +414,17 @@ class MountingFrame:
                     if not value.is_integer():
                         raise ValueError('grooves must be a whole number')
                     value = int(value)
-            sizes[key] = value
-        return sizes
+            options[key] = value
+        return options
 
     @property
-    def renderStyle(self):
-        return self._renderStyle
+    def renderOptions(self):
+        return self._renderOptions
 
-    @renderStyle.setter
-    def renderStyle(self, value):
-        if isinstance(value, str) and value in self._renderStyles:
-            self._renderStyle = value
-        else:
-            logger.warning('%s: renderStyle must be one of %s',
-                           self.name, ', '.join(self._renderStyles))
-
-    @property
-    def renderSize(self):
-        return self._renderSize
-
-    @renderSize.setter
-    def renderSize(self, value):
+    @renderOptions.setter
+    def renderOptions(self, value):
         try:
-            self._renderSize = self._validate_render_size(
+            self._renderOptions = self._validate_render_options(
                 **({} if value is None else value))
         except (TypeError, ValueError, OverflowError) as error:
             logger.warning('%s: %s', self.name, error)
@@ -735,7 +728,7 @@ class Stage(MountingFrame):
                  mount=None, mountOffset=None, axis=None, position=0.,
                  positionMin=None, positionMax=None, positionUnit=None,
                  bl=None, uuid=None, renderStyle='auto', renderSize=None,
-                 renderColor='auto', positionOffset=0.):
+                 renderColor='auto', positionOffset=0., renderOptions=None):
         """
         Base placement, parent mounting and registration use the parameters
         of :class:`MountingFrame`.
@@ -764,13 +757,11 @@ class Stage(MountingFrame):
             to 'mm' for a linear stage and 'rad' for a rotation stage. Other
             units use the raycing length or angle unit dictionary.
 
-        *renderStyle*: str
-            Glow geometry style. 'auto' selects it from the actuator axis.
-
-        *renderSize*: dict or None
-            Glow dimensions in mm. Width and length entries accept a positive
-            centered span, a pair of local limits or None to fit the supported
-            geometry. Height entries set part thicknesses.
+        *renderOptions*: dict or None
+            Glow geometry and color settings. 'auto' style is selected from
+            the actuator axis. Width and length take a centered span, local
+            limits or None to fit the supported geometry. Heights set part
+            thicknesses. Dimensions are in mm.
         """
         # Validate the actuator before the mount is registered on the beamline.
         self.bl = bl
@@ -799,7 +790,7 @@ class Stage(MountingFrame):
             positionRoll=positionRoll, rotationSequence=rotationSequence,
             pose=pose, mount=mount, mountOffset=mountOffset, bl=bl, uuid=uuid,
             renderStyle=renderStyle, renderSize=renderSize,
-            renderColor=renderColor)
+            renderColor=renderColor, renderOptions=renderOptions)
 
     def _check_position(self):
         pass
@@ -918,7 +909,7 @@ class Stage(MountingFrame):
 class LinearStage(Stage):
     """One signed translation along x, y or z of the stage base.
 
-    Glow styles are 'auto', 'plates' and 'grooved'. *renderSize* accepts
+    Glow styles are 'auto', 'plates' and 'grooved'. *renderOptions* accepts
     width across travel, topLength and bottomLength along travel, topHeight,
     bottomHeight, grooves, grooveWidth, grooveDepth and gap. Automatic groove
     counts are one for X/Y and zero for Z. The default gap is 0.5 mm.
@@ -952,7 +943,7 @@ class RotationStage(Stage):
     photon energies in eV.
 
     Glow styles are 'auto', 'disk' and 'cradle'. The automatic style is
-    'disk' for yaw and 'cradle' for pitch and roll. *renderSize* accepts
+    'disk' for yaw and 'cradle' for pitch and roll. *renderOptions* accepts
     width, length, shape ('square' or 'round'), topHeight, bottomHeight and
     radius. A disk radius sets the bearing radius and supplies the moving
     plate's automatic width and length. The cradle radius can be inferred

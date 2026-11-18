@@ -26,7 +26,8 @@ shapeArgSet = {'limPhysX', 'limPhysY', 'limPhysX2', 'limPhysY2',
 calculatedArgSet = {'R', 'r', 'Rm', 'Rs', 'focus', 'nCRL'}
 derivedArgSet = {'center', 'pitch', 'bragg'} | calculatedArgSet
 
-renderOnlyArgSet = {'renderStyle', 'renderSize', 'renderColor', 'name'}
+renderOnlyArgSet = {'renderStyle', 'renderSize', 'renderColor',
+                    'renderOptions', 'name'}
 
 # String-valued arguments interpreted as filenames during code generation.
 filenameArgSet = {'fileName', 'efficiencyFile', 'saveName',
@@ -289,7 +290,8 @@ argumentInputGroups = {
     ('sequence', 'auto', 'None'): {'pAxis', 'parabolaAxis'},
     ('string', 'sequence:string'): {'elements'},
     ('string', 'sequence', 'None'): {'refractiveIndex'},
-    'dict': {'afterScriptKWargs', 'blades', 'generatorKWargs', 'renderSize'},
+    'dict': {'afterScriptKWargs', 'blades', 'generatorKWargs',
+             'renderSize', 'renderOptions'},
     ('sequence', 'inf', 'None'): {'f1', 'f2'},
     'integer': {
         'eN', 'gIntervals', 'N', 'nPairs', 'nRK', 'nSpokes', 'nx', 'nz',

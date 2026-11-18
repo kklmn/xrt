@@ -48,9 +48,10 @@ def build_beamline():
         positionMin=-20.0,
         positionMax=20.0,
         positionUnit='mm',
-        renderSize={'width': 200.0, 'topLength': 500.0, 'bottomLength': 500.0,
-                    'topHeight': 20.0, 'bottomHeight': 100.0, 'grooves': None,
-                    'grooveWidth': 6.0, 'grooveDepth': 5.0, 'gap': 0.5})
+        renderOptions={
+            'width': 200.0, 'topLength': 500.0, 'bottomLength': 500.0,
+            'topHeight': 20.0, 'bottomHeight': 100.0, 'grooves': None,
+            'grooveWidth': 6.0, 'grooveDepth': 5.0, 'gap': 0.5})
 
     Bragg_disk = rstages.RotationStage(
         bl=bl,
@@ -66,8 +67,9 @@ def build_beamline():
         positionMin=5.0,
         positionMax=35.0,
         positionUnit='deg',
-        renderSize={'width': None, 'length': None, 'shape': None,
-                    'topHeight': 2.0, 'bottomHeight': 2.0, 'radius': 150.0})
+        renderOptions={
+            'width': None, 'length': None, 'shape': None,
+            'topHeight': 2.0, 'bottomHeight': 2.0, 'radius': 150.0})
 
     X2_longitudinal = rstages.LinearStage(
         bl=bl,
@@ -109,8 +111,9 @@ def build_beamline():
         positionMin=-45.0,
         positionMax=45.0,
         positionUnit='deg',
-        renderSize={'width': None, 'length': None, 'shape': None,
-                    'topHeight': 2.0, 'bottomHeight': 2.0, 'radius': 10.0})
+        renderOptions={
+            'width': None, 'length': None, 'shape': None,
+            'topHeight': 2.0, 'bottomHeight': 2.0, 'radius': 10.0})
 
     bl.Geometric_source = rsources.geoms.GeometricSource(
         bl=bl,
@@ -173,9 +176,7 @@ def build_beamline():
     bl.Exit_screen = rscreens.Screen(
         bl=bl,
         name='Exit_screen',
-        center=[0.0, 12000.0, 10.0],
-        limPhysX=[0.0, 0.0],
-        limPhysY=[0.0, 0.0])
+        center=[0.0, 12000.0, 10.0])
 
     return bl
 

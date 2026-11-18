@@ -328,7 +328,7 @@ class EpicsDevice:
                 {
                     "Mono:ENERGY": "MONO:E",
                     "Slit1:blades:left": "SLIT1:L",
-                    "Screen1:image": "CAM1:ArrayData"
+                    "Detector1:image": "CAM1:ArrayData"
                 }
 
             Note that ``epicsMap`` values replace only the per-record suffix.
@@ -367,6 +367,7 @@ class EpicsDevice:
         """
 
         from ..detectors import DetectorScreen
+        from ..screens import Screen
 
         self.bl = bl
         self.epicsPrefix = epicsPrefix + ":" if epicsPrefix else ""
@@ -518,6 +519,8 @@ class EpicsDevice:
                                                   oeid, f'histShape.{field}'))
                             self.pv_map[oeid][f'histShape.{field}'] =\
                                 pv_records[pvname]
+            elif isinstance(oeObj, Screen):
+                oePvFields.difference_update(('limPhysX', 'limPhysY'))
 
             for argName in oePvFields:
                 if argName in ['shape', 'renderStyle', 'renderSize']:

@@ -836,7 +836,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         if oeid not in self.needMeshUpdate:
                             self.needMeshUpdate.append(oeid)
                         meshUpdateQueued = True
-                elif arg0 in shapeArgSet or arg0 in ('mount', 'mountOffset'):
+                elif arg0 in shapeArgSet or arg0 in (
+                        'mount', 'mountOffset', 'renderOptions'):
                     if oeid not in self.needMeshUpdate:
                         self.needMeshUpdate.append(oeid)
                     meshUpdateQueued = True
@@ -2528,7 +2529,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         model, self.mView, self.mProj, index,
                         isSelected=isSelected,
                         shader=self.shaderMesh,
-                        material=getattr(stage, 'renderColor', 'auto'))
+                        material=stage.renderOptions['color'])
                     if self.showContours:
                         stage_contours.append((index, model, stencilNum))
             if self.stagePlateMesh is not None:

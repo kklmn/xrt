@@ -52,6 +52,7 @@ import xrt  #analysis:ignore
 from ....backends import raycing  # analysis:ignore
 from ....backends.raycing import sources as rsources  # analysis:ignore
 from ....backends.raycing import screens as rscreens  # analysis:ignore
+from ....backends.raycing import detectors as rdetectors
 from ....backends.raycing import materials as rmats  # analysis:ignore
 from ....backends.raycing import figure_error as rfe  # analysis:ignore
 from ....backends.raycing import stages as rstages
@@ -126,7 +127,7 @@ class XrtQookBase(qt.QMainWindow):
         self.iconsDir = os.path.join(self.xrtQookDir, '../_icons')
         self.setWindowIcon(qt.QIcon(os.path.join(self.iconsDir, 'xrQt1.ico')))
 
-        self.xrtModules = ['rsources', 'rscreens',
+        self.xrtModules = ['rsources', 'rscreens', 'rdetectors',
                            'rmats', 'rmatsel', 'rmatsco', 'rmatscr',
                            'roes', 'rapts', 'rfe', 'rstages',
                            'rrun', 'raycing', 'xrtplot', 'xrtrun']
@@ -483,6 +484,9 @@ class XrtQookBase(qt.QMainWindow):
                 else:  # only with __all__
                     for elname in amodule.__all__:
                         self._addAction(amodule, elname, afunction, tmenu)
+                if amodule is rscreens:
+                    self._addAction(
+                        rdetectors, 'DetectorScreen', afunction, tmenu)
             else:
                 for beamType in ['Local Beams', 'Global Beams']:
                     subAction = qt.QAction(self)
@@ -2950,6 +2954,8 @@ class XrtQookBase(qt.QMainWindow):
                     for elname in tmodule.__all__:
                         self._addAction(
                             tmodule, elname, self.addElement, tsubmenu)
+            self._addAction(
+                rdetectors, 'DetectorScreen', self.addElement, menuscr)
         elif level == 1 and selText != "properties":
             # tsubmenu = menu.addMenu(self.tr("Add method"))
             if self.blViewer is not None:
