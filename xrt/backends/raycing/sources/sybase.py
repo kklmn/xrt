@@ -417,7 +417,7 @@ class SourceBase:
         zPrimeMaxVal = self._zPrimeMax
 
         if hasattr(self, '_zPrimeMaxAutoReduce') and self._zPrimeMaxAutoReduce:
-            if all([hasattr(self, x) for x in ['_Kx', '_gamma']]):
+            if all([hasattr(self, x) for x in ['_Kx', 'gamma']]):
                 K0 = self.Kx if abs(self.Kx) > 0 else 2.
                 zPrimeMaxTmp = K0 / self.gamma
                 if abs(self._zPrimeMax) > abs(zPrimeMaxTmp):
@@ -425,7 +425,7 @@ class SourceBase:
                           self._zPrimeMax * 1e3, zPrimeMaxTmp * 1e3))
                     zPrimeMaxVal = zPrimeMaxTmp
                 if abs(self._zPrimeMin) > abs(zPrimeMaxTmp):
-                    print("Reducing xPrimeMin from {0} down to {1} mrad".format(
+                    print("Reducing zPrimeMin from {0} down to {1} mrad".format(
                           self._zPrimeMin * 1e3, zPrimeMaxTmp * 1e3))
                     zPrimeMinVal = np.sign(self._zPrimeMin) * zPrimeMaxTmp
 
