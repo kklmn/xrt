@@ -26,6 +26,7 @@ oes/
 apertures/
 screens/
 detectors/
+stages/
 propagation/
 ```
 
@@ -45,6 +46,23 @@ runtime histograms are expected.
 Plain `Screen` objects expose position and physical limits, but do not provide
 image or `histShape` records. Generic screen and detector templates reflect
 this distinction.
+
+## Stages and mounted elements
+
+A movable stage publishes `<stage>:VAL` for position commands and
+`<stage>:RBV` for the applied position. `LLM`, `HLM`, and
+`positionOffset` are read-only. An unset limit has no PV and is shown as
+unbounded on the display. The position records use the stage's engineering
+units.
+
+Mounted elements publish read-only world pose values. Stage motion refreshes
+these values even with AutoUpdate off. Record availability and access are
+established when the IOC starts.
+
+For a concrete layout the generator writes one `stages/<base>.bob` file
+per mount assembly. It includes the stages, frames and attached optics,
+including supports joined by a shared frame. Unattached elements get their
+own displays.
 
 ## EPICS propagation behavior
 
@@ -71,8 +89,8 @@ python -m xrt.backends.raycing.epics.generate_bob [options]
 | Option | Meaning |
 | --- | --- |
 | `-h`, `--help` | Show the command help and exit. |
-| `--beamline MODULE_OR_FILE[:CALLABLE]` | Load a Python beamline builder and generate one BOB file per EPICS-enabled element. The callable defaults to `build_beamline` when omitted. Examples: `my_beamline.py:build_beamline`, `package.module:create_bl`. |
-| `--layout PATH` | Load an xrtQook XML or JSON layout and generate one BOB file per EPICS-enabled element. |
+| `--beamline MODULE_OR_FILE[:CALLABLE]` | Load a Python beamline builder and generate BOB files for mount assemblies and unattached elements. The callable defaults to `build_beamline` when omitted. Examples: `my_beamline.py:build_beamline`, `package.module:create_bl`. |
+| `--layout PATH` | Load an xrtQook XML or JSON layout and generate BOB files for mount assemblies and unattached elements. |
 | `--builder-kw NAME=JSON` | Pass a JSON-decoded keyword argument to the Python beamline builder. Can be repeated. Example: `--builder-kw nrays=1000 --builder-kw hkl='[1, 1, 1]'`. |
 | `--epics-map PATH` | Load an `EpicsDevice` record-remapping JSON file. Keys are default record suffixes, values are replacement suffixes, matching the `epicsMap` argument of `EpicsDevice`. |
 | `--output PATH` | Choose the output folder. Default: `xrt/backends/raycing/epics`. |

@@ -15,6 +15,17 @@ from .._named_arrays import Center, Limits
 from .._sets_units import (
     derivedArgSet, diagnosticArgs, orientationArgSet, shapeArgSet)
 from ..physconsts import CH
+from ..stages import MountingFrame, Stage
+
+
+MOTOR_FIELDS = (
+    ("VAL", "position", "Position", "rw"),
+    ("RBV", "position", "Position readback", "ro"),
+    ("LLM", "positionMin", "Low limit", "ro"),
+    ("HLM", "positionMax", "High limit", "ro"),
+    ("positionOffset", "positionOffset", "Position offset", "ro"),
+)
+POSE_FIELDS = ("center", "pitch", "roll", "yaw", "x", "z")
 
 
 @dataclass(frozen=True)
@@ -64,6 +75,68 @@ def workflow_records(
     ]
 
 
+def stage_motor_records(stage: Stage, epics_map=None):
+    """Describe the individual actuator PVs for both the IOC and the BOB."""
+    name = to_valid_var_name(stage.name)
+    demand = resolve_epics_record(f"{name}:VAL", epics_map)
+    pvs = []
+    for suffix, attr, label, access in MOTOR_FIELDS:
+        value = getattr(stage, attr)
+        record = resolve_epics_record(f"{name}:{suffix}", epics_map)
+        if value is None or record is None:
+            continue
+        metadata = {"EGU": stage.positionUnit}
+        if suffix == "RBV" and demand is not None:
+            metadata["readback_for"] = demand
+        pvs.append(PvSpec(record, label, attr, "number", access, value,
+                          "Motion", metadata))
+    return pvs
+
+
+def pose_records(element, epics_map=None):
+    """Describe stage poses and mounted optical pose PVs."""
+    name = to_valid_var_name(element.name)
+    mounted = getattr(element, "mount", None) is not None
+    pvs = []
+    angles = hasattr(element, "pitch")
+    fields = (("center", "pitch", "roll", "yaw") if angles
+              else ("center", "x", "z"))
+    for attr in fields:
+        value = getattr(element, attr, None)
+        if value is None:
+            continue
+        vector = attr in ("center", "x", "z")
+        components = zip("xyz", value) if vector else (("", value),)
+        group = "Position" if attr == "center" else "Orientation"
+        if attr == "center":
+            unit, precision = "mm", 3
+        elif vector:
+            unit, precision = "", 6
+        else:
+            unit, precision = "rad", 8
+        for component, initial in components:
+            path = f"{attr}.{component}" if component else attr
+            suffix = path.replace(".", ":")
+            default = f"{name}:{suffix}"
+            record = resolve_epics_record(default, epics_map)
+            metadata = {"EGU": unit, "PREC": precision}
+            if mounted and attr in ("center", "pitch"):
+                # These fields already have readback PV names in layouts.
+                readback, _ = resolve_epics_readback(default, epics_map)
+                if record is None:
+                    record = readback
+                elif readback and readback != record:
+                    metadata["alias"] = readback
+            if record is not None:
+                label = _label(attr)
+                if component:
+                    label = f"{label} {component}"
+                pvs.append(PvSpec(record, label, path, "number",
+                                  "ro" if mounted else "rw", initial,
+                                  group, metadata))
+    return pvs
+
+
 def element_records(oe_obj: Any,
                     epics_map: Optional[Dict[str, Optional[str]]] = None
                     ) -> List[PvSpec]:
@@ -73,8 +146,14 @@ def element_records(oe_obj: Any,
     ``softioc`` or creating an IOC.
     """
 
+    if isinstance(oe_obj, MountingFrame):
+        pvs = (stage_motor_records(oe_obj, epics_map)
+               if isinstance(oe_obj, Stage) else [])
+        return pvs + pose_records(oe_obj, epics_map)
+
     oename = to_valid_var_name(getattr(oe_obj, "name", "unnamed"))
-    pvs: List[PvSpec] = []
+    mounted = getattr(oe_obj, "mount", None) is not None
+    pvs: List[PvSpec] = pose_records(oe_obj, epics_map) if mounted else []
 
     def add(default_record: str, label: str, property_path: str, kind: str,
             access: str = "rw", initial_value: Any = None,
@@ -107,6 +186,8 @@ def element_records(oe_obj: Any,
     if hasattr(oe_obj, "shine") and hasattr(oe_obj, "nrays"):
         pv_fields.add("nrays")
     for arg_name in _ordered_fields(pv_fields):
+        if mounted and arg_name in POSE_FIELDS:
+            continue
         if arg_name in ["shape", "renderStyle", "renderSize"]:
             continue
         if not hasattr(oe_obj, arg_name):
@@ -153,7 +234,8 @@ def element_records(oe_obj: Any,
                     initial_value, _group(arg_name))
 
     for arg_name in derivedArgSet:
-        if arg_name == "center" or not hasattr(oe_obj, arg_name):
+        if (arg_name == "center" or not hasattr(oe_obj, arg_name) or
+                (mounted and arg_name in POSE_FIELDS)):
             continue
         record = f"{oename}:{arg_name}"
         if any(pv.record == f"{record}_RBV" for pv in pvs):
@@ -178,6 +260,14 @@ def iter_element_specs(bl: Any,
 
     elements = bl.iter_oes_ordered() if hasattr(bl, "iter_oes_ordered") else\
         getattr(bl, "oesDict", {}).items()
+    stages = getattr(bl, "stagesDict", {})
+    for stage_id in bl.sort_stages() if stages else ():
+        stage = stages[stage_id]
+        yield ElementSpec(
+            uuid=stage_id, name=stage.name,
+            valid_name=to_valid_var_name(stage.name),
+            class_name=f"{stage.__class__.__module__}.{stage.__class__.__name__}",
+            category="stages", pvs=element_records(stage, epics_map))
     for oeid, oeline in elements:
         oe_obj = oeline[0]
         name = getattr(oe_obj, "name", oeid)

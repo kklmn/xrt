@@ -9,6 +9,7 @@ import importlib.util
 import json
 import sys
 import xml.etree.ElementTree as ET
+from dataclasses import replace
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 from xml.dom import minidom
@@ -241,11 +242,30 @@ def generate_templates(output: Path, writer: BobWriter,
     return paths
 
 
+def _assembly_roots(bl):
+    """Map each mount to the base of its assembly, merging shared supports."""
+    roots = {}
+    members = {}
+    for uuid in bl.sort_stages():
+        stage = bl.stagesDict[uuid]
+        bases = list(dict.fromkeys(roots[parent.uuid]
+                                   for parent in stage._mount_parents))
+        base = bases[0] if bases else uuid
+        branch = members.setdefault(base, [])
+        for other in bases[1:]:
+            shared = members.pop(other)
+            roots.update(dict.fromkeys(shared, base))
+            branch.extend(shared)
+        roots[uuid] = base
+        branch.append(uuid)
+    return roots
+
+
 def generate_for_beamline(bl: Any, output: Path, writer: BobWriter,
                           prefix: str = "",
                           epics_map: Optional[Dict[str, Optional[str]]] = None
                           ) -> List[Path]:
-    """Generate one BOB file per EPICS-enabled element plus propagation."""
+    """Generate an EPICS display for each assembly or unattached element."""
 
     paths: List[Path] = []
     workflow_path = output / "propagation" / "propagation_control.bob"
@@ -253,8 +273,38 @@ def generate_for_beamline(bl: Any, output: Path, writer: BobWriter,
                  workflow_records(epics_map), {"P": _prefix_macro(prefix)})
     paths.append(workflow_path)
 
-    for spec in iter_element_specs(bl, epics_map):
-        if not spec.pvs:
+    specs = {spec.uuid: spec for spec in iter_element_specs(bl, epics_map)}
+    roots = _assembly_roots(bl) if getattr(bl, 'stagesDict', None) else {}
+    for uuid, (element, *_) in getattr(bl, 'oesDict', {}).items():
+        mount = getattr(element, 'mount', None)
+        if mount is not None and mount.uuid in roots:
+            roots[uuid] = roots[mount.uuid]
+    assemblies = {}
+    for spec in specs.values():
+        base = roots.get(spec.uuid)
+        if base is None:
+            continue
+        section = spec.name
+        stage = bl.stagesDict.get(spec.uuid)
+        if hasattr(stage, 'position'):
+            section += f" ({stage.axis}, {stage.positionUnit})"
+            if stage.positionMin is None:
+                section += " - Low limit unbounded"
+            if stage.positionMax is None:
+                section += " - High limit unbounded"
+        assemblies.setdefault(base, []).extend(
+            replace(pv, group=section) for pv in spec.pvs)
+
+    for base, pvs in assemblies.items():
+        if pvs:
+            spec = specs[base]
+            path = output / "stages" / f"{spec.valid_name}.bob"
+            writer.write(path, f"{spec.name} EPICS", pvs,
+                         {"P": _prefix_macro(prefix)})
+            paths.append(path)
+
+    for spec in specs.values():
+        if not spec.pvs or spec.uuid in roots:
             continue
         file_name = f"{spec.valid_name}.bob"
         path = output / spec.category / file_name
@@ -349,7 +399,7 @@ def _group_pvs(pvs: List[PvSpec]):
     for pv in pvs:
         if pv.group not in seen:
             seen.append(pv.group)
-    for group in order + sorted(set(seen) - set(order)):
+    for group in order + [group for group in seen if group not in order]:
         group_pvs = [pv for pv in pvs if pv.group == group]
         if group_pvs:
             yield group, group_pvs

@@ -23,6 +23,7 @@ DEFAULT_OUTPUT_POLICY = {
     'footprints': True,
     'diagnostics': True,
     'progress': True,
+    'epics_readbacks': False,
 }
 
 
@@ -39,7 +40,9 @@ def propagationProcess(q_in, q_out, with_epics_histograms=False,
             pass
         else:
             try:
-                handler.process_message(message)
+                reply = handler.process_message(message)
+                if reply is not None:
+                    q_out.put(reply)
             except Exception as e:
                 if _DEBUG_:
                     raise
@@ -274,6 +277,26 @@ class MessageHandler:
                 self.needUpdate = True
                 self.startEl = objuuid
 
+    def _epics_readback_message(self, elements):
+        from .epics.records import MOTOR_FIELDS, POSE_FIELDS
+        from .stages import Stage
+
+        readbacks = []
+        motor_attrs = tuple(dict.fromkeys(attr for _, attr, _, _ in MOTOR_FIELDS))
+        for uuid, element in elements:
+            if isinstance(element, Stage):
+                readbacks.extend((uuid, attr, getattr(element, attr))
+                                 for attr in motor_attrs)
+            if getattr(element, 'mount', None) is not None:
+                for attr in POSE_FIELDS:
+                    value = getattr(element, attr, None)
+                    if value is not None:
+                        readbacks.append((uuid, attr, value))
+        return {
+            'epics_readbacks': readbacks,
+            'will_propagate': self.needUpdate and not self.stop,
+        }
+
     def handle_modify(self, message):
 #        print(message)
         objuuid = message.get("uuid")
@@ -323,6 +346,12 @@ class MessageHandler:
                 if not (len(modified_kwargs) == 1 and
                         (modified_kwargs.keys() & renderOnlyArgSet)):
                     self._set_start_element(modifiedEl)
+                if (self.output_policy.get('epics_readbacks') and
+                        getattr(element, 'mount', None) is not None and
+                        modified_kwargs.keys() & {
+                            'mount', 'mountOffset', 'positionRoll',
+                            'rotationSequence'}):
+                    return self._epics_readback_message(((objuuid, element),))
         elif object_type == 'stage':
             stage = self.bl.stagesDict.get(objuuid)
             if stage is None:
@@ -331,6 +360,11 @@ class MessageHandler:
 
             if kwargs.keys() - renderOnlyArgSet - {'uuid', 'bl'}:
                 self._restart_from_stage(stage)
+                if self.output_policy.get('epics_readbacks'):
+                    elements = [(objuuid, stage)]
+                    elements.extend(self.bl.iter_stage_dependents(
+                        stage, include_stages=True))
+                    return self._epics_readback_message(elements)
         elif object_type == 'mat':
             # element = self.bl.materialsDict.get(objuuid)
             # We reinstantiate the material object instead of updating. Single-
@@ -553,6 +587,6 @@ class MessageHandler:
                            'start'):
                 self.mode = 'update'
             # print(message)
-            handler(message)
+            return handler(message)
         else:
             print(f"Unknown command: {command}")

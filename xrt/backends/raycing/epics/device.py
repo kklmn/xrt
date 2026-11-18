@@ -27,6 +27,8 @@ HEADLESS_OUTPUT_POLICY = {
 
 COMPOUND_RECORD_FIELDS = {
     'center': ('x', 'y', 'z'),
+    'x': ('x', 'y', 'z'),
+    'z': ('x', 'y', 'z'),
     'limPhysX': ('lmin', 'lmax'),
     'limPhysY': ('lmin', 'lmax'),
     'limPhysX2': ('lmin', 'lmax'),
@@ -125,7 +127,11 @@ def update_epics_readback(epics, oeid, key, value):
 
     record = elementReadbacks.get(key)
     if record is not None:
-        record.set(_record_value(value))
+        if value is None:
+            from softioc import alarm
+            record.set_alarm(alarm.INVALID_ALARM, alarm.UDF_ALARM)
+        else:
+            record.set(_record_value(value))
         updated = True
     return updated
 
@@ -376,6 +382,8 @@ class EpicsDevice:
         except ImportError:
             print("Missing softioc dependencies")
             return
+        from .records import POSE_FIELDS, element_records, pose_records
+
         # Create an asyncio dispatcher, the event loop is now running
         self.dispatcher = asyncio_dispatcher.AsyncioDispatcher()
 
@@ -396,6 +404,26 @@ class EpicsDevice:
                 initial_value=_initial_numeric_value(initial_value))
             self.rbv_map[oeid][key] = pv_records[rbvname]
 
+        def add_stage_or_pose_records(oeid, specs):
+            for pv in specs:
+                options = dict(
+                    initial_value=_initial_numeric_value(pv.initial_value),
+                    EGU=pv.metadata.get("EGU"), PREC=pv.metadata.get("PREC"))
+                if pv.access == "rw":
+                    record = builder.aOut(
+                        pv.record, always_update=True,
+                        on_update=partial(callback, oeid, pv.property_path),
+                        **options)
+                    self.pv_map[oeid][pv.property_path] = record
+                else:
+                    record = builder.aIn(pv.record, **options)
+                    self.rbv_map[oeid][pv.property_path] = record
+                    if "alias" in pv.metadata:
+                        alias = pv.metadata["alias"]
+                        record.add_alias(self.epicsPrefix + alias)
+                        pv_records[alias] = record
+                pv_records[pv.record] = record
+
         pv_records['Acquire'] = builder.boolOut(
             'Acquire', ZNAM=0, ONAM=1,
             initial_value=0, always_update=True,
@@ -410,6 +438,14 @@ class EpicsDevice:
             initial_value=1, always_update=True,
             on_update=partial(callback, None, 'AutoUpdate'))
 
+        stage_ids = bl.sort_stages() if getattr(bl, 'stagesDict', None) else ()
+        for stage_id in stage_ids:
+            self.pv_map[stage_id] = {}
+            self.rbv_map[stage_id] = {}
+            stage = bl.stagesDict[stage_id]
+            add_stage_or_pose_records(
+                stage_id, element_records(stage, self.epicsMap))
+
         for oeid, oeline in bl.oesDict.items():
             oeObj = oeline[0]
             oename = to_valid_var_name(oeObj.name)
@@ -419,6 +455,11 @@ class EpicsDevice:
 
             self.pv_map[oeid] = {}
             self.rbv_map[oeid] = {}
+            mounted = getattr(oeObj, 'mount', None) is not None
+            if mounted:
+                oePvFields.difference_update(POSE_FIELDS)
+                add_stage_or_pose_records(
+                    oeid, pose_records(oeObj, self.epicsMap))
 
             if hasattr(oeObj, 'material') and oeObj.material is not None:
                 if hasattr(oeObj.material, 'get_Bragg_angle'):
@@ -567,7 +608,8 @@ class EpicsDevice:
                                 self.pv_map[oeid][argName] = pv_records[pvname]
 
             for argName in derivedArgSet:
-                if argName == 'center' or not hasattr(oeObj, argName):
+                if (argName == 'center' or not hasattr(oeObj, argName) or
+                        (mounted and argName in POSE_FIELDS)):
                     continue
                 default_pvname = f'{oename}:{argName}'
                 add_numeric_rbv(
@@ -620,6 +662,7 @@ class DynamicBeamline:
         self.with_epics_histograms = with_epics_histograms
         self.startOutputThread = startOutputThread
         self.output_policy = HEADLESS_OUTPUT_POLICY.copy()
+        self.output_policy['epics_readbacks'] = epicsPrefix is not None
         if output_policy is not None:
             self.output_policy.update(output_policy)
 
@@ -676,6 +719,8 @@ class DynamicBeamline:
             object_types[objuuid] = 'mat'
         for objuuid in getattr(beamline, 'fesDict', {}):
             object_types[objuuid] = 'fe'
+        for objuuid in getattr(beamline, 'stagesDict', {}):
+            object_types[objuuid] = 'stage'
         return object_types
 
     @staticmethod
@@ -746,7 +791,7 @@ class DynamicBeamline:
                 continue
 
             object_type = self.object_types.get(oeid, 'oe')
-            if self.autoUpdate:
+            if self.autoUpdate and object_type != 'stage':
                 self.set_acquire_status(1)
             self.input_queue.put({
                 "command": "modify",
@@ -792,7 +837,12 @@ class DynamicBeamline:
         return msg
 
     def handle_output_message(self, msg):
-        if 'histogram' in msg:
+        if 'epics_readbacks' in msg:
+            for oeid, key, value in msg['epics_readbacks']:
+                self.update_epics_record(oeid, key, value)
+            if msg.get('will_propagate'):
+                self.set_acquire_status(1)
+        elif 'histogram' in msg:
             self.update_epics_image(msg)
         elif 'pos_attr' in msg:
             self.update_epics_record(

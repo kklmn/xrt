@@ -1126,13 +1126,15 @@ class BeamLine(object):
             visit(stage)
         return list(ordered)
 
-    def iter_stage_dependents(self, stage):
-        """Yield UUIDs and optical elements carried directly or indirectly."""
+    def iter_stage_dependents(self, stage, *, include_stages=False):
+        """Yield carried elements and, optionally, the intervening mounts."""
         affected = {stage}
         for stage_id in self.sort_stages():
             mount = self.stagesDict.get(stage_id)
             if mount is not None and affected.intersection(mount._mount_parents):
                 affected.add(mount)
+                if include_stages:
+                    yield stage_id, mount
         for oeid, (element, *_) in self.oesDict.items():
             if getattr(element, 'mount', None) in affected:
                 yield oeid, element

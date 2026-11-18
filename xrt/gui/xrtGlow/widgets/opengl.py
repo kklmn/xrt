@@ -239,7 +239,9 @@ class xrtGlWidget(qt.QOpenGLWidget):
             self.calc_process = Process(
                     target=propagationProcess,
                     args=(self.input_queue, self.output_queue,
-                          epicsPrefix is not None))
+                          epicsPrefix is not None),
+                     kwargs={'output_policy': {
+                         'epics_readbacks': epicsPrefix is not None}})
             self.calc_process.start()
 
             msg_init_bl = {
@@ -542,7 +544,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         "kwargs": kwargs
                         })
 
-    def update_epics_record(self, oeid, kwargs):
+    def update_epics_record(self, oeid, kwargs, *, process=True):
         """Update EPICS record if the value was changed from Qook or Explorer
         """
         if self.epicsPrefix is not None:
@@ -553,28 +555,28 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         for argVal, field in zip(val, ['x', 'y', 'z']):
                             record = elementBase.get(f'center.{field}')
                             if record is not None:
-                                record.set(argVal)
+                                record.set(argVal, process=process)
                     elif key in ['limPhysX', 'limPhysY', 'limPhysX2',
                                  'limPhysY2']:
                         for argVal, field in zip(val, ['lmin', 'lmax']):
                             record = elementBase.get(f'{key}.{field}')
                             if record is not None:
-                                record.set(argVal)
+                                record.set(argVal, process=process)
 #                    elif key == 'opening':
 #                        oeObj = self.beamline.oesDict[oeid][0]
 #                        for argVal, field in zip(val, oeObj.kind):
 #                            record = elementBase.get(f'opening.{field}')
 #                            if record is not None:
-#                                record.set(argVal)
+#                                record.set(argVal, process=process)
                     elif key == 'blades':
                         for field, argVal in val.items():
                             record = elementBase.get(f'blades.{field}')
                             if record is not None:
-                                record.set(argVal)
+                                record.set(argVal, process=process)
                     else:
                         record = elementBase.get(key)
                         if record is not None:
-                            record.set(val)
+                            record.set(val, process=process)
 
     def update_beamline(self, oeid, kwargs, sender="gui"):  # one OE at a time
         if oeid is not None or '_object' in kwargs:
@@ -601,6 +603,8 @@ class xrtGlWidget(qt.QOpenGLWidget):
                 self.input_queue.put({
                     'command': command, 'object_type': 'stage',
                     'uuid': oeid, 'kwargs': kwargs.copy()})
+            if command == 'modify' and sender != 'epics':
+                self.update_epics_record(oeid, kwargs, process=False)
             return
 
         if '_object' in kwargs:  # only Qook can create new elements for now
@@ -1220,6 +1224,11 @@ class xrtGlWidget(qt.QOpenGLWidget):
                     else:
                         self.needBeamUpdate.append(beamTag)
                     self.beamUpdated.emit((msg['sender_id'], beamKey))
+            elif 'epics_readbacks' in msg and self.epicsPrefix is not None:
+                for uuid, attr, value in msg['epics_readbacks']:
+                    update_epics_readback(self.epicsInterface, uuid, attr, value)
+                if msg.get('will_propagate'):
+                    self.epicsInterface.pv_records['AcquireStatus'].set(1)
             elif 'histogram' in msg and self.epicsPrefix is not None:
                 record = self.epicsInterface.pv_map.get(msg['sender_id'],
                                                         {}).get('image')
