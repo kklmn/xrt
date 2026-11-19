@@ -41,8 +41,8 @@ calculated intensity signaled by various indicators:
 __author__ = "Konstantin Klementiev, Roman Chernikov"
 __date__ = "12 Sep 2021"
 import numpy as np
-# import matplotlib
-# matplotlib.use("Agg")
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import time
 # path to xrt:
@@ -126,7 +126,7 @@ def main():
     zMin, zMax = -0.5*Np*L0, 0.5*Np*L0
     fieldZ = np.linspace(zMin, zMax, int(Np*L0)+1)
 
-    #tapered
+    # tapered
     fieldK = Kmax*(1.-alphaZ*(0.5-(fieldZ-zMin)/(Np*L0)))*np.sin(2*np.pi*fieldZ/L0)
     fieldB = K2B * fieldK / L0
     plt.figure("B")
@@ -134,7 +134,7 @@ def main():
     plt.xlabel('z (mm)', fontsize=12)
     plt.ylabel('B (T)', fontsize=12)
     plt.savefig("B_vs_Z.png")
-    #plt.show()
+    # plt.show()
     fieldArray = np.vstack((fieldZ, fieldB)).T
 
     kwargsCF = dict(
@@ -150,7 +150,7 @@ def main():
         # gNodes=2000,
         # uniformRayDensity=uniformRayDensity,
         # filamentBeam=filamentBeam,  # Single wavefront
-        customField = fieldArray,
+        customField=fieldArray,
         # targetOpenCL="GPU",
         # R0=R0,   # Near Field.
         eEpsilonX=0.263, eEpsilonZ=0.008,)  # Emittance [nmrad]
@@ -207,10 +207,10 @@ def main():
         fluxArr.append(flux)
 
     if saveVideo:
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
         out = cv2.VideoWriter(
-            'Imap_frames.mp4',
-            -1, # cv2.VideoWriter_fourcc(*'MP4V'),
-            15, fig.canvas.get_width_height())
+            'Imap_frames_highE.mp4', fourcc, 15, fig.canvas.get_width_height())
+        print(f"{out.isOpened()=}")  # if False, no video will be written
         for frame in frames:
             rgbframe = frame[:, :, ::-1]   # bgr -> rgb
             out.write(rgbframe)
