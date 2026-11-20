@@ -1321,6 +1321,9 @@ class IntegratedSource(SourceBase):
 
         return mad, dIMAD
 
+    def _minimum_convergence_order(self):
+        return 0
+
     def test_convergence(self, nMax=500000, withPlots=True, overStep=100):
         u"""
         This function evaluates the length of the integration grid required for
@@ -1345,6 +1348,7 @@ class IntegratedSource(SourceBase):
         self.convergenceSearchFlag = True
         self.needReset = False
         self._reset_limits()
+        minimumOrder = self._minimum_convergence_order()
         mStart = 10
         mStep = 1
         statStep = 5
@@ -1423,7 +1427,8 @@ class IntegratedSource(SourceBase):
                 statOut.append(mad)
                 dIOut.append(dIMAD)
 
-                if ((dIMAD < self.gp) or (mad < self.gp)) and not converged:
+                if (not converged and k >= minimumOrder and
+                        (dIMAD < self.gp or mad < self.gp)):
                     convPoint = k*self.gIntervals
                     outQuad = k
                     outInt = self.gIntervals
@@ -1468,6 +1473,7 @@ class IntegratedSource(SourceBase):
 
         convRes, stats = self._find_convergence_mixed()
         print("CONVERGENCE TEST COMPLETED.")
+        self.convergenceSearchFlag = False
         self.needReset = True
         if withPlots:
             label = 'Auto-finder: {0} nodes, {1} interval{2}'.format(

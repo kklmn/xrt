@@ -120,6 +120,124 @@ __kernel void undulator(const float alpha,
     Ip_gl[ii] = Ip;
     }
 
+// The same orbit rows are used by both NumPy integrators. Integrate one
+// region at a time so the long-body phase is applied only once per region.
+inline float4 integrate_undulator_region(__global const float *grid, int count,
+                                         float h, float v, float a)
+{
+    float linear = 1 + h*h + v*v;
+    float4 field = (float4)(0);
+    for (int j = 0; j < count; ++j) {
+        __global const float *row = grid + 9*j;
+        // r, weight, gamma*beta_x/y, their derivatives, int px/py, int p^2.
+        float dx = h - row[2], dy = v - row[3];
+        float den = 1 + dx*dx + dy*dy;
+        float proj = 2*(dx*row[4] + dy*row[5]);
+        float phase = a*(linear*row[0] - 2*(h*row[6] + v*row[7]) + row[8]);
+        float cs;
+        float sn = sincos(phase, &cs);
+        float2 wave = (row[1]/(den*den)) * (float2)(cs, sn);
+        field.xy += (dx*proj - den*row[4])*wave;
+        field.zw += (dy*proj - den*row[5])*wave;
+    }
+    return field;
+}
+
+__kernel void undulator_terminated(const int body_count, const int end_count,
+                                   __global const float *h_angle,
+                                   __global const float *v_angle,
+                                   __global const float *phase_scale,
+                                   __global const float *field_scale,
+                                   __global const float *body_factor,
+                                   __global const float2 *exit_phase,
+                                   __global const float *body,
+                                   __global const float *entrance,
+                                   __global const float *exit_grid,
+                                   __global float2 *Is, __global float2 *Ip)
+{
+    int i = get_global_id(0);
+    float h = h_angle[i], v = v_angle[i], a = phase_scale[i];
+    float4 center = integrate_undulator_region(body, body_count, h, v, a);
+    float4 left = integrate_undulator_region(entrance, end_count, h, v, a);
+    float4 right = integrate_undulator_region(exit_grid, end_count, h, v, a);
+    // Multiply entrance by conj(exit_phase) and exit by exit_phase.
+    float2 rot = exit_phase[i];
+    float4 diff = right - left;
+    float4 field = body_factor[i]*center + rot.x*(right + left) +
+                   rot.y*(float4)(-diff.y, diff.x, -diff.w, diff.z);
+    Is[i] = field_scale[i]*field.xy;
+    Ip[i] = field_scale[i]*field.zw;
+}
+
+// Finite-distance version of _undulator_ends.near_fields. One work item
+// integrates the entire orbit to a single pixel. Only one body grid is stored.
+inline float4 integrate_nf_region(__global const float *grid, int count,
+                                  float offset, float mean_p2, float distance,
+                                  float g, float k, float4 screen)
+{
+    float g2 = g*g;
+    float4 field = (float4)(0);
+    for (int j = 0; j < count; ++j) {
+        __global const float *row = grid + 9*j;
+        float s = offset + row[0];
+        float slip = (s + row[8] + mean_p2*offset)/(2*g2);
+        float x = row[6]/g, y = row[7]/g, z = s - slip;
+        float rx = screen.x*screen.w - x, ry = screen.y*screen.w - y;
+        float rz = (distance - s) + slip;
+        float lr = sqrt(rx*rx + ry*ry + rz*rz);
+        float nx = rx/lr, ny = ry/lr, nz = rz/lr;
+
+        // Optical path relative to the center-to-pixel distance, screen.w.
+        float plane = slip + screen.z*z - screen.x*x - screen.y*y;
+        float gap = screen.w - s;
+        float path = gap >= 0 ?
+            (2*screen.w*plane + x*x + y*y - (s + z)*slip)/(lr + gap) :
+            lr - gap;
+        float px = row[2], py = row[3], dpx = row[4], dpy = row[5];
+        float loss = nz >= 0 ? (nx*nx + ny*ny)/(1 + nz) : 1 - nz;
+        float dx = g*nx - px, dy = g*ny - py;
+        float den = 1 + dx*dx + dy*dy + loss*(g2*loss - 1 - px*px - py*py);
+        float proj = 2*((dx + loss*px)*dpx + (dy + loss*py)*dpy);
+        float cs;
+        float sn = sincos(k*path, &cs);
+        float2 wave = (row[1]/(den*den))*(float2)(cs, sn);
+        field.xy += (dx*proj - den*dpx)*wave;
+        field.zw += (dy*proj - den*dpy)*wave;
+    }
+    return field;
+}
+
+__kernel void undulator_nf_terminated(const int body_count, const int end_count,
+                                      const int periods, const float distance,
+                                      const float mean_p2,
+                                      __global const float *gamma,
+                                      __global const float *w_over_wu,
+                                      __global const float *nx0,
+                                      __global const float *ny0,
+                                      __global const float *nz0_loss,
+                                      __global const float *radius,
+                                      __global const float *body,
+                                      __global const float *entrance,
+                                      __global const float *exit_grid,
+                                      __global float2 *Is, __global float2 *Ip)
+{
+    int i = get_global_id(0);
+    float g = gamma[i], k = w_over_wu[i];
+    float4 screen = (float4)(nx0[i], ny0[i], nz0_loss[i], radius[i]);
+    float4 field = integrate_nf_region(entrance, end_count, -PI*periods,
+                                       mean_p2, distance, g, k, screen);
+    for (int p = 0; p < periods; ++p) {
+        float center = PI*(2*p + 1 - periods);
+        field += integrate_nf_region(body, body_count, center, mean_p2,
+                                     distance, g, k, screen);
+    }
+    field += integrate_nf_region(exit_grid, end_count, PI*periods, mean_p2,
+                                 distance, g, k, screen);
+    // The host applies 2*gamma*wu and the common propagation phasor.
+    Is[i] = field.xy;
+    Ip[i] = field.zw;
+}
+
 __kernel void undulator_taper(const float alpha,
                               const float Kx,
                               const float Ky,

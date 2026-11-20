@@ -928,7 +928,8 @@ electronBeamArgSet = {'eE', 'eI', 'eEspread', 'eSigmaX', 'eSigmaZ',
                       'eEpsilonX', 'eEpsilonZ', 'betaX', 'betaZ'}
 
 magneticStructureArgSet = {'targetE', 'B0', 'rho', 'K', 'Kx', 'Ky', 'period',
-                           'n', 'phaseDeg', 'taper', 'B0x', 'B0y'}
+                           'n', 'terminationPeriods', 'phaseDeg', 'taper',
+                           'B0x', 'B0y'}
 
 sourceLimitsArgSet = {'dx', 'dy', 'dz',
                       'dxprime', 'dzprime',
