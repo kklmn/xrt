@@ -46,7 +46,7 @@ def orbit_grids(source):
     p = gamma*beta_perp. The longitudinal coordinate is a body phase in
     radians. Each end uses its own join as origin, increasing downstream.
     """
-    m = source.terminationPeriods
+    m = int(source.terminationPeriods)
     kx, ky = source.Kx, source.Ky
     t, weights = source.tg, source.ag
     st, ct = source.sintg, source.costg
@@ -54,6 +54,17 @@ def orbit_grids(source):
     body = np.column_stack((t, weights, ky*ct, -kx*cp, -ky*st, kx*sp,
                             ky*st, -kx*sp, (kx*kx + ky*ky)*t/2 +
                             (ky*ky*st*ct + kx*kx*sp*cp)/2))
+    if source._taperVal:
+        # At center c, p_x = A*f + a*b, A = 1-a*c, f = Ky*cos(t),
+        # b = -t*f. Append b, b', int b, int f², int fb and int b².
+        # These primitives are local to the region, avoiding large phases.
+        sc = st*ct
+        cos2 = ct*ct - st*st
+        ff = ky**2*(t + sc)/2
+        fb = -ky**2*(t*t/4 + t*sc/2 + cos2/8)
+        bb = ky**2*(t**3/6 + t*t*sc/2 + t*cos2/4 - sc/4)
+        body = np.column_stack((body, -ky*t*ct, ky*(t*st - ct),
+                                ky*(1 - ct - t*st), ff, fb, bb))
     if source.terminatorGridScale:
         u = ((t + np.pi) + 2*np.pi*np.arange(m)[:, None]).ravel()
         carrier = -np.tile(ct + 1j*st, m)
@@ -78,7 +89,14 @@ def orbit_grids(source):
         iy = kx*(side*c*iu - s*ic + s)
         ip2 = (side*((ky*ky + (kx*c)**2)*iuu + (kx*s)**2*icc)
                - 2*kx*kx*c*s*iuc + kx*kx*c*s/2)
-        return np.column_stack((side*u, weights, px, py, dpx, dpy, ix, iy, ip2))
+        rows = np.column_stack((side*u, weights, px, py, dpx, dpy, ix, iy, ip2))
+        if source._taperVal:
+            # p'_x = Ky*W*(A_join*sin(r) + a*cos(r)). The constants in
+            # int b and int fb carry the body trajectory through the join.
+            rows = np.column_stack((rows, ky*side*g.imag, ky*window*carrier.real,
+                                    ky*(ic + 2), ky**2*side*iuu,
+                                    -ky**2*(iuc + 1./8), ky**2*side*icc))
+        return rows
 
     return body, end(-1), end(1)
 
@@ -110,7 +128,33 @@ def _sum_grid(grid, integrand, sum_over_nodes, *args):
     return sx, sy
 
 
-def fields(grids, periods, q, w, wu, gamma, theta, psi, sum_over_nodes):
+def _regions(grids, periods):
+    body, entrance, exit_grid = grids
+    n = int(periods)
+    yield entrance, -np.pi*n
+    for i in range(n):
+        yield body, np.pi*(2*i + 1 - n)
+    yield exit_grid, np.pi*n
+
+
+def _secular_q(offset, mean_p2, ky2, slope):
+    """Secular integral of p² at the region origin, including quadratic taper."""
+    change = slope*offset
+    return offset*(mean_p2 + ky2/2*change*(change/3 - 1))
+
+
+def _taper_node(row, slope, amplitude, ky2):
+    r, weight, f, py, df, dpy, ix, iy, ip2, b, db, ib, ff, fb, bb = row
+    # Expand (A*f+a*b)^2. The constant fixes the same phase origin as the
+    # existing first-order tapered body. The a² term follows from beta_z.
+    ip2 = (ip2 + (amplitude - 1)*(amplitude + 1)*ff +
+           2*amplitude*slope*fb + slope*slope*bb - ky2*slope/4)
+    return (r, weight, amplitude*f + slope*b, py, amplitude*df + slope*db,
+            dpy, amplitude*ix + slope*ib, iy, ip2)
+
+
+def fields(grids, periods, q, w, wu, gamma, theta, psi, sum_over_nodes,
+           taper=0., ky2=0., mean_p2=0.):
     """Integrate both polarizations, vectorizing over nodes or over rays.
 
     With delta = gamma*(theta, psi) - p and D = 1 + |delta|², the
@@ -119,14 +163,16 @@ def fields(grids, periods, q, w, wu, gamma, theta, psi, sum_over_nodes):
     orbit primitives and avoids subtracting two nearly equal velocities.
     """
     q, w, wu, gamma, theta, psi = np.broadcast_arrays(q, w, wu, gamma, theta, psi)
-    body, exit_phase = interference(q, periods)
     h, v = gamma*theta, gamma*psi
     a = w/(2*wu*gamma**2)
     linear = 1 + h*h + v*v
+    slope = taper/wu
     if not sum_over_nodes:
-        h, v, a, linear = (x[..., None] for x in (h, v, a, linear))
+        h, v, a, linear, slope = (x[..., None] for x in (h, v, a, linear, slope))
 
-    def integrand(row):
+    def integrand(row, amplitude=None):
+        if taper:
+            row = _taper_node(row, slope, amplitude, ky2)
         r, weight, px, py, dpx, dpy, ix, iy, ip2 = row
         dx, dy = h - px, v - py
         den = 1 + dx*dx + dy*dy  # 2*gamma²*(1 - n.beta) to paraxial order
@@ -136,6 +182,17 @@ def fields(grids, periods, q, w, wu, gamma, theta, psi, sum_over_nodes):
         return wave*(dx*dot - den*dpx), wave*(dy*dot - den*dpy)
 
     es, ep = 0j, 0j
+    if taper:
+        for grid, offset in _regions(grids, periods):
+            center_q = _secular_q(offset, mean_p2, ky2, slope)
+            rotation = np.exp(1j*a*(linear*offset + center_q))
+            if not sum_over_nodes:
+                rotation = rotation[..., 0]
+            sx, sy = _sum_grid(grid, integrand, sum_over_nodes, 1 - slope*offset)
+            es += rotation*sx
+            ep += rotation*sy
+        return 2*gamma*wu*es, 2*gamma*wu*ep
+    body, exit_phase = interference(q, periods)
     for grid, factor in zip(grids, (body, exit_phase.conj(), exit_phase)):
         sx, sy = _sum_grid(grid, integrand, sum_over_nodes)
         es += factor*sx
@@ -160,37 +217,41 @@ def near_screen(distance, theta, psi, w_over_wu):
 
 
 def near_fields(grids, periods, mean_p2, distance, w, wu, gamma, theta, psi,
-                sum_over_nodes):
+                sum_over_nodes, taper=0., ky2=0.):
     """Finite-distance acceleration field with xrt's angular-flux normalization."""
     w, wu, gamma, theta, psi = np.broadcast_arrays(w, wu, gamma, theta, psi)
     k = w/wu
     screen, carrier = near_screen(distance, theta, psi, k)
     scale = 2*gamma*wu*carrier
     nx0, ny0, nz0_loss, radius = screen
+    slope = taper/wu
     if not sum_over_nodes:
-        gamma, k, nx0, ny0, nz0_loss, radius = (
-            x[..., None] for x in (gamma, k, nx0, ny0, nz0_loss, radius))
+        gamma, k, nx0, ny0, nz0_loss, radius, slope = (
+            x[..., None] for x in (gamma, k, nx0, ny0, nz0_loss, radius, slope))
     screen_x, screen_y = nx0*radius, ny0*radius
     gamma2 = gamma*gamma
 
-    def integrand(row, offset):
+    def path_difference(r, slip, x, y, length, sightline):
+        # Rationalize L - (R - r) using L^2 - (R - r)^2.
+        nx_ref, ny_ref, loss_ref, range_ref = sightline
+        z = r - slip
+        plane = slip + loss_ref*z - nx_ref*x - ny_ref*y
+        gap = range_ref - r
+        denom = length + np.maximum(gap, 0.)
+        path = (2*range_ref*plane + x*x + y*y - (r + z)*slip) / np.where(
+            denom == 0, 1., denom)
+        return np.where(gap >= 0, path, length - gap)
+
+    def integrand(row, screen_z, sightline, amplitude):
+        if taper:
+            row = _taper_node(row, slope, amplitude, ky2)
         r, weight, px, py, dpx, dpy, ix, iy, ip2 = row
-        s = offset + r
-        # int p^2 advances by 2*pi*mean_p2 per body period. The other
-        # primitives already contain their periodic values at the joins.
-        slip = (s + ip2 + mean_p2*offset)/(2*gamma2)  # s - z
-        x, y, z = ix/gamma, iy/gamma, s - slip
-        rx, ry, rz = screen_x - x, screen_y - y, (distance - s) + slip
+        slip = (r + ip2)/(2*gamma2)
+        x, y = ix/gamma, iy/gamma
+        rx, ry, rz = screen_x - x, screen_y - y, (screen_z - r) + slip
         length = np.sqrt(rx*rx + ry*ry + rz*rz)
         nx, ny, nz = rx/length, ry/length, rz/length
-
-        # Rationalize L - (R - s) using L^2 - (R - s)^2. This keeps the
-        # node-dependent phase accurate even when the screen is very far away.
-        plane = slip + nz0_loss*z - nx0*x - ny0*y  # s - n0.rho
-        gap = radius - s
-        path = (2*radius*plane + x*x + y*y - (s + z)*slip) / (
-            length + np.maximum(gap, 0.))
-        phase = k*np.where(gap >= 0, path, length - gap)
+        phase = k*path_difference(r, slip, x, y, length, sightline)
 
         # Evaluate the transverse triple product with the local sightline.
         # den = 2*gamma^2*(1 - n.beta), with beta_z expanded as in undulator_nf.
@@ -201,12 +262,26 @@ def near_fields(grids, periods, mean_p2, distance, w, wu, gamma, theta, psi,
         wave = weight*np.exp(1j*phase)/(den*den)
         return wave*(dx*proj - den*dpx), wave*(dy*proj - den*dpy)
 
-    body, entrance, exit_grid = grids
-    es, ep = _sum_grid(entrance, integrand, sum_over_nodes, -np.pi*periods)
-    for i in range(int(periods)):
-        center = np.pi*(2*i + 1 - periods)
-        sx, sy = _sum_grid(body, integrand, sum_over_nodes, center)
+    def region(grid, offset):
+        # Translate the phase origin to the axis at this period center or
+        # end join. Include the secular part of int p² in its axial delay.
+        slip = (offset + _secular_q(offset, mean_p2, ky2, slope))/(2*gamma2)
+        screen_z = (distance - offset) + slip
+        length = np.sqrt(screen_x**2 + screen_y**2 + screen_z**2)
+        rotation = np.exp(1j*k*path_difference(
+            offset, slip, 0., 0., length, (nx0, ny0, nz0_loss, radius)))
+        safe_length = np.where(length == 0, 1., length)
+        nx, ny, nz = screen_x/safe_length, screen_y/safe_length, screen_z/safe_length
+        loss = (nx*nx + ny*ny)/(1 + abs(nz)) + 2*np.maximum(-nz, 0.)
+        sx, sy = _sum_grid(grid, integrand, sum_over_nodes, screen_z,
+                           (nx, ny, loss, length), 1 - slope*offset)
+        if not sum_over_nodes:
+            rotation = rotation[..., 0]
+        return rotation*sx, rotation*sy
+
+    es, ep = 0j, 0j
+    for grid, offset in _regions(grids, periods):
+        sx, sy = region(grid, offset)
         es += sx
         ep += sy
-    sx, sy = _sum_grid(exit_grid, integrand, sum_over_nodes, np.pi*periods)
-    return scale*(es + sx), scale*(ep + sy)
+    return scale*es, scale*ep

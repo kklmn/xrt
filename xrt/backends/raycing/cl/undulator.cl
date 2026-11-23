@@ -122,22 +122,51 @@ __kernel void undulator(const float alpha,
 
 // The same orbit rows are used by both NumPy integrators. Integrate one
 // region at a time so the long-body phase is applied only once per region.
+// Return px, dpx, int px and the local int p². The last six entries of
+// tapered rows are b, db, int b, int f², int fb and int b² (px = A*f+a*b).
+inline float4 orbit_x(__global const float *row, int stride, float amplitude,
+                      float slope, float ky2)
+{
+    float4 orbit = (float4)(row[2], row[4], row[6], row[8]);
+    if (stride == 15) {
+        orbit.xyz = amplitude*orbit.xyz + slope*(float3)(row[9], row[10], row[11]);
+        orbit.w += (amplitude-1)*(amplitude+1)*row[12] + 2*amplitude*slope*row[13]
+                 + slope*slope*row[14] - ky2*slope/4;
+    }
+    return orbit;
+}
+
+inline float secular_q(float offset, float mean_p2, float ky2, float slope)
+{
+    float change = slope*offset;
+    return offset*(mean_p2 + ky2*HALF*change*(change/3 - 1));
+}
+
+inline float4 rotate_field(float4 field, float phase)
+{
+    float cs;
+    float sn = sincos(phase, &cs);
+    return cs*field + sn*(float4)(-field.y, field.x, -field.w, field.z);
+}
+
 inline float4 integrate_undulator_region(__global const float *grid, int count,
-                                         float h, float v, float a)
+                                         float h, float v, float a, int stride,
+                                         float amplitude, float slope, float ky2)
 {
     float linear = 1 + h*h + v*v;
     float4 field = (float4)(0);
     for (int j = 0; j < count; ++j) {
-        __global const float *row = grid + 9*j;
+        __global const float *row = grid + stride*j;
+        float4 orbit = orbit_x(row, stride, amplitude, slope, ky2);
         // r, weight, gamma*beta_x/y, their derivatives, int px/py, int p^2.
-        float dx = h - row[2], dy = v - row[3];
+        float dx = h - orbit.x, dy = v - row[3];
         float den = 1 + dx*dx + dy*dy;
-        float proj = 2*(dx*row[4] + dy*row[5]);
-        float phase = a*(linear*row[0] - 2*(h*row[6] + v*row[7]) + row[8]);
+        float proj = 2*(dx*orbit.y + dy*row[5]);
+        float phase = a*(linear*row[0] - 2*(h*orbit.z + v*row[7]) + orbit.w);
         float cs;
         float sn = sincos(phase, &cs);
         float2 wave = (row[1]/(den*den)) * (float2)(cs, sn);
-        field.xy += (dx*proj - den*row[4])*wave;
+        field.xy += (dx*proj - den*orbit.y)*wave;
         field.zw += (dy*proj - den*row[5])*wave;
     }
     return field;
@@ -157,9 +186,9 @@ __kernel void undulator_terminated(const int body_count, const int end_count,
 {
     int i = get_global_id(0);
     float h = h_angle[i], v = v_angle[i], a = phase_scale[i];
-    float4 center = integrate_undulator_region(body, body_count, h, v, a);
-    float4 left = integrate_undulator_region(entrance, end_count, h, v, a);
-    float4 right = integrate_undulator_region(exit_grid, end_count, h, v, a);
+    float4 center = integrate_undulator_region(body, body_count, h, v, a, 9, 1, 0, 0);
+    float4 left = integrate_undulator_region(entrance, end_count, h, v, a, 9, 1, 0, 0);
+    float4 right = integrate_undulator_region(exit_grid, end_count, h, v, a, 9, 1, 0, 0);
     // Multiply entrance by conj(exit_phase) and exit by exit_phase.
     float2 rot = exit_phase[i];
     float4 diff = right - left;
@@ -169,31 +198,48 @@ __kernel void undulator_terminated(const int body_count, const int end_count,
     Ip[i] = field_scale[i]*field.zw;
 }
 
+// Rationalized optical path r + L - R relative to a chosen phase origin.
+inline float nf_path_difference(float r, float slip, float x, float y,
+                                float lr, float4 screen)
+{
+    float gap = screen.w - r;
+    if (gap < 0 || lr + gap == 0)
+        return lr - gap;
+    float z = r - slip;
+    float plane = slip + screen.z*z - screen.x*x - screen.y*y;
+    return (2*screen.w*plane + x*x + y*y - (r + z)*slip)/(lr + gap);
+}
+
 // Finite-distance version of _undulator_ends.near_fields. One work item
 // integrates the entire orbit to a single pixel. Only one body grid is stored.
 inline float4 integrate_nf_region(__global const float *grid, int count,
                                   float offset, float mean_p2, float distance,
-                                  float g, float k, float4 screen)
+                                  float g, float k, float4 screen,
+                                  int stride, float slope, float ky2)
 {
     float g2 = g*g;
     float4 field = (float4)(0);
+    float center_slip = (offset + secular_q(offset, mean_p2, ky2, slope))/(2*g2);
+    float screen_z = (distance - offset) + center_slip;
+    float screen_x = screen.x*screen.w, screen_y = screen.y*screen.w;
+    float range = sqrt(screen_x*screen_x + screen_y*screen_y + screen_z*screen_z);
+    float center_path = nf_path_difference(offset, center_slip, 0, 0, range, screen);
+    float safe_range = range == 0 ? 1 : range;
+    float hx = screen_x/safe_range, hy = screen_y/safe_range, hz = screen_z/safe_range;
+    float loss_ref = hz >= 0 ? (hx*hx + hy*hy)/(1 + hz) : 1 - hz;
+    float4 sightline = (float4)(hx, hy, loss_ref, range);
     for (int j = 0; j < count; ++j) {
-        __global const float *row = grid + 9*j;
-        float s = offset + row[0];
-        float slip = (s + row[8] + mean_p2*offset)/(2*g2);
-        float x = row[6]/g, y = row[7]/g, z = s - slip;
-        float rx = screen.x*screen.w - x, ry = screen.y*screen.w - y;
-        float rz = (distance - s) + slip;
+        __global const float *row = grid + stride*j;
+        float4 orbit = orbit_x(row, stride, 1-slope*offset, slope, ky2);
+        float r = row[0], slip = (r + orbit.w)/(2*g2);
+        float x = orbit.z/g, y = row[7]/g;
+        float rx = screen_x - x, ry = screen_y - y;
+        float rz = (screen_z - r) + slip;
         float lr = sqrt(rx*rx + ry*ry + rz*rz);
         float nx = rx/lr, ny = ry/lr, nz = rz/lr;
 
-        // Optical path relative to the center-to-pixel distance, screen.w.
-        float plane = slip + screen.z*z - screen.x*x - screen.y*y;
-        float gap = screen.w - s;
-        float path = gap >= 0 ?
-            (2*screen.w*plane + x*x + y*y - (s + z)*slip)/(lr + gap) :
-            lr - gap;
-        float px = row[2], py = row[3], dpx = row[4], dpy = row[5];
+        float path = nf_path_difference(r, slip, x, y, lr, sightline);
+        float px = orbit.x, py = row[3], dpx = orbit.y, dpy = row[5];
         float loss = nz >= 0 ? (nx*nx + ny*ny)/(1 + nz) : 1 - nz;
         float dx = g*nx - px, dy = g*ny - py;
         float den = 1 + dx*dx + dy*dy + loss*(g2*loss - 1 - px*px - py*py);
@@ -204,7 +250,7 @@ inline float4 integrate_nf_region(__global const float *grid, int count,
         field.xy += (dx*proj - den*dpx)*wave;
         field.zw += (dy*proj - den*dpy)*wave;
     }
-    return field;
+    return rotate_field(field, k*center_path);
 }
 
 __kernel void undulator_nf_terminated(const int body_count, const int end_count,
@@ -225,15 +271,55 @@ __kernel void undulator_nf_terminated(const int body_count, const int end_count,
     float g = gamma[i], k = w_over_wu[i];
     float4 screen = (float4)(nx0[i], ny0[i], nz0_loss[i], radius[i]);
     float4 field = integrate_nf_region(entrance, end_count, -PI*periods,
-                                       mean_p2, distance, g, k, screen);
+                                       mean_p2, distance, g, k, screen, 9, 0, 0);
     for (int p = 0; p < periods; ++p) {
         float center = PI*(2*p + 1 - periods);
         field += integrate_nf_region(body, body_count, center, mean_p2,
-                                     distance, g, k, screen);
+                                     distance, g, k, screen, 9, 0, 0);
     }
     field += integrate_nf_region(exit_grid, end_count, PI*periods, mean_p2,
-                                 distance, g, k, screen);
+                                 distance, g, k, screen, 9, 0, 0);
     // The host applies 2*gamma*wu and the common propagation phasor.
+    Is[i] = field.xy;
+    Ip[i] = field.zw;
+}
+
+__kernel void undulator_taper_terminated(const int body_count, const int end_count,
+                                         const int periods, const int near_field,
+                                         const float distance, const float mean_p2,
+                                         const float ky2, __global const float *gamma,
+                                         __global const float *w_over_wu,
+                                         __global const float *slope,
+                                         __global const float *hx, __global const float *vy,
+                                         __global const float *nz_loss, __global const float *radius,
+                                         __global const float *body, __global const float *entrance,
+                                         __global const float *exit_grid,
+                                         __global float2 *Is, __global float2 *Ip)
+{
+    int i = get_global_id(0);
+    float g = gamma[i], k = w_over_wu[i], a = k/(2*g*g), taper = slope[i];
+    float4 screen = (float4)(hx[i], vy[i], nz_loss[i], radius[i]);
+    float4 field = (float4)(0);
+    for (int p = -1; p <= periods; ++p) {
+        __global const float *grid = body;
+        int count = body_count;
+        float offset = PI*(2*p + 1 - periods);
+        if (p == -1 || p == periods) {
+            grid = p == -1 ? entrance : exit_grid;
+            offset = p == -1 ? -PI*periods : PI*periods;
+            count = end_count;
+        }
+        if (near_field) {
+            field += integrate_nf_region(grid, count, offset, mean_p2, distance,
+                                         g, k, screen, 15, taper, ky2);
+        } else {
+            float phase = a*((1 + screen.x*screen.x + screen.y*screen.y)*offset +
+                             secular_q(offset, mean_p2, ky2, taper));
+            float4 local_field = integrate_undulator_region(
+                grid, count, screen.x, screen.y, a, 15, 1-taper*offset, taper, ky2);
+            field += rotate_field(local_field, phase);
+        }
+    }
     Is[i] = field.xy;
     Ip[i] = field.zw;
 }

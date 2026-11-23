@@ -1419,7 +1419,7 @@ class Undulator(IntegratedSource):
     The integration grid covers a single period in the far-field approximation
     and the full undulator length for near-field calculations or tapered
     undulators, making the latter much more computationally demanding.
-    Optional smooth terminations extend the untapered orbit at both ends.
+    Optional smooth terminations extend the orbit at both ends.
 
     Implemented in NumPy and OpenCL. Both backends are reasonably fast in the
     far-field paraxial approximation, but high magnetic fields, acceptance
@@ -1430,18 +1430,33 @@ class Undulator(IntegratedSource):
 
     def __init__(self, *args, **kwargs):
         """
-        *period*, *n*:
-            Magnetic period (mm) length and number of periods.
+        *period*: float
+            Magnetic period length in mm.
+
+        *n*: int
+            Number of body periods, excluding the ends (default 50, minimum 1).
+            Both *n* and *terminationPeriods* accept numbers and numeric text.
+            Fractional parts are discarded, so ``"5.9"`` gives 5 periods.
+            Blank, nonnumeric or nonfinite input keeps the previous count,
+            or the default during construction.
 
         *terminationPeriods*: int
-            Extra periods at each end of an untapered undulator.
-            Zero (default) uses the periodic body alone. An integer m >= 2
+            Extra periods at each end of the undulator.
+            Zero (default) uses the periodic body alone. After conversion,
+            negative counts become 0 and a count of 1 becomes 2, the shortest
+            end that matches the body velocity to a drift. A count m >= 2
             gives a total magnetic length of (n + 2m) periods, with n whole
-            periods at full strength. Both field components use the same
-            integrated Hann envelope. At distance u from either body join
+            body periods following the specified taper. Both field components
+            use the same integrated Hann envelope. At distance u from either body join
             in units of the end length it is ``1 - u + sin(2*pi*u)/(2*pi)``.
             The phase shift applies to the horizontal field carrier.
-            Matching the end velocity to a drift requires at least two periods.
+            For a tapered body, each end holds the local sine and cosine
+            coefficients of the magnetic field fixed beneath this envelope.
+            The cosine term from the taper slope matches the transverse
+            acceleration at the join. The taper acts on the orbit driven by
+            the vertical field (*Ky*). The longitudinal phase includes the
+            square of that tapered velocity. Far- and near-field calculations
+            then integrate every body period and both ends.
             With a finite *R0*, each body period and both ends contribute
             with the direction and propagation phase to the screen pixel.
 
@@ -1491,12 +1506,12 @@ class Undulator(IntegratedSource):
         super(Undulator, self).__init__(*args, **kwargs)
 
         self.L0 = period
-        self.Np = n
+        self.n = n
         self.taper = taper
         self.phaseDeg = phaseDeg
         self.terminationPeriods = terminationPeriods
         self._terminatorGridScale = True
-        if terminationPeriods and kwargs.get('gNodes') is not None:
+        if self.terminationPeriods and kwargs.get('gNodes') is not None:
             self.needConvergence = False
 
         self._targetE = None
@@ -1587,13 +1602,17 @@ class Undulator(IntegratedSource):
 
     @n.setter
     def n(self, n):
-        n = float(n)
-        if self.terminationPeriods and (n < 1 or not n.is_integer()):
-            raise ValueError(
-                "Terminations require a positive whole number of body periods")
-        self.Np = n
+        self.Np = max(1, self._period_count(n, getattr(self, 'Np', 50)))
+        if getattr(self, '_taper', None) is not None:
+            self.taper = self._taper  # A gap-based taper depends on body length.
         self.needReset = True
-        # Need to recalculate the integration parameters
+
+    @staticmethod
+    def _period_count(value, previous):
+        try:
+            return int(float(value))
+        except (TypeError, ValueError, OverflowError):
+            return previous
 
     @property
     def terminationPeriods(self):
@@ -1601,21 +1620,11 @@ class Undulator(IntegratedSource):
 
     @terminationPeriods.setter
     def terminationPeriods(self, value):
-        if (not isinstance(value, (int, np.integer)) or
-                isinstance(value, (bool, np.bool_)) or value < 0 or value == 1):
-            raise ValueError("terminationPeriods must be zero or an integer >= 2")
+        value = max(0, self._period_count(value, self.terminationPeriods))
         if value:
-            self._check_termination_mode()
-        self._terminationPeriods = int(value)
+            value = max(2, value)
+        self._terminationPeriods = value
         self.needReset = True
-
-    def _check_termination_mode(self):
-        if self._taperVal:
-            raise ValueError(
-                "terminationPeriods requires an untapered undulator")
-        if self.Np < 1 or not float(self.Np).is_integer():
-            raise ValueError(
-                "Terminations require a positive whole number of body periods")
 
     @property
     def terminatorGridScale(self):
@@ -1957,7 +1966,6 @@ class Undulator(IntegratedSource):
                                   if self.terminationPeriods else None)
 
     def _termination_convergence_probes(self):
-        self._check_termination_mode()
         theta = max((self.Theta_min, self.Theta_max), key=abs)
         psi = max((self.Psi_min, self.Psi_max), key=abs)
         h, v = self.gamma*theta, self.gamma*psi
@@ -1972,6 +1980,10 @@ class Undulator(IntegratedSource):
         # Enforce at least two samples per wave there, before comparing tiny
         # fields whose absolute differences could otherwise pass prematurely.
         hMax, vMax = abs(h), abs(v)
+        slope = abs((self._taperVal or 0.)/(E2WC*wu))
+        # At either frozen end the velocity is a combination of Re G and
+        # Im G, with coefficients bounded by A_max and the taper slope.
+        kyMax = abs(self.Ky)*np.hypot(1 + slope*np.pi*self.Np, slope)
         if self.R0 is not None:
             distance = self.R0*PI2/self.L0
             clearance = distance - np.pi*(self.Np + 2*self.terminationPeriods)
@@ -1980,16 +1992,16 @@ class Undulator(IntegratedSource):
                 # transverse primitive changes by at most 2*pi*m*|K| there.
                 extent = 1 + PI2*self.terminationPeriods
                 hMax = (self.gamma*distance*abs(np.tan(theta)) +
-                        abs(self.Ky)*extent)/clearance
+                        kyMax*extent + 2*abs(self.Ky)*slope)/clearance
                 vMax = (self.gamma*distance*abs(np.tan(psi)) +
                         abs(self.Kx)*extent)/clearance
-        maxSlope = a*(1 + (hMax + abs(self.Ky))**2 + (vMax + abs(self.Kx))**2)
+        maxSlope = a*(1 + (hMax + kyMax)**2 + (vMax + abs(self.Kx))**2)
         stretch = 1 if self.terminatorGridScale else self.terminationPeriods
         minimumOrder = 1 + int(np.ceil(np.pi/self.gIntervals*stretch*maxSlope))
 
         qmax = a*(mean + h*h + v*v)
-        # Include an integer harmonic (body adds coherently) and its first
-        # interference zero (ends alone), as well as the actual energy limit.
+        # Probe the energy limit and two detunings. For a periodic body
+        # the latter are a harmonic and its first interference zero.
         order = max(1, np.floor(qmax))
         detuning = 1./self.Np if self.Np > 1 else .5
         q = np.array([qmax, order, order + detuning])
@@ -2026,13 +2038,15 @@ class Undulator(IntegratedSource):
 
 #    @profile
     def _terminated_fields(self, ww1, w, wu, gamma, theta, psi, sum_over_nodes):
+        taper = (self._taperVal or 0.)/E2WC
+        mean = (self.Kx**2 + self.Ky**2)/2
         if self.R0 is None:
             return _undulator_ends.fields(
                 self._terminationGrids, self.Np, ww1, w, wu, gamma, theta,
-                psi, sum_over_nodes)
+                psi, sum_over_nodes, taper=taper, ky2=self.Ky**2, mean_p2=mean)
         return _undulator_ends.near_fields(
-            self._terminationGrids, self.Np, (self.Kx**2 + self.Ky**2)/2,
-            self.R0*PI2/self.L0, w, wu, gamma, theta, psi, sum_over_nodes)
+            self._terminationGrids, self.Np, mean, self.R0*PI2/self.L0,
+            w, wu, gamma, theta, psi, sum_over_nodes, taper=taper, ky2=self.Ky**2)
 
     def _sp(self, dim, ww1, w, wu, gamma, ddphi, ddpsi, R0=None):
         if self.terminationPeriods:
@@ -2065,13 +2079,14 @@ class Undulator(IntegratedSource):
         alphaS = 0
 
         if (R0 is not None) or (self._taperVal is not None):
-            dI = np.arange(0.5*self.dstep - PI*self.Np, PI*self.Np, self.dstep)
-            tg = (dI[:, None] + 0.5*self.dstep*self.tg_n).ravel()
-            ag = np.tile(self.ag, self.Np)
-            sinx = np.tile(self.sintg, self.Np)
-            cosx = np.tile(self.costg, self.Np)
-            sinxph = np.tile(self.sintgph, self.Np)
-            cosxph = np.tile(self.costgph, self.Np)
+            nPeriods = int(self.Np)
+            centers = -(nPeriods-1)*PI + np.arange(nPeriods)*PI2
+            tg = (centers[:, None] + self.tg).ravel()
+            ag = np.tile(self.ag, nPeriods)
+            sinx = np.tile(self.sintg, nPeriods)
+            cosx = np.tile(self.costg, nPeriods)
+            sinxph = np.tile(self.sintgph, nPeriods)
+            cosxph = np.tile(self.costgph, nPeriods)
         else:
             tg = self.tg
             ag = self.ag
@@ -2186,7 +2201,7 @@ class Undulator(IntegratedSource):
         dirx = ddphiS
         diry = ddpsiS
         dirz = 1. - 0.5*(ddphiS**2 + ddpsiS**2)
-        Nmx = self.Np if (R0 is not None or self._taperVal is not None) else 1
+        Nmx = int(self.Np) if (R0 is not None or self._taperVal is not None) else 1
 
         if R0 is not None:
             sinr0z = np.sin(wwuS*R0[-1])
@@ -2273,11 +2288,6 @@ class Undulator(IntegratedSource):
                 Bpr += eucos*(bny*dirDotBetaP - betaPy*dirDotDmB)
 
         return wuS*revgamma*Bsr, wuS*revgamma*Bpr
-
-    def reset(self):
-        if self.terminationPeriods:
-            self._check_termination_mode()
-        super(Undulator, self).reset()
 
     def build_I_map(self, w, ddtheta, ddpsi, harmonic=None, dg=None):
         if self.needReset:
@@ -2386,22 +2396,36 @@ class Undulator(IntegratedSource):
         if self.terminationPeriods:
             grids = self._terminationGrids
             scalarArgs = [np.int32(len(grids[0])), np.int32(len(grids[1]))]
-            if self.R0 is None:
+            periodic = self.R0 is None and not self._taperVal
+            if periodic:
                 kernel = 'undulator_terminated'
                 body, exitPhase = _undulator_ends.interference(ww1, self.Np)
                 rayArgs = (gamma*ddtheta, gamma*ddpsi, w/(2*wu*gamma2),
                            2*gamma*wu, body)
             else:
-                kernel = 'undulator_nf_terminated'
-                distance = self.R0*PI2/self.L0
-                screen, carrier = _undulator_ends.near_screen(
-                    distance, ddtheta, ddpsi, w/wu)
-                scalarArgs.extend((np.int32(self.Np), self.cl_precisionF(distance),
+                distance = (self.R0 or 0.)*PI2/self.L0
+                if self.R0 is None:
+                    screen = (gamma*ddtheta, gamma*ddpsi, 0., 0.)
+                    carrier = 1.
+                else:
+                    screen, carrier = _undulator_ends.near_screen(
+                        distance, ddtheta, ddpsi, w/wu)
+                scalarArgs.append(np.int32(self.Np))
+                if self._taperVal:
+                    scalarArgs.append(np.int32(self.R0 is not None))
+                scalarArgs.extend((self.cl_precisionF(distance),
                                    self.cl_precisionF((self.Kx**2 + self.Ky**2)/2)))
-                rayArgs = np.broadcast_arrays(gamma, w/wu, *screen)
+                if self._taperVal:
+                    kernel = 'undulator_taper_terminated'
+                    scalarArgs.append(self.cl_precisionF(self.Ky**2))
+                    rayArgs = np.broadcast_arrays(gamma, w/wu, self._taperVal/E2WC/wu,
+                                                  *screen)
+                else:
+                    kernel = 'undulator_nf_terminated'
+                    rayArgs = np.broadcast_arrays(gamma, w/wu, *screen)
             slicedROArgs = [np.ascontiguousarray(arg, dtype=self.cl_precisionF)
                             for arg in rayArgs]
-            if self.R0 is None:
+            if periodic:
                 slicedROArgs.append(
                     np.ascontiguousarray(exitPhase, dtype=self.cl_precisionC))
             nonSlicedROArgs = [grid.ravel().astype(self.cl_precisionF, copy=False)
@@ -2411,7 +2435,7 @@ class Undulator(IntegratedSource):
             Is_local, Ip_local = self.ucl.run_parallel(
                 kernel, scalarArgs, slicedROArgs, nonSlicedROArgs,
                 outputs, dimension=NRAYS)
-            if self.R0 is not None:
+            if not periodic:
                 scale = 2*gamma*wu*carrier
                 Is_local, Ip_local = scale*Is_local, scale*Ip_local
         else:
