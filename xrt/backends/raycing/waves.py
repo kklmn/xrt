@@ -539,21 +539,27 @@ def prepare_wave(fromOE, wave, xglo, yglo, zglo):
     x -= fromOE.center[0]
     y -= fromOE.center[1]
     z -= fromOE.center[2]
-    a0, b0 = fromOE.bl.sinAzimuth, fromOE.bl.cosAzimuth
-    x[:], y[:] = raycing.rotate_z(x, y, b0, a0)
 
     if hasattr(fromOE, 'rotationSequence'):  # OE
+        a0, b0 = fromOE.bl.sinAzimuth, fromOE.bl.cosAzimuth
+        x[:], y[:] = raycing.rotate_z(x, y, b0, a0)
+
         dt = 0
         extraAnglesSign = 1.  # only for pitch and yaw
+
         if hasattr(fromOE, 'local_n2'):
             extraAnglesSign = -1.  # only for pitch and yaw
             dt = -fromOE.t
             raycing.rotate_xyz(
-                x, y, z, rotationSequence=fromOE.rotationSequence, yaw=-np.pi)
+                x, y, z, rotationSequence=fromOE.rotationSequence, roll=-np.pi)
+            pitch = fromOE.pitch
+            roll = fromOE.roll + fromOE.positionRoll
+            yaw = fromOE.yaw
+        else:
+            pitch = -fromOE.pitch
+            roll = -(fromOE.roll + fromOE.positionRoll)
+            yaw = -fromOE.yaw
 
-        pitch = -fromOE.pitch
-        roll = -(fromOE.roll+fromOE.positionRoll)
-        yaw = -fromOE.yaw
         raycing.rotate_xyz(
             x, y, z, rotationSequence=fromOE.rotationSequence,
             pitch=pitch, roll=roll, yaw=yaw)
@@ -566,10 +572,16 @@ def prepare_wave(fromOE, wave, xglo, yglo, zglo):
 
         if dt:
             z += dt
+    elif hasattr(fromOE, 'set_orientation'):  # aperture, screen
+        lx, ly, lz = fromOE.x, fromOE.y, fromOE.z
+        xyz = x, y, z
+        x, y, z = (sum(c*b for c, b in zip(lx, xyz)),
+                   sum(c*b for c, b in zip(ly, xyz)),
+                   sum(c*b for c, b in zip(lz, xyz)))
 
-    wave.xDiffr = x  # in fromOE local coordinates
-    wave.yDiffr = y  # in fromOE local coordinates
-    wave.zDiffr = z  # in fromOE local coordinates
+    wave.xDiffr = x  # in fromOE-local coordinates
+    wave.yDiffr = y  # in fromOE-local coordinates
+    wave.zDiffr = z  # in fromOE-local coordinates
     wave.rDiffr = (wave.xDiffr**2 + wave.yDiffr**2 + wave.zDiffr**2)**0.5
     wave.a[:] = wave.xDiffr / wave.rDiffr
     wave.b[:] = wave.yDiffr / wave.rDiffr
@@ -580,7 +592,6 @@ def prepare_wave(fromOE, wave, xglo, yglo, zglo):
     wave.beamReflSumJ = 0.
     wave.beamReflSumJnl = 0.
     wave.diffract_repeats = np.int64(0)
-#    wave.parentId =
     return wave
 
 
@@ -786,10 +797,10 @@ def diffract(oeLocal, wave, targetOpenCL=raycing.targetOpenCL,
         wave.a[:], wave.b[:], wave.c[:] = glo.a, glo.b, glo.c
         wave.Jss[:], wave.Jpp[:], wave.Jsp[:] = glo.Jss, glo.Jpp, glo.Jsp
         wave.Es[:], wave.Ep[:] = glo.Es, glo.Ep
-        a0, b0 = toOE.bl.sinAzimuth, toOE.bl.cosAzimuth
-        wave.a[:], wave.b[:] = raycing.rotate_z(wave.a, wave.b, b0, a0)
 
         if hasattr(toOE, 'rotationSequence'):  # OE
+            a0, b0 = toOE.bl.sinAzimuth, toOE.bl.cosAzimuth
+            wave.a[:], wave.b[:] = raycing.rotate_z(wave.a, wave.b, b0, a0)
             if hasattr(toOE, 'local_n1'):
                 local_n = toOE.local_n1
             else:
