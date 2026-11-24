@@ -168,7 +168,7 @@ class RectangularAperture(object):
             if self not in bl.slits:
                 bl.slits.append(self)
                 self.ordinalNum = len(bl.slits)
-                self.lostNum = -self.ordinalNum - 1000
+                self.lostNum = -self.ordinalNum - raycing.lostNum['aperture']
         raycing.set_name(self, name)
 #        if name not in [None, 'None', '']:
 #            self.name = name
@@ -645,7 +645,7 @@ class SetOfRectangularAperturesOnZActuator(RectangularAperture):
             if self not in bl.slits:
                 bl.slits.append(self)
                 self.ordinalNum = len(bl.slits)
-                self.lostNum = -self.ordinalNum - 1000
+                self.lostNum = -self.ordinalNum - raycing.lostNum['aperture']
         raycing.set_name(self, name)
 #        if name not in [None, 'None', '']:
 #            self.name = name
@@ -765,7 +765,7 @@ class RoundAperture(object):
             if self not in bl.slits:
                 bl.slits.append(self)
                 self.ordinalNum = len(bl.slits)
-                self.lostNum = -self.ordinalNum - 1000
+                self.lostNum = -self.ordinalNum - raycing.lostNum['aperture']
         raycing.set_name(self, name)
 #        if name not in [None, 'None', '']:
 #            self.name = name
@@ -1166,7 +1166,7 @@ class PolygonalAperture(object):
         if bl is not None:
             bl.slits.append(self)
             self.ordinalNum = len(bl.slits)
-            self.lostNum = -self.ordinalNum - 1000
+            self.lostNum = -self.ordinalNum - raycing.lostNum['aperture']
         if name in [None, 'None', '']:
             self.name = '{0}{1}'.format(
                 self.__class__.__name__,

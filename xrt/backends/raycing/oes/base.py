@@ -280,7 +280,7 @@ class OE(OEMainMethods):
             if self not in bl.oes:  # First init
                 bl.oes.append(self)
                 self.ordinalNum = len(bl.oes)
-                self.lostNum = -self.ordinalNum
+                self.lostNum = -self.ordinalNum - raycing.lostNum['oe']
         raycing.set_name(self, name)
 #        if name not in [None, 'None', '']:
 #            self.name = name
@@ -1213,7 +1213,7 @@ class OE(OEMainMethods):
         dx, dy, dz = 0, 0, 0
         extraAnglesSign = 1.  # only for pitch and yaw
 
-        if hasattr(self, 'cryst2pitch'):
+        if hasattr(self, 'cryst2pitch'):  # dcm, plate, lens
             is2ndXtal = kwargs.get('is2ndXtal', False)
             if is2ndXtal:
                 pitch = -self.pitch - self.bragg + self.cryst2pitch +\

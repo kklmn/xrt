@@ -77,7 +77,7 @@ class Screen(object):
             if self not in bl.screens:
                 bl.screens.append(self)
                 self.ordinalNum = len(bl.screens)
-                self.lostNum = -self.ordinalNum - 2000
+                self.lostNum = -self.ordinalNum - raycing.lostNum['screen']
         raycing.set_name(self, name)
         self.footprint = []
         self.set_orientation(x, z)
@@ -291,14 +291,10 @@ class Screen(object):
             d1s, d2s = condition(d1s, d2s)
         nrays = len(d1s)
 
+        wave = rs.Beam(nrays=nrays, forceState=1, withAmplitudes=True)
         if isinstance(self, HemisphericScreen):
             xlo, ylo, zlo, xglo, yglo, zglo = self.local_to_global_sph(
                 phi=d1s, theta=d2s)
-        else:
-            xglo, yglo, zglo = self.local_to_global(x=d1s, z=d2s)
-
-        wave = rs.Beam(nrays=nrays, forceState=1, withAmplitudes=True)
-        if isinstance(self, HemisphericScreen):
             wave.x[:] = xlo
             wave.y[:] = ylo + dy
             wave.z[:] = zlo
@@ -306,14 +302,16 @@ class Screen(object):
             wave.theta = d2s
             dS *= np.abs(np.cos(wave.theta)) * self.R**2
         else:
-            wave.x[:] = d1s
-            wave.y[:] = np.zeros_like(d1s) + dy
-            wave.z[:] = d2s
+            xlo, ylo, zlo = d1s, np.zeros_like(d1s)+dy, d2s
+            xglo, yglo, zglo = self.local_to_global(x=xlo, y=ylo, z=zlo)
+            wave.x[:] = xlo
+            wave.y[:] = ylo
+            wave.z[:] = zlo
         wave.dS = dS
         wave.toOE = self
-        wave.area = (np.ones_like(d1s) * dS).sum()
+        wave.area = (np.ones_like(d1s)*dS).sum()
         wave.parentId = prevOE.uuid
-        return rw.prepare_wave(prevOE, wave, xglo, yglo+dy, zglo)
+        return rw.prepare_wave(prevOE, wave, xglo, yglo, zglo)
 
     def expose_wave(self, wave=None, beam=None, dim1=0, dim2=0):
         """
@@ -390,7 +388,7 @@ class HemisphericScreen(Screen):
 #            if self not in bl.screens:
 #                bl.screens.append(self)
 #                self.ordinalNum = len(bl.screens)
-#                self.lostNum = -self.ordinalNum - 2000
+#                self.lostNum = -self.ordinalNum - raycing.lostNum['screen']
 #        raycing.set_name(self, name)
 #        self._x = x
 #        self._z = z

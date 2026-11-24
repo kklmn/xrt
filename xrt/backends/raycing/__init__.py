@@ -111,6 +111,8 @@ precisionOpenCL = 'auto'
 # targetOpenCL = (0, 0)
 # precisionOpenCL = 'float32'
 
+lostNum = dict(oe=0, aperture=1000, screen=2000, sample=3000)
+
 msg_start = {"command": "start"}
 msg_stop = {"command": "stop"}
 msg_exit = {"command": "exit"}
