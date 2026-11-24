@@ -232,7 +232,8 @@ def global_to_virgin_local(bl, beam, lo, center=None, part=None):
     and yaw all zeros) local system. The resulting local beam is *lo*. If
     *center* is provided, the rotation Rz is about it, otherwise is about the
     origin of *beam*. The beam arrays can be sliced by *part* indexing array.
-    *bl* is an instance of :class:`BeamLine`"""
+    *bl* is an instance of :class:`BeamLine` or a local xyz basis in global
+    coordinates given as a 3-list or 3-tuple."""
     if part is None:
         part = np.ones(beam.x.shape, dtype=bool)
     if center is None:
