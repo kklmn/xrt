@@ -143,3 +143,6 @@ class EmptyMaterial(object):
         if not hasattr(self, 'uuid'):  # uuid must not change on re-init
             self.uuid = kwargs['uuid'] if 'uuid' in kwargs else\
                 str(raycing.uuid.uuid4())
+
+    def get_refractive_index(self, E):
+        return 1.
