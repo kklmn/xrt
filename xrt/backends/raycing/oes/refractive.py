@@ -33,7 +33,6 @@ class Plate(DCM):
         kwargs = self.__pop_kwargs(**kwargs)
         kwargs.setdefault('overEdge', '')
         DCM.__init__(self, *args, **kwargs)
-        self.cryst2perpTransl = -self.t
         self.cryst2pitch = self.wedgeAngle
         if isinstance(self.limPhysX, (list, tuple)):
             self.limPhysX2 = [-x for x in reversed(self.limPhysX)]
@@ -45,7 +44,6 @@ class Plate(DCM):
         else:
             self.limOptX2 = self.limOptX
         self.limOptY2 = self.limOptY
-#        self.material2 = self.material
 
     def _resolve_material(self, mat):
         return raycing.normalize_ref(
@@ -213,8 +211,7 @@ class Plate(DCM):
                 self.bl.flowSource = 'double_refract'
 
         gb, lb1, lb2 = self.double_reflect(beam=beam, needLocal=needLocal,
-                                           fromVacuum1=True,
-                                           fromVacuum2=False)
+                                           fromVacuum1=True, fromVacuum2=False)
 
         if needLocal:
             footprints = [self._get_surface_footprint(lb)

@@ -342,16 +342,20 @@ class OEMainMethods(object):
             if isinstance(nrays[0], (int, float)):
                 xx = np.linspace(*self.limPhysX, nrays[0])
                 yy = np.linspace(*self.limPhysY, nrays[1])
+                if area == 'auto':
+                    dX = self.limPhysX[1] - self.limPhysX[0]
+                    dY = self.limPhysY[1] - self.limPhysY[0]
+                    area = dX * dY
             elif (isinstance(nrays[0], np.ndarray) and
                   isinstance(nrays[1], np.ndarray)):
                 xx, yy = nrays
+                if area == 'auto':
+                    dX = xx[-1] - xx[0]
+                    dY = yy[-1] - yy[0]
+                    area = dX * dY
             X, Y = np.meshgrid(xx, yy)
             x = X.ravel()
             y = Y.ravel()
-            if area == 'auto':
-                dX = self.limPhysX[1] - self.limPhysX[0]
-                dY = self.limPhysY[1] - self.limPhysY[0]
-                area = dX * dY
         else:
             raise ValueError('wrong type of `nrays`!')
 
@@ -411,10 +415,10 @@ class OEMainMethods(object):
         good = (waveLocal.state == 1) | (waveLocal.state == 2)
         waveGlobal.filter_by_index(good)
         waveLocal.filter_by_index(good)
+        waveLocal.dS = area / float(len(good))
         area *= good.sum() / float(len(good))
         waveLocal.area = area
         waveLocal.areaNormal = area * areaNormalFact
-        waveLocal.dS = area / float(len(good))
         waveLocal.toOE = self
         waveLocal.parentId = self.uuid
 #        waveLocal.xGlobal = waveGlobal.x
@@ -668,8 +672,8 @@ class OEMainMethods(object):
     def _reflect_local(
         self, good, lb, vlb, pitch, roll, yaw, dx=None, dy=None, dz=None,
         local_z=None, local_n=None, local_g=None, fromVacuum=True,
-        material=None, is2ndXtal=False, needElevationMap=False,
-            noIntersectionSearch=False, isMulti=False):
+        material=None, vacuumMaterial=None, is2ndXtal=False,
+            needElevationMap=False, noIntersectionSearch=False, isMulti=False):
         """Finds the intersection points of rays in the beam *lb* indexed by
         *good* array. *vlb* is the same beam in virgin local system.
         *pitch, roll, yaw* determine the transformation between true local and
@@ -1021,10 +1025,15 @@ class OEMainMethods(object):
                 else:
                     refractive_index = \
                         matSur.get_refractive_index(lb.E[goodN]).real
-                if fromVacuum:
-                    n1overn2 = 1. / refractive_index
+                if vacuumMaterial is not None:
+                    vacuum_refractive_index = \
+                        vacuumMaterial.get_refractive_index(lb.E[goodN]).real
                 else:
-                    n1overn2 = refractive_index
+                    vacuum_refractive_index = 1.
+                if fromVacuum:
+                    n1overn2 = vacuum_refractive_index / refractive_index
+                else:
+                    n1overn2 = refractive_index / vacuum_refractive_index
                 signN = np.sign(-beamInDotNormal)
                 n1overn2cosTheta1 = -n1overn2 * beamInDotNormal
                 cosTheta2 = signN * \
@@ -1136,23 +1145,23 @@ class OEMainMethods(object):
                         refl = matSur.get_amplitude(
                             lb.E[goodN], beamInDotNormal, fromVacuum)
             else:
-                refl = 1., 1.
+                refl = 1., 1., 0., lb.E[goodN]/CHBAR*1e8
             ras, rap = refl[0], refl[1]
             nanSum = np.isnan(ras).sum()
             if nanSum > 0:
                 ras[np.isnan(ras)] = 0.
-#                    self._reportNaN(ras, 'ras')
+                # self._reportNaN(ras, 'ras')
             nanSum = np.isnan(rap).sum()
             if nanSum > 0:
                 rap[np.isnan(rap)] = 0.
-#                    self._reportNaN(rap, 'rap')
+                # self._reportNaN(rap, 'rap')
 
             lb.Jss[goodN] = (localJ[0] * ras * np.conjugate(ras)).real
             lb.Jpp[goodN] = (localJ[1] * rap * np.conjugate(rap)).real
             lb.Jsp[goodN] = localJ[2] * ras * np.conjugate(rap)
-#                self._reportNaN(lb.Jss[goodN], 'lb.Jss[goodN]')
-#                self._reportNaN(lb.Jpp[goodN], 'lb.Jpp[goodN]')
-#                self._reportNaN(lb.Jsp[goodN], 'lb.Jsp[goodN]')
+            # self._reportNaN(lb.Jss[goodN], 'lb.Jss[goodN]')
+            # self._reportNaN(lb.Jpp[goodN], 'lb.Jpp[goodN]')
+            # self._reportNaN(lb.Jsp[goodN], 'lb.Jsp[goodN]')
             if hasattr(lb, 'Es'):
                 lb.Es[goodN] *= ras
                 lb.Ep[goodN] *= rap
@@ -1170,10 +1179,22 @@ class OEMainMethods(object):
                     lb.Es[goodN] *= mPh
                     lb.Ep[goodN] *= mPh
             else:
+                if vacuumMaterial is not None:
+                    vn = vacuumMaterial.get_refractive_index(lb.E[goodN])
+                    vmu = abs(vn.imag) * lb.E[goodN] / CHBAR * 2e8  # 1/cm
+                    vkn = vn.real * lb.E[goodN] / CHBAR * 1e8
+                    att = np.exp(-vmu * tMax[goodN] * 0.1)
+                    lb.Jss[goodN] *= att
+                    lb.Jpp[goodN] *= att
+                    lb.Jsp[goodN] *= att
+                else:
+                    vkn = lb.E[goodN] / CHBAR * 1e8
+                    att = 1
                 if hasattr(lb, 'Es'):
-                    mPh = np.exp(1e7j * lb.E[goodN]/CHBAR * tMax[goodN])
+                    mPh = att**0.5 * np.exp(0.1j * vkn * tMax[goodN])
                     lb.Es[goodN] *= mPh
                     lb.Ep[goodN] *= mPh
+            # print('tMax', goodN.sum(), tMax[goodN].min(), tMax[goodN].max())
 
         if self.isParametric:
             lb.s = np.copy(lb.x)

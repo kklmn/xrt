@@ -269,7 +269,7 @@ class DCM(OE):
     @raycing.append_to_flow_decorator
     def double_reflect(self, beam=None, needLocal=True,
                        fromVacuum1=True, fromVacuum2=True,
-                       returnLocalAbsorbed=None):
+                       vacuumMaterial=None, returnLocalAbsorbed=None):
         """
         Returns the reflected beam in global and two local (if *needLocal*
         is true) systems.
@@ -320,9 +320,11 @@ class DCM(OE):
             good1, lo1, gb, self.pitch + self.bragg,
             self.roll + self.positionRoll + self.cryst1roll, self.yaw, self.dx,
             local_z=self.local_z1, local_n=self.local_n1,
-            fromVacuum=fromVacuum1, material=self.material)
+            fromVacuum=fromVacuum1, material=self.material,
+            vacuumMaterial=vacuumMaterial)
         goodAfter1 = gb.state > 0  # (gb.state == 1) | (gb.state == 2)
-# not intersected rays remain unchanged except their state:
+
+        # not intersected rays remain unchanged except their state:
         notGood = ~goodAfter1
         if notGood.sum() > 0:
             rs.copy_beam(gb, beam, notGood)
@@ -349,7 +351,9 @@ class DCM(OE):
             self.roll + self.cryst2roll + self.positionRoll, -self.yaw,
             -self.dx, self.cryst2longTransl, -self.cryst2perpTransl,
             local_z=self.local_z2, local_n=self.local_n2,
-            fromVacuum=fromVacuum2, material=self.material2, is2ndXtal=True)
+            fromVacuum=fromVacuum2, material=self.material2,
+            vacuumMaterial=vacuumMaterial, is2ndXtal=True)
+        # the global state is defined by the 1st xtal:
         goodAfter2 = gb.state > 0  # (gb2.state == 1) | (gb2.state == 2)
 # in global coordinate system:
         raycing.virgin_local_to_global(self.bl, gb2, self.center, goodAfter2)
