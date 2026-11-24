@@ -91,7 +91,9 @@ def _linear_plates(stage, base, mount, bounds, optic):
     gap = sizes['gap']
     base_face = face - top_height - gap
     if axis == 2:
-        base_face += travel[0]
+        # The lower end in local Z supports the fixed plate and piston.
+        lowest = travel[0 if stage.direction == 1 else 1]
+        base_face += lowest
     else:
         base_limits[:, along] += np.sort(travel)
     base_limits[:, along] = _extent(
@@ -110,7 +112,7 @@ def _linear_plates(stage, base, mount, bounds, optic):
     yield 0, _plate(base, base_limits, base_top, height - groove_depth, 1)
 
     if axis == 2:
-        extension = stage.position_to_base_units(stage.position) - travel[0]
+        extension = stage.position_to_base_units(stage.position) - lowest
         cylinder_height = gap + extension + groove_depth
         # Size the cylinder to the footprint shared by the two plates.
         lower = np.maximum(limits[0], base_limits[0])

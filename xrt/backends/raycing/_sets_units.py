@@ -271,7 +271,7 @@ argumentInputGroups = {
         'substrate', 'surfaceHintX', 'surfaceHintY', 'tLayer', 'table', 'wave',
         'waveFar', 'E from Source', 'θ from OE'},
     ('string', 'editableCombo'): {'label', 'targetOpenCL', 'unit'},
-    ('integer', 'combo'): {'ePos', 'xPos', 'yPos'},
+    ('integer', 'combo'): {'direction', 'ePos', 'xPos', 'yPos'},
     'string': {
         'afterScript', 'crossSection', 'extraRotationSequence',
         'name', 'orientation', 'rotationSequence', 'title',

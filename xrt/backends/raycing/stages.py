@@ -355,6 +355,8 @@ class MountingFrame:
 
     @classmethod
     def get_argument_editor_hint(cls, argName):
+        if argName == 'direction' and hasattr(cls, 'direction'):
+            return {'editor': 'choice', 'choices': ('1', '-1')}
         if argName == 'renderOptions':
             defaults = cls._validate_render_options()
             inputTypes = {key: ('float', 'None') for key in cls._renderSizes}
@@ -728,7 +730,8 @@ class Stage(MountingFrame):
                  mount=None, mountOffset=None, axis=None, position=0.,
                  positionMin=None, positionMax=None, positionUnit=None,
                  bl=None, uuid=None, renderStyle='auto', renderSize=None,
-                 renderColor='auto', positionOffset=0., renderOptions=None):
+                 renderColor='auto', positionOffset=0., renderOptions=None,
+                 direction=1):
         """
         Base placement, parent mounting and registration use the parameters
         of :class:`MountingFrame`.
@@ -749,8 +752,15 @@ class Stage(MountingFrame):
 
         *positionOffset*: float
             Controller position at the modeled zero, in *positionUnit*. The
-            actuator displacement is *position* minus *positionOffset*.
-            Defaults to zero. Nonzero offsets require length or angle units.
+            signed travel is *direction* times (*position* minus
+            *positionOffset*). Defaults to zero. Nonzero offsets require
+            length or angle units.
+
+        *direction*: int
+            Use +1 for motion along the positive local axis or right-hand
+            rotation about it. Use -1 to reverse the modeled motion.
+            Position and limits are expressed in controller coordinates.
+            For eV stages the sign applies to the calculated Bragg angle.
 
         *positionUnit*: str or None
             Unit of position, offset and limits, fixed at construction. Defaults
@@ -778,6 +788,8 @@ class Stage(MountingFrame):
             raise ValueError('positionUnit must be one of {}'.format(
                 ', '.join(self._units)))
         self._positionUnit = unit
+        self._direction = 1
+        self.direction = direction
         self._position = self._positionOffset = 0.
         self.positionOffset = positionOffset
         self._positionMin = self._positionMax = None
@@ -811,6 +823,21 @@ class Stage(MountingFrame):
         else:
             logger.warning('%s: axis must be one of %s', self.name,
                            ', '.join(self._axes))
+
+    @property
+    def direction(self):
+        """Sign of local motion for the converted controller position."""
+        return self._direction
+
+    @direction.setter
+    def direction(self, value):
+        if isinstance(value, str) and value.strip() in ('1', '+1', '-1'):
+            value = int(value)
+        if (isinstance(value, (int, float, np.integer, np.floating)) and
+                not isinstance(value, bool) and value in (-1, 1)):
+            self._direction = int(value)
+        else:
+            logger.warning('%s: direction must be +1 or -1', self.name)
 
     @property
     def positionUnit(self):
@@ -892,7 +919,8 @@ class Stage(MountingFrame):
 
     def position_to_base_units(self, position):
         """Convert a controller position to local motion in mm or radians."""
-        return (position - self.positionOffset) * self._units[self.positionUnit]
+        travel = self.direction * (position - self.positionOffset)
+        return travel * self._units[self.positionUnit]
 
     @property
     def _position_in_base_units(self):
@@ -933,7 +961,8 @@ class RotationStage(Stage):
     """One signed rotation about an axis fixed in the stage base.
 
     *axis* is 'pitch', 'roll' or 'yaw', corresponding to the x, y and z
-    directions of the base. Positive travel follows the right-hand rule.
+    directions of the base. With direction=1, positive angles follow the
+    right-hand rule.
     *pivotPoint* is a point on the rotation axis, in base coordinates (mm).
     It defaults to the stage origin. Set it away from the origin to model
     a cradle. Travel and its limits use *positionUnit*, radians by default.
@@ -1023,7 +1052,8 @@ class RotationStage(Stage):
 
     def position_to_base_units(self, position):
         if self.positionUnit == 'eV':
-            return float(self._bragg_method(self.crystal)(position))
+            angle = self._bragg_method(self.crystal)(position)
+            return self.direction * float(angle)
         return super().position_to_base_units(position)
 
     @property
