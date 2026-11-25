@@ -1,0 +1,380 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+	<Beams type="prop">
+		<None type="flat"></None>
+		<Point_source_global type="flat"></Point_source_global>
+		<VFM_global type="flat"></VFM_global>
+		<VFM_local type="flat"></VFM_local>
+		<HFM_global type="flat"></HFM_global>
+		<HFM_local type="flat"></HFM_local>
+		<Focus_local type="flat"></Focus_local>
+	</Beams>
+	<Materials type="prop">
+		<Platinum type="value">
+			<properties type="prop">
+				<elements type="param">['Pt']</elements>
+				<quantities type="param">[1.0]</quantities>
+				<kind type="param">mirror</kind>
+				<rho type="param">21.45</rho>
+				<t type="param">None</t>
+				<table type="param">Chantler total</table>
+				<efficiency type="param">None</efficiency>
+				<efficiencyFile type="param">None</efficiencyFile>
+				<name type="param">Platinum</name>
+				<refractiveIndex type="param">None</refractiveIndex>
+			</properties>
+			<_object type="param">xrt.backends.raycing.materials.material.Material</_object>
+		</Platinum>
+	</Materials>
+	<KB_Mirrors type="value">
+		<properties type="prop">
+			<azimuth type="param">0.0</azimuth>
+			<height type="param">0.0</height>
+			<alignE type="param">8000.0</alignE>
+			<name type="param">KB_Mirrors</name>
+			<description type="param">None</description>
+		</properties>
+		<_object type="param">xrt.backends.raycing.BeamLine</_object>
+		<Point_source type="value">
+			<properties type="prop">
+				<bl type="param">KB_Mirrors</bl>
+				<name type="param">Point_source</name>
+				<center type="param">[0.0, 0.0, 0.0]</center>
+				<pitch type="param">0</pitch>
+				<roll type="param">0</roll>
+				<yaw type="param">0</yaw>
+				<nrays type="param">5000</nrays>
+				<distx type="param">None</distx>
+				<dx type="param">0.32</dx>
+				<disty type="param">None</disty>
+				<dy type="param">0</dy>
+				<distz type="param">None</distz>
+				<dz type="param">0.018</dz>
+				<distxprime type="param">normal</distxprime>
+				<dxprime type="param">2e-05</dxprime>
+				<distzprime type="param">normal</distzprime>
+				<dzprime type="param">2e-05</dzprime>
+				<distE type="param">lines</distE>
+				<energies type="param">[8000.0]</energies>
+				<polarization type="param">horizontal</polarization>
+				<filamentBeam type="param">False</filamentBeam>
+				<uniformRayDensity type="param">False</uniformRayDensity>
+				<totalFlux type="param">None</totalFlux>
+			</properties>
+			<_object type="param">xrt.backends.raycing.sources.geoms.GeometricSource</_object>
+			<shine type="prop">
+				<parameters type="prop">
+					<withAmplitudes type="param">False</withAmplitudes>
+					<accuBeam type="param">None</accuBeam>
+					<wave type="param">None</wave>
+				</parameters>
+				<_object type="param">xrt.backends.raycing.sources.geoms.GeometricSource.shine</_object>
+				<output type="prop">
+					<beamGlobal type="param">Point_source_global</beamGlobal>
+				</output>
+			</shine>
+		</Point_source>
+		<VFM type="value">
+			<properties type="prop">
+				<bl type="param">KB_Mirrors</bl>
+				<name type="param">VFM</name>
+				<center type="param">[0.0, 0.0, 0.0]</center>
+				<pitch type="param">0</pitch>
+				<roll type="param">0</roll>
+				<yaw type="param">0</yaw>
+				<mount type="param">Common_platform</mount>
+				<mountOffset type="param">{'center': [0.0, -100.0, 8.0], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
+				<positionRoll type="param">0</positionRoll>
+				<extraPitch type="param">0</extraPitch>
+				<extraRoll type="param">0</extraRoll>
+				<extraYaw type="param">0</extraYaw>
+				<rotationSequence type="param">RzRyRx</rotationSequence>
+				<extraRotationSequence type="param">RzRyRx</extraRotationSequence>
+				<surface type="param">None</surface>
+				<material type="param">Platinum</material>
+				<alpha type="param">None</alpha>
+				<limPhysX type="param">[-8.0, 8.0]</limPhysX>
+				<limOptX type="param">None</limOptX>
+				<limPhysY type="param">[-70.0, 70.0]</limPhysY>
+				<limOptY type="param">None</limOptY>
+				<isParametric type="param">False</isParametric>
+				<shape type="param">rect</shape>
+				<gratingDensity type="param">None</gratingDensity>
+				<order type="param">1</order>
+				<shouldCheckCenter type="param">False</shouldCheckCenter>
+				<R type="param">[2000.0, 715.4638936125106, 0.003]</R>
+				<r type="param">100.0</r>
+				<alarmLevel type="param">None</alarmLevel>
+				<targetOpenCL type="param">None</targetOpenCL>
+				<precisionOpenCL type="param">float32</precisionOpenCL>
+				<figureError type="param">None</figureError>
+				<renderOptions type="param">{'thickness': 8.0}</renderOptions>
+			</properties>
+			<_object type="param">xrt.backends.raycing.oes.ToroidMirror</_object>
+			<reflect type="prop">
+				<parameters type="prop">
+					<beam type="param">Point_source_global</beam>
+					<noIntersectionSearch type="param">False</noIntersectionSearch>
+				</parameters>
+				<_object type="param">xrt.backends.raycing.oes.ToroidMirror.reflect</_object>
+				<output type="prop">
+					<beamGlobal type="param">VFM_global</beamGlobal>
+					<beamLocal type="param">VFM_local</beamLocal>
+				</output>
+			</reflect>
+		</VFM>
+		<HFM type="value">
+			<properties type="prop">
+				<bl type="param">KB_Mirrors</bl>
+				<name type="param">HFM</name>
+				<center type="param">[0.0, 0.0, 0.0]</center>
+				<pitch type="param">0</pitch>
+				<roll type="param">0</roll>
+				<yaw type="param">0</yaw>
+				<mount type="param">HFM_platform</mount>
+				<mountOffset type="param">{'center': [0.0, 0.0, 8.0], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
+				<positionRoll type="param">0</positionRoll>
+				<extraPitch type="param">0</extraPitch>
+				<extraRoll type="param">0</extraRoll>
+				<extraYaw type="param">0</extraYaw>
+				<rotationSequence type="param">RxRzRy</rotationSequence>
+				<extraRotationSequence type="param">RzRyRx</extraRotationSequence>
+				<surface type="param">None</surface>
+				<material type="param">Platinum</material>
+				<alpha type="param">None</alpha>
+				<limPhysX type="param">[-8.0, 8.0]</limPhysX>
+				<limOptX type="param">None</limOptX>
+				<limPhysY type="param">[-70.0, 70.0]</limPhysY>
+				<limOptY type="param">None</limOptY>
+				<isParametric type="param">False</isParametric>
+				<shape type="param">rect</shape>
+				<gratingDensity type="param">None</gratingDensity>
+				<order type="param">1</order>
+				<shouldCheckCenter type="param">False</shouldCheckCenter>
+				<R type="param">[2472.726807851544, 500.0, 0.003]</R>
+				<r type="param">100.0</r>
+				<alarmLevel type="param">None</alarmLevel>
+				<targetOpenCL type="param">None</targetOpenCL>
+				<precisionOpenCL type="param">float32</precisionOpenCL>
+				<figureError type="param">None</figureError>
+				<renderOptions type="param">{'color': 'auto', 'thickness': 8.0}</renderOptions>
+			</properties>
+			<_object type="param">xrt.backends.raycing.oes.ToroidMirror</_object>
+			<reflect type="prop">
+				<parameters type="prop">
+					<beam type="param">VFM_global</beam>
+					<noIntersectionSearch type="param">False</noIntersectionSearch>
+				</parameters>
+				<_object type="param">xrt.backends.raycing.oes.ToroidMirror.reflect</_object>
+				<output type="prop">
+					<beamGlobal type="param">HFM_global</beamGlobal>
+					<beamLocal type="param">HFM_local</beamLocal>
+				</output>
+			</reflect>
+		</HFM>
+		<Focus type="value">
+			<properties type="prop">
+				<bl type="param">KB_Mirrors</bl>
+				<name type="param">Focus</name>
+				<center type="param">[2.9999820000324013, 2500, 'auto']</center>
+				<x type="param">[0.9999820000540001, -0.005999856001036799, -3.599956800215409e-05]</x>
+				<z type="param">[5.551115123125783e-17, -0.005999964000064802, 0.9999820000540001]</z>
+				<compressX type="param">None</compressX>
+				<compressZ type="param">None</compressZ>
+				<limPhysX type="param">[0.0, 0.0]</limPhysX>
+				<limPhysY type="param">[0.0, 0.0]</limPhysY>
+				<mount type="param">None</mount>
+				<mountOffset type="param">None</mountOffset>
+				<renderOptions type="param">{'width': 12.0, 'height': 12.0}</renderOptions>
+			</properties>
+			<_object type="param">xrt.backends.raycing.screens.Screen</_object>
+			<expose type="prop">
+				<parameters type="prop">
+					<beam type="param">HFM_global</beam>
+					<onlyPositivePath type="param">False</onlyPositivePath>
+				</parameters>
+				<_object type="param">xrt.backends.raycing.screens.Screen.expose</_object>
+				<output type="prop">
+					<beamLocal type="param">Focus_local</beamLocal>
+				</output>
+			</expose>
+		</Focus>
+	</KB_Mirrors>
+	<FigureErrors type="prop">
+	</FigureErrors>
+	<Stages type="prop">
+		<Base_upstream type="value">
+			<properties type="prop">
+				<name type="param">Base_upstream</name>
+				<axis type="param">z</axis>
+				<position type="param">15.0</position>
+				<center type="param">[0.0, 1970.0, -28.0]</center>
+				<pitch type="param">0.0</pitch>
+				<roll type="param">0.0</roll>
+				<yaw type="param">0.0</yaw>
+				<positionRoll type="param">0.0</positionRoll>
+				<rotationSequence type="param">RzRyRx</rotationSequence>
+				<mount type="param">None</mount>
+				<mountOffset type="param">{'center': [0.0, 0.0, 0.0], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
+				<positionMin type="param">-20.0</positionMin>
+				<positionMax type="param">20.0</positionMax>
+				<positionUnit type="param">mm</positionUnit>
+				<positionOffset type="param">0.0</positionOffset>
+				<renderOptions type="param">{'style': 'auto', 'color': 'auto', 'width': 25.0, 'topLength': 25.0, 'bottomLength': 25.0, 'topHeight': 4.0, 'bottomHeight': 18.0, 'grooves': None, 'grooveWidth': 6.0, 'grooveDepth': 5.0, 'gap': 0.5}</renderOptions>
+				<direction type="param">1</direction>
+			</properties>
+			<_object type="param">xrt.backends.raycing.stages.LinearStage</_object>
+		</Base_upstream>
+		<Base_downstream type="value">
+			<properties type="prop">
+				<name type="param">Base_downstream</name>
+				<axis type="param">z</axis>
+				<position type="param">17.0</position>
+				<center type="param">[0.0, 2230.0, -28.0]</center>
+				<pitch type="param">0.0</pitch>
+				<roll type="param">0.0</roll>
+				<yaw type="param">0.0</yaw>
+				<positionRoll type="param">0.0</positionRoll>
+				<rotationSequence type="param">RzRyRx</rotationSequence>
+				<mount type="param">None</mount>
+				<mountOffset type="param">{'center': [0.0, 0.0, 0.0], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
+				<positionMin type="param">-20.0</positionMin>
+				<positionMax type="param">20.0</positionMax>
+				<positionUnit type="param">mm</positionUnit>
+				<positionOffset type="param">0.0</positionOffset>
+				<renderOptions type="param">{'style': 'auto', 'color': 'auto', 'width': 25.0, 'topLength': 25.0, 'bottomLength': 25.0, 'topHeight': 4.0, 'bottomHeight': 18.0, 'grooves': None, 'grooveWidth': 6.0, 'grooveDepth': 5.0, 'gap': 0.5}</renderOptions>
+				<direction type="param">1</direction>
+			</properties>
+			<_object type="param">xrt.backends.raycing.stages.LinearStage</_object>
+		</Base_downstream>
+		<Common_platform type="value">
+			<properties type="prop">
+				<name type="param">Common_platform</name>
+				<center type="param">[0.0, 0.0, 0.0]</center>
+				<pitch type="param">0.0</pitch>
+				<roll type="param">0.0</roll>
+				<yaw type="param">0.0</yaw>
+				<positionRoll type="param">0.0</positionRoll>
+				<rotationSequence type="param">RzRyRx</rotationSequence>
+				<mount type="param">Base_upstream</mount>
+				<mountOffset type="param">{'center': [0.0, 0.0, 5.0], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
+				<mount2 type="param">Base_downstream</mount2>
+				<mount3 type="param">None</mount3>
+				<yReference type="param">Base_downstream</yReference>
+				<renderOptions type="param">{'style': 'rectangular', 'color': 'Marble', 'width': 100.0, 'height': 5.0, 'length': 360.0}</renderOptions>
+			</properties>
+			<_object type="param">xrt.backends.raycing.stages.MountingFrame</_object>
+		</Common_platform>
+		<HFM_upright type="value">
+			<properties type="prop">
+				<name type="param">HFM_upright</name>
+				<center type="param">[0.0, 0.0, 0.0]</center>
+				<pitch type="param">0.0</pitch>
+				<roll type="param">0.0</roll>
+				<yaw type="param">0.0</yaw>
+				<positionRoll type="param">0.0</positionRoll>
+				<rotationSequence type="param">RzRyRx</rotationSequence>
+				<mount type="param">Common_platform</mount>
+				<mountOffset type="param">{'center': [-21.7, 100.02, 10.0], 'pitch': -0.0, 'roll': 1.5707963267948966, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
+				<mount2 type="param">None</mount2>
+				<mount3 type="param">None</mount3>
+				<yReference type="param">None</yReference>
+				<renderOptions type="param">{'style': 'rectangular', 'color': 'Aluminum (machined)', 'width': 20.0, 'height': 12.0, 'length': 150.0}</renderOptions>
+			</properties>
+			<_object type="param">xrt.backends.raycing.stages.MountingFrame</_object>
+		</HFM_upright>
+		<HFM_upstream type="value">
+			<properties type="prop">
+				<name type="param">HFM_upstream</name>
+				<axis type="param">z</axis>
+				<position type="param">0.0</position>
+				<center type="param">[0.0, 0.0, 0.0]</center>
+				<pitch type="param">0.0</pitch>
+				<roll type="param">0.0</roll>
+				<yaw type="param">0.0</yaw>
+				<positionRoll type="param">0.0</positionRoll>
+				<rotationSequence type="param">RzRyRx</rotationSequence>
+				<mount type="param">HFM_upright</mount>
+				<mountOffset type="param">{'center': [0.0, -50.0, 8.7], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
+				<positionMin type="param">-0.2</positionMin>
+				<positionMax type="param">0.2</positionMax>
+				<positionUnit type="param">mm</positionUnit>
+				<positionOffset type="param">0.0</positionOffset>
+				<renderOptions type="param">{'style': 'auto', 'color': 'auto', 'width': 18.0, 'topLength': 18.0, 'bottomLength': 18.0, 'topHeight': 2.0, 'bottomHeight': 6.0, 'grooves': None, 'grooveWidth': 6.0, 'grooveDepth': 5.0, 'gap': 0.5}</renderOptions>
+				<direction type="param">1</direction>
+			</properties>
+			<_object type="param">xrt.backends.raycing.stages.LinearStage</_object>
+		</HFM_upstream>
+		<HFM_downstream type="value">
+			<properties type="prop">
+				<name type="param">HFM_downstream</name>
+				<axis type="param">z</axis>
+				<position type="param">0.0</position>
+				<center type="param">[0.0, 0.0, 0.0]</center>
+				<pitch type="param">0.0</pitch>
+				<roll type="param">0.0</roll>
+				<yaw type="param">0.0</yaw>
+				<positionRoll type="param">0.0</positionRoll>
+				<rotationSequence type="param">RzRyRx</rotationSequence>
+				<mount type="param">HFM_upright</mount>
+				<mountOffset type="param">{'center': [0.0, 50.0, 8.7], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
+				<positionMin type="param">-0.2</positionMin>
+				<positionMax type="param">0.2</positionMax>
+				<positionUnit type="param">mm</positionUnit>
+				<positionOffset type="param">0.0</positionOffset>
+				<renderOptions type="param">{'style': 'auto', 'color': 'auto', 'width': 18.0, 'topLength': 18.0, 'bottomLength': 18.0, 'topHeight': 2.0, 'bottomHeight': 6.0, 'grooves': None, 'grooveWidth': 6.0, 'grooveDepth': 5.0, 'gap': 0.5}</renderOptions>
+				<direction type="param">1</direction>
+			</properties>
+			<_object type="param">xrt.backends.raycing.stages.LinearStage</_object>
+		</HFM_downstream>
+		<HFM_platform type="value">
+			<properties type="prop">
+				<name type="param">HFM_platform</name>
+				<center type="param">[0.0, 0.0, 0.0]</center>
+				<pitch type="param">0.0</pitch>
+				<roll type="param">0.0</roll>
+				<yaw type="param">0.0</yaw>
+				<positionRoll type="param">0.0</positionRoll>
+				<rotationSequence type="param">RzRyRx</rotationSequence>
+				<mount type="param">HFM_upstream</mount>
+				<mountOffset type="param">{'center': [0.0, 0.0, 5.0], 'pitch': 0.003, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
+				<mount2 type="param">HFM_downstream</mount2>
+				<mount3 type="param">None</mount3>
+				<yReference type="param">HFM_downstream</yReference>
+				<renderOptions type="param">{'style': 'rectangular', 'color': 'auto', 'width': 20.0, 'height': 5.0, 'length': 140.0}</renderOptions>
+			</properties>
+			<_object type="param">xrt.backends.raycing.stages.MountingFrame</_object>
+		</HFM_platform>
+	</Stages>
+	<plots type="value">
+	</plots>
+	<run_ray_tracing type="prop">
+		<plots type="param">plots</plots>
+		<repeats type="param">1</repeats>
+		<updateEvery type="param">1</updateEvery>
+		<pickleEvery type="param">None</pickleEvery>
+		<energyRange type="param">None</energyRange>
+		<backend type="param">raycing</backend>
+		<beamLine type="param">KB_Mirrors</beamLine>
+		<threads type="param">1</threads>
+		<processes type="param">1</processes>
+		<generator type="param">None</generator>
+		<generatorArgs type="param">[]</generatorArgs>
+		<generatorKWargs type="param">auto</generatorKWargs>
+		<globalNorm type="param">0</globalNorm>
+		<afterScript type="param">None</afterScript>
+		<afterScriptArgs type="param">[]</afterScriptArgs>
+		<afterScriptKWargs type="param">{}</afterScriptKWargs>
+		<_object type="param">xrt.runner.run_ray_tracing</_object>
+	</run_ray_tracing>
+<description>Two toroidal KB mirrors on a common platform.
+
+Two vertical actuators support the common platform. Equal travel lifts
+both mirrors, and differential travel pitches the assembly. The VFM
+attaches directly to the platform. An upright carries the HFM's two
+sideways actuators, which adjust its translation and local pitch.
+Positive local Y points toward the downstream support of each platform.
+
+Run this script for a short actuator demonstration and focus readout.
+Set SHOW_3D to True or pass --glow to adjust the stages in xrtGlow.</description>
+</Project>

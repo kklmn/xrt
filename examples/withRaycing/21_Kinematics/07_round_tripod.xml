@@ -1,0 +1,286 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+	<Beams type="prop">
+		<None type="flat"></None>
+		<Collimated_source_global type="flat"></Collimated_source_global>
+		<Round_flat_mirror_global type="flat"></Round_flat_mirror_global>
+		<Round_flat_mirror_local type="flat"></Round_flat_mirror_local>
+		<Beam_monitor_local type="flat"></Beam_monitor_local>
+	</Beams>
+	<Materials type="prop">
+		<Platinum type="value">
+			<properties type="prop">
+				<elements type="param">['Pt']</elements>
+				<quantities type="param">[1.0]</quantities>
+				<kind type="param">mirror</kind>
+				<rho type="param">21.45</rho>
+				<t type="param">None</t>
+				<table type="param">Chantler total</table>
+				<efficiency type="param">None</efficiency>
+				<efficiencyFile type="param">None</efficiencyFile>
+				<name type="param">Platinum</name>
+				<refractiveIndex type="param">None</refractiveIndex>
+			</properties>
+			<_object type="param">xrt.backends.raycing.materials.material.Material</_object>
+		</Platinum>
+	</Materials>
+	<Round_Tripod_Mirror type="value">
+		<properties type="prop">
+			<azimuth type="param">0.0</azimuth>
+			<height type="param">0.0</height>
+			<alignE type="param">8000.0</alignE>
+			<name type="param">Round_Tripod_Mirror</name>
+			<description type="param">None</description>
+		</properties>
+		<_object type="param">xrt.backends.raycing.BeamLine</_object>
+		<Collimated_source type="value">
+			<properties type="prop">
+				<bl type="param">Round_Tripod_Mirror</bl>
+				<name type="param">Collimated_source</name>
+				<center type="param">[0.0, 0.0, 0.0]</center>
+				<pitch type="param">0</pitch>
+				<roll type="param">0</roll>
+				<yaw type="param">0</yaw>
+				<nrays type="param">2000</nrays>
+				<distx type="param">flat</distx>
+				<dx type="param">0.8</dx>
+				<disty type="param">None</disty>
+				<dy type="param">0</dy>
+				<distz type="param">flat</distz>
+				<dz type="param">0.05</dz>
+				<distxprime type="param">normal</distxprime>
+				<dxprime type="param">0.001</dxprime>
+				<distzprime type="param">normal</distzprime>
+				<dzprime type="param">0.001</dzprime>
+				<distE type="param">lines</distE>
+				<energies type="param">[3000.0]</energies>
+				<polarization type="param">horizontal</polarization>
+				<filamentBeam type="param">False</filamentBeam>
+				<uniformRayDensity type="param">False</uniformRayDensity>
+				<totalFlux type="param">None</totalFlux>
+			</properties>
+			<_object type="param">xrt.backends.raycing.sources.geoms.GeometricSource</_object>
+			<shine type="prop">
+				<parameters type="prop">
+					<withAmplitudes type="param">False</withAmplitudes>
+					<accuBeam type="param">None</accuBeam>
+					<wave type="param">None</wave>
+				</parameters>
+				<_object type="param">xrt.backends.raycing.sources.geoms.GeometricSource.shine</_object>
+				<output type="prop">
+					<beamGlobal type="param">Collimated_source_global</beamGlobal>
+				</output>
+			</shine>
+		</Collimated_source>
+		<Round_flat_mirror type="value">
+			<properties type="prop">
+				<bl type="param">Round_Tripod_Mirror</bl>
+				<name type="param">Round_flat_mirror</name>
+				<center type="param">[0.0, 0.0, 0.0]</center>
+				<pitch type="param">0</pitch>
+				<roll type="param">0</roll>
+				<yaw type="param">0</yaw>
+				<mount type="param">Round_tripod</mount>
+				<mountOffset type="param">{'center': [0.0, 0.0, 5.0], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
+				<positionRoll type="param">0</positionRoll>
+				<extraPitch type="param">0</extraPitch>
+				<extraRoll type="param">0</extraRoll>
+				<extraYaw type="param">0</extraYaw>
+				<rotationSequence type="param">RzRyRx</rotationSequence>
+				<extraRotationSequence type="param">RzRyRx</extraRotationSequence>
+				<surface type="param">None</surface>
+				<material type="param">Platinum</material>
+				<alpha type="param">None</alpha>
+				<limPhysX type="param">[-25.0, 25.0]</limPhysX>
+				<limOptX type="param">None</limOptX>
+				<limPhysY type="param">[-25.0, 25.0]</limPhysY>
+				<limOptY type="param">None</limOptY>
+				<isParametric type="param">False</isParametric>
+				<shape type="param">round</shape>
+				<gratingDensity type="param">None</gratingDensity>
+				<order type="param">1</order>
+				<shouldCheckCenter type="param">False</shouldCheckCenter>
+				<alarmLevel type="param">None</alarmLevel>
+				<targetOpenCL type="param">None</targetOpenCL>
+				<precisionOpenCL type="param">float32</precisionOpenCL>
+				<figureError type="param">None</figureError>
+				<renderOptions type="param">{'color': 'auto', 'thickness': 5.0}</renderOptions>
+			</properties>
+			<_object type="param">xrt.backends.raycing.oes.base.OE</_object>
+			<reflect type="prop">
+				<parameters type="prop">
+					<beam type="param">Collimated_source_global</beam>
+					<noIntersectionSearch type="param">False</noIntersectionSearch>
+				</parameters>
+				<_object type="param">xrt.backends.raycing.oes.base.OE.reflect</_object>
+				<output type="prop">
+					<beamGlobal type="param">Round_flat_mirror_global</beamGlobal>
+					<beamLocal type="param">Round_flat_mirror_local</beamLocal>
+				</output>
+			</reflect>
+		</Round_flat_mirror>
+		<Beam_monitor type="value">
+			<properties type="prop">
+				<bl type="param">Round_Tripod_Mirror</bl>
+				<name type="param">Beam_monitor</name>
+				<center type="param">[0.0, 1050, 'auto']</center>
+				<x type="param">[1.0, 0.0, 0.0]</x>
+				<z type="param">auto</z>
+				<compressX type="param">None</compressX>
+				<compressZ type="param">None</compressZ>
+				<limPhysX type="param">[0.0, 0.0]</limPhysX>
+				<limPhysY type="param">[0.0, 0.0]</limPhysY>
+				<mount type="param">None</mount>
+				<mountOffset type="param">None</mountOffset>
+				<renderOptions type="param">{'width': 10.0, 'height': 10.0}</renderOptions>
+			</properties>
+			<_object type="param">xrt.backends.raycing.screens.Screen</_object>
+			<expose type="prop">
+				<parameters type="prop">
+					<beam type="param">Round_flat_mirror_global</beam>
+					<onlyPositivePath type="param">False</onlyPositivePath>
+				</parameters>
+				<_object type="param">xrt.backends.raycing.screens.Screen.expose</_object>
+				<output type="prop">
+					<beamLocal type="param">Beam_monitor_local</beamLocal>
+				</output>
+			</expose>
+		</Beam_monitor>
+	</Round_Tripod_Mirror>
+	<FigureErrors type="prop">
+	</FigureErrors>
+	<Stages type="prop">
+		<Round_base type="value">
+			<properties type="prop">
+				<name type="param">Round_base</name>
+				<center type="param">[0.0, 1000.0982495906255, -19.649754375511716]</center>
+				<pitch type="param">0.0</pitch>
+				<roll type="param">0.0</roll>
+				<yaw type="param">0.0</yaw>
+				<positionRoll type="param">0.0</positionRoll>
+				<rotationSequence type="param">RzRyRx</rotationSequence>
+				<mount type="param">None</mount>
+				<mountOffset type="param">{'center': [0.0, 0.0, 0.0], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
+				<mount2 type="param">None</mount2>
+				<mount3 type="param">None</mount3>
+				<yReference type="param">None</yReference>
+				<renderOptions type="param">{'style': 'round', 'color': 'Aluminum (red anodized)', 'width': 60.0, 'height': 6.0, 'length': 60.0}</renderOptions>
+			</properties>
+			<_object type="param">xrt.backends.raycing.stages.MountingFrame</_object>
+		</Round_base>
+		<Upstream__X type="value">
+			<properties type="prop">
+				<name type="param">Upstream__X</name>
+				<axis type="param">z</axis>
+				<position type="param">0.0</position>
+				<center type="param">[0.0, 0.0, 0.0]</center>
+				<pitch type="param">0.0</pitch>
+				<roll type="param">0.0</roll>
+				<yaw type="param">0.0</yaw>
+				<positionRoll type="param">0.0</positionRoll>
+				<rotationSequence type="param">RzRyRx</rotationSequence>
+				<mount type="param">Round_base</mount>
+				<mountOffset type="param">{'center': [-15.588457268119894, -9.0, 10.65], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
+				<positionMin type="param">-5.0</positionMin>
+				<positionMax type="param">5.0</positionMax>
+				<positionUnit type="param">mm</positionUnit>
+				<positionOffset type="param">0.0</positionOffset>
+				<renderOptions type="param">{'style': 'auto', 'color': 'Stainless Steel (satin)', 'width': 5.0, 'topLength': 5.0, 'bottomLength': 5.0, 'topHeight': 2.0, 'bottomHeight': 8.0, 'grooves': None, 'grooveWidth': 6.0, 'grooveDepth': 5.0, 'gap': 0.5}</renderOptions>
+				<direction type="param">1</direction>
+			</properties>
+			<_object type="param">xrt.backends.raycing.stages.LinearStage</_object>
+		</Upstream__X>
+		<Upstream__X_2 type="value">
+			<properties type="prop">
+				<name type="param">Upstream__X_2</name>
+				<axis type="param">z</axis>
+				<position type="param">0.0</position>
+				<center type="param">[0.0, 0.0, 0.0]</center>
+				<pitch type="param">0.0</pitch>
+				<roll type="param">0.0</roll>
+				<yaw type="param">0.0</yaw>
+				<positionRoll type="param">0.0</positionRoll>
+				<rotationSequence type="param">RzRyRx</rotationSequence>
+				<mount type="param">Round_base</mount>
+				<mountOffset type="param">{'center': [15.588457268119894, -9.0, 10.65], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
+				<positionMin type="param">-5.0</positionMin>
+				<positionMax type="param">5.0</positionMax>
+				<positionUnit type="param">mm</positionUnit>
+				<positionOffset type="param">0.0</positionOffset>
+				<renderOptions type="param">{'style': 'auto', 'color': 'Stainless Steel (satin)', 'width': 5.0, 'topLength': 5.0, 'bottomLength': 5.0, 'topHeight': 2.0, 'bottomHeight': 8.0, 'grooves': None, 'grooveWidth': 6.0, 'grooveDepth': 5.0, 'gap': 0.5}</renderOptions>
+				<direction type="param">1</direction>
+			</properties>
+			<_object type="param">xrt.backends.raycing.stages.LinearStage</_object>
+		</Upstream__X_2>
+		<Downstream type="value">
+			<properties type="prop">
+				<name type="param">Downstream</name>
+				<axis type="param">z</axis>
+				<position type="param">0.5</position>
+				<center type="param">[0.0, 0.0, 0.0]</center>
+				<pitch type="param">0.0</pitch>
+				<roll type="param">0.0</roll>
+				<yaw type="param">0.0</yaw>
+				<positionRoll type="param">0.0</positionRoll>
+				<rotationSequence type="param">RzRyRx</rotationSequence>
+				<mount type="param">Round_base</mount>
+				<mountOffset type="param">{'center': [0.0, 18.0, 10.65], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
+				<positionMin type="param">-5.0</positionMin>
+				<positionMax type="param">5.0</positionMax>
+				<positionUnit type="param">mm</positionUnit>
+				<positionOffset type="param">0.0</positionOffset>
+				<renderOptions type="param">{'style': 'auto', 'color': 'Stainless Steel (satin)', 'width': 5.0, 'topLength': 5.0, 'bottomLength': 5.0, 'topHeight': 2.0, 'bottomHeight': 8.0, 'grooves': None, 'grooveWidth': 6.0, 'grooveDepth': 5.0, 'gap': 0.5}</renderOptions>
+				<direction type="param">1</direction>
+			</properties>
+			<_object type="param">xrt.backends.raycing.stages.LinearStage</_object>
+		</Downstream>
+		<Round_tripod type="value">
+			<properties type="prop">
+				<name type="param">Round_tripod</name>
+				<center type="param">[0.0, 0.0, 0.0]</center>
+				<pitch type="param">0.0</pitch>
+				<roll type="param">0.0</roll>
+				<yaw type="param">0.0</yaw>
+				<positionRoll type="param">0.0</positionRoll>
+				<rotationSequence type="param">RzRyRx</rotationSequence>
+				<mount type="param">Upstream__X</mount>
+				<mountOffset type="param">{'center': [0.0, 0.0, 4.0], 'pitch': 0.0, 'roll': 0.0, 'yaw': 0.0, 'rotationSequence': 'RzRyRx'}</mountOffset>
+				<mount2 type="param">Upstream__X_2</mount2>
+				<mount3 type="param">Downstream</mount3>
+				<yReference type="param">Downstream</yReference>
+				<renderOptions type="param">{'style': 'round', 'color': 'Aluminum (machined)', 'width': 54.0, 'height': 4.0, 'length': 54.0}</renderOptions>
+			</properties>
+			<_object type="param">xrt.backends.raycing.stages.MountingFrame</_object>
+		</Round_tripod>
+	</Stages>
+	<plots type="value">
+	</plots>
+	<run_ray_tracing type="prop">
+		<plots type="param">plots</plots>
+		<repeats type="param">1</repeats>
+		<updateEvery type="param">1</updateEvery>
+		<pickleEvery type="param">None</pickleEvery>
+		<energyRange type="param">None</energyRange>
+		<backend type="param">raycing</backend>
+		<beamLine type="param">Round_Tripod_Mirror</beamLine>
+		<threads type="param">1</threads>
+		<processes type="param">1</processes>
+		<generator type="param">None</generator>
+		<generatorArgs type="param">[]</generatorArgs>
+		<generatorKWargs type="param">auto</generatorKWargs>
+		<globalNorm type="param">0</globalNorm>
+		<afterScript type="param">None</afterScript>
+		<afterScriptArgs type="param">[]</afterScriptArgs>
+		<afterScriptKWargs type="param">{}</afterScriptKWargs>
+		<_object type="param">xrt.runner.run_ray_tracing</_object>
+	</run_ray_tracing>
+<description>A 50 mm flat circular mirror on a compact round tripod.
+
+Three Z actuators sit at 120-degree intervals on the base. The moving
+plate follows the plane through their attachment points, with its local Y
+axis pointing toward the downstream actuator. The mirror sits flush on
+the moving plate.
+
+Run this script to see the mirror pose and reflected spot for lift, pitch,
+and roll moves. Set SHOW_3D to True or pass --glow to open xrtGlow.</description>
+</Project>
