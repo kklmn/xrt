@@ -134,9 +134,9 @@ class OE(OEMainMethods):
             Defaults to identity on attachment.
 
         *renderOptions*: dict or None
-            Glow surface options. Use 'color' for a material preset and
-            'thickness' for the rendered thickness in mm. Omitted options
-            use the default appearance.
+            Glow surface options. Use 'color' for a material preset or 'auto'
+            to match the optical material when a preset exists. Use 'thickness'
+            for the rendered thickness in mm.
 
         *pitch, roll, yaw*: floats
             Rotations Rx, Ry, Rz, correspondingly, defined in the local system.

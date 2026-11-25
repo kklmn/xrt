@@ -2942,8 +2942,19 @@ class OEMesh3D():
             material = options.get('color')
             if material is None:
                 material = getattr(self.oe, 'renderColor', 'auto')
+        opticalMaterial = None
+        if isinstance(material, str) and material == 'auto' and is_oe(self.oe):
+            opticalMaterial = (
+                self.oe.material2 if oeIndex == 1 and is_dcm(self.oe)
+                else self.oe.material)
+            if raycing.is_sequence(opticalMaterial):
+                try:
+                    opticalMaterial = opticalMaterial[self.oe.curSurface]
+                except (IndexError, TypeError):
+                    opticalMaterial = None
         _set_surface_material(
-            shader, get_render_material(material, default), isSelected)
+            shader, get_render_material(material, default, opticalMaterial),
+            isSelected)
 
         shader.setUniformValue("opacity", float(self.parent.pointOpacity*2))
         shader.setUniformValue("surfOpacity", float(surfOpacity))

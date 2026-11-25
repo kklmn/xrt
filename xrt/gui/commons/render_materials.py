@@ -10,7 +10,7 @@ class PhongMaterial(NamedTuple):
     shininess: float
 
 
-# Preserve the original appearance when an object uses renderColor='auto'.
+# Fallback appearances for automatic colors.
 AUTO_MATERIALS = {
     'Cu': PhongMaterial((0.8, 0.4, 0.15), (0.50, 0.25, 0.12),
                         (1., 0.9, 0.8), 100.),
@@ -89,8 +89,32 @@ RENDER_MATERIALS['Steel'] = AUTO_MATERIALS['Steel']
 RENDER_COLOR_CHOICES = ('auto', *sorted(RENDER_MATERIALS))
 
 
-def get_render_material(name, default):
-    """Resolve an object's preset, falling back to its automatic appearance."""
-    if isinstance(name, str) and name in RENDER_MATERIALS:
-        return RENDER_MATERIALS[name]
+_ELEMENT_PRESETS = {
+    'Ag': 'Silver',
+    'Al': 'Aluminum',
+    'Au': 'Gold',
+    'Cr': 'Chromium',
+    'Cu': 'Copper',
+    'Ge': 'Germanium',
+    'Ir': 'Iridium',
+    'Ni': 'Nickel',
+    'Pd': 'Palladium',
+    'Pt': 'Platinum',
+    'Rh': 'Rhodium',
+    'Si': 'Silicon',
+    'Ti': 'Titanium',
+    'W': 'Tungsten',
+}
+
+
+def get_render_material(name, default, optical_material=None):
+    """Resolve an explicit preset or infer one from a single-element material."""
+    if isinstance(name, str):
+        if name == 'auto':
+            elements = getattr(optical_material, 'elements', None)
+            if elements is not None and len(elements) == 1:
+                symbol = getattr(elements[0], 'name', None)
+                name = _ELEMENT_PRESETS.get(symbol, name)
+        if name in RENDER_MATERIALS:
+            return RENDER_MATERIALS[name]
     return AUTO_MATERIALS[default]
