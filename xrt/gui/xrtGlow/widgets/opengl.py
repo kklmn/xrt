@@ -595,6 +595,7 @@ class xrtGlWidget(qt.QOpenGLWidget):
                         self.parent.updateTargets()
                     for oeuuid, _ in affected:
                         self.queue_mesh_update(oeuuid)
+                        self.oePropsUpdated.emit((oeuuid, None, None))
             if self.parent is not None and (
                     command == 'create' or kwargs.keys() & {'name', 'mount'}):
                 self.parent.updateStagesModel()

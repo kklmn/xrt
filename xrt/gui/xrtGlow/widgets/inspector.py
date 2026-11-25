@@ -38,6 +38,8 @@ ACCUMULATION_ENABLED = False
 
 oeDiagnosticArgs = ('incoming from', 'center distance (mm)',
                     'grazing angle (°)', 'incidence angle (°)')
+_MOUNT_ANGLES = ('pitch', 'roll', 'yaw')
+_MOUNT_POSE_FIELDS = ('center', 'x', 'z') + _MOUNT_ANGLES
 
 
 # Resolve the declared class paths once for both the inspector and Qook trees.
@@ -155,6 +157,7 @@ class InstanceInspector(qt.QDialog):
         self.original_data = raycing.OrderedDict()
         headerLine = ["Property", "Value"]
         self.viewOnly = viewOnly
+        self.read_only_color = qt.QColor('#E0F7FA')
         self.liveUpdateEnabled = True
         self.widgetType = 'oe'
         self.objectFlag = qt.Qt.ItemFlags(0)
@@ -291,6 +294,8 @@ class InstanceInspector(qt.QDialog):
 
 #        for item in self.itemGroups.values():
         self.changed_data = {}
+        self._pose_mounted = False
+        self.refresh_mounted_pose()
         self.model.itemChanged.connect(self.on_item_changed)
         self.highlight_color = qt.QColor("#fffacd")
 
@@ -516,14 +521,14 @@ class InstanceInspector(qt.QDialog):
         stageReadOnly = isinstance(self.editorObject, MountingFrame) and (
             paramName == 'positionUnit' or (
                 self.editorObject.mount is not None and
-                paramName.split('.')[0] in ('center', 'pitch', 'roll', 'yaw')))
+                paramName.split('.')[0] in _MOUNT_POSE_FIELDS))
         if self.viewOnly or stageReadOnly:
             child1.setEditable(False)
 
-        if paramName.endswith('rbk') or\
+        if stageReadOnly or paramName.endswith('rbk') or\
                 parent is self.itemGroups.get('Diagnostic'):
-            child1.setBackground(qt.QColor('#E0F7FA'))
-            child0.setBackground(qt.QColor('#E0F7FA'))
+            child1.setBackground(self.read_only_color)
+            child0.setBackground(self.read_only_color)
 
         if unit is not None:
             child1u = qt.QStandardItem(str(unit))
@@ -634,19 +639,21 @@ class InstanceInspector(qt.QDialog):
             self.changed_data.pop(key, None)
             self.set_row_highlight(item, False)
 
-    def set_row_highlight(self, item, highlight=True):
+    def set_row_highlight(self, item, highlight=True, *, readOnly=False):
         row = item.row()
         parent = item.parent() or item.model().invisibleRootItem()
-        item.model().blockSignals(True)
+        signalsBlocked = item.model().blockSignals(True)
         for col in range(self.model.columnCount()):
             itemH = parent.child(row, col)
             if itemH is None:
                 continue
             if highlight:
                 itemH.setBackground(self.highlight_color)
+            elif readOnly and col < 2:
+                itemH.setBackground(self.read_only_color)
             else:
                 itemH.setBackground(qt.QBrush(qt.Qt.NoBrush))
-        item.model().blockSignals(False)
+        item.model().blockSignals(signalsBlocked)
 
     def show_context_menu(self, position):
         index = self.table.indexAt(position)
@@ -745,10 +752,12 @@ class InstanceInspector(qt.QDialog):
                 valueItem = self.modelRoot.child(row, 1)
                 self.set_param_item_value(valueItem, key, value)
                 self.original_data[key] = str(value)
-                if key.startswith('center.') or key in ('pitch', 'roll', 'yaw'):
-                    valueItem.setEditable(
-                        stage.mount is None and not self.viewOnly)
-                self.set_row_highlight(keyItem, False)
+                poseField = key.split('.')[0] in _MOUNT_POSE_FIELDS
+                readOnly = key == 'positionUnit' or (
+                    poseField and stage.mount is not None)
+                if poseField:
+                    valueItem.setEditable(not self.viewOnly and not readOnly)
+                self.set_row_highlight(keyItem, False, readOnly=readOnly)
         elif self.widgetType == 'oe':
             for row in range(self.modelRoot.rowCount()):
                 catItem = self.modelRoot.child(row, 0)
@@ -763,6 +772,7 @@ class InstanceInspector(qt.QDialog):
                             self.set_param_item_value(
                                 catItem.child(j, 1), key, new_value)
                         self.set_row_highlight(catItem.child(j, 0), False)
+            self.refresh_mounted_pose()
         elif self.widgetType in ['mat', 'fe']:
             rootItem = self.modelRoot
             for j in range(rootItem.rowCount()):
@@ -791,7 +801,54 @@ class InstanceInspector(qt.QDialog):
                 changedData.pop(key, None)
         return changedData
 
+    def refresh_mounted_pose(self):
+        """Show the resolved optical pose or restore the detached inputs."""
+        obj = self.editorObject
+        if isinstance(obj, MountingFrame):
+            return
+        mounted = getattr(obj, 'mount', None) is not None
+        if not mounted and not self._pose_mounted:
+            return
+        self._pose_mounted = mounted
+
+        parent = self.itemGroups.get('Position', self.modelRoot)
+        signalsBlocked = self.model.blockSignals(True)
+        try:
+            for row in range(parent.rowCount()):
+                label = parent.child(row, 0)
+                key = label.text()
+                field, _, component = key.removesuffix(' rbk').partition('.')
+                if field not in _MOUNT_POSE_FIELDS:
+                    continue
+                item = parent.child(row, 1)
+                readback = key.endswith(' rbk')
+                value = getattr(obj, field)
+                if mounted and field in _MOUNT_ANGLES:
+                    value = f'{_format_display_value(np.degrees(value))} deg'
+                if not readback:
+                    if not mounted:
+                        value = getattr(obj, f'_{field}Init', value)
+                    if component:
+                        value = raycing.parametrize(value)
+                        if isinstance(value, str):
+                            value = value.strip('([])').split(',')
+                        value = value[raycing.compoundArgs['center'].index(component)]
+                    item.setEditable(not mounted and not self.viewOnly)
+                    qt.set_param_tooltip(
+                        label, item, key, _getArgumentUnit(key, obj))
+                    self.original_data[key] = str(value)
+                    self.changed_data.pop(key, None)
+                    self.set_row_highlight(item, False, readOnly=mounted)
+                self.set_param_item_value(item, key, value)
+        finally:
+            self.model.blockSignals(signalsBlocked)
+
     def update_param(self, pTuple):
+        if pTuple[0] == self.elementId and pTuple[1] in (
+                None, 'mount', 'mountOffset', 'rotationSequence', 'positionRoll'):
+            self.refresh_mounted_pose()
+            self.table.viewport().update()
+
         if self.beamLine is not None and\
                 all(arg in self.original_data for arg in oeDiagnosticArgs):
             incomingIds = []
@@ -878,6 +935,8 @@ class InstanceInspector(qt.QDialog):
 
         parentItem = None
         if pTuple[0] == self.elementId:
+            if self._pose_mounted and pTuple[1] in _MOUNT_POSE_FIELDS:
+                return
             if self.categoriesDict is not None:
                 for igName, igSet in self.categoriesDict.items():
                     if pTuple[1] in igSet:
